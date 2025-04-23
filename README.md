@@ -79,7 +79,7 @@ go build -o pentora ./cmd/pentora
 
 ## 📜 License
 
-MIT License. See the `LICENSE` file for more details.
+Apache-2.0 License. See the `LICENSE` file for more details.
 
 ---
 
