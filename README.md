@@ -3,7 +3,7 @@
 # Pentora
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/pentoraai/pentora)](https://goreportcard.com/report/github.com/pentoraai/pentora)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://opensource.org/license/apache-2-0)
 [![Build](https://img.shields.io/github/actions/workflow/status/pentoraai/pentora/test.yml?branch=main)](https://github.com/pentoraai/pentora/actions)
 
 **Pentora** is a fast, modular, and extensible security scanner designed for modern networks. It detects open ports, collects service banners, and performs optional CVE matching for basic vulnerability assessments.
