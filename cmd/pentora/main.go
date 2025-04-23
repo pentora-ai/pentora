@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pentoraai/pentora/cli"
+	"github.com/pentoraai/pentora/pkg/cli"
 
 	"github.com/spf13/cobra"
 )

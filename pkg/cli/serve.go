@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/pentoraai/pentora/api"
+	"github.com/pentoraai/pentora/pkg/api"
 	"github.com/spf13/cobra"
 )
 
