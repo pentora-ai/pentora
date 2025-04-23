@@ -1,11 +1,17 @@
 # Makefile for macOS .pkg + .dmg installer
 
+SRCS = $(shell git ls-files '*.go' | grep -v '^vendor/')
+
 APP_NAME=pentora
 VERSION=1.0.0
 IDENTIFIER=com.pentora.cli
 PKG_ROOT=pkgroot
 BUILD_DIR=build
 DMG_ROOT=dmgroot
+
+# Default build target
+GOOS := $(shell go env GOOS)
+GOARCH := $(shell go env GOARCH)
 
 .PHONY: all clean build pkg dmg
 
@@ -43,3 +49,18 @@ dmg: pkg
 
 clean:
 	rm -rf $(BUILD_DIR) $(PKG_ROOT) $(DMG_ROOT)
+
+
+.PHONY: test
+#? test: Run the unit and integration tests
+test: test-unit
+
+.PHONY: test-unit
+#? test-unit: Run the unit tests
+test-unit:
+	GOOS=$(GOOS) GOARCH=$(GOARCH) go test -cover "-coverprofile=cover.out" -v $(TESTFLAGS) ./pkg/... ./cmd/...	
+
+.PHONY: fmt
+#? fmt: Format the Code
+fmt:
+	gofmt -s -l -w $(SRCS)	

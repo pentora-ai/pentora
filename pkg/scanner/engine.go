@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pentoraai/pentora/parser"
-	"github.com/pentoraai/pentora/plugin"
+	"github.com/pentoraai/pentora/pkg/parser"
+	"github.com/pentoraai/pentora/pkg/plugin"
 )
 
 // ScanJob defines the structure of a scanning task

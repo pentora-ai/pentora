@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/pentoraai/pentora/scanner"
+	"github.com/pentoraai/pentora/pkg/scanner"
 	"github.com/spf13/cobra"
 )
 
