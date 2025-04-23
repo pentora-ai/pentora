@@ -30,7 +30,7 @@ pentora scan 192.168.1.1 --ports 21,22,80,8080
 pentora scan 192.168.1.1 --discover
 
 # Scan with CVE plugin matching
-tentora scan 192.168.1.1 --ports 22 --vuln
+pentora scan 192.168.1.1 --ports 22 --vuln
 ```
 
 ## 🧩 Plugin System
