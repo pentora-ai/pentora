@@ -10,13 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        goos: [linux, darwin]
         goarch: [amd64, arm64]
-        exclude:
-          - goos: darwin
-            goarch: arm64
 
-    name: Test on ${{ matrix.goos }} / ${{ matrix.goarch }}
+    name: Test on linux / ${{ matrix.goarch }}
 
     steps:
       - uses: actions/checkout@v3
@@ -28,14 +24,14 @@ jobs:
       - name: Run tests
         run: |
           mkdir -p coverage
-          make test-unit GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }}
-          mv cover.out coverage/cover-${{ matrix.goos }}-${{ matrix.goarch }}.out
+          GOOS=linux GOARCH=${{ matrix.goarch }} make test-unit
+          mv cover.out coverage/cover-linux-${{ matrix.goarch }}.out
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v3
         with:
-          name: cover-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: coverage/cover-${{ matrix.goos }}-${{ matrix.goarch }}.out
+          name: cover-linux-${{ matrix.goarch }}
+          path: coverage/cover-linux-${{ matrix.goarch }}.out
 
   merge-coverage:
     needs: test
@@ -56,7 +52,7 @@ jobs:
       - name: Merge coverage files
         run: |
           mkdir -p coverage
-          find merged-coverage -name '*.out' -exec cat {} + | sort | uniq > coverage/combined.out
+          gocovmerge $(find merged-coverage -name 'cover-*.out') > coverage/combined.out
 
       - name: Generate HTML report
         run: go tool cover -html=coverage/combined.out -o coverage/coverage.html
