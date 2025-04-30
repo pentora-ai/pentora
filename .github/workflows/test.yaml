@@ -1,0 +1,68 @@
+name: Multi-Platform Go Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, darwin]
+        goarch: [amd64, arm64]
+        exclude:
+          - goos: darwin
+            goarch: arm64
+
+    name: Test on ${{ matrix.goos }} / ${{ matrix.goarch }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.22'
+
+      - name: Run tests
+        run: |
+          mkdir -p coverage
+          make test-unit GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }}
+          mv cover.out coverage/cover-${{ matrix.goos }}-${{ matrix.goarch }}.out
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: cover-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: coverage/cover-${{ matrix.goos }}-${{ matrix.goarch }}.out
+
+  merge-coverage:
+    needs: test
+    runs-on: ubuntu-latest
+    name: Merge Coverage Reports
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Download all coverage files
+        uses: actions/download-artifact@v3
+        with:
+          path: merged-coverage
+
+      - name: Install gocovmerge
+        run: go install github.com/wadey/gocovmerge@latest
+
+      - name: Merge coverage files
+        run: |
+          mkdir -p coverage
+          find merged-coverage -name '*.out' -exec cat {} + | sort | uniq > coverage/combined.out
+
+      - name: Generate HTML report
+        run: go tool cover -html=coverage/combined.out -o coverage/coverage.html
+
+      - name: Upload combined coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: coverage/
