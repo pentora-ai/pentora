@@ -3,9 +3,10 @@ package cli
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
-	"github.com/pentoraai/pentora/pkg/api"
+	"github.com/pentoraai/pentora/pkg/api/dashboard"
 	"github.com/spf13/cobra"
 )
 
@@ -15,7 +16,18 @@ var ServeCmd = &cobra.Command{
 	Short: "Start the Pentora API server",
 	Run: func(cmd *cobra.Command, args []string) {
 		port := 8080
-		fmt.Printf("API server listening on http://localhost:%d\n", port)
-		http.ListenAndServe(fmt.Sprintf(":%d", port), api.NewRouter())
+
+		mux := http.NewServeMux()
+
+		// Frontend UI register
+		dashboard.RegisterFrontend(mux)
+
+		// Buraya ileride API endpoint'leri de eklenebilir
+		// mux.HandleFunc("/api/...", api.SomeHandler)
+
+		log.Printf("🚀 Pentora UI serving at http://localhost:%d\n", port)
+		if err := http.ListenAndServe(fmt.Sprintf(":%d", port), mux); err != nil {
+			log.Fatalf("Server error: %v", err)
+		}
 	},
 }
