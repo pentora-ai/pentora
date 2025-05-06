@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Pentora Community Support
+    url: https://community.pentora.ai/
+    about: If you have a question, or are looking for advice, please post on our Discuss forum! The community loves to chime in to help. Happy Coding!
+  - name: Pentora Helm Chart Issues
+    url: https://github.com/pentora/pentora-helm-chart
+    about: Are you submitting an issue or feature enhancement for the Pentora helm chart? Please post in the pentora-helm-chart GitHub Issues.

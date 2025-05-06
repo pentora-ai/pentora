@@ -13,54 +13,62 @@ DMG_ROOT=dmgroot
 GOOS := $(shell go env GOOS)
 GOARCH := $(shell go env GOARCH)
 
-.PHONY: all clean build pkg dmg
+.PHONY: default
+#? default: Run `make generate` and `make binary`
+default: generate binary
 
-all: clean build pkg dmg
-
-build:
-	@echo "> Building $(APP_NAME) binary for macOS"
-	mkdir -p $(BUILD_DIR)
-	GOOS=darwin GOARCH=arm64 go build -o $(BUILD_DIR)/$(APP_NAME) ./cmd/pentora
-
-pkg: build
-	@echo "> Preparing package root"
-	mkdir -p $(PKG_ROOT)/usr/local/bin
-	cp $(BUILD_DIR)/$(APP_NAME) $(PKG_ROOT)/usr/local/bin/$(APP_NAME)
-	@echo "> Creating .pkg installer"
-	pkgbuild \
-	  --identifier $(IDENTIFIER) \
-	  --version $(VERSION) \
-	  --root $(PKG_ROOT) \
-	  --install-location / \
-	  $(BUILD_DIR)/$(APP_NAME).pkg
-
-dmg: pkg
-	@echo "> Creating .dmg image"
-	@mkdir -p $(DMG_ROOT)
-	@cp $(BUILD_DIR)/$(APP_NAME).pkg $(DMG_ROOT)/
-	create-dmg \
-	  --volname "Pentora Installer" \
-	  --window-size 500 300 \
-	  --icon-size 100 \
-	  --icon "$(APP_NAME).pkg" 200 120 \
-	  --app-drop-link 400 120 \
-	  $(BUILD_DIR)/$(APP_NAME)-installer.dmg \
-	  $(DMG_ROOT)
-
-clean:
-	rm -rf $(BUILD_DIR) $(PKG_ROOT) $(DMG_ROOT)
-
-
-.PHONY: test
+.PHONY: testsss
 #? test: Run the unit and integration tests
 test: test-unit
 
-.PHONY: test-unit
+.PHONY: test-unitssss
 #? test-unit: Run the unit tests
-test-unit:
+test-unitsadasda:
 	GOOS=$(GOOS) GOARCH=$(GOARCH) go test -cover "-coverprofile=cover.out" -v $(TESTFLAGS) ./pkg/... ./cmd/...	
 
 .PHONY: fmt
 #? fmt: Format the Code
 fmt:
 	gofmt -s -l -w $(SRCS)	
+
+
+#? dist: Create the "dist" directory
+dist:
+	mkdir -p dist
+
+.PHONY: build-ui-image
+#? build-ui-image: Build UI Docker image
+build-ui-image:
+	docker build -t pentora-ui -f ui/Dockerfile ui	
+
+.PHONY: clean-ui
+#? clean-ui: Clean UI static generated assets
+clean-ui:
+	rm -r ui/static
+	mkdir -p ui/static
+	printf 'For more information see `ui/readme.md`' > ui/static/DONT-EDIT-FILES-IN-THIS-DIRECTORY.md	
+
+ui/static/index.html:
+	$(MAKE) build-ui-image
+	docker run --rm -v "$(PWD)/ui/static":'/src/ui/static' pentora-ui npm run build:nc
+	docker run --rm -v "$(PWD)/ui/static":'/src/ui/static' pentora-ui chown -R $(shell id -u):$(shell id -g) ./static
+
+.PHONY: generate-ui
+#? generate-ui: Generate UI
+generate-ui: ui/static/index.html	
+
+.PHONY: generate
+#? generate: Generate code (Dynamic and Static configuration documentation reference files)
+generate:
+#	go generate
+
+.PHONY: binary
+#? binary: Build the binary
+binary: generate-ui dist
+	@echo SHA: $(VERSION) $(CODENAME) $(DATE)
+	CGO_ENABLED=0 GOGC=off GOOS=${GOOS} GOARCH=${GOARCH} go build ${FLAGS[*]} -ldflags "-s -w \
+    -X github.com/pentoraai/pentora/pkg/version.Version=$(VERSION) \
+    -X github.com/pentoraai/pentora/pkg/version.Codename=$(CODENAME) \
+    -X github.com/pentoraai/pentora/pkg/version.BuildDate=$(DATE)" \
+    -installsuffix nocgo -o "./dist/${GOOS}/${GOARCH}/$(BIN_NAME)" ./cmd/pentora
+
