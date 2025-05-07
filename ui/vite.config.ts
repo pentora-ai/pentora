@@ -11,6 +11,12 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets'
   },
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': 'http://localhost:8080',
+    },
+  },
   plugins: [
     TanStackRouterVite({
       target: 'react',
