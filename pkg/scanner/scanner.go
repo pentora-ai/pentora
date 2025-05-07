@@ -13,7 +13,11 @@ func ScanPort(host string, port int) bool {
 	if err != nil {
 		return false
 	}
-	conn.Close()
+	defer func() {
+		if err := conn.Close(); err != nil {
+			fmt.Printf("Error closing connection: %v\n", err)
+		}
+	}()
 	return true
 }
 
@@ -23,9 +27,16 @@ func GrabBanner(host string, port int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer conn.Close()
 
-	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	defer func() {
+		if err := conn.Close(); err != nil {
+			fmt.Printf("Error closing connection: %v\n", err)
+		}
+	}()
+
+	if err := conn.SetReadDeadline(time.Now().Add(2 * time.Second)); err != nil {
+		return "", err
+	}
 	buffer := make([]byte, 1024)
 	n, err := conn.Read(buffer)
 	if err != nil {
@@ -40,7 +51,12 @@ func HTTPProbe(host string, port int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer conn.Close()
+
+	defer func() {
+		if err := conn.Close(); err != nil {
+			fmt.Printf("Error closing connection: %v\n", err)
+		}
+	}()
 
 	req := "GET / HTTP/1.1\r\nHost: " + host + "\r\nConnection: close\r\n\r\n"
 	_, err = conn.Write([]byte(req))
@@ -48,7 +64,9 @@ func HTTPProbe(host string, port int) (string, error) {
 		return "", err
 	}
 
-	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	if err := conn.SetWriteDeadline(time.Now().Add(2 * time.Second)); err != nil {
+		return "", err
+	}
 	buffer := make([]byte, 2048)
 	n, err := conn.Read(buffer)
 	if err != nil {
