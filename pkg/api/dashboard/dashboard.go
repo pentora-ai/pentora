@@ -67,7 +67,11 @@ func RegisterFrontend(mux *http.ServeMux) {
 			return
 		}
 		w.Header().Set("Content-Type", "text/html")
-		w.Write(data)
+
+		if _, err := w.Write(data); err != nil {
+			http.Error(w, "Failed to write index.html", http.StatusInternalServerError)
+			return
+		}
 	}))
 	mux.Handle("/", spaHandler)
 }

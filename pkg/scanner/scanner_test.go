@@ -23,7 +23,11 @@ func TestScanPortOpen(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to open temporary listener: %v", err)
 	}
-	defer ln.Close()
+	defer func() {
+		if err := ln.Close(); err != nil {
+			t.Errorf("Close failed: %v", err)
+		}
+	}()
 
 	port := ln.Addr().(*net.TCPAddr).Port
 	result := ScanPort("127.0.0.1", port)
@@ -40,13 +44,17 @@ func TestGrabBanner(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to open test TCP listener: %v", err)
 	}
-	defer ln.Close()
+	defer func() {
+		if err := ln.Close(); err != nil {
+			t.Errorf("Close failed: %v", err)
+		}
+	}()
 
 	go func() {
 		conn, err := ln.Accept()
 		if err == nil {
-			conn.Write([]byte(bannerText))
-			conn.Close()
+			_, _ = conn.Write([]byte(bannerText))
+			_ = conn.Close()
 		}
 	}()
 
@@ -66,7 +74,7 @@ func TestGrabBanner(t *testing.T) {
 func TestHTTPProbe(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Server", "Pentora-Test-HTTP")
-		fmt.Fprintln(w, "Hello from Pentora")
+		_, _ = fmt.Fprintln(w, "Hello from Pentora")
 	}))
 	defer ts.Close()
 
@@ -74,7 +82,11 @@ func TestHTTPProbe(t *testing.T) {
 	parts := strings.Split(host, ":")
 	ip := parts[0]
 	port := 80
-	fmt.Sscanf(parts[1], "%d", &port)
+
+	_, err := fmt.Sscanf(parts[1], "%d", &port)
+	if err != nil {
+		t.Fatalf("port parsing failed: %v", err)
+	}
 
 	banner, err := HTTPProbe(ip, port)
 	if err != nil {

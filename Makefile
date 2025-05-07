@@ -13,24 +13,25 @@ DMG_ROOT=dmgroot
 GOOS := $(shell go env GOOS)
 GOARCH := $(shell go env GOARCH)
 
+LINT_EXECUTABLES = misspell shellcheck
+
 .PHONY: default
 #? default: Run `make generate` and `make binary`
 default: generate binary
 
-.PHONY: testsss
+.PHONY: test
 #? test: Run the unit and integration tests
 test: test-unit
 
-.PHONY: test-unitssss
+.PHONY: test-unit
 #? test-unit: Run the unit tests
-test-unitsadasda:
+test-unit:
 	GOOS=$(GOOS) GOARCH=$(GOARCH) go test -cover "-coverprofile=cover.out" -v $(TESTFLAGS) ./pkg/... ./cmd/...	
 
 .PHONY: fmt
 #? fmt: Format the Code
 fmt:
 	gofmt -s -l -w $(SRCS)	
-
 
 #? dist: Create the "dist" directory
 dist:
@@ -72,3 +73,20 @@ binary: generate-ui dist
     -X github.com/pentoraai/pentora/pkg/version.BuildDate=$(DATE)" \
     -installsuffix nocgo -o "./dist/${GOOS}/${GOARCH}/$(BIN_NAME)" ./cmd/pentora
 
+.PHONY: lint
+#? lint: Run golangci-lint
+lint:
+	golangci-lint run
+
+.PHONY: validate-files
+#? validate-files: Validate code and docs
+validate-files:
+	$(foreach exec,$(LINT_EXECUTABLES),\
+            $(if $(shell which $(exec)),,$(error "No $(exec) in PATH")))
+	$(CURDIR)/script/validate-vendor.sh
+	$(CURDIR)/script/validate-misspell.sh
+	$(CURDIR)/script/validate-shell-script.sh
+
+.PHONY: validate
+#? validate: Validate code, docs, and vendor
+validate: lint validate-files
