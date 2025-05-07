@@ -90,3 +90,9 @@ validate-files:
 .PHONY: validate
 #? validate: Validate code, docs, and vendor
 validate: lint validate-files
+
+.PHONY: help
+#? help: Get more info on make commands
+help: Makefile
+	@echo " Choose a command run in pentora:"
+	@sed -n 's/^#?//p' $< | column -t -s ':' |  sort | sed -e 's/^/ /'
