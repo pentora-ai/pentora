@@ -36,7 +36,7 @@ func TestAppManagerContext(t *testing.T) {
 
 func TestAppManagerShutdown(t *testing.T) {
 	manager := app.NewAppManager()
-	manager.Init()
+	_ = manager.Init()
 
 	// Ensure HookManager is initialized
 	if manager.HookManager == nil {
@@ -55,5 +55,3 @@ func TestAppManagerShutdown(t *testing.T) {
 		t.Errorf("Expected onShutdown hook to be triggered, but it was not")
 	}
 }
-
-
