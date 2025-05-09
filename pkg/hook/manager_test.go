@@ -102,3 +102,18 @@ func TestHookWithCanceledContext(t *testing.T) {
 		t.Error("hook should be called even with canceled context")
 	}
 }
+
+func TestIsTriggered(t *testing.T) {
+	mgr := hook.NewManager()
+	ctx := context.Background()
+
+	if mgr.IsTriggered("test") {
+		t.Error("expected 'test' to not be triggered initially")
+	}
+
+	mgr.Trigger(ctx, "test")
+
+	if !mgr.IsTriggered("test") {
+		t.Error("expected 'test' to be triggered after calling Trigger")
+	}
+}
