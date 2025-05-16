@@ -6,8 +6,14 @@ import (
 	"io/fs"
 	"net/http"
 
-	"github.com/pentoraai/pentora/ui"
+	"github.com/containous/mux"
+	"github.com/pentora-ai/pentora/ui"
 )
+
+// Handler expose dashboard routes.
+type Handler struct {
+	BasePath string
+}
 
 // commonHeaders is a middleware function that adds common HTTP headers to the response.
 // It sets the Content-Security-Policy header to allow iframe embedding only from the
@@ -74,4 +80,12 @@ func RegisterFrontend(mux *http.ServeMux) {
 		}
 	}))
 	mux.Handle("/", spaHandler)
+}
+
+func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	http.NotFound(w, r) // Replace with appropriate logic for handling requests
+}
+
+func Append(router *mux.Router, basePath string) error {
+	return nil
 }

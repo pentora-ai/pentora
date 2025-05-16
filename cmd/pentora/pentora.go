@@ -10,19 +10,21 @@ import (
 	"time"
 
 	"github.com/coreos/go-systemd/v22/daemon"
-	"github.com/pentoraai/pentora/cmd"
-	"github.com/pentoraai/pentora/cmd/license"
-	cmdVersion "github.com/pentoraai/pentora/cmd/version"
-	"github.com/pentoraai/pentora/pkg/cli"
-	"github.com/pentoraai/pentora/pkg/config/static"
-	app "github.com/pentoraai/pentora/pkg/core"
-	lic "github.com/pentoraai/pentora/pkg/license"
-	"github.com/pentoraai/pentora/pkg/safe"
-	"github.com/pentoraai/pentora/pkg/server"
-	"github.com/pentoraai/pentora/pkg/server/service"
-	"github.com/pentoraai/pentora/pkg/version"
+	"github.com/pentora-ai/pentora/cmd"
+	"github.com/pentora-ai/pentora/cmd/license"
+	cmdVersion "github.com/pentora-ai/pentora/cmd/version"
+	"github.com/pentora-ai/pentora/pkg/cli"
+	"github.com/pentora-ai/pentora/pkg/config/static"
+	"github.com/pentora-ai/pentora/pkg/core"
+	lic "github.com/pentora-ai/pentora/pkg/license"
+	"github.com/pentora-ai/pentora/pkg/safe"
+	"github.com/pentora-ai/pentora/pkg/server"
+	"github.com/pentora-ai/pentora/pkg/server/service"
+	"github.com/pentora-ai/pentora/pkg/version"
 	"github.com/rs/zerolog/log"
 	"github.com/sirupsen/logrus"
+
+	//"github.com/pentora-ai/pentora/pkg/core/logger"
 
 	"github.com/spf13/cobra"
 )
@@ -59,24 +61,35 @@ func main() {
 	// pentora config inits
 	pConfig := cmd.NewPentoraConfiguration()
 
-	loadGlobalLicense()
-	//if err := rootCmd.Execute(); err != nil {
-	//	fmt.Println(err)
-	//	os.Exit(1)
-	//}
-
 	runCmd(&pConfig.Configuration)
 
 	logrus.Exit(0)
 }
 
 func runCmd(staticConfiguration *static.Configuration) error {
-	if err := setupLogger(staticConfiguration); err != nil {
+	if err := core.SetupLogger(staticConfiguration); err != nil {
 		return fmt.Errorf("failed to setting up logger: %w", err)
 	}
 
-	app := app.NewAppManager()
+	app := core.NewAppManager()
 	_ = app.Init()
+
+	app.HookManager.Register("plugin:beforeRun:ping", func(ctx context.Context) {
+		log.Info().Msg("Running before plugin:ping hooks...")
+	})
+
+	app.HookManager.Register("plugin:onError:ping", func(ctx context.Context) {
+		log.Info().Msg("Running onError plugin:ping hooks...")
+	})
+
+	app.HookManager.Register("plugin:afterRun:ping", func(ctx context.Context) {
+		log.Info().Msg("Running after plugin:ping hooks...")
+	})
+
+	err := app.Orchestrator.RunPluginsDAGParallelLayers(app.Context(), "192.168.1.1")
+	if err != nil {
+		log.Err(err).Msg("scan failed:")
+	}
 
 	app.HookManager.Register("onShutdown", func(ctx context.Context) {
 		log.Info().Msg("Running shutdown hooks...")

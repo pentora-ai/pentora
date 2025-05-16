@@ -68,9 +68,9 @@ generate:
 binary: generate-ui dist
 	@echo SHA: $(VERSION) $(CODENAME) $(DATE)
 	CGO_ENABLED=0 GOGC=off GOOS=${GOOS} GOARCH=${GOARCH} go build ${FLAGS[*]} -ldflags "-s -w \
-    -X github.com/pentoraai/pentora/pkg/version.Version=$(VERSION) \
-    -X github.com/pentoraai/pentora/pkg/version.Codename=$(CODENAME) \
-    -X github.com/pentoraai/pentora/pkg/version.BuildDate=$(DATE)" \
+    -X github.com/pentora-ai/pentora/pkg/version.Version=$(VERSION) \
+    -X github.com/pentora-ai/pentora/pkg/version.Commit=$(CODENAME) \
+    -X github.com/pentora-ai/pentora/pkg/version.BuildDate=$(DATE)" \
     -installsuffix nocgo -o "./dist/${GOOS}/${GOARCH}/$(BIN_NAME)" ./cmd/pentora
 
 .PHONY: lint

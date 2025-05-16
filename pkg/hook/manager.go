@@ -16,6 +16,8 @@ type Manager struct {
 	mu        sync.RWMutex
 	hooks     map[string][]HookFunc
 	triggered map[string]bool
+
+	// todo: async bool // whether to trigger hooks asynchronously
 }
 
 // NewManager creates and returns a new hook manager.
@@ -39,7 +41,7 @@ func (m *Manager) Trigger(ctx context.Context, event string) {
 	defer m.mu.RUnlock()
 	m.triggered[event] = true
 	for _, fn := range m.hooks[event] {
-		go fn(ctx) // trigger hooks asynchronously
+		fn(ctx) // go fn(ctx) // trigger hooks synchronously
 	}
 }
 

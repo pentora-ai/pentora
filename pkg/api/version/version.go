@@ -6,12 +6,12 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/pentoraai/pentora/pkg/version"
+	"github.com/pentora-ai/pentora/pkg/version"
 )
 
 var (
 	Version = version.Version
-	Commit  = version.Codename
+	Commit  = version.Commit
 	Build   = version.BuildDate
 )
 
