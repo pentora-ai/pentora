@@ -46,7 +46,7 @@ func TestSSH_CVE_2016_0777_MatchFunc(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			plugin := &Plugin{
+			plugin := &Plugins{
 				MatchFunc: func(ctx map[string]string) *MatchResult {
 					banner := ctx["ssh/banner"]
 					if strings.Contains(banner, "OpenSSH_7.1p2") {

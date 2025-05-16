@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/pentoraai/pentora/pkg/scanner"
+	"github.com/pentora-ai/pentora/pkg/scanner"
 )
 
 // ScanRequest represents the input JSON structure for a scan job

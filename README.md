@@ -2,9 +2,9 @@
 
 # Pentora
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/pentoraai/pentora)](https://goreportcard.com/report/github.com/pentoraai/pentora)
+[![Go Report Card](https://goreportcard.com/badge/github.com/pentora-ai/pentora)](https://goreportcard.com/report/github.com/pentora-ai/pentora)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://opensource.org/license/apache-2-0)
-[![Build](https://img.shields.io/github/actions/workflow/status/pentoraai/pentora/test.yml?branch=main)](https://github.com/pentoraai/pentora/actions)
+[![Build](https://img.shields.io/github/actions/workflow/status/pentoraai/pentora/test.yml?branch=main)](https://github.com/pentora-ai/pentora/actions)
 
 **Pentora** is a fast, modular, and extensible security scanner designed for modern networks. It detects open ports, collects service banners, and performs optional CVE matching for basic vulnerability assessments.
 
@@ -60,7 +60,7 @@ plugin.Register(&plugin.Plugin{
 ## 🔧 Installation
 
 ```bash
-git clone https://github.com/pentoraai/pentora.git
+git clone https://github.com/pentora-ai/pentora.git
 cd pentora
 go build -o pentora ./cmd/pentora
 ```

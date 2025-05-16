@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pentoraai/pentora/pkg/hook"
+	"github.com/pentora-ai/pentora/pkg/hook"
 )
 
 func TestHookManager_OnShutdown(t *testing.T) {

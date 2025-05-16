@@ -1,17 +1,19 @@
-// pkg/core/manager.go
+// pkg/core/app.go
 
 // AppManager is the core lifecycle orchestrator for Pentora.
 // It is responsible for initializing and managing the application runtime environment.
 // All subsystems (config, logging, hooks, registry, etc.) are injected and controlled from here.
-package app
+package core
 
 import (
 	"context"
 	"sync"
 
-	//"github.com/pentora-ai/pentora/pkg/config"
-	//"github.com/pentora-ai/pentora/pkg/log"
-	"github.com/pentoraai/pentora/pkg/hook"
+	"github.com/pentora-ai/pentora/pkg/event"
+	"github.com/pentora-ai/pentora/pkg/hook"
+	"github.com/pentora-ai/pentora/pkg/plugin"
+	"github.com/pentora-ai/pentora/pkg/scan"
+	"github.com/pentora-ai/pentora/pkg/version"
 )
 
 // AppManager is the central controller for the application's lifecycle.
@@ -21,7 +23,11 @@ type AppManager struct {
 
 	//Config     *config.Config // configuration subsystem
 	//LogManager *log.Manager   // logging subsystem
-	HookManager *hook.Manager // hooks subsystem
+	HookManager  *hook.Manager            // hooks subsystem
+	EventBus     event.EventBus           // internal pub/sub event bus
+	Orchestrator scan.Orchestrator        // orchestrator for running plugins
+	Plugin       plugin.RegistryInterface //
+	Version      version.Struct           // version manager for checking updates
 
 	once sync.Once // ensures single initialization
 }
@@ -47,6 +53,18 @@ func (a *AppManager) Init() error {
 
 		// Initialize hook manager for internal lifecycle extensions
 		a.HookManager = hook.NewManager()
+
+		// Initialize internal event bus for pub/sub communication
+		a.EventBus = event.New()
+
+		//
+		a.Plugin = plugin.GlobalRegistry
+
+		// Load version information at startup
+		vm := version.Get()
+		a.Version = vm
+
+		a.Orchestrator = scan.New(a.Plugin, a.HookManager)
 	})
 
 	return nil
@@ -60,9 +78,6 @@ func (a *AppManager) Context() context.Context {
 // Shutdown gracefully shuts down all subsystems.
 func (a *AppManager) Shutdown() {
 	a.cancel()
-	//if a.LogManager != nil {
-	//	a.LogManager.Shutdown()
-	//}
 	if a.HookManager != nil {
 		a.HookManager.Trigger(a.ctx, "onShutdown")
 	}

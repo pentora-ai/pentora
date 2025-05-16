@@ -6,8 +6,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/pentoraai/pentora/pkg/api/dashboard"
-	"github.com/pentoraai/pentora/pkg/api/version"
+	"github.com/pentora-ai/pentora/pkg/api/dashboard"
+	"github.com/pentora-ai/pentora/pkg/api/version"
 	"github.com/spf13/cobra"
 )
 

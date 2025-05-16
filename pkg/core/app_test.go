@@ -1,12 +1,12 @@
 // pkg/core/manager_test.go
 
-package app_test
+package core_test
 
 import (
 	"context"
 	"testing"
 
-	app "github.com/pentoraai/pentora/pkg/core"
+	app "github.com/pentora-ai/pentora/pkg/core"
 )
 
 func TestNewAppManager(t *testing.T) {

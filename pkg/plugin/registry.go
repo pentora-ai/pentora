@@ -1,7 +1,7 @@
 package plugin
 
 // Plugin represents a pluggable vulnerability rule
-type Plugin struct {
+type Plugins struct {
 	ID           string
 	Name         string
 	RequirePorts []int
@@ -18,16 +18,16 @@ type MatchResult struct {
 	Info    string
 }
 
-var registry = map[string]*Plugin{}
+var registry = map[string]*Plugins{}
 
 // Register adds a plugin to the global registry
-func Register(p *Plugin) {
+func Register(p *Plugins) {
 	registry[p.ID] = p
 }
 
 // Filter returns plugins that match the given context
-func Filter(ctx map[string]string, openPorts []int, satisfied []string) []*Plugin {
-	var selected []*Plugin
+func Filter(ctx map[string]string, openPorts []int, satisfied []string) []*Plugins {
+	var selected []*Plugins
 
 	portMap := make(map[int]bool)
 	for _, p := range openPorts {
