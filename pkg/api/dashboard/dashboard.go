@@ -3,11 +3,9 @@
 package dashboard
 
 import (
-	"io/fs"
 	"net/http"
 
 	"github.com/containous/mux"
-	"github.com/pentora-ai/pentora/ui"
 )
 
 // Handler expose dashboard routes.
@@ -56,28 +54,28 @@ func commonHeaders(next http.Handler) http.Handler {
 //	"dist" directory.
 func RegisterFrontend(mux *http.ServeMux) {
 	// Make the files under the "dist" directory the root FS
-	fsys, err := fs.Sub(ui.Assets, "dist")
-	if err != nil {
-		panic("Failed to create sub filesystem: " + err.Error())
-	}
+	// fsys, err := fs.Sub(ui.Assets, "dist")
+	// if err != nil {
+	//	panic("Failed to create sub filesystem: " + err.Error())
+	//}
 
 	// Asset handler
-	assetHandler := http.StripPrefix("/assets/", http.FileServer(http.FS(fsys)))
-	mux.Handle("/assets/", assetHandler)
+	// assetHandler := http.StripPrefix("/assets/", http.FileServer(http.FS(fsys)))
+	// mux.Handle("/assets/", assetHandler)
 
 	// SPA handler
 	spaHandler := commonHeaders(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		data, err := fs.ReadFile(ui.Assets, "dist/index.html")
-		if err != nil {
-			http.Error(w, "Failed to read index.html", http.StatusInternalServerError)
-			return
-		}
+		// data, err := fs.ReadFile(ui.Assets, "dist/index.html")
+		// if err != nil {
+		//	http.Error(w, "Failed to read index.html", http.StatusInternalServerError)
+		//	return
+		// }
 		w.Header().Set("Content-Type", "text/html")
 
-		if _, err := w.Write(data); err != nil {
-			http.Error(w, "Failed to write index.html", http.StatusInternalServerError)
-			return
-		}
+		// if _, err := w.Write(data); err != nil {
+		//	http.Error(w, "Failed to write index.html", http.StatusInternalServerError)
+		//	return
+		// }
 	}))
 	mux.Handle("/", spaHandler)
 }
