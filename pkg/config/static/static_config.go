@@ -12,7 +12,7 @@ type Configuration struct {
 	Global *Global `description:"Global configuration options" json:"global,omitempty" yaml:"global,omitempty" export:"true"`
 
 	API *API              `description:"Enable api/dashboard." json:"api,omitempty" yaml:"api,omitempty" label:"allowEmpty" file:"allowEmpty" export:"true"`
-	Log *types.PentoraLog `description:"Traefik log settings." json:"log,omitempty" yaml:"log,omitempty" label:"allowEmpty" file:"allowEmpty" export:"true"`
+	Log *types.PentoraLog `description:"Pentora log settings." json:"log,omitempty" yaml:"log,omitempty" label:"allowEmpty" file:"allowEmpty" export:"true"`
 }
 
 // Global holds the global configuration.
