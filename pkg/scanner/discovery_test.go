@@ -10,7 +10,11 @@ func TestDiscoverPortsReturnsOpenPort(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to open test listener: %v", err)
 	}
-	defer ln.Close()
+	defer func() {
+		if err := ln.Close(); err != nil {
+			t.Errorf("Close failed: %v", err)
+		}
+	}()
 
 	port := ln.Addr().(*net.TCPAddr).Port
 	ports := DiscoverPorts("127.0.0.1", port, port)

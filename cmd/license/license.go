@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pentoraai/pentora/pkg/license"
+	"github.com/pentora-ai/pentora/pkg/license"
 	"github.com/spf13/cobra"
 )
 

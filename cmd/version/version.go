@@ -5,12 +5,12 @@ import (
 	"runtime"
 	"text/template"
 
-	"github.com/pentoraai/pentora/pkg/version"
+	"github.com/pentora-ai/pentora/pkg/version"
 	"github.com/spf13/cobra"
 )
 
 var versionTemplate = `Version:      {{.Version}}
-Codename:     {{.Codename}}
+Commit:     {{.Commit}}
 Go version:   {{.GoVersion}}
 Built:        {{.BuildTime}}
 OS/Arch:      {{.Os}}/{{.Arch}}`
@@ -33,14 +33,14 @@ func GetPrint(wr io.Writer) error {
 
 	v := struct {
 		Version   string
-		Codename  string
+		Commit    string
 		GoVersion string
 		BuildTime string
 		Os        string
 		Arch      string
 	}{
 		Version:   version.Version,
-		Codename:  version.Codename,
+		Commit:    version.Commit,
 		GoVersion: runtime.Version(),
 		BuildTime: version.BuildDate,
 		Os:        runtime.GOOS,

@@ -13,24 +13,25 @@ DMG_ROOT=dmgroot
 GOOS := $(shell go env GOOS)
 GOARCH := $(shell go env GOARCH)
 
+LINT_EXECUTABLES = misspell shellcheck
+
 .PHONY: default
 #? default: Run `make generate` and `make binary`
 default: generate binary
 
-.PHONY: testsss
+.PHONY: test
 #? test: Run the unit and integration tests
 test: test-unit
 
-.PHONY: test-unitssss
+.PHONY: test-unit
 #? test-unit: Run the unit tests
-test-unitsadasda:
+test-unit:
 	GOOS=$(GOOS) GOARCH=$(GOARCH) go test -cover "-coverprofile=cover.out" -v $(TESTFLAGS) ./pkg/... ./cmd/...	
 
 .PHONY: fmt
 #? fmt: Format the Code
 fmt:
 	gofmt -s -l -w $(SRCS)	
-
 
 #? dist: Create the "dist" directory
 dist:
@@ -67,8 +68,31 @@ generate:
 binary: generate-ui dist
 	@echo SHA: $(VERSION) $(CODENAME) $(DATE)
 	CGO_ENABLED=0 GOGC=off GOOS=${GOOS} GOARCH=${GOARCH} go build ${FLAGS[*]} -ldflags "-s -w \
-    -X github.com/pentoraai/pentora/pkg/version.Version=$(VERSION) \
-    -X github.com/pentoraai/pentora/pkg/version.Codename=$(CODENAME) \
-    -X github.com/pentoraai/pentora/pkg/version.BuildDate=$(DATE)" \
+    -X github.com/pentora-ai/pentora/pkg/version.Version=$(VERSION) \
+    -X github.com/pentora-ai/pentora/pkg/version.Commit=$(CODENAME) \
+    -X github.com/pentora-ai/pentora/pkg/version.BuildDate=$(DATE)" \
     -installsuffix nocgo -o "./dist/${GOOS}/${GOARCH}/$(BIN_NAME)" ./cmd/pentora
 
+.PHONY: lint
+#? lint: Run golangci-lint
+lint:
+	golangci-lint run
+
+.PHONY: validate-files
+#? validate-files: Validate code and docs
+validate-files:
+	$(foreach exec,$(LINT_EXECUTABLES),\
+            $(if $(shell which $(exec)),,$(error "No $(exec) in PATH")))
+	$(CURDIR)/script/validate-vendor.sh
+	$(CURDIR)/script/validate-misspell.sh
+	$(CURDIR)/script/validate-shell-script.sh
+
+.PHONY: validate
+#? validate: Validate code, docs, and vendor
+validate: lint validate-files
+
+.PHONY: help
+#? help: Get more info on make commands
+help: Makefile
+	@echo " Choose a command run in pentora:"
+	@sed -n 's/^#?//p' $< | column -t -s ':' |  sort | sed -e 's/^/ /'

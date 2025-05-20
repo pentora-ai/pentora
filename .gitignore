@@ -1,4 +1,10 @@
-cover.out
+# Go workspace file
+go.work*
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+
 internal
 public.pem
 test.license

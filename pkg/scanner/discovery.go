@@ -2,6 +2,7 @@ package scanner
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"time"
 )
@@ -17,7 +18,9 @@ func DiscoverPorts(ip string, startPort, endPort int) []int {
 		conn, err := net.DialTimeout("tcp", address, timeout)
 		if err == nil {
 			openPorts = append(openPorts, port)
-			conn.Close()
+			if err := conn.Close(); err != nil {
+				log.Printf("connection close failed (addr: %s): %v", conn.RemoteAddr(), err)
+			}
 		}
 	}
 

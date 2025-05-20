@@ -5,7 +5,7 @@ import (
 )
 
 func init() {
-	Register(&Plugin{
+	Register(&Plugins{
 		ID:           "ssh_cve_2016_0777",
 		Name:         "OpenSSH 7.1p2 Vulnerability",
 		RequirePorts: []int{22},

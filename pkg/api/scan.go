@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/pentoraai/pentora/pkg/scanner"
+	"github.com/pentora-ai/pentora/pkg/scanner"
 )
 
 // ScanRequest represents the input JSON structure for a scan job
@@ -33,5 +33,9 @@ func ScanHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(results)
+
+	if err := json.NewEncoder(w).Encode(results); err != nil {
+		http.Error(w, "Failed to encode response: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
