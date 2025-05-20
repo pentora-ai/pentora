@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -16,57 +17,46 @@ import (
 	"github.com/pentora-ai/pentora/pkg/cli"
 	"github.com/pentora-ai/pentora/pkg/config/static"
 	"github.com/pentora-ai/pentora/pkg/core"
-	lic "github.com/pentora-ai/pentora/pkg/license"
 	"github.com/pentora-ai/pentora/pkg/safe"
 	"github.com/pentora-ai/pentora/pkg/server"
 	"github.com/pentora-ai/pentora/pkg/server/service"
 	"github.com/pentora-ai/pentora/pkg/version"
 	"github.com/rs/zerolog/log"
-	"github.com/sirupsen/logrus"
-
-	//"github.com/pentora-ai/pentora/pkg/core/logger"
 
 	"github.com/spf13/cobra"
 )
-
-var rootCmd = &cobra.Command{
-	Use:   "pentora",
-	Short: "Pentora - Platform-independent vulnerability scanner",
-	Long:  `Pentora is a cross-platform security scanner designed to find vulnerabilities and misconfigurations in your infrastructure.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Pentora CLI. Use --help for available commands.")
-	},
-}
-
-func loadGlobalLicense() {
-	lic.GlobalStatus = lic.Check(lic.GetDefaultLicensePath(), lic.GetPublicKeyPath())
-
-	if lic.GlobalStatus.Valid {
-		fmt.Println("🔐 License OK –", lic.GlobalStatus.Payload.Licensee)
-	} else if lic.GlobalStatus.Error != nil {
-		fmt.Println("⚠️ License error:", lic.GlobalStatus.Error)
-	} else {
-		fmt.Println("⚠️ No license found. Running in free mode.")
-	}
-}
-
-func init() {
-	rootCmd.AddCommand(cli.ServeCmd)
-	rootCmd.AddCommand(cli.ScanCmd)
-	rootCmd.AddCommand(license.LicenseCmd)
-	rootCmd.AddCommand(cmdVersion.VersionCmd)
-}
 
 func main() {
 	// pentora config inits
 	pConfig := cmd.NewPentoraConfiguration()
 
-	runCmd(&pConfig.Configuration)
+	rootCmd := NewRootCmd(&pConfig.Configuration)
 
-	logrus.Exit(0)
+	rootCmd.AddCommand(cli.ServeCmd)
+	rootCmd.AddCommand(cli.ScanCmd)
+	rootCmd.AddCommand(license.LicenseCmd)
+	rootCmd.AddCommand(cmdVersion.VersionCmd)
+
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }
 
-func runCmd(staticConfiguration *static.Configuration) error {
+func NewRootCmd(pConfig *static.Configuration) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "pentora",
+		Short: "Pentora - Platform-independent vulnerability scanner",
+		Long:  `Pentora is a cross-platform security scanner designed to find vulnerabilities and misconfigurations in your infrastructure.`,
+		Run: func(cmd *cobra.Command, args []string) {
+			StartPentora(pConfig)
+		},
+	}
+
+	return cmd
+}
+
+func StartPentora(staticConfiguration *static.Configuration) error {
 	if err := core.SetupLogger(staticConfiguration); err != nil {
 		return fmt.Errorf("failed to setting up logger: %w", err)
 	}
@@ -74,26 +64,10 @@ func runCmd(staticConfiguration *static.Configuration) error {
 	app := core.NewAppManager()
 	_ = app.Init()
 
-	app.HookManager.Register("plugin:beforeRun:ping", func(ctx context.Context) {
-		log.Info().Msg("Running before plugin:ping hooks...")
-	})
-
-	app.HookManager.Register("plugin:onError:ping", func(ctx context.Context) {
-		log.Info().Msg("Running onError plugin:ping hooks...")
-	})
-
-	app.HookManager.Register("plugin:afterRun:ping", func(ctx context.Context) {
-		log.Info().Msg("Running after plugin:ping hooks...")
-	})
-
 	err := app.Orchestrator.RunPluginsDAGParallelLayers(app.Context(), "192.168.1.1")
 	if err != nil {
 		log.Err(err).Msg("scan failed:")
 	}
-
-	app.HookManager.Register("onShutdown", func(ctx context.Context) {
-		log.Info().Msg("Running shutdown hooks...")
-	})
 
 	log.Info().Str("version", version.Version).
 		Msgf("Pentora version %s built on %s", version.Version, version.BuildDate)
