@@ -12,7 +12,6 @@ import (
 
 	"github.com/coreos/go-systemd/v22/daemon"
 	"github.com/pentora-ai/pentora/cmd"
-	"github.com/pentora-ai/pentora/cmd/license"
 	cmdVersion "github.com/pentora-ai/pentora/cmd/version"
 	"github.com/pentora-ai/pentora/pkg/cli"
 	"github.com/pentora-ai/pentora/pkg/config/static"
@@ -34,7 +33,6 @@ func main() {
 
 	rootCmd.AddCommand(cli.ServeCmd)
 	rootCmd.AddCommand(cli.ScanCmd)
-	rootCmd.AddCommand(license.LicenseCmd)
 	rootCmd.AddCommand(cmdVersion.VersionCmd)
 
 	if err := rootCmd.Execute(); err != nil {
