@@ -1,104 +1,81 @@
 // pkg/engine/proto/module_api.proto
-
 syntax = "proto3";
 
 package engine;
-
-// Define the Go package for the generated code.
-// This should align with your project's Go module structure.
 option go_package = "github.com/pentora-ai/pentora/pkg/engine/proto";
 
-// ModuleExecutionService will be implemented by each external module.
-// Pentora (the core engine) will act as a client to this service
-// when it needs to invoke an external module.
-service ModuleExecutionService {
-  // Pentora calls this RPC to initiate the module's primary task.
-  // The module is expected to stream its results (outputs) back to Pentora.
-  // The stream nature allows for partial results or continuous data flow.
-  rpc Execute (ExecuteRequest) returns (stream ExecuteResponse);
-
-  // Optional: An RPC for Pentora to fetch metadata from the external module
-  // after it has been started. This could be used if metadata isn't fully
-  // defined in the DAG or needs to be dynamically verified.
-  // rpc GetMetadata (MetadataRequest) returns (ModuleMetadataMessage);
+// This service will be IMPLEMENTED BY PENTORA'S CORE.
+// External modules will CONNECT TO THIS SERVICE as clients.
+service PentoraModuleHost {
+  // External module calls this to announce its presence and get tasks,
+  // or to send results back. This could be a bi-directional stream.
+  // Module sends its metadata first, then Pentora streams tasks,
+  // and module streams back results.
+  rpc ModuleStream(stream ModuleMessage) returns (stream HostMessage);
 }
 
-/*
-// Optional: If structured metadata exchange via gRPC is desired.
-// This would mirror the fields in your Go `engine.ModuleMetadata` struct.
-message ModuleMetadataMessage {
-  string name = 1;        // The registered type/name of the module (e.g., "icmp-ping-discovery")
-  string version = 2;     // Module version
-  string description = 3; // Brief description of the module
-  repeated string produces = 4; // List of data keys this module can produce
-  repeated string consumes = 5; // List of data keys this module requires as input
-  string config_schema_json = 6; // JSON string representing the module's configuration schema
-  // Add other relevant metadata fields like author, tags, module_type etc.
+// Message from External Module to Pentora Host
+message ModuleMessage {
+  oneof payload {
+    ModuleRegistration registration = 1; // First message from module
+    TaskOutputResult output_result = 2;  // Subsequent messages with results
+    ModuleHeartbeat heartbeat = 3;       // Optional: for long-running modules
+  }
 }
 
-message MetadataRequest {
-  // Could be empty if the service is dedicated to a single module instance,
-  // or could contain an identifier if one gRPC server instance might serve
-  // different logical module functionalities (less likely in the per-process model).
+// Message from Pentora Host to External Module
+message HostMessage {
+  oneof payload {
+    RegistrationAck registration_ack = 1; // Acknowledgement for registration
+    ExecuteNewTask execute_task = 2;       // Command to execute a task
+    HostControlSignal control_signal = 3; // e.g., shutdown, cancel_task
+  }
 }
-*/
 
-// ExecuteRequest is the message Pentora sends to an external module to start its execution.
-message ExecuteRequest {
-  // Identifier for the overall scan job or session, useful for logging and context.
-  string scan_id = 1;
+message ModuleRegistration {
+  string module_type_name = 1; // e.g., "external-icmp-ping"
+  string module_version = 2;
+  // Add other relevant metadata the module wants to provide (consumes, produces can be static in DAG for now)
+  string instance_hint = 3; // Optional: if Pentora launched multiple instances of this type
+}
 
-  // Unique identifier for this specific instance of the module within the current DAG.
-  // This helps the module understand its specific role if multiple instances of the same module type exist.
-  string instance_id = 2;
+message RegistrationAck {
+  bool success = 1;
+  string message = 2;
+  string assigned_session_id = 3; // Pentora assigns a session ID for this connection
+}
 
-  // Input data for the module, typically outputs from its dependency modules in the DAG.
-  // The key is the `data_key` (e.g., "discovery.live_hosts") and the value is the data itself,
-  // serialized into bytes (e.g., as JSON).
+message ExecuteNewTask {
+  string task_id = 1;             // Unique ID for this specific task execution
+  string instance_id_from_dag = 2; // The InstanceID as defined in Pentora's DAG
   map<string, bytes> inputs = 3;
-
-  // Module-specific configuration.
-  // Keys are configuration parameter names, and values are their string representations.
-  // For complex configurations (nested objects, arrays), the value for a key could be a JSON string.
   map<string, string> module_config = 4;
-
-  // Optional: A list of `data_key`s that Pentora (orchestrator) expects this module to produce.
-  // This can help the module optimize or validate its output.
-  repeated string expected_output_keys = 5;
 }
 
-// OutputData represents a single piece of structured data produced by an external module.
-// This is streamed back to Pentora as part of an ExecuteResponse.
-message OutputData {
-  // The key identifying this specific piece of data (e.g., "discovery.live_hosts", "service.banner.ssh").
-  // This should align with one of the keys declared in the module's `Produces` metadata.
-  string data_key = 1;
-
-  // The actual data payload, serialized into bytes (e.g., JSON, plain text, or other binary formats).
-  // Pentora's orchestrator or subsequent modules will need to know how to deserialize this.
-  bytes data = 2;
-
-  // If an error occurred while trying to produce this specific piece of data,
-  // the error message can be included here. The main RPC might still succeed overall
-  // if the module can continue or produce other valid outputs.
-  string error_message = 3;
-
-  // Unix timestamp (seconds since epoch) indicating when this data was generated.
-  int64 timestamp = 4;
-
-  // The specific target (e.g., IP address, hostname, URL) to which this data pertains, if applicable.
-  string target = 5;
+message TaskOutputResult {
+  string task_id = 1;            // Correlates with ExecuteNewTask.task_id
+  string instance_id_from_dag = 2;
+  string data_key = 3;
+  bytes data = 4;
+  string error_message = 5;
+  int64 timestamp = 6;
+  string target = 7;
+  bool is_final_for_key = 8;
+  bool is_task_complete = 9;    // True if this module instance has completed all work for this task_id
 }
 
-// ExecuteResponse is a message streamed from the external module back to Pentora.
-// Each message typically contains one piece of OutputData.
-message ExecuteResponse {
-  OutputData output = 1;
+message ModuleHeartbeat {
+  string session_id = 1;
+  int64 timestamp = 2;
+}
 
-  // Notes on stream termination and overall module status:
-  // - The successful completion of the gRPC stream (i.e., the server side closes it without error)
-  //   indicates that the module has finished all its processing for the ExecuteRequest.
-  // - If the module encounters a fatal error that prevents it from continuing, it should
-  //   return a gRPC error status for the stream.
-  // - Individual errors related to specific outputs can be conveyed within the `OutputData.error_message`.
+message HostControlSignal {
+  string session_id = 1;
+  enum SignalType {
+    NO_OP = 0;
+    REQUEST_SHUTDOWN = 1;
+    CANCEL_TASK = 2;
+  }
+  SignalType signal = 2;
+  string task_id_to_cancel = 3; // if signal is CANCEL_TASK
 }

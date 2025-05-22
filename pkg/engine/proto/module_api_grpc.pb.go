@@ -21,120 +21,110 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ModuleExecutionService_Execute_FullMethodName = "/engine.ModuleExecutionService/Execute"
+	PentoraModuleHost_ModuleStream_FullMethodName = "/engine.PentoraModuleHost/ModuleStream"
 )
 
-// ModuleExecutionServiceClient is the client API for ModuleExecutionService service.
+// PentoraModuleHostClient is the client API for PentoraModuleHost service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// ModuleExecutionService will be implemented by each external module.
-// Pentora (the core engine) will act as a client to this service
-// when it needs to invoke an external module.
-type ModuleExecutionServiceClient interface {
-	// Pentora calls this RPC to initiate the module's primary task.
-	// The module is expected to stream its results (outputs) back to Pentora.
-	// The stream nature allows for partial results or continuous data flow.
-	Execute(ctx context.Context, in *ExecuteRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ExecuteResponse], error)
+// This service will be IMPLEMENTED BY PENTORA'S CORE.
+// External modules will CONNECT TO THIS SERVICE as clients.
+type PentoraModuleHostClient interface {
+	// External module calls this to announce its presence and get tasks,
+	// or to send results back. This could be a bi-directional stream.
+	// Module sends its metadata first, then Pentora streams tasks,
+	// and module streams back results.
+	ModuleStream(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[ModuleMessage, HostMessage], error)
 }
 
-type moduleExecutionServiceClient struct {
+type pentoraModuleHostClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewModuleExecutionServiceClient(cc grpc.ClientConnInterface) ModuleExecutionServiceClient {
-	return &moduleExecutionServiceClient{cc}
+func NewPentoraModuleHostClient(cc grpc.ClientConnInterface) PentoraModuleHostClient {
+	return &pentoraModuleHostClient{cc}
 }
 
-func (c *moduleExecutionServiceClient) Execute(ctx context.Context, in *ExecuteRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ExecuteResponse], error) {
+func (c *pentoraModuleHostClient) ModuleStream(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[ModuleMessage, HostMessage], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &ModuleExecutionService_ServiceDesc.Streams[0], ModuleExecutionService_Execute_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &PentoraModuleHost_ServiceDesc.Streams[0], PentoraModuleHost_ModuleStream_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &grpc.GenericClientStream[ExecuteRequest, ExecuteResponse]{ClientStream: stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
+	x := &grpc.GenericClientStream[ModuleMessage, HostMessage]{ClientStream: stream}
 	return x, nil
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type ModuleExecutionService_ExecuteClient = grpc.ServerStreamingClient[ExecuteResponse]
+type PentoraModuleHost_ModuleStreamClient = grpc.BidiStreamingClient[ModuleMessage, HostMessage]
 
-// ModuleExecutionServiceServer is the server API for ModuleExecutionService service.
-// All implementations must embed UnimplementedModuleExecutionServiceServer
+// PentoraModuleHostServer is the server API for PentoraModuleHost service.
+// All implementations must embed UnimplementedPentoraModuleHostServer
 // for forward compatibility.
 //
-// ModuleExecutionService will be implemented by each external module.
-// Pentora (the core engine) will act as a client to this service
-// when it needs to invoke an external module.
-type ModuleExecutionServiceServer interface {
-	// Pentora calls this RPC to initiate the module's primary task.
-	// The module is expected to stream its results (outputs) back to Pentora.
-	// The stream nature allows for partial results or continuous data flow.
-	Execute(*ExecuteRequest, grpc.ServerStreamingServer[ExecuteResponse]) error
-	mustEmbedUnimplementedModuleExecutionServiceServer()
+// This service will be IMPLEMENTED BY PENTORA'S CORE.
+// External modules will CONNECT TO THIS SERVICE as clients.
+type PentoraModuleHostServer interface {
+	// External module calls this to announce its presence and get tasks,
+	// or to send results back. This could be a bi-directional stream.
+	// Module sends its metadata first, then Pentora streams tasks,
+	// and module streams back results.
+	ModuleStream(grpc.BidiStreamingServer[ModuleMessage, HostMessage]) error
+	mustEmbedUnimplementedPentoraModuleHostServer()
 }
 
-// UnimplementedModuleExecutionServiceServer must be embedded to have
+// UnimplementedPentoraModuleHostServer must be embedded to have
 // forward compatible implementations.
 //
 // NOTE: this should be embedded by value instead of pointer to avoid a nil
 // pointer dereference when methods are called.
-type UnimplementedModuleExecutionServiceServer struct{}
+type UnimplementedPentoraModuleHostServer struct{}
 
-func (UnimplementedModuleExecutionServiceServer) Execute(*ExecuteRequest, grpc.ServerStreamingServer[ExecuteResponse]) error {
-	return status.Errorf(codes.Unimplemented, "method Execute not implemented")
+func (UnimplementedPentoraModuleHostServer) ModuleStream(grpc.BidiStreamingServer[ModuleMessage, HostMessage]) error {
+	return status.Errorf(codes.Unimplemented, "method ModuleStream not implemented")
 }
-func (UnimplementedModuleExecutionServiceServer) mustEmbedUnimplementedModuleExecutionServiceServer() {
-}
-func (UnimplementedModuleExecutionServiceServer) testEmbeddedByValue() {}
+func (UnimplementedPentoraModuleHostServer) mustEmbedUnimplementedPentoraModuleHostServer() {}
+func (UnimplementedPentoraModuleHostServer) testEmbeddedByValue()                           {}
 
-// UnsafeModuleExecutionServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to ModuleExecutionServiceServer will
+// UnsafePentoraModuleHostServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to PentoraModuleHostServer will
 // result in compilation errors.
-type UnsafeModuleExecutionServiceServer interface {
-	mustEmbedUnimplementedModuleExecutionServiceServer()
+type UnsafePentoraModuleHostServer interface {
+	mustEmbedUnimplementedPentoraModuleHostServer()
 }
 
-func RegisterModuleExecutionServiceServer(s grpc.ServiceRegistrar, srv ModuleExecutionServiceServer) {
-	// If the following call pancis, it indicates UnimplementedModuleExecutionServiceServer was
+func RegisterPentoraModuleHostServer(s grpc.ServiceRegistrar, srv PentoraModuleHostServer) {
+	// If the following call pancis, it indicates UnimplementedPentoraModuleHostServer was
 	// embedded by pointer and is nil.  This will cause panics if an
 	// unimplemented method is ever invoked, so we test this at initialization
 	// time to prevent it from happening at runtime later due to I/O.
 	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
 		t.testEmbeddedByValue()
 	}
-	s.RegisterService(&ModuleExecutionService_ServiceDesc, srv)
+	s.RegisterService(&PentoraModuleHost_ServiceDesc, srv)
 }
 
-func _ModuleExecutionService_Execute_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(ExecuteRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(ModuleExecutionServiceServer).Execute(m, &grpc.GenericServerStream[ExecuteRequest, ExecuteResponse]{ServerStream: stream})
+func _PentoraModuleHost_ModuleStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(PentoraModuleHostServer).ModuleStream(&grpc.GenericServerStream[ModuleMessage, HostMessage]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type ModuleExecutionService_ExecuteServer = grpc.ServerStreamingServer[ExecuteResponse]
+type PentoraModuleHost_ModuleStreamServer = grpc.BidiStreamingServer[ModuleMessage, HostMessage]
 
-// ModuleExecutionService_ServiceDesc is the grpc.ServiceDesc for ModuleExecutionService service.
+// PentoraModuleHost_ServiceDesc is the grpc.ServiceDesc for PentoraModuleHost service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var ModuleExecutionService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "engine.ModuleExecutionService",
-	HandlerType: (*ModuleExecutionServiceServer)(nil),
+var PentoraModuleHost_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "engine.PentoraModuleHost",
+	HandlerType: (*PentoraModuleHostServer)(nil),
 	Methods:     []grpc.MethodDesc{},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "Execute",
-			Handler:       _ModuleExecutionService_Execute_Handler,
+			StreamName:    "ModuleStream",
+			Handler:       _PentoraModuleHost_ModuleStream_Handler,
 			ServerStreams: true,
+			ClientStreams: true,
 		},
 	},
 	Metadata: "pkg/engine/proto/module_api.proto",

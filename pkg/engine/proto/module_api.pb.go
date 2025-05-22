@@ -23,43 +23,82 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// ExecuteRequest is the message Pentora sends to an external module to start its execution.
-type ExecuteRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Identifier for the overall scan job or session, useful for logging and context.
-	ScanId string `protobuf:"bytes,1,opt,name=scan_id,json=scanId,proto3" json:"scan_id,omitempty"`
-	// Unique identifier for this specific instance of the module within the current DAG.
-	// This helps the module understand its specific role if multiple instances of the same module type exist.
-	InstanceId string `protobuf:"bytes,2,opt,name=instance_id,json=instanceId,proto3" json:"instance_id,omitempty"`
-	// Input data for the module, typically outputs from its dependency modules in the DAG.
-	// The key is the `data_key` (e.g., "discovery.live_hosts") and the value is the data itself,
-	// serialized into bytes (e.g., as JSON).
-	Inputs map[string][]byte `protobuf:"bytes,3,rep,name=inputs,proto3" json:"inputs,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	// Module-specific configuration.
-	// Keys are configuration parameter names, and values are their string representations.
-	// For complex configurations (nested objects, arrays), the value for a key could be a JSON string.
-	ModuleConfig map[string]string `protobuf:"bytes,4,rep,name=module_config,json=moduleConfig,proto3" json:"module_config,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	// Optional: A list of `data_key`s that Pentora (orchestrator) expects this module to produce.
-	// This can help the module optimize or validate its output.
-	ExpectedOutputKeys []string `protobuf:"bytes,5,rep,name=expected_output_keys,json=expectedOutputKeys,proto3" json:"expected_output_keys,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+type HostControlSignal_SignalType int32
+
+const (
+	HostControlSignal_NO_OP            HostControlSignal_SignalType = 0
+	HostControlSignal_REQUEST_SHUTDOWN HostControlSignal_SignalType = 1
+	HostControlSignal_CANCEL_TASK      HostControlSignal_SignalType = 2
+)
+
+// Enum value maps for HostControlSignal_SignalType.
+var (
+	HostControlSignal_SignalType_name = map[int32]string{
+		0: "NO_OP",
+		1: "REQUEST_SHUTDOWN",
+		2: "CANCEL_TASK",
+	}
+	HostControlSignal_SignalType_value = map[string]int32{
+		"NO_OP":            0,
+		"REQUEST_SHUTDOWN": 1,
+		"CANCEL_TASK":      2,
+	}
+)
+
+func (x HostControlSignal_SignalType) Enum() *HostControlSignal_SignalType {
+	p := new(HostControlSignal_SignalType)
+	*p = x
+	return p
 }
 
-func (x *ExecuteRequest) Reset() {
-	*x = ExecuteRequest{}
+func (x HostControlSignal_SignalType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (HostControlSignal_SignalType) Descriptor() protoreflect.EnumDescriptor {
+	return file_pkg_engine_proto_module_api_proto_enumTypes[0].Descriptor()
+}
+
+func (HostControlSignal_SignalType) Type() protoreflect.EnumType {
+	return &file_pkg_engine_proto_module_api_proto_enumTypes[0]
+}
+
+func (x HostControlSignal_SignalType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use HostControlSignal_SignalType.Descriptor instead.
+func (HostControlSignal_SignalType) EnumDescriptor() ([]byte, []int) {
+	return file_pkg_engine_proto_module_api_proto_rawDescGZIP(), []int{7, 0}
+}
+
+// Message from External Module to Pentora Host
+type ModuleMessage struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Payload:
+	//
+	//	*ModuleMessage_Registration
+	//	*ModuleMessage_OutputResult
+	//	*ModuleMessage_Heartbeat
+	Payload       isModuleMessage_Payload `protobuf_oneof:"payload"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ModuleMessage) Reset() {
+	*x = ModuleMessage{}
 	mi := &file_pkg_engine_proto_module_api_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ExecuteRequest) String() string {
+func (x *ModuleMessage) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ExecuteRequest) ProtoMessage() {}
+func (*ModuleMessage) ProtoMessage() {}
 
-func (x *ExecuteRequest) ProtoReflect() protoreflect.Message {
+func (x *ModuleMessage) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_engine_proto_module_api_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -71,83 +110,385 @@ func (x *ExecuteRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ExecuteRequest.ProtoReflect.Descriptor instead.
-func (*ExecuteRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use ModuleMessage.ProtoReflect.Descriptor instead.
+func (*ModuleMessage) Descriptor() ([]byte, []int) {
 	return file_pkg_engine_proto_module_api_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *ExecuteRequest) GetScanId() string {
+func (x *ModuleMessage) GetPayload() isModuleMessage_Payload {
 	if x != nil {
-		return x.ScanId
+		return x.Payload
+	}
+	return nil
+}
+
+func (x *ModuleMessage) GetRegistration() *ModuleRegistration {
+	if x != nil {
+		if x, ok := x.Payload.(*ModuleMessage_Registration); ok {
+			return x.Registration
+		}
+	}
+	return nil
+}
+
+func (x *ModuleMessage) GetOutputResult() *TaskOutputResult {
+	if x != nil {
+		if x, ok := x.Payload.(*ModuleMessage_OutputResult); ok {
+			return x.OutputResult
+		}
+	}
+	return nil
+}
+
+func (x *ModuleMessage) GetHeartbeat() *ModuleHeartbeat {
+	if x != nil {
+		if x, ok := x.Payload.(*ModuleMessage_Heartbeat); ok {
+			return x.Heartbeat
+		}
+	}
+	return nil
+}
+
+type isModuleMessage_Payload interface {
+	isModuleMessage_Payload()
+}
+
+type ModuleMessage_Registration struct {
+	Registration *ModuleRegistration `protobuf:"bytes,1,opt,name=registration,proto3,oneof"` // First message from module
+}
+
+type ModuleMessage_OutputResult struct {
+	OutputResult *TaskOutputResult `protobuf:"bytes,2,opt,name=output_result,json=outputResult,proto3,oneof"` // Subsequent messages with results
+}
+
+type ModuleMessage_Heartbeat struct {
+	Heartbeat *ModuleHeartbeat `protobuf:"bytes,3,opt,name=heartbeat,proto3,oneof"` // Optional: for long-running modules
+}
+
+func (*ModuleMessage_Registration) isModuleMessage_Payload() {}
+
+func (*ModuleMessage_OutputResult) isModuleMessage_Payload() {}
+
+func (*ModuleMessage_Heartbeat) isModuleMessage_Payload() {}
+
+// Message from Pentora Host to External Module
+type HostMessage struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Payload:
+	//
+	//	*HostMessage_RegistrationAck
+	//	*HostMessage_ExecuteTask
+	//	*HostMessage_ControlSignal
+	Payload       isHostMessage_Payload `protobuf_oneof:"payload"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HostMessage) Reset() {
+	*x = HostMessage{}
+	mi := &file_pkg_engine_proto_module_api_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HostMessage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HostMessage) ProtoMessage() {}
+
+func (x *HostMessage) ProtoReflect() protoreflect.Message {
+	mi := &file_pkg_engine_proto_module_api_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HostMessage.ProtoReflect.Descriptor instead.
+func (*HostMessage) Descriptor() ([]byte, []int) {
+	return file_pkg_engine_proto_module_api_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *HostMessage) GetPayload() isHostMessage_Payload {
+	if x != nil {
+		return x.Payload
+	}
+	return nil
+}
+
+func (x *HostMessage) GetRegistrationAck() *RegistrationAck {
+	if x != nil {
+		if x, ok := x.Payload.(*HostMessage_RegistrationAck); ok {
+			return x.RegistrationAck
+		}
+	}
+	return nil
+}
+
+func (x *HostMessage) GetExecuteTask() *ExecuteNewTask {
+	if x != nil {
+		if x, ok := x.Payload.(*HostMessage_ExecuteTask); ok {
+			return x.ExecuteTask
+		}
+	}
+	return nil
+}
+
+func (x *HostMessage) GetControlSignal() *HostControlSignal {
+	if x != nil {
+		if x, ok := x.Payload.(*HostMessage_ControlSignal); ok {
+			return x.ControlSignal
+		}
+	}
+	return nil
+}
+
+type isHostMessage_Payload interface {
+	isHostMessage_Payload()
+}
+
+type HostMessage_RegistrationAck struct {
+	RegistrationAck *RegistrationAck `protobuf:"bytes,1,opt,name=registration_ack,json=registrationAck,proto3,oneof"` // Acknowledgement for registration
+}
+
+type HostMessage_ExecuteTask struct {
+	ExecuteTask *ExecuteNewTask `protobuf:"bytes,2,opt,name=execute_task,json=executeTask,proto3,oneof"` // Command to execute a task
+}
+
+type HostMessage_ControlSignal struct {
+	ControlSignal *HostControlSignal `protobuf:"bytes,3,opt,name=control_signal,json=controlSignal,proto3,oneof"` // e.g., shutdown, cancel_task
+}
+
+func (*HostMessage_RegistrationAck) isHostMessage_Payload() {}
+
+func (*HostMessage_ExecuteTask) isHostMessage_Payload() {}
+
+func (*HostMessage_ControlSignal) isHostMessage_Payload() {}
+
+type ModuleRegistration struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	ModuleTypeName string                 `protobuf:"bytes,1,opt,name=module_type_name,json=moduleTypeName,proto3" json:"module_type_name,omitempty"` // e.g., "external-icmp-ping"
+	ModuleVersion  string                 `protobuf:"bytes,2,opt,name=module_version,json=moduleVersion,proto3" json:"module_version,omitempty"`
+	// Add other relevant metadata the module wants to provide (consumes, produces can be static in DAG for now)
+	InstanceHint  string `protobuf:"bytes,3,opt,name=instance_hint,json=instanceHint,proto3" json:"instance_hint,omitempty"` // Optional: if Pentora launched multiple instances of this type
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ModuleRegistration) Reset() {
+	*x = ModuleRegistration{}
+	mi := &file_pkg_engine_proto_module_api_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ModuleRegistration) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ModuleRegistration) ProtoMessage() {}
+
+func (x *ModuleRegistration) ProtoReflect() protoreflect.Message {
+	mi := &file_pkg_engine_proto_module_api_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ModuleRegistration.ProtoReflect.Descriptor instead.
+func (*ModuleRegistration) Descriptor() ([]byte, []int) {
+	return file_pkg_engine_proto_module_api_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ModuleRegistration) GetModuleTypeName() string {
+	if x != nil {
+		return x.ModuleTypeName
 	}
 	return ""
 }
 
-func (x *ExecuteRequest) GetInstanceId() string {
+func (x *ModuleRegistration) GetModuleVersion() string {
 	if x != nil {
-		return x.InstanceId
+		return x.ModuleVersion
 	}
 	return ""
 }
 
-func (x *ExecuteRequest) GetInputs() map[string][]byte {
+func (x *ModuleRegistration) GetInstanceHint() string {
+	if x != nil {
+		return x.InstanceHint
+	}
+	return ""
+}
+
+type RegistrationAck struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Success           bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Message           string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	AssignedSessionId string                 `protobuf:"bytes,3,opt,name=assigned_session_id,json=assignedSessionId,proto3" json:"assigned_session_id,omitempty"` // Pentora assigns a session ID for this connection
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *RegistrationAck) Reset() {
+	*x = RegistrationAck{}
+	mi := &file_pkg_engine_proto_module_api_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RegistrationAck) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RegistrationAck) ProtoMessage() {}
+
+func (x *RegistrationAck) ProtoReflect() protoreflect.Message {
+	mi := &file_pkg_engine_proto_module_api_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RegistrationAck.ProtoReflect.Descriptor instead.
+func (*RegistrationAck) Descriptor() ([]byte, []int) {
+	return file_pkg_engine_proto_module_api_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *RegistrationAck) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *RegistrationAck) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *RegistrationAck) GetAssignedSessionId() string {
+	if x != nil {
+		return x.AssignedSessionId
+	}
+	return ""
+}
+
+type ExecuteNewTask struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	TaskId            string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`                                      // Unique ID for this specific task execution
+	InstanceIdFromDag string                 `protobuf:"bytes,2,opt,name=instance_id_from_dag,json=instanceIdFromDag,proto3" json:"instance_id_from_dag,omitempty"` // The InstanceID as defined in Pentora's DAG
+	Inputs            map[string][]byte      `protobuf:"bytes,3,rep,name=inputs,proto3" json:"inputs,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	ModuleConfig      map[string]string      `protobuf:"bytes,4,rep,name=module_config,json=moduleConfig,proto3" json:"module_config,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *ExecuteNewTask) Reset() {
+	*x = ExecuteNewTask{}
+	mi := &file_pkg_engine_proto_module_api_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExecuteNewTask) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExecuteNewTask) ProtoMessage() {}
+
+func (x *ExecuteNewTask) ProtoReflect() protoreflect.Message {
+	mi := &file_pkg_engine_proto_module_api_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExecuteNewTask.ProtoReflect.Descriptor instead.
+func (*ExecuteNewTask) Descriptor() ([]byte, []int) {
+	return file_pkg_engine_proto_module_api_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ExecuteNewTask) GetTaskId() string {
+	if x != nil {
+		return x.TaskId
+	}
+	return ""
+}
+
+func (x *ExecuteNewTask) GetInstanceIdFromDag() string {
+	if x != nil {
+		return x.InstanceIdFromDag
+	}
+	return ""
+}
+
+func (x *ExecuteNewTask) GetInputs() map[string][]byte {
 	if x != nil {
 		return x.Inputs
 	}
 	return nil
 }
 
-func (x *ExecuteRequest) GetModuleConfig() map[string]string {
+func (x *ExecuteNewTask) GetModuleConfig() map[string]string {
 	if x != nil {
 		return x.ModuleConfig
 	}
 	return nil
 }
 
-func (x *ExecuteRequest) GetExpectedOutputKeys() []string {
-	if x != nil {
-		return x.ExpectedOutputKeys
-	}
-	return nil
+type TaskOutputResult struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	TaskId            string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"` // Correlates with ExecuteNewTask.task_id
+	InstanceIdFromDag string                 `protobuf:"bytes,2,opt,name=instance_id_from_dag,json=instanceIdFromDag,proto3" json:"instance_id_from_dag,omitempty"`
+	DataKey           string                 `protobuf:"bytes,3,opt,name=data_key,json=dataKey,proto3" json:"data_key,omitempty"`
+	Data              []byte                 `protobuf:"bytes,4,opt,name=data,proto3" json:"data,omitempty"`
+	ErrorMessage      string                 `protobuf:"bytes,5,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
+	Timestamp         int64                  `protobuf:"varint,6,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	Target            string                 `protobuf:"bytes,7,opt,name=target,proto3" json:"target,omitempty"`
+	IsFinalForKey     bool                   `protobuf:"varint,8,opt,name=is_final_for_key,json=isFinalForKey,proto3" json:"is_final_for_key,omitempty"`
+	IsTaskComplete    bool                   `protobuf:"varint,9,opt,name=is_task_complete,json=isTaskComplete,proto3" json:"is_task_complete,omitempty"` // True if this module instance has completed all work for this task_id
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
-// OutputData represents a single piece of structured data produced by an external module.
-// This is streamed back to Pentora as part of an ExecuteResponse.
-type OutputData struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// The key identifying this specific piece of data (e.g., "discovery.live_hosts", "service.banner.ssh").
-	// This should align with one of the keys declared in the module's `Produces` metadata.
-	DataKey string `protobuf:"bytes,1,opt,name=data_key,json=dataKey,proto3" json:"data_key,omitempty"`
-	// The actual data payload, serialized into bytes (e.g., JSON, plain text, or other binary formats).
-	// Pentora's orchestrator or subsequent modules will need to know how to deserialize this.
-	Data []byte `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
-	// If an error occurred while trying to produce this specific piece of data,
-	// the error message can be included here. The main RPC might still succeed overall
-	// if the module can continue or produce other valid outputs.
-	ErrorMessage string `protobuf:"bytes,3,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
-	// Unix timestamp (seconds since epoch) indicating when this data was generated.
-	Timestamp int64 `protobuf:"varint,4,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	// The specific target (e.g., IP address, hostname, URL) to which this data pertains, if applicable.
-	Target        string `protobuf:"bytes,5,opt,name=target,proto3" json:"target,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *OutputData) Reset() {
-	*x = OutputData{}
-	mi := &file_pkg_engine_proto_module_api_proto_msgTypes[1]
+func (x *TaskOutputResult) Reset() {
+	*x = TaskOutputResult{}
+	mi := &file_pkg_engine_proto_module_api_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *OutputData) String() string {
+func (x *TaskOutputResult) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*OutputData) ProtoMessage() {}
+func (*TaskOutputResult) ProtoMessage() {}
 
-func (x *OutputData) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_engine_proto_module_api_proto_msgTypes[1]
+func (x *TaskOutputResult) ProtoReflect() protoreflect.Message {
+	mi := &file_pkg_engine_proto_module_api_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -158,70 +499,97 @@ func (x *OutputData) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use OutputData.ProtoReflect.Descriptor instead.
-func (*OutputData) Descriptor() ([]byte, []int) {
-	return file_pkg_engine_proto_module_api_proto_rawDescGZIP(), []int{1}
+// Deprecated: Use TaskOutputResult.ProtoReflect.Descriptor instead.
+func (*TaskOutputResult) Descriptor() ([]byte, []int) {
+	return file_pkg_engine_proto_module_api_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *OutputData) GetDataKey() string {
+func (x *TaskOutputResult) GetTaskId() string {
+	if x != nil {
+		return x.TaskId
+	}
+	return ""
+}
+
+func (x *TaskOutputResult) GetInstanceIdFromDag() string {
+	if x != nil {
+		return x.InstanceIdFromDag
+	}
+	return ""
+}
+
+func (x *TaskOutputResult) GetDataKey() string {
 	if x != nil {
 		return x.DataKey
 	}
 	return ""
 }
 
-func (x *OutputData) GetData() []byte {
+func (x *TaskOutputResult) GetData() []byte {
 	if x != nil {
 		return x.Data
 	}
 	return nil
 }
 
-func (x *OutputData) GetErrorMessage() string {
+func (x *TaskOutputResult) GetErrorMessage() string {
 	if x != nil {
 		return x.ErrorMessage
 	}
 	return ""
 }
 
-func (x *OutputData) GetTimestamp() int64 {
+func (x *TaskOutputResult) GetTimestamp() int64 {
 	if x != nil {
 		return x.Timestamp
 	}
 	return 0
 }
 
-func (x *OutputData) GetTarget() string {
+func (x *TaskOutputResult) GetTarget() string {
 	if x != nil {
 		return x.Target
 	}
 	return ""
 }
 
-// ExecuteResponse is a message streamed from the external module back to Pentora.
-// Each message typically contains one piece of OutputData.
-type ExecuteResponse struct {
+func (x *TaskOutputResult) GetIsFinalForKey() bool {
+	if x != nil {
+		return x.IsFinalForKey
+	}
+	return false
+}
+
+func (x *TaskOutputResult) GetIsTaskComplete() bool {
+	if x != nil {
+		return x.IsTaskComplete
+	}
+	return false
+}
+
+type ModuleHeartbeat struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Output        *OutputData            `protobuf:"bytes,1,opt,name=output,proto3" json:"output,omitempty"`
+	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	Timestamp     int64                  `protobuf:"varint,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ExecuteResponse) Reset() {
-	*x = ExecuteResponse{}
-	mi := &file_pkg_engine_proto_module_api_proto_msgTypes[2]
+func (x *ModuleHeartbeat) Reset() {
+	*x = ModuleHeartbeat{}
+	mi := &file_pkg_engine_proto_module_api_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ExecuteResponse) String() string {
+func (x *ModuleHeartbeat) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ExecuteResponse) ProtoMessage() {}
+func (*ModuleHeartbeat) ProtoMessage() {}
 
-func (x *ExecuteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_engine_proto_module_api_proto_msgTypes[2]
+func (x *ModuleHeartbeat) ProtoReflect() protoreflect.Message {
+	mi := &file_pkg_engine_proto_module_api_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -232,47 +600,145 @@ func (x *ExecuteResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ExecuteResponse.ProtoReflect.Descriptor instead.
-func (*ExecuteResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_engine_proto_module_api_proto_rawDescGZIP(), []int{2}
+// Deprecated: Use ModuleHeartbeat.ProtoReflect.Descriptor instead.
+func (*ModuleHeartbeat) Descriptor() ([]byte, []int) {
+	return file_pkg_engine_proto_module_api_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *ExecuteResponse) GetOutput() *OutputData {
+func (x *ModuleHeartbeat) GetSessionId() string {
 	if x != nil {
-		return x.Output
+		return x.SessionId
 	}
-	return nil
+	return ""
+}
+
+func (x *ModuleHeartbeat) GetTimestamp() int64 {
+	if x != nil {
+		return x.Timestamp
+	}
+	return 0
+}
+
+type HostControlSignal struct {
+	state          protoimpl.MessageState       `protogen:"open.v1"`
+	SessionId      string                       `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	Signal         HostControlSignal_SignalType `protobuf:"varint,2,opt,name=signal,proto3,enum=engine.HostControlSignal_SignalType" json:"signal,omitempty"`
+	TaskIdToCancel string                       `protobuf:"bytes,3,opt,name=task_id_to_cancel,json=taskIdToCancel,proto3" json:"task_id_to_cancel,omitempty"` // if signal is CANCEL_TASK
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *HostControlSignal) Reset() {
+	*x = HostControlSignal{}
+	mi := &file_pkg_engine_proto_module_api_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HostControlSignal) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HostControlSignal) ProtoMessage() {}
+
+func (x *HostControlSignal) ProtoReflect() protoreflect.Message {
+	mi := &file_pkg_engine_proto_module_api_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HostControlSignal.ProtoReflect.Descriptor instead.
+func (*HostControlSignal) Descriptor() ([]byte, []int) {
+	return file_pkg_engine_proto_module_api_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *HostControlSignal) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *HostControlSignal) GetSignal() HostControlSignal_SignalType {
+	if x != nil {
+		return x.Signal
+	}
+	return HostControlSignal_NO_OP
+}
+
+func (x *HostControlSignal) GetTaskIdToCancel() string {
+	if x != nil {
+		return x.TaskIdToCancel
+	}
+	return ""
 }
 
 var File_pkg_engine_proto_module_api_proto protoreflect.FileDescriptor
 
 const file_pkg_engine_proto_module_api_proto_rawDesc = "" +
 	"\n" +
-	"!pkg/engine/proto/module_api.proto\x12\x06engine\"\x83\x03\n" +
-	"\x0eExecuteRequest\x12\x17\n" +
-	"\ascan_id\x18\x01 \x01(\tR\x06scanId\x12\x1f\n" +
-	"\vinstance_id\x18\x02 \x01(\tR\n" +
-	"instanceId\x12:\n" +
-	"\x06inputs\x18\x03 \x03(\v2\".engine.ExecuteRequest.InputsEntryR\x06inputs\x12M\n" +
-	"\rmodule_config\x18\x04 \x03(\v2(.engine.ExecuteRequest.ModuleConfigEntryR\fmoduleConfig\x120\n" +
-	"\x14expected_output_keys\x18\x05 \x03(\tR\x12expectedOutputKeys\x1a9\n" +
+	"!pkg/engine/proto/module_api.proto\x12\x06engine\"\xd6\x01\n" +
+	"\rModuleMessage\x12@\n" +
+	"\fregistration\x18\x01 \x01(\v2\x1a.engine.ModuleRegistrationH\x00R\fregistration\x12?\n" +
+	"\routput_result\x18\x02 \x01(\v2\x18.engine.TaskOutputResultH\x00R\foutputResult\x127\n" +
+	"\theartbeat\x18\x03 \x01(\v2\x17.engine.ModuleHeartbeatH\x00R\theartbeatB\t\n" +
+	"\apayload\"\xdf\x01\n" +
+	"\vHostMessage\x12D\n" +
+	"\x10registration_ack\x18\x01 \x01(\v2\x17.engine.RegistrationAckH\x00R\x0fregistrationAck\x12;\n" +
+	"\fexecute_task\x18\x02 \x01(\v2\x16.engine.ExecuteNewTaskH\x00R\vexecuteTask\x12B\n" +
+	"\x0econtrol_signal\x18\x03 \x01(\v2\x19.engine.HostControlSignalH\x00R\rcontrolSignalB\t\n" +
+	"\apayload\"\x8a\x01\n" +
+	"\x12ModuleRegistration\x12(\n" +
+	"\x10module_type_name\x18\x01 \x01(\tR\x0emoduleTypeName\x12%\n" +
+	"\x0emodule_version\x18\x02 \x01(\tR\rmoduleVersion\x12#\n" +
+	"\rinstance_hint\x18\x03 \x01(\tR\finstanceHint\"u\n" +
+	"\x0fRegistrationAck\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12.\n" +
+	"\x13assigned_session_id\x18\x03 \x01(\tR\x11assignedSessionId\"\xe1\x02\n" +
+	"\x0eExecuteNewTask\x12\x17\n" +
+	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12/\n" +
+	"\x14instance_id_from_dag\x18\x02 \x01(\tR\x11instanceIdFromDag\x12:\n" +
+	"\x06inputs\x18\x03 \x03(\v2\".engine.ExecuteNewTask.InputsEntryR\x06inputs\x12M\n" +
+	"\rmodule_config\x18\x04 \x03(\v2(.engine.ExecuteNewTask.ModuleConfigEntryR\fmoduleConfig\x1a9\n" +
 	"\vInputsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01\x1a?\n" +
 	"\x11ModuleConfigEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x96\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xb9\x02\n" +
+	"\x10TaskOutputResult\x12\x17\n" +
+	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12/\n" +
+	"\x14instance_id_from_dag\x18\x02 \x01(\tR\x11instanceIdFromDag\x12\x19\n" +
+	"\bdata_key\x18\x03 \x01(\tR\adataKey\x12\x12\n" +
+	"\x04data\x18\x04 \x01(\fR\x04data\x12#\n" +
+	"\rerror_message\x18\x05 \x01(\tR\ferrorMessage\x12\x1c\n" +
+	"\ttimestamp\x18\x06 \x01(\x03R\ttimestamp\x12\x16\n" +
+	"\x06target\x18\a \x01(\tR\x06target\x12'\n" +
+	"\x10is_final_for_key\x18\b \x01(\bR\risFinalForKey\x12(\n" +
+	"\x10is_task_complete\x18\t \x01(\bR\x0eisTaskComplete\"N\n" +
+	"\x0fModuleHeartbeat\x12\x1d\n" +
 	"\n" +
-	"OutputData\x12\x19\n" +
-	"\bdata_key\x18\x01 \x01(\tR\adataKey\x12\x12\n" +
-	"\x04data\x18\x02 \x01(\fR\x04data\x12#\n" +
-	"\rerror_message\x18\x03 \x01(\tR\ferrorMessage\x12\x1c\n" +
-	"\ttimestamp\x18\x04 \x01(\x03R\ttimestamp\x12\x16\n" +
-	"\x06target\x18\x05 \x01(\tR\x06target\"=\n" +
-	"\x0fExecuteResponse\x12*\n" +
-	"\x06output\x18\x01 \x01(\v2\x12.engine.OutputDataR\x06output2V\n" +
-	"\x16ModuleExecutionService\x12<\n" +
-	"\aExecute\x12\x16.engine.ExecuteRequest\x1a\x17.engine.ExecuteResponse0\x01B0Z.github.com/pentora-ai/pentora/pkg/engine/protob\x06proto3"
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1c\n" +
+	"\ttimestamp\x18\x02 \x01(\x03R\ttimestamp\"\xdb\x01\n" +
+	"\x11HostControlSignal\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12<\n" +
+	"\x06signal\x18\x02 \x01(\x0e2$.engine.HostControlSignal.SignalTypeR\x06signal\x12)\n" +
+	"\x11task_id_to_cancel\x18\x03 \x01(\tR\x0etaskIdToCancel\">\n" +
+	"\n" +
+	"SignalType\x12\t\n" +
+	"\x05NO_OP\x10\x00\x12\x14\n" +
+	"\x10REQUEST_SHUTDOWN\x10\x01\x12\x0f\n" +
+	"\vCANCEL_TASK\x10\x022S\n" +
+	"\x11PentoraModuleHost\x12>\n" +
+	"\fModuleStream\x12\x15.engine.ModuleMessage\x1a\x13.engine.HostMessage(\x010\x01B0Z.github.com/pentora-ai/pentora/pkg/engine/protob\x06proto3"
 
 var (
 	file_pkg_engine_proto_module_api_proto_rawDescOnce sync.Once
@@ -286,25 +752,38 @@ func file_pkg_engine_proto_module_api_proto_rawDescGZIP() []byte {
 	return file_pkg_engine_proto_module_api_proto_rawDescData
 }
 
-var file_pkg_engine_proto_module_api_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_pkg_engine_proto_module_api_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_pkg_engine_proto_module_api_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_pkg_engine_proto_module_api_proto_goTypes = []any{
-	(*ExecuteRequest)(nil),  // 0: engine.ExecuteRequest
-	(*OutputData)(nil),      // 1: engine.OutputData
-	(*ExecuteResponse)(nil), // 2: engine.ExecuteResponse
-	nil,                     // 3: engine.ExecuteRequest.InputsEntry
-	nil,                     // 4: engine.ExecuteRequest.ModuleConfigEntry
+	(HostControlSignal_SignalType)(0), // 0: engine.HostControlSignal.SignalType
+	(*ModuleMessage)(nil),             // 1: engine.ModuleMessage
+	(*HostMessage)(nil),               // 2: engine.HostMessage
+	(*ModuleRegistration)(nil),        // 3: engine.ModuleRegistration
+	(*RegistrationAck)(nil),           // 4: engine.RegistrationAck
+	(*ExecuteNewTask)(nil),            // 5: engine.ExecuteNewTask
+	(*TaskOutputResult)(nil),          // 6: engine.TaskOutputResult
+	(*ModuleHeartbeat)(nil),           // 7: engine.ModuleHeartbeat
+	(*HostControlSignal)(nil),         // 8: engine.HostControlSignal
+	nil,                               // 9: engine.ExecuteNewTask.InputsEntry
+	nil,                               // 10: engine.ExecuteNewTask.ModuleConfigEntry
 }
 var file_pkg_engine_proto_module_api_proto_depIdxs = []int32{
-	3, // 0: engine.ExecuteRequest.inputs:type_name -> engine.ExecuteRequest.InputsEntry
-	4, // 1: engine.ExecuteRequest.module_config:type_name -> engine.ExecuteRequest.ModuleConfigEntry
-	1, // 2: engine.ExecuteResponse.output:type_name -> engine.OutputData
-	0, // 3: engine.ModuleExecutionService.Execute:input_type -> engine.ExecuteRequest
-	2, // 4: engine.ModuleExecutionService.Execute:output_type -> engine.ExecuteResponse
-	4, // [4:5] is the sub-list for method output_type
-	3, // [3:4] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	3,  // 0: engine.ModuleMessage.registration:type_name -> engine.ModuleRegistration
+	6,  // 1: engine.ModuleMessage.output_result:type_name -> engine.TaskOutputResult
+	7,  // 2: engine.ModuleMessage.heartbeat:type_name -> engine.ModuleHeartbeat
+	4,  // 3: engine.HostMessage.registration_ack:type_name -> engine.RegistrationAck
+	5,  // 4: engine.HostMessage.execute_task:type_name -> engine.ExecuteNewTask
+	8,  // 5: engine.HostMessage.control_signal:type_name -> engine.HostControlSignal
+	9,  // 6: engine.ExecuteNewTask.inputs:type_name -> engine.ExecuteNewTask.InputsEntry
+	10, // 7: engine.ExecuteNewTask.module_config:type_name -> engine.ExecuteNewTask.ModuleConfigEntry
+	0,  // 8: engine.HostControlSignal.signal:type_name -> engine.HostControlSignal.SignalType
+	1,  // 9: engine.PentoraModuleHost.ModuleStream:input_type -> engine.ModuleMessage
+	2,  // 10: engine.PentoraModuleHost.ModuleStream:output_type -> engine.HostMessage
+	10, // [10:11] is the sub-list for method output_type
+	9,  // [9:10] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_pkg_engine_proto_module_api_proto_init() }
@@ -312,18 +791,29 @@ func file_pkg_engine_proto_module_api_proto_init() {
 	if File_pkg_engine_proto_module_api_proto != nil {
 		return
 	}
+	file_pkg_engine_proto_module_api_proto_msgTypes[0].OneofWrappers = []any{
+		(*ModuleMessage_Registration)(nil),
+		(*ModuleMessage_OutputResult)(nil),
+		(*ModuleMessage_Heartbeat)(nil),
+	}
+	file_pkg_engine_proto_module_api_proto_msgTypes[1].OneofWrappers = []any{
+		(*HostMessage_RegistrationAck)(nil),
+		(*HostMessage_ExecuteTask)(nil),
+		(*HostMessage_ControlSignal)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pkg_engine_proto_module_api_proto_rawDesc), len(file_pkg_engine_proto_module_api_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   5,
+			NumEnums:      1,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_pkg_engine_proto_module_api_proto_goTypes,
 		DependencyIndexes: file_pkg_engine_proto_module_api_proto_depIdxs,
+		EnumInfos:         file_pkg_engine_proto_module_api_proto_enumTypes,
 		MessageInfos:      file_pkg_engine_proto_module_api_proto_msgTypes,
 	}.Build()
 	File_pkg_engine_proto_module_api_proto = out.File
