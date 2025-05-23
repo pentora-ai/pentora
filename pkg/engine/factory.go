@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/pentora-ai/pentora/pkg/config"
+	"github.com/pentora-ai/pentora/pkg/event"
 	"github.com/pentora-ai/pentora/pkg/logging"
 	"github.com/pentora-ai/pentora/pkg/version"
 	"github.com/spf13/pflag"
@@ -56,6 +57,7 @@ func (f *DefaultAppManagerFactory) Create(flags *pflag.FlagSet, configFile strin
 		ctx:           context,
 		cancel:        cancel,
 		ConfigManager: ConfigManager,
+		EventManager:  event.NewManager(),
 		Version:       version.Get(),
 	}, nil
 }

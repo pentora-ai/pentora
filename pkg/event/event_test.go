@@ -1,18 +1,16 @@
 // pkg/event/event_test.go
 
-package event_test
+package event
 
 import (
 	"context"
 	"sync/atomic"
 	"testing"
 	"time"
-
-	"github.com/pentora-ai/pentora/pkg/event"
 )
 
 func TestBus_SubscribeAndPublish(t *testing.T) {
-	bus := event.New()
+	bus := NewManager()
 	var received int32
 
 	bus.Subscribe("test_event", func(ctx context.Context, data any) {
@@ -33,7 +31,7 @@ func TestBus_SubscribeAndPublish(t *testing.T) {
 }
 
 func TestBus_MultipleHandlers(t *testing.T) {
-	bus := event.New()
+	bus := NewManager()
 	var count int32
 
 	bus.Subscribe("test_event", func(ctx context.Context, data any) {
@@ -55,7 +53,7 @@ func TestBus_MultipleHandlers(t *testing.T) {
 }
 
 func TestBus_NoSubscribers(t *testing.T) {
-	bus := event.New()
+	bus := NewManager()
 
 	// Publish an event with no subscribers
 	ctx := context.Background()
@@ -68,7 +66,7 @@ func TestBus_NoSubscribers(t *testing.T) {
 }
 
 func TestBus_ConcurrentAccess(t *testing.T) {
-	bus := event.New()
+	bus := NewManager()
 	var count int32
 
 	bus.Subscribe("test_event", func(ctx context.Context, data any) {
