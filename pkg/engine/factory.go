@@ -13,7 +13,7 @@ import (
 
 // Factory is responsible for constructing an AppManager instance with all required components.
 type AppManagerFactory interface {
-	Create(flags *pflag.FlagSet, configFile string) (*AppManager, error)
+	CreateWithConfig(flags *pflag.FlagSet, configFile string) (*AppManager, error)
 }
 
 // DefaultAppManagerFactory is a factory type responsible for creating instances of the default application manager.
@@ -22,15 +22,32 @@ type DefaultAppManagerFactory struct{}
 
 // Create initializes a new AppManager instance with a cancellable context and the current application version.
 // It returns a pointer to the created AppManager.
+// Create initializes and returns a new AppManager instance.
+// It configures global logging based on the provided flags, loads configuration
+// from the specified configFile, and sets up a cancellable context for the AppManager.
+// Returns an error if logging configuration or configuration loading fails.
+//
+// Parameters:
+//   - flags:      A pflag.FlagSet containing runtime flags, may be nil.
+//   - configFile: Path to the configuration file.
+//
+// Returns:
+//   - *AppManager: A pointer to the initialized AppManager.
+//   - error:       An error if initialization fails.
 func (f *DefaultAppManagerFactory) Create(flags *pflag.FlagSet, configFile string) (*AppManager, error) {
+
+	logLevel := "info"
+	if flags != nil {
+		logLevel = f.GetRuntimeLogLevel(flags)
+	}
+
+	if err := logging.ConfigureGlobalLogging(logLevel); err != nil {
+		return nil, fmt.Errorf("failed to configure global logging: %w", err)
+	}
 
 	ConfigManager := config.NewManager()
 	if err := ConfigManager.Load(flags, configFile); err != nil {
 		return nil, err
-	}
-
-	if err := logging.ConfigureGlobalLogging(ConfigManager.Get().Log.Level); err != nil {
-		return nil, fmt.Errorf("failed to configure global logging: %w", err)
 	}
 
 	context, cancel := context.WithCancel(context.Background())
@@ -41,4 +58,30 @@ func (f *DefaultAppManagerFactory) Create(flags *pflag.FlagSet, configFile strin
 		ConfigManager: ConfigManager,
 		Version:       version.Get(),
 	}, nil
+}
+
+// CreateWithConfig creates a new AppManager instance using the provided pflag.FlagSet and configuration file.
+// It delegates the creation process to the Create method of DefaultAppManagerFactory.
+// Returns a pointer to the created AppManager and an error if the creation fails.
+func (f *DefaultAppManagerFactory) CreateWithConfig(flags *pflag.FlagSet, configFile string) (*AppManager, error) {
+	return f.Create(flags, configFile)
+}
+
+// CreateWithNoConfig creates a new AppManager instance without any configuration.
+// It calls the Create method with nil configuration and an empty string as parameters.
+// Returns the created AppManager and any error encountered during creation.
+func (f *DefaultAppManagerFactory) CreateWithNoConfig() (*AppManager, error) {
+	return f.Create(nil, "")
+}
+
+// GetRuntimeLogLevel determines the runtime log level based on the provided flag set.
+// If the "debug" flag is set to "true", it returns "debug"; otherwise, it defaults to "info".
+func (f *DefaultAppManagerFactory) GetRuntimeLogLevel(flags *pflag.FlagSet) string {
+	logLevel := "info"
+	debugFlag := flags.Lookup("debug")
+	if debugFlag != nil && debugFlag.Value.String() == "true" {
+		logLevel = "debug"
+	}
+
+	return logLevel
 }
