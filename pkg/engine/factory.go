@@ -23,7 +23,6 @@ type DefaultAppManagerFactory struct{}
 // Create initializes a new AppManager instance with a cancellable context and the current application version.
 // It returns a pointer to the created AppManager.
 func (f *DefaultAppManagerFactory) Create(flags *pflag.FlagSet, configFile string) (*AppManager, error) {
-	context, cancel := context.WithCancel(context.Background())
 
 	ConfigManager := config.NewManager()
 	if err := ConfigManager.Load(flags, configFile); err != nil {
@@ -33,6 +32,8 @@ func (f *DefaultAppManagerFactory) Create(flags *pflag.FlagSet, configFile strin
 	if err := logging.ConfigureGlobalLogging(ConfigManager.Get().Log.Level); err != nil {
 		return nil, fmt.Errorf("failed to configure global logging: %w", err)
 	}
+
+	context, cancel := context.WithCancel(context.Background())
 
 	return &AppManager{
 		ctx:           context,
