@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/pentora-ai/pentora/cmd/version"
-	"github.com/pentora-ai/pentora/pkg/cli"
 	"github.com/pentora-ai/pentora/pkg/config"
 	"github.com/pentora-ai/pentora/pkg/engine"
 	"github.com/spf13/cobra"
@@ -85,7 +84,7 @@ func init() {
 	// rootCmd.AddCommand(cli.ServeCmd)       // Assumes cli.ServeCmd uses appManager for config, logger, etc.
 	// rootCmd.AddCommand(license.LicenseCmd) // License commands
 	rootCmd.AddCommand(version.VersionCmd) // Version command
-	rootCmd.AddCommand(cli.ModuleHostCmd)  // The test command for hosting external modules
+	// rootCmd.AddCommand(cli.ModuleHostCmd)  // The test command for hosting external modules
 }
 
 // main is the entry point of the Pentora application.
