@@ -17,27 +17,27 @@ type EventBus interface {
 }
 
 // Bus represents the event bus.
-type Bus struct {
+type Manager struct {
 	mu          sync.RWMutex
 	subscribers map[string][]Handler
 }
 
 // New creates a new event bus.
-func New() *Bus {
-	return &Bus{
+func NewManager() *Manager {
+	return &Manager{
 		subscribers: make(map[string][]Handler),
 	}
 }
 
 // Subscribe adds a handler for a specific event.
-func (b *Bus) Subscribe(event string, handler Handler) {
+func (b *Manager) Subscribe(event string, handler Handler) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.subscribers[event] = append(b.subscribers[event], handler)
 }
 
 // Publish triggers all handlers subscribed to the event.
-func (b *Bus) Publish(ctx context.Context, event string, data any) {
+func (b *Manager) Publish(ctx context.Context, event string, data any) {
 	b.mu.RLock()
 	handlers := append([]Handler{}, b.subscribers[event]...) // copy to avoid race
 	b.mu.RUnlock()

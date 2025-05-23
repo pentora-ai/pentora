@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/pentora-ai/pentora/pkg/config"
+	"github.com/pentora-ai/pentora/pkg/event"
 	"github.com/pentora-ai/pentora/pkg/version"
 )
 
@@ -18,6 +19,8 @@ type AppManager struct {
 	cancel context.CancelFunc
 
 	ConfigManager *config.Manager // Configuration manager for loading and managing application settings.
+
+	EventManager *event.Manager // Event manager for handling events and notifications within the application.
 
 	// Version represents the version information of the engine, encapsulated in the version.Struct type.
 	Version version.Struct
