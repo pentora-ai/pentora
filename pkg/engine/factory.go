@@ -7,6 +7,7 @@ import (
 
 	"github.com/pentora-ai/pentora/pkg/config"
 	"github.com/pentora-ai/pentora/pkg/event"
+	"github.com/pentora-ai/pentora/pkg/hook"
 	"github.com/pentora-ai/pentora/pkg/logging"
 	"github.com/pentora-ai/pentora/pkg/version"
 	"github.com/spf13/pflag"
@@ -58,6 +59,7 @@ func (f *DefaultAppManagerFactory) Create(flags *pflag.FlagSet, configFile strin
 		cancel:        cancel,
 		ConfigManager: ConfigManager,
 		EventManager:  event.NewManager(),
+		HookManager:   hook.NewManager(),
 		Version:       version.Get(),
 	}, nil
 }
