@@ -8,6 +8,7 @@ import (
 
 	"github.com/pentora-ai/pentora/pkg/config"
 	"github.com/pentora-ai/pentora/pkg/event"
+	"github.com/pentora-ai/pentora/pkg/hook"
 	"github.com/pentora-ai/pentora/pkg/version"
 )
 
@@ -21,6 +22,8 @@ type AppManager struct {
 	ConfigManager *config.Manager // Configuration manager for loading and managing application settings.
 
 	EventManager *event.Manager // Event manager for handling events and notifications within the application.
+
+	HookManager *hook.Manager // Hook manager for managing lifecycle hooks and custom event triggers.
 
 	// Version represents the version information of the engine, encapsulated in the version.Struct type.
 	Version version.Struct

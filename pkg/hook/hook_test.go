@@ -1,19 +1,17 @@
 // pkg/hook/manager_test.go
-package hook_test
+package hook
 
 import (
 	"context"
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/pentora-ai/pentora/pkg/hook"
 )
 
 func TestHookManager_OnShutdown(t *testing.T) {
 	t.Parallel() // Paralel test
 
-	mgr := hook.NewManager()
+	mgr := NewManager()
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
@@ -51,7 +49,7 @@ func TestHookManager_OnShutdown(t *testing.T) {
 }
 
 func TestMultipleHooks(t *testing.T) {
-	mgr := hook.NewManager()
+	mgr := NewManager()
 	ctx := context.Background()
 
 	var callCount int
@@ -79,7 +77,7 @@ func TestMultipleHooks(t *testing.T) {
 }
 
 func TestHookWithCanceledContext(t *testing.T) {
-	mgr := hook.NewManager()
+	mgr := NewManager()
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
@@ -104,7 +102,7 @@ func TestHookWithCanceledContext(t *testing.T) {
 }
 
 func TestIsTriggered(t *testing.T) {
-	mgr := hook.NewManager()
+	mgr := NewManager()
 	ctx := context.Background()
 
 	if mgr.IsTriggered("test") {
