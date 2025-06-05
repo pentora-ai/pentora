@@ -12,6 +12,7 @@ import (
 
 	"github.com/pentora-ai/pentora/pkg/engine" // Engine interfaces
 	"github.com/pentora-ai/pentora/pkg/utils"  // Utilities like target and port parsing
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cast"
 )
 
@@ -52,15 +53,50 @@ func newTCPPortDiscoveryModule() *TCPPortDiscoveryModule {
 	}
 	return &TCPPortDiscoveryModule{
 		meta: engine.ModuleMetadata{
-			// ID is set by the orchestrator for each instance in a DAG.
+			ID:          "tcp-port-discovery-instance",  // Unique ID for this module instance, can be generated dynamically
 			Name:        tcpPortDiscoveryModuleTypeName, // Type name for factory registration
 			Version:     "0.1.0",
 			Description: "Discovers open TCP ports on target hosts based on a list or range.",
 			Type:        engine.DiscoveryModuleType,
 			Author:      "Pentora Team",
 			Tags:        []string{"discovery", "port", "tcp"},
-			Produces:    []string{"discovery.open_tcp_ports"},               // Output data key
-			Consumes:    []string{"config.targets", "discovery.live_hosts"}, // Possible inputs
+			Consumes: []engine.DataContractEntry{
+				{
+					Key: "config.targets",
+					// DataTypeName: "[]string", // This is an initial input, stored directly
+					// Cardinality: engine.CardinalitySingle, // Expects a single []string list
+					DataTypeName: "[]string",               // The type of the data itself
+					Cardinality:  engine.CardinalitySingle, // "config.targets" itself is a single list of strings
+					IsOptional:   true,                     // Can also get targets from discovery.live_hosts
+					Description:  "List of initial target strings (IPs, CIDRs, hostnames) to scan.",
+				},
+				{
+					Key: "discovery.live_hosts",
+					// DataTypeName: "discovery.ICMPPingDiscoveryResult", // This is what's inside the []interface{} list
+					// Cardinality: engine.CardinalityList, // Expects a list of ICMPPingDiscoveryResult from DataContext
+					DataTypeName: "discovery.ICMPPingDiscoveryResult", // The type of each item in the list
+					Cardinality:  engine.CardinalityList,              // Expects a list of these items
+					IsOptional:   true,
+					Description:  "List of live hosts (as ICMPPingDiscoveryResult) from ICMP ping module.",
+				},
+				{
+					Key:          "config.ports", // Optional: specific ports can also be an input
+					DataTypeName: "string",       // e.g., "80,443,1000-1024"
+					Cardinality:  engine.CardinalitySingle,
+					IsOptional:   true,
+					Description:  "Port string to scan, can override module's static config.",
+				},
+			},
+			Produces: []engine.DataContractEntry{
+				{
+					Key: "discovery.open_tcp_ports",
+					// DataTypeName: "discovery.TCPPortDiscoveryResult", // This is the type of EACH item in the list DataContext will store
+					// Cardinality: engine.CardinalityList, // This module produces multiple such items, DataContext will store as list
+					DataTypeName: "discovery.TCPPortDiscoveryResult",
+					Cardinality:  engine.CardinalityList, // Indicates this DataKey will hold a list of results
+					Description:  "List of results, each detailing open TCP ports for a specific target.",
+				},
+			},
 			ConfigSchema: map[string]engine.ParameterDefinition{
 				"targets": {
 					Description: "List of IPs, CIDRs, or hostnames to scan. Can be inherited from global config or previous modules.",
@@ -86,6 +122,9 @@ func newTCPPortDiscoveryModule() *TCPPortDiscoveryModule {
 					Default:     defaultTCPConcurrency,
 				},
 			},
+			// ActivationTriggers: Usually none for a primary discovery module, unless it depends on a very specific prior state.
+			// IsDynamic: false,
+			EstimatedCost: 2, // 1-5 scale, TCP port scan is generally a bit more involved than ICMP.
 		},
 		config: defaultConfig,
 	}
@@ -98,8 +137,10 @@ func (m *TCPPortDiscoveryModule) Metadata() engine.ModuleMetadata {
 
 // Init initializes the module with the given configuration map.
 // It parses the map and populates the module's config struct, overriding defaults.
-func (m *TCPPortDiscoveryModule) Init(moduleConfig map[string]interface{}) error {
+func (m *TCPPortDiscoveryModule) Init(instanceID string, moduleConfig map[string]interface{}) error {
 	cfg := m.config // Start with default config values
+
+	m.meta.ID = instanceID // Set the unique ID for this module instance
 
 	if targetsVal, ok := moduleConfig["targets"]; ok {
 		cfg.Targets = cast.ToStringSlice(targetsVal)
@@ -135,7 +176,9 @@ func (m *TCPPortDiscoveryModule) Init(moduleConfig map[string]interface{}) error
 
 	m.config = cfg
 	// For debugging during development; consider a proper logging framework for production.
-	fmt.Printf("[DEBUG] Module '%s' (instance: %s) initialized. Final Config: %+v\n", m.meta.Name, m.meta.ID, m.config)
+	log.Debug().
+		Str("module", m.meta.Name).
+		Str("instance_id", m.meta.ID).Interface("config", m.config).Msg("Module configuration initialized with config.")
 	return nil
 }
 
@@ -143,13 +186,15 @@ func (m *TCPPortDiscoveryModule) Init(moduleConfig map[string]interface{}) error
 func (m *TCPPortDiscoveryModule) Execute(ctx context.Context, inputs map[string]interface{}, outputChan chan<- engine.ModuleOutput) error {
 	var targetsToScan []string
 
+	logger := log.With().Str("module", m.meta.Name).Str("instance_id", m.meta.ID).Logger()
+
 	// Determine targets: prefer 'discovery.live_hosts' from input, then 'config.targets' from input, then module's own config.
-	if liveHosts, ok := inputs["discovery.live_hosts"].([]string); ok && len(liveHosts) > 0 {
-		targetsToScan = liveHosts // Assumes these are already expanded IPs
-		fmt.Printf("[DEBUG] Module '%s': Using %d live hosts from input 'discovery.live_hosts'.\n", m.meta.Name, len(targetsToScan))
+	if liveHosts, ok := inputs["discovery.live_hosts"].(ICMPPingDiscoveryResult); ok && len(liveHosts.LiveHosts) > 0 {
+		targetsToScan = append(targetsToScan, liveHosts.LiveHosts...) // Assuming LiveHosts contains IP addresses
+		logger.Debug().Msgf("Using %d live hosts from input 'discovery.live_hosts'.", len(targetsToScan))
 	} else if configTargets, ok := inputs["config.targets"].([]string); ok && len(configTargets) > 0 {
 		targetsToScan = utils.ParseAndExpandTargets(configTargets)
-		fmt.Printf("[DEBUG] Module '%s': Using %d targets from input 'config.targets', expanded to %d IPs.\n", m.meta.Name, len(configTargets), len(targetsToScan))
+		logger.Debug().Msgf("Using %d targets from input 'config.targets', expanded to %d IPs.", len(configTargets), len(targetsToScan))
 	} else if len(m.config.Targets) > 0 {
 		targetsToScan = utils.ParseAndExpandTargets(m.config.Targets)
 		fmt.Printf("[DEBUG] Module '%s': Using %d targets from module config, expanded to %d IPs.\n", m.meta.Name, len(m.config.Targets), len(targetsToScan))
@@ -172,7 +217,7 @@ func (m *TCPPortDiscoveryModule) Execute(ctx context.Context, inputs map[string]
 		// Send an empty result to indicate completion without error but no data
 		outputChan <- engine.ModuleOutput{
 			FromModuleName: m.meta.ID,
-			DataKey:        m.meta.Produces[0], // "discovery.open_tcp_ports"
+			DataKey:        m.meta.Produces[0].Key, // "discovery.open_tcp_ports"
 			Data:           []TCPPortDiscoveryResult{},
 			Timestamp:      time.Now(),
 		}
@@ -182,15 +227,15 @@ func (m *TCPPortDiscoveryModule) Execute(ctx context.Context, inputs map[string]
 		fmt.Printf("[INFO] Module '%s': Effective port list is empty. Nothing to scan.\n", m.meta.Name)
 		outputChan <- engine.ModuleOutput{
 			FromModuleName: m.meta.ID,
-			DataKey:        m.meta.Produces[0],
+			DataKey:        m.meta.Produces[0].Key, // "discovery.open_tcp_ports"
 			Data:           []TCPPortDiscoveryResult{},
 			Timestamp:      time.Now(),
 		}
 		return nil
 	}
 
-	fmt.Printf("[INFO] Module '%s' (instance: %s): Starting TCP Port Discovery for %d targets on %d unique ports. Concurrency: %d, Timeout per port: %s\n",
-		m.meta.Name, m.meta.ID, len(targetsToScan), len(parsedPorts), m.config.Concurrency, m.config.Timeout)
+	logger.Info().Msgf("Starting TCP Port Discovery for %d targets on %d unique ports. Concurrency: %d, Timeout per port: %s",
+		len(targetsToScan), len(parsedPorts), m.config.Concurrency, m.config.Timeout)
 
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, m.config.Concurrency) // Semaphore to limit concurrency
@@ -238,7 +283,6 @@ func (m *TCPPortDiscoveryModule) Execute(ctx context.Context, inputs map[string]
 
 endLoops:
 	wg.Wait() // Wait for all goroutines to complete or be cancelled
-
 	// Send aggregated results per target
 	for target, openPorts := range openPortsByTarget {
 		if len(openPorts) > 0 {
@@ -247,19 +291,20 @@ endLoops:
 			result := TCPPortDiscoveryResult{Target: target, OpenPorts: openPorts}
 			outputChan <- engine.ModuleOutput{
 				FromModuleName: m.meta.ID,
-				DataKey:        m.meta.Produces[0], // "discovery.open_tcp_ports"
+				DataKey:        m.meta.Produces[0].Key, // "discovery.open_tcp_ports"
 				Data:           result,
 				Timestamp:      time.Now(),
 				Target:         target,
 			}
-			fmt.Printf("[INFO] Module '%s': Target %s - Open TCP Ports: %v\n", m.meta.Name, target, openPorts)
+			logger.Info().
+				Str("target", target).
+				Ints("open_ports", openPorts).Msgf("Target %s - Open TCP Ports: %v", target, openPorts)
 		}
 	}
 	// If no open ports were found for any target, we might still want to send an empty aggregate or signal completion.
 	// The current logic sends per-target results, so if all targets have no open ports, nothing is sent from this loop.
 	// Consider if an explicit "no open ports found for any target" message is needed.
-
-	fmt.Printf("[INFO] Module '%s' (instance: %s): TCP Port Discovery completed.\n", m.meta.Name, m.meta.ID)
+	log.Info().Msg("TCP Port Discovery completed.")
 	return nil // Indicate successful completion of the module's execution logic
 }
 

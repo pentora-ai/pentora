@@ -16,6 +16,9 @@ import (
 	"time"
 
 	"github.com/pentora-ai/pentora/pkg/engine" // Your engine/core package
+	"github.com/pentora-ai/pentora/pkg/modules/discovery"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cast"
 )
 
@@ -48,10 +51,14 @@ type BannerGrabResult struct {
 type BannerGrabModule struct {
 	meta   engine.ModuleMetadata
 	config BannerGrabConfig
+	logger zerolog.Logger // Optional: Use zerolog for structured logging
+}
+type PortInfo struct {
+	*discovery.TCPPortDiscoveryResult // Embedding discovery.TCPPortDiscoveryResult for convenience
 }
 
 // newBannerGrabModule is the internal constructor for the BannerGrabModule.
-func newBannerGrabModule() *BannerGrabModule {
+func newBannerGrabModule1() *BannerGrabModule {
 	defaultConfig := BannerGrabConfig{
 		ReadTimeout:           3 * time.Second,
 		ConnectTimeout:        2 * time.Second, // Should be less than or equal to PortScanModule's timeout for that port
@@ -70,8 +77,30 @@ func newBannerGrabModule() *BannerGrabModule {
 			Type:        engine.ScanModuleType, // Could also be a more specific "fingerprint" type
 			Author:      "Pentora Team",
 			Tags:        []string{"scan", "banner", "fingerprint", "tcp"},
-			Produces:    []string{"service.banner.raw"}, // Each output is a BannerGrabResult
-			Consumes:    []string{"scan.port_status"},   // Consumes results from port scanner
+			Consumes: []engine.DataContractEntry{
+				{
+					Key: "discovery.open_tcp_ports",
+					// This is the type of *each item* within the []interface{} list that DataContext stores.
+					DataTypeName: "discovery.TCPPortDiscoveryResult",
+					// DataContext stores the output of "tcp-port-discovery" (which are individual TCPPortDiscoveryResult structs)
+					// as a list: []interface{}{TCPPortDiscoveryResult1, TCPPortDiscoveryResult2, ...}
+					Cardinality: engine.CardinalityList,
+					IsOptional:  false, // This module relies on open port information
+					Description: "List of results, where each item details open TCP ports for a specific target.",
+				},
+				// Optionally, could consume a global config for probes if not part of module config
+				// {Key: "config.banner_probes", DataTypeName: "map[string]string", Cardinality: engine.CardinalitySingle, IsOptional: true},
+			},
+			Produces: []engine.DataContractEntry{
+				{
+					Key: "service.banner.tcp", // Changed from .raw to be more specific if other banner types arise
+					// This module will send multiple ModuleOutput messages, each containing one BannerScanResult.
+					// DataContext will aggregate these into a list: []interface{}{BannerScanResult1, BannerScanResult2, ...}
+					DataTypeName: "scan.BannerScanResult", // The type of the Data field in each ModuleOutput
+					Cardinality:  engine.CardinalityList,  // Indicates that the DataKey "service.banner.tcp" in DataContext will hold a list of these.
+					Description:  "List of banners (or errors) captured from TCP services, one result per target/port.",
+				},
+			},
 			ConfigSchema: map[string]engine.ParameterDefinition{
 				"read_timeout":    {Description: "Timeout for reading banner data from an open port (e.g., '3s').", Type: "duration", Required: false, Default: defaultConfig.ReadTimeout.String()},
 				"connect_timeout": {Description: "Timeout for establishing connection if re-dialing (e.g., '2s').", Type: "duration", Required: false, Default: defaultConfig.ConnectTimeout.String()},
@@ -79,6 +108,8 @@ func newBannerGrabModule() *BannerGrabModule {
 				"concurrency":     {Description: "Number of concurrent banner grabbing operations.", Type: "int", Required: false, Default: defaultConfig.Concurrency},
 				"send_probes":     {Description: "Whether to send basic HTTP/generic probes to elicit banners.", Type: "bool", Required: false, Default: defaultConfig.SendProbes},
 			},
+			EstimatedCost: 2, // 1-5 scale, can be network intensive.
+
 		},
 		config: defaultConfig,
 	}
@@ -90,7 +121,9 @@ func (m *BannerGrabModule) Metadata() engine.ModuleMetadata {
 }
 
 // Init initializes the module with the given configuration map.
-func (m *BannerGrabModule) Init(configMap map[string]interface{}) error {
+func (m *BannerGrabModule) Init(instanceID string, configMap map[string]interface{}) error {
+	m.logger = log.With().Str("module", m.meta.Name).Str("instance_id", m.meta.ID).Logger()
+
 	cfg := m.config // Start with defaults
 
 	if readTimeoutStr, ok := configMap["read_timeout"].(string); ok {
@@ -135,7 +168,7 @@ func (m *BannerGrabModule) Init(configMap map[string]interface{}) error {
 	}
 
 	m.config = cfg
-	fmt.Printf("[DEBUG] Module '%s' initialized. Final Config: %+v\n", m.meta.Name, m.config)
+	m.logger.Debug().Interface("final_config", m.config).Msgf("Module initialized.")
 	return nil
 }
 
@@ -160,152 +193,163 @@ func isPotentiallyTLS(port int) bool {
 	}
 }
 
+// TargetPortData represents a target IP and a port to scan.
+type TargetPortData struct {
+	Target string
+	Port   int
+}
+
 // Execute attempts to grab banners from open ports.
-// It consumes 'scan.port_status' which should be of type PortStatusInfo.
+// It consumes 'discovery.open_tcp_ports' which should be of type PortStatusInfo.
 func (m *BannerGrabModule) Execute(ctx context.Context, inputs map[string]interface{}, outputChan chan<- engine.ModuleOutput) error {
-	portStatusInput, ok := inputs["scan.port_status"]
-	if !ok {
-		// This module depends on port status information.
-		// If not critical for the DAG, it could return nil.
-		// Otherwise, it's a configuration error in the DAG.
-		fmt.Fprintf(os.Stderr, "[WARN] Module '%s': Missing required input 'scan.port_status'. Skipping banner grabbing.\n", m.meta.Name)
-		// Send an empty or marker output
-		outputChan <- engine.ModuleOutput{FromModuleName: m.meta.ID, DataKey: m.meta.Produces[0], Data: BannerGrabResult{}, Timestamp: time.Now()}
-		return nil // Or an error: fmt.Errorf("module '%s': missing required input 'scan.port_status'", m.meta.Name)
+	m.logger.Debug().Interface("received_inputs", inputs).Msg("Executing module")
+
+	var scanTasks []TargetPortData
+
+	// Prefer "discovery.open_tcp_ports" from input
+	if rawOpenTCPPorts, ok := inputs["discovery.open_tcp_ports"]; ok {
+		m.logger.Debug().Type("type", rawOpenTCPPorts).Msg("Found 'discovery.open_tcp_ports' in inputs")
+		if openTCPPortsList, listOk := rawOpenTCPPorts.([]interface{}); listOk {
+			for _, item := range openTCPPortsList {
+				if portResult, castOk := item.(discovery.TCPPortDiscoveryResult); castOk {
+					for _, port := range portResult.OpenPorts {
+						scanTasks = append(scanTasks, TargetPortData{Target: portResult.Target, Port: port})
+					}
+				} else {
+					m.logger.Warn().Type("item_type", item).Msg("Item in 'discovery.open_tcp_ports' list is not of expected type discovery.TCPPortDiscoveryResult")
+				}
+			}
+			m.logger.Info().Int("num_target_port_pairs", len(scanTasks)).Msg("Targets and ports loaded from 'discovery.open_tcp_ports' input")
+		} else {
+			m.logger.Warn().Type("type", rawOpenTCPPorts).Msg("'discovery.open_tcp_ports' input is not a list as expected")
+		}
+	} else {
+		// Fallback: if explicit targets and ports are given (less common for this module if chained after discovery)
+		// This logic might be simplified if the DAG always ensures open_tcp_ports is provided.
+		m.logger.Warn().Msg("'discovery.open_tcp_ports' not found in inputs. Banner grabbing will be limited or skipped unless targets/ports provided via other means (not fully implemented in this example).")
+		// For a robust fallback, you would parse config.targets and config.ports here, similar to discovery modules.
+		// However, a banner grabber typically relies on prior port discovery.
 	}
 
-	// The input can be a single PortStatusInfo or a slice/stream of them.
-	// For this example, let's assume it's a single PortStatusInfo for simplicity in Execute.
-	// An orchestrator would typically iterate over a list of open ports and call this for each,
-	// or this module would handle a slice of PortStatusInfo.
-	// Let's design it to handle a PortStatusInfo as input for a single IP/Port.
-	// The orchestrator will feed these one by one or in batches.
-
-	// We'll make this module process one PortStatusInfo at a time, matching a typical DAG node.
-	// The orchestrator should ensure this module is called for each open port.
-	// An alternative design is for this module to take a list of open ports.
-	// For simplicity in this standalone module example, let's assume inputs["scan.port_status"] is ONE PortStatusInfo.
-	// In a real DAG, you'd likely get a stream or a list.
-	// Let's adjust to expect a PortStatusInfo directly for simplicity in this module's Execute.
-	// If it were a list, we'd loop here.
-
-	portInfo, ok := portStatusInput.(PortStatusInfo) // From previous PortScanModule
-	if !ok {
-		fmt.Fprintf(os.Stderr, "[WARN] Module '%s': Invalid data type for 'scan.port_status' input. Expected PortStatusInfo, got %T. Skipping.\n", m.meta.Name, portStatusInput)
-		errMsg := fmt.Errorf("invalid input type %T", portStatusInput)
+	if len(scanTasks) == 0 {
+		m.logger.Info().Msg("No target/port pairs to grab banners from. Module execution complete.")
+		// Send an empty data output if needed, or just complete.
 		outputChan <- engine.ModuleOutput{
 			FromModuleName: m.meta.ID,
-			DataKey:        m.meta.Produces[0],
-			Data: BannerGrabResult{
-				IP:    "unknown",
-				Port:  0,
-				Error: errMsg.Error(),
-			},
-			Error:     errMsg,
-			Timestamp: time.Now(),
+			DataKey:        m.meta.Produces[0].Key, // "service.banner.tcp"
+			Data:           []BannerGrabResult{},   // Empty list of banners
+			Timestamp:      time.Now(),
 		}
 		return nil
 	}
 
-	if portInfo.Status != "open" {
-		// fmt.Printf("[DEBUG] Module '%s': Skipping banner grab for %s:%d as port is not open (status: %s).\n", m.meta.Name, portInfo.IP, portInfo.Port, portInfo.Status)
-		return nil // Only grab banners from open ports
-	}
-
-	// fmt.Printf("[INFO] Module '%s': Attempting to grab banner from %s:%d.\n", m.meta.Name, portInfo.IP, portInfo.Port)
-
 	var wg sync.WaitGroup
-	sem := make(chan struct{}, m.config.Concurrency) // Although we process one portInfo, internal probes might be concurrent
+	sem := make(chan struct{}, m.config.Concurrency)
+	m.logger.Info().Int("tasks", len(scanTasks)).Int("concurrency", m.config.Concurrency).Msg("Starting banner grabbing")
 
-	// For a single portInfo, concurrency is less about multiple hosts/ports here,
-	// and more about potentially trying multiple probes concurrently on the same port if designed so.
-	// For this version, we'll try probes sequentially.
+	// Prepare the output channel for results
+	grabbedBanners := make([]BannerGrabResult, 0, len(scanTasks))
 
-	wg.Add(1) // Only one "task" for this single portInfo
-	sem <- struct{}{}
-
-	go func(pInfo PortStatusInfo) {
-		defer wg.Done()
-		defer func() { <-sem }()
-
-		address := net.JoinHostPort(pInfo.IP, strconv.Itoa(pInfo.Port))
-		var banner string
-		var err error
-		isTLS := false
-
-		// 1. Attempt a simple TCP read (for non-HTTP, non-TLS services)
-		// Only if not a common TLS port, or if SendProbes is off for those.
-		if !isPotentiallyTLS(pInfo.Port) || !m.config.SendProbes {
-			banner, err = m.grabGenericBanner(ctx, address)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "[DEBUG] Generic banner grab for %s failed: %v\n", address, err)
-			}
+	for _, task := range scanTasks {
+		select {
+		case <-ctx.Done():
+			m.logger.Info().Msg("Context cancelled. Aborting further banner grabbing.")
+			goto endLoop
+		default:
 		}
 
-		// 2. If generic banner is empty or failed, and SendProbes is true, try specific probes
-		if (banner == "" || err != nil) && m.config.SendProbes {
-			if isPotentiallyHTTP(pInfo.Port) {
-				// Try HTTP GET probe
-				httpBanner, httpErr := m.grabHTTPBanner(ctx, pInfo.IP, pInfo.Port, false)
-				if httpErr == nil && httpBanner != "" {
-					banner = httpBanner
-					err = nil // Clear previous generic error
-				} else {
-					// If HTTP failed, and it's a common HTTPS port, try HTTPS
-					if isPotentiallyTLS(pInfo.Port) { // Typically 443, 8443
-						httpsBanner, httpsErr := m.grabHTTPBanner(ctx, pInfo.IP, pInfo.Port, true)
-						if httpsErr == nil && httpsBanner != "" {
-							banner = httpsBanner
-							isTLS = true
-							err = nil // Clear previous errors
-						} else if httpErr != nil && banner == "" { // Preserve original httpErr if https also fails
-							err = httpErr
-						} else if httpsErr != nil && banner == "" {
-							err = httpsErr
+		wg.Add(1)
+		sem <- struct{}{} // Acquire semaphore
+
+		go func(currentTarget string, currentPort int) {
+			defer wg.Done()
+			defer func() {
+				<-sem
+			}()
+
+			address := net.JoinHostPort(currentTarget, strconv.Itoa(currentPort))
+			var banner string
+			var err error
+			isTLS := false
+
+			// 1. Attempt a simple TCP read (for non-HTTP, non-TLS services)
+			// Only if not a common TLS port, or if SendProbes is off for those.
+			if !isPotentiallyTLS(currentPort) || !m.config.SendProbes {
+				banner, err = m.grabGenericBanner(ctx, address)
+				if err != nil {
+					m.logger.Debug().Msgf("Generic banner grab for %s failed: %v", address, err)
+				}
+			}
+
+			// 2. If generic banner is empty or failed, and SendProbes is true, try specific probes
+			if (banner == "" || err != nil) && m.config.SendProbes {
+				if isPotentiallyHTTP(currentPort) {
+					// Try HTTP GET probe
+					httpBanner, httpErr := m.grabHTTPBanner(ctx, currentTarget, currentPort, false)
+					if httpErr == nil && httpBanner != "" {
+						banner = httpBanner
+						err = nil // Clear previous generic error
+					} else {
+						// If HTTP failed, and it's a common HTTPS port, try HTTPS
+						if isPotentiallyTLS(currentPort) { // Typically 443, 8443
+							httpsBanner, httpsErr := m.grabHTTPBanner(ctx, currentTarget, currentPort, true)
+							if httpsErr == nil && httpsBanner != "" {
+								banner = httpsBanner
+								isTLS = true
+								err = nil // Clear previous errors
+							} else if httpErr != nil && banner == "" { // Preserve original httpErr if https also fails
+								err = httpErr
+							} else if httpsErr != nil && banner == "" {
+								err = httpsErr
+							}
+						} else if httpErr != nil && banner == "" {
+							err = httpErr // Preserve HTTP error if not trying HTTPS
 						}
-					} else if httpErr != nil && banner == "" {
-						err = httpErr // Preserve HTTP error if not trying HTTPS
+					}
+				} else if isPotentiallyTLS(currentPort) && banner == "" { // Non-HTTP TLS port (e.g. SMTPS, IMAPS)
+					tlsBanner, tlsErr := m.grabTLSBanner(ctx, address)
+					if tlsErr == nil && tlsBanner != "" {
+						banner = tlsBanner
+						isTLS = true
+						err = nil
+					} else if tlsErr != nil && banner == "" {
+						err = tlsErr
 					}
 				}
-			} else if isPotentiallyTLS(pInfo.Port) && banner == "" { // Non-HTTP TLS port (e.g. SMTPS, IMAPS)
-				tlsBanner, tlsErr := m.grabTLSBanner(ctx, address)
-				if tlsErr == nil && tlsBanner != "" {
-					banner = tlsBanner
-					isTLS = true
-					err = nil
-				} else if tlsErr != nil && banner == "" {
-					err = tlsErr
-				}
+				// Future: Add more probes for FTP, SMTP, SSH (though SSH usually sends banner first)
 			}
-			// Future: Add more probes for FTP, SMTP, SSH (though SSH usually sends banner first)
-		}
 
-		result := BannerGrabResult{
-			IP:       pInfo.IP,
-			Port:     pInfo.Port,
-			Protocol: "tcp",
-			Banner:   strings.TrimSpace(banner),
-			IsTLS:    isTLS,
-		}
-		if err != nil {
-			result.Error = err.Error()
-		}
+			result := BannerGrabResult{
+				IP:       currentTarget,
+				Port:     currentPort,
+				Protocol: "tcp",
+				Banner:   strings.TrimSpace(banner),
+				IsTLS:    isTLS,
+			}
+			if err != nil {
+				result.Error = err.Error()
+			}
 
-		select {
-		case outputChan <- engine.ModuleOutput{
-			FromModuleName: m.meta.ID,
-			DataKey:        m.meta.Produces[0], // "service.banner.raw"
-			Target:         pInfo.IP,
-			Data:           result,
-			Timestamp:      time.Now(),
-		}:
-		case <-ctx.Done():
-			return
-		}
-	}(portInfo)
+			grabbedBanners = append(grabbedBanners, result)
 
+			select {
+			case outputChan <- engine.ModuleOutput{
+				FromModuleName: m.meta.ID,
+				DataKey:        m.meta.Produces[0].Key, // "service.banner.raw"
+				Target:         currentTarget,
+				Data:           result,
+				Timestamp:      time.Now(),
+			}:
+			case <-ctx.Done():
+				return
+			}
+		}(task.Target, task.Port)
+	}
+
+endLoop:
 	wg.Wait()
-	// fmt.Printf("[INFO] Module '%s': Banner grabbing attempt for %s:%d completed.\n", m.meta.Name, portInfo.IP, portInfo.Port)
+	m.logger.Info().Msg("Service banner scanning completed.")
+
 	return nil
 }
 
@@ -480,7 +524,7 @@ func (m *BannerGrabModule) grabTLSBanner(ctx context.Context, address string) (s
 
 // BannerGrabModuleFactory creates a new BannerGrabModule instance.
 func BannerGrabModuleFactory() engine.Module {
-	return newBannerGrabModule()
+	return newBannerGrabModule1()
 }
 
 func init() {

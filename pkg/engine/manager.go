@@ -12,6 +12,14 @@ import (
 	"github.com/pentora-ai/pentora/pkg/version"
 )
 
+// AppManagerKeyType is an unexported type for the context key.
+// This prevents collisions with context keys defined in other packages.
+type appManagerKeyType struct{}
+
+// AppManagerKey is the key used to store and retrieve the AppManager
+// from a context.Context. It is exported for use in other packages.
+var AppManagerKey = appManagerKeyType{}
+
 // AppManager represents the application manager constructed by Factory.
 type AppManager struct {
 	// ctx is the context for managing request-scoped values, cancellation signals, and deadlines across API boundaries.

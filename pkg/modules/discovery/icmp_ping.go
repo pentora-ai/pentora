@@ -15,6 +15,7 @@ import (
 	"github.com/go-ping/ping"
 	"github.com/pentora-ai/pentora/pkg/engine" // Assuming your core module interfaces are in pkg/engine
 	"github.com/pentora-ai/pentora/pkg/utils"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cast"
 )
 
@@ -84,8 +85,24 @@ func newICMPPingDiscoveryModule() *ICMPPingDiscoveryModule {
 			Type:        engine.DiscoveryModuleType,
 			Author:      "Pentora Team",
 			Tags:        []string{"discovery", "host", "icmp", "ping"},
-			Produces:    []string{"discovery.live_hosts"},
-			Consumes:    []string{"config.targets"}, // Example: Consumes a list of targets from global config or previous stage
+			Consumes: []engine.DataContractEntry{
+				{
+					Key:          "config.targets",
+					DataTypeName: "[]string", // Beklenen Go tipinin string temsili
+					// DataType:    reflect.TypeOf(([]string)(nil)), // reflect.Type kullanımı opsiyonel
+					Cardinality: engine.CardinalitySingle, // config.targets tek bir []string listesi olarak gelir
+					IsOptional:  false,                    // Ya bu ya da module.config.Targets dolu olmalı
+					Description: "List of initial targets (IPs, CIDRs, hostnames) to ping.",
+				},
+			},
+			Produces: []engine.DataContractEntry{
+				{
+					Key:          "discovery.live_hosts",
+					DataTypeName: "discovery.ICMPPingDiscoveryResult", // Üretilen ModuleOutput.Data'nın tipi
+					Cardinality:  engine.CardinalitySingle,            // ICMPPingDiscoveryResult tek bir struct'tır
+					Description:  "A single result object containing a list of live hosts found.",
+				},
+			},
 			ConfigSchema: map[string]engine.ParameterDefinition{
 				"targets":        {Description: "List of IPs, CIDRs, or ranges to ping.", Type: "[]string", Required: false /* Can be provided by input */},
 				"timeout":        {Description: "Overall timeout for all ping attempts to a single host (e.g., '3s'). This is for the module's management of the ping operation.", Type: "duration", Required: false, Default: defaultConfig.Timeout.String()},
@@ -96,6 +113,7 @@ func newICMPPingDiscoveryModule() *ICMPPingDiscoveryModule {
 				"concurrency":    {Description: "Number of concurrent ping operations.", Type: "int", Required: false, Default: defaultConfig.Concurrency},
 				"allow_loopback": {Description: "Set to true to allow pinging loopback addresses (e.g., 127.0.0.1).", Type: "bool", Required: false, Default: defaultConfig.AllowLoopback},
 			},
+			EstimatedCost: 1,
 		},
 		config: defaultConfig, // Initialize with defaults
 		pingerFactory: func(ip string) (Pinger, error) {
@@ -115,9 +133,14 @@ func (m *ICMPPingDiscoveryModule) Metadata() engine.ModuleMetadata {
 
 // Init initializes the module with the given configuration map.
 // It parses the map and populates the module's config struct, overriding defaults.
-func (m *ICMPPingDiscoveryModule) Init(configMap map[string]interface{}) error {
+func (m *ICMPPingDiscoveryModule) Init(instanceID string, configMap map[string]interface{}) error {
 	// Start with default config values already set by newICMPPingDiscoveryModule
 	cfg := m.config
+
+	logger := log.With().Str("module", m.meta.Name).Str("instance_id", m.meta.ID).Logger()
+	logger.Debug().Interface("received_config_map", configMap).Msg("Initializing module")
+
+	m.meta.ID = instanceID // Set the instance ID for this module
 
 	if targetsVal, ok := configMap["targets"]; ok {
 		cfg.Targets = cast.ToStringSlice(targetsVal)
@@ -126,7 +149,7 @@ func (m *ICMPPingDiscoveryModule) Init(configMap map[string]interface{}) error {
 		if dur, err := time.ParseDuration(timeoutStr); err == nil {
 			cfg.Timeout = dur
 		} else {
-			fmt.Printf("[WARN] Module '%s': Invalid 'timeout' format in config: '%s'. Using default: %s\n", m.meta.Name, timeoutStr, cfg.Timeout)
+			log.Warn().Msgf("Module '%s': Invalid 'timeout' format in config: '%s'. Using default: %s\n", m.meta.Name, timeoutStr, cfg.Timeout)
 		}
 	}
 	if countVal, ok := configMap["count"]; ok {
@@ -136,14 +159,14 @@ func (m *ICMPPingDiscoveryModule) Init(configMap map[string]interface{}) error {
 		if dur, err := time.ParseDuration(intervalStr); err == nil {
 			cfg.Interval = dur
 		} else {
-			fmt.Printf("[WARN] Module '%s': Invalid 'interval' format in config: '%s'. Using default: %s\n", m.meta.Name, intervalStr, cfg.Interval)
+			log.Warn().Msgf("Module '%s': Invalid 'interval' format in config: '%s'. Using default: %s\n", m.meta.Name, intervalStr, cfg.Interval)
 		}
 	}
 	if packetTimeoutStr, ok := configMap["packet_timeout"].(string); ok {
 		if dur, err := time.ParseDuration(packetTimeoutStr); err == nil {
 			cfg.PacketTimeout = dur
 		} else {
-			fmt.Printf("[WARN] Module '%s': Invalid 'packet_timeout' format in config: '%s'. Using default: %s\n", m.meta.Name, packetTimeoutStr, cfg.PacketTimeout)
+			log.Warn().Msgf("Module '%s': Invalid 'packet_timeout' format in config: '%s'. Using default: %s\n", m.meta.Name, packetTimeoutStr, cfg.PacketTimeout)
 		}
 	}
 	if privilegedVal, ok := configMap["privileged"]; ok {
@@ -158,60 +181,87 @@ func (m *ICMPPingDiscoveryModule) Init(configMap map[string]interface{}) error {
 
 	// Validate and sanitize config values
 	if cfg.Count < 1 {
-		fmt.Printf("[WARN] Module '%s': Ping count in config is < 1 (%d). Setting to 1.\n", m.meta.Name, cfg.Count)
+		log.Warn().Msgf("Module '%s': Ping count in config is < 1 (%d). Setting to 1.", m.meta.Name, cfg.Count)
 		cfg.Count = 1
 	}
 	if cfg.Concurrency < 1 {
-		fmt.Printf("[WARN] Module '%s': Concurrency in config is < 1 (%d). Setting to 1.\n", m.meta.Name, cfg.Concurrency)
+		log.Warn().Msgf("Module '%s': Concurrency in config is < 1 (%d). Setting to 1.", m.meta.Name, cfg.Concurrency)
 		cfg.Concurrency = 1
 	}
 	if cfg.Timeout <= 0 { // Ensure overall timeout is also positive
 		cfg.Timeout = 3 * time.Second // A sensible fallback
-		fmt.Printf("[WARN] Module '%s': Invalid 'timeout'. Setting to default: %s\n", m.meta.Name, cfg.Timeout)
+		log.Warn().Msgf("Module '%s': Invalid 'timeout'. Setting to default: %s", m.meta.Name, cfg.Timeout)
 	}
 	if cfg.PacketTimeout <= 0 {
 		cfg.PacketTimeout = cfg.Timeout // Fallback if packet_timeout is invalid or not set appropriately
-		fmt.Printf("[WARN] Module '%s': Invalid 'packet_timeout'. Using overall 'timeout' value: %s\n", m.meta.Name, cfg.PacketTimeout)
+		log.Warn().Msgf("Module '%s': Invalid 'packet_timeout'. Using overall 'timeout' value: %s", m.meta.Name, cfg.PacketTimeout)
 	}
 
 	// Handle privileged mode warning/downgrade for non-Windows OS
 	if cfg.Privileged && runtime.GOOS != "windows" {
 		if os.Geteuid() != 0 {
-			fmt.Printf("[WARN] Module '%s': Privileged ping requested, but process is not running as root. Falling back to unprivileged ping.\n", m.meta.Name)
+			log.Warn().Msgf("Module '%s': Privileged ping requested, but process is not running as root. Falling back to unprivileged ping.", m.meta.Name)
 			cfg.Privileged = false
 		}
 	} else if cfg.Privileged && runtime.GOOS == "windows" {
 		// Inform the user about Windows behavior with privileged pings
-		fmt.Printf("[INFO] Module '%s': Privileged mode for go-ping on Windows may rely on ICMP.DLL rather than raw sockets.\n", m.meta.Name)
+		log.Info().Msgf("Module '%s': Privileged mode for go-ping on Windows may rely on ICMP.DLL rather than raw sockets.", m.meta.Name)
 	}
 
 	m.config = cfg // Assign the processed config back to the module
-	fmt.Printf("[DEBUG] Module '%s' initialized. Final Config: %+v\n", m.meta.Name, m.config)
+	log.Debug().Msgf("Module '%s' initialized. Final Config: %+v", m.meta.Name, m.config)
 	return nil
 }
 
 // Execute performs the host discovery using ICMP pings based on the initialized configuration.
 func (m *ICMPPingDiscoveryModule) Execute(ctx context.Context, inputs map[string]interface{}, outputChan chan<- engine.ModuleOutput) error {
-	var targetsToProcess []string
+	logger := log.With().Str("module", m.meta.Name).Str("instance_id", m.meta.ID).Logger()
+	logger.Debug().Interface("received_inputs", inputs).Msg("Executing module")
 
-	// Determine targets: prefer inputs, fallback to module config
-	if inputTargets, ok := inputs["targets"].([]string); ok && len(inputTargets) > 0 {
-		targetsToProcess = utils.ParseAndExpandTargets(inputTargets)
-	} else if len(m.config.Targets) > 0 {
+	var targetsToProcess []string
+	var targetsInputSource = "module_config_fallback" // To log which source was used
+
+	// "config.targets" is an initial input, assumed to be set directly by DataContext.SetInitial
+	if rawTargetsInput, ok := inputs["config.targets"]; ok {
+		logger.Debug().Interface("config.targets_input_raw", rawTargetsInput).Type("type", rawTargetsInput).Msg("Found 'config.targets' in inputs")
+		if stringSlice, isStringSlice := rawTargetsInput.([]string); isStringSlice {
+			targetsToProcess = utils.ParseAndExpandTargets(stringSlice)
+			targetsInputSource = "inputs[\"config.targets\"] (direct []string)"
+		} else if rawTargetsInput != nil {
+			logger.Error().Type("type", rawTargetsInput).Msg("'config.targets' input has unexpected type, expected []string")
+		}
+	}
+
+	if len(targetsToProcess) == 0 && len(m.config.Targets) > 0 {
 		targetsToProcess = utils.ParseAndExpandTargets(m.config.Targets)
-	} else {
-		err := fmt.Errorf("module '%s': no targets specified (neither in input nor in module config)", m.meta.Name)
-		outputChan <- engine.ModuleOutput{FromModuleName: m.meta.ID, Error: err, Timestamp: time.Now()}
+		targetsInputSource = "module.config.Targets (from Init)"
+		logger.Debug().Interface("module_config_targets", m.config.Targets).Msg("Using targets from module's own config as fallback")
+	}
+
+	logger.Debug().Strs("parsed_targets", targetsToProcess).Str("source", targetsInputSource).Msg("Targets after attempting to read from all sources")
+
+	if len(targetsToProcess) == 0 {
+		err := fmt.Errorf("no targets specified (source evaluated: %s, instance: %s)", targetsInputSource, m.meta.ID)
+		logger.Error().Err(err).Msg("Module execution cannot proceed")
+		// Send error via ModuleOutput, DataKey can be empty or a specific error key
+		outputChan <- engine.ModuleOutput{
+			FromModuleName: m.meta.ID,
+			DataKey:        "error.input.targets", // More specific error key
+			Error:          err,
+			Timestamp:      time.Now(),
+		}
 		return err // Return error to orchestrator to indicate module failure
 	}
-	// fmt.Printf("[DEBUG-EXEC] Module '%s': Targets after parseAndExpandTargets: %v\n", m.meta.Name, targetsToProcess)
 
+	logger.Debug().Msgf("[DEBUG-EXEC] Module '%s': Targets after parseAndExpandTargets: %v", m.meta.Name, targetsToProcess)
+
+	// --- Loopback Filtering ---
 	finalTargetsToScan := []string{}
 	if !m.config.AllowLoopback {
 		for _, ipStr := range targetsToProcess {
 			ip := net.ParseIP(ipStr)
 			if ip != nil && ip.IsLoopback() {
-				// fmt.Printf("[INFO] Module '%s': Skipping loopback address %s as per configuration (AllowLoopback=false).\n", m.meta.Name, ipStr)
+				logger.Debug().Str("ip", ipStr).Msg("Skipping loopback address")
 				continue
 			}
 			finalTargetsToScan = append(finalTargetsToScan, ipStr)
@@ -219,7 +269,7 @@ func (m *ICMPPingDiscoveryModule) Execute(ctx context.Context, inputs map[string
 	} else {
 		finalTargetsToScan = targetsToProcess
 	}
-	// fmt.Printf("[DEBUG-EXEC] Module '%s': Targets after loopback filtering (finalTargetsToScan): %v\n", m.meta.Name, finalTargetsToScan)
+	logger.Debug().Strs("final_targets_to_scan", finalTargetsToScan).Msg("Targets after loopback filtering")
 
 	if len(finalTargetsToScan) == 0 {
 		msg := "effective target list is empty after all filters"
@@ -236,16 +286,14 @@ func (m *ICMPPingDiscoveryModule) Execute(ctx context.Context, inputs map[string
 				msg = "all specified targets were loopback addresses and loopback scanning is disabled"
 			}
 		}
-		// Send an info output that no targets are left, but don't necessarily error the module itself
-		// unless the orchestrator should stop on this.
+		logger.Info().Msg(msg + ". No hosts to ping.")
 		outputChan <- engine.ModuleOutput{
 			FromModuleName: m.meta.ID,
-			DataKey:        m.meta.Produces[0], // discovery.live_hosts
+			DataKey:        m.meta.Produces[0].Key,
 			Data:           ICMPPingDiscoveryResult{LiveHosts: []string{}},
 			Timestamp:      time.Now(),
-			Error:          fmt.Errorf("module '%s': %s", m.meta.Name, msg), // Informative error in output
+			// Error: // No actual module execution error, just no results.
 		}
-		fmt.Printf("[INFO] Module '%s': %s. No hosts to ping.\n", m.meta.Name, msg)
 		return nil // Module itself didn't fail, just had no work.
 	}
 
@@ -254,13 +302,12 @@ func (m *ICMPPingDiscoveryModule) Execute(ctx context.Context, inputs map[string
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, m.config.Concurrency)
 
-	fmt.Printf("[INFO] Module '%s': Starting ICMP Ping for %d targets. Concurrency: %d, Count: %d, Interval: %s, PktTimeout: %s, Privileged: %v\n",
-		m.meta.Name, len(finalTargetsToScan), m.config.Concurrency, m.config.Count, m.config.Interval, m.config.PacketTimeout, m.config.Privileged)
+	logger.Info().Int("num_targets", len(finalTargetsToScan)).Int("concurrency", m.config.Concurrency).Msg("Starting ICMP Ping scan")
 
 	for _, targetIP := range finalTargetsToScan {
 		select {
 		case <-ctx.Done():
-			fmt.Printf("[INFO] Module '%s': Main context cancelled. Aborting further pings. Found %d live hosts so far.\n", m.meta.Name, len(liveHosts))
+			logger.Info().Int("live_hosts_found", len(liveHosts)).Msg("Main context cancelled. Aborting further pings.")
 			return ctx.Err() // Propagate cancellation
 		default:
 		}
@@ -280,25 +327,21 @@ func (m *ICMPPingDiscoveryModule) Execute(ctx context.Context, inputs map[string
 
 			pinger, err := m.pingerFactory(ip)
 			if err != nil {
-				// fmt.Printf("[DEBUG] Module '%s': Failed to create pinger for %s: %v\n", m.meta.Name, ip, err)
+				logger.Warn().Str("target", ip).Err(err).Msg("Failed to create pinger")
 				return
 			}
 
 			pinger.SetPrivileged(m.config.Privileged)
 			pinger.SetCount(m.config.Count)
 			pinger.SetInterval(m.config.Interval)
-			pinger.SetTimeout(m.config.PacketTimeout) // go-ping's Pinger.Timeout is for the entire operation for this pinger instance
+			pinger.SetTimeout(m.config.PacketTimeout)
 
-			// Create a context for this specific ping operation that respects the overall module context
-			// and the pinger's configured timeout (plus a small buffer for cleanup).
 			opCtx, opCancel := context.WithTimeout(ctx, pinger.GetTimeout()+(500*time.Millisecond))
 			defer opCancel()
 
-			// Ensure the pinger stops if the operation context is done.
-			// This is crucial if pinger.Run() doesn't immediately react to parent ctx cancellation in all cases.
 			go func() {
 				<-opCtx.Done()
-				if opCtx.Err() == context.DeadlineExceeded || opCtx.Err() == context.Canceled {
+				if opCtx.Err() != nil { // Could be context.DeadlineExceeded or context.Canceled
 					pinger.Stop()
 				}
 			}()
@@ -307,22 +350,24 @@ func (m *ICMPPingDiscoveryModule) Execute(ctx context.Context, inputs map[string
 			stats := pinger.Statistics() // Get stats regardless of error from Run()
 
 			if opCtx.Err() != nil { // Check if our operation context timed out or was cancelled
-				// fmt.Printf("[DEBUG] Module '%s': Ping operation for %s context done: %v\n", m.meta.Name, ip, opCtx.Err())
+				logger.Debug().Str("target", ip).Err(opCtx.Err()).Msg("Ping operation context done")
 				return
 			}
 			// Error from pinger.Run() itself might indicate network issues other than timeout,
 			// or issues setting up the ping (e.g. privilege problems not caught earlier).
-			// if err != nil {
-			// 	fmt.Printf("[DEBUG] Module '%s': Pinger.Run() for %s reported error: %v. Stats: %+v\n", m.meta.Name, ip, err, stats)
-			// }
+			if err != nil {
+				// Depending on verbosity, this might be a debug or warn.
+				// If stats.PacketsRecv > 0, it's not a complete failure for host discovery.
+				// logger.Debug().Err(err).Str("target", ip).Msg("Pinger.Run() error")
+			}
 
-			if stats.PacketsRecv > 0 {
+			if stats != nil && stats.PacketsRecv > 0 {
 				mu.Lock()
 				liveHosts = append(liveHosts, ip)
 				mu.Unlock()
+				logger.Debug().Str("target", ip).Msg("Host is live")
 			} else {
-				// fmt.Printf("[DEBUG] Module '%s': Host %s did not respond (Sent: %d, Recv: %d, Loss: %.0f%%)\n",
-				//  m.meta.Name, ip, stats.PacketsSent, stats.PacketsRecv, stats.PacketLoss)
+				// logger.Debug().Str("target", ip).Int("sent", stats.PacketsSent).Int("recv", stats.PacketsRecv).Msg("Host did not respond")
 			}
 		}(targetIP)
 	}
@@ -332,12 +377,12 @@ func (m *ICMPPingDiscoveryModule) Execute(ctx context.Context, inputs map[string
 	resultData := ICMPPingDiscoveryResult{LiveHosts: liveHosts}
 	outputChan <- engine.ModuleOutput{
 		FromModuleName: m.meta.ID,
-		DataKey:        m.meta.Produces[0], // "discovery.live_hosts"
+		DataKey:        m.meta.Produces[0].Key, // "discovery.live_hosts"
 		Data:           resultData,
 		Timestamp:      time.Now(),
 	}
 
-	fmt.Printf("[INFO] Module '%s': ICMP Ping Discovery completed. Found %d live hosts out of %d processed targets.\n", m.meta.Name, len(liveHosts), len(finalTargetsToScan))
+	logger.Info().Int("live_hosts_found", len(liveHosts)).Int("targets_processed", len(finalTargetsToScan)).Msg("ICMP Ping Discovery completed")
 	return nil
 }
 
