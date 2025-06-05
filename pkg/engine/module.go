@@ -3,6 +3,7 @@ package engine
 
 import (
 	"context"
+	"reflect"
 	"time"
 )
 
@@ -19,6 +20,36 @@ const (
 	OrchestrationModuleType ModuleType = "orchestration" // Meta-modules that can manage other modules
 )
 
+// DataType represents the expected Go type of a DataKey as a string.
+// Examples: "[]string", "int", "discovery.ICMPPingDiscoveryResult", "[]scan.BannerScanResult"
+type DataType string
+
+// DataCardinality indicates if a DataKey represents a single item or a list of items.
+type DataCardinality string
+
+const (
+	CardinalitySingle DataCardinality = "single" // Represents a single data item (struct, int, string, etc.)
+	CardinalityList   DataCardinality = "list"   // Represents a list/slice of data items (e.g., []string, []MyStruct)
+)
+
+// DataContractEntry, bir DataKey'in tipini ve kardinalitesini tanımlar.
+type DataContractEntry struct {
+	Key          string          `json:"key" yaml:"key"`                                     // DataKey adı (örn: "discovery.live_hosts")
+	DataType     reflect.Type    `json:"-" yaml:"-"`                                         // Beklenen Go tipi (JSON/YAML'a serileştirilmez, çalışma zamanında kullanılır)
+	DataTypeName string          `json:"data_type_name" yaml:"data_type_name"`               // Tipin string temsili (örn: "[]string", "discovery.ICMPPingDiscoveryResult")
+	Cardinality  DataCardinality `json:"cardinality" yaml:"cardinality"`                     // Is the Data field for this key a single item or a list of items?
+	IsList       bool            `json:"is_list" yaml:"is_list"`                             // Bu anahtarın değeri bir liste mi (birden fazla öğe içerebilir mi)?
+	IsOptional   bool            `json:"is_optional,omitempty" yaml:"is_optional,omitempty"` // Bu girdi/çıktı opsiyonel mi?
+	Description  string          `json:"description,omitempty" yaml:"description,omitempty"`
+}
+
+// ActivationTrigger (önceki yanıttaki gibi kalabilir veya geliştirilebilir)
+type ActivationTrigger struct {
+	DataKey        string `json:"data_key" yaml:"data_key"`
+	ValueCondition string `json:"value_condition,omitempty" yaml:"value_condition,omitempty"`
+	ConditionType  string `json:"condition_type,omitempty"` // "equals", "contains", "regex", "version_lt"
+}
+
 // ModuleMetadata holds common information for all modules.
 type ModuleMetadata struct {
 	ID          string     // Unique identifier for the module instance in a DAG
@@ -29,17 +60,23 @@ type ModuleMetadata struct {
 	Author      string     // Author of the module
 	Tags        []string   // Tags for categorization or filtering
 
-	// Defines what data keys this module can produce.
-	// Example: ["discovery.live_hosts", "asset.ip_addresses"]
-	Produces []string
-
 	// Defines what data keys this module consumes from the data context or previous modules.
 	// Example: ["config.targets", "discovery.live_hosts"]
-	Consumes []string
+	Consumes []DataContractEntry `json:"consumes,omitempty" yaml:"consumes,omitempty"`
+	// Defines what data keys this module can produce.
+	// Example: ["discovery.live_hosts", "asset.ip_addresses"]
+	Produces []DataContractEntry `json:"produces,omitempty" yaml:"produces,omitempty"`
 
 	// Defines module-specific configuration parameters and their types/defaults.
 	// This could be a more structured type or a map for flexibility.
 	ConfigSchema map[string]ParameterDefinition
+
+	ActivationTriggers []ActivationTrigger `json:"activation_triggers,omitempty" yaml:"activation_triggers,omitempty"`
+	IsDynamic          bool                `json:"is_dynamic,omitempty" yaml:"is_dynamic,omitempty"`
+
+	// Opsiyonel ek alanlar:
+	EstimatedCost    int      `json:"estimated_cost,omitempty" yaml:"estimated_cost,omitempty"`       // 1-5 arası (1:hızlı, 5:çok yavaş)
+	RequiredFeatures []string `json:"required_features,omitempty" yaml:"required_features,omitempty"` // Lisans için
 }
 
 // ParameterDefinition describes a configuration parameter for a module.
@@ -75,7 +112,7 @@ type Module interface {
 
 	// Init initializes the module with its specific configuration.
 	// The config map is typically derived from the DAG definition.
-	Init(moduleConfig map[string]interface{}) error
+	Init(instanceID string, moduleConfig map[string]interface{}) error
 
 	// Execute runs the module's main logic.
 	// It takes the current execution context, a map of input data (keyed by DataKey),

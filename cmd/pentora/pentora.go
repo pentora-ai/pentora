@@ -2,10 +2,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
 	"github.com/pentora-ai/pentora/cmd/version"
+	"github.com/pentora-ai/pentora/pkg/cli"
 	"github.com/pentora-ai/pentora/pkg/config"
 	"github.com/pentora-ai/pentora/pkg/engine"
 	"github.com/spf13/cobra"
@@ -36,6 +38,9 @@ var (
 				return err
 			}
 
+			ctxWithAppMgr := context.WithValue(cmd.Context(), engine.AppManagerKey, appManager)
+			cmd.SetContext(ctxWithAppMgr)
+
 			log.Debug().Msgf("Pentora is running: %v", appManager.Version.Version)
 
 			// InitializeGlobalLogger(appManager.ConfigManager.Get().Log) // If you have one
@@ -50,8 +55,13 @@ var (
 				currentCfg := appManager.ConfigManager.Get()
 				log.Debug().Msgf("Hint: Current log level from config is '%s'.\n", currentCfg.Log.Level)
 			}
-
-			//spew.Dump(appManager) // This is a debugging line to print the appManager struct.
+		},
+		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			if appMgr, ok := ctx.Value(engine.AppManagerKey).(*engine.AppManager); ok && appMgr != nil {
+				appMgr.Shutdown() // Ensure the AppManager is properly closed after execution.
+			}
+			return nil
 		},
 	}
 
@@ -72,6 +82,10 @@ func init() {
 	// The default value is empty, meaning config.Load will try default locations.
 	rootCmd.PersistentFlags().StringVarP(&configFile, "config", "c", "", "Configuration file path (e.g., ./config.yaml, /etc/pentora/config.yaml)")
 
+	var verbosity int
+	// Define a persistent flag for verbosity level.
+	rootCmd.PersistentFlags().CountVarP(&verbosity, "verbosity", "v", "Verbosity level (e.g., -v, -vv, -vvv)")
+
 	// Define other application-wide persistent flags that correspond to config settings.
 	// These flags will be bound to Koanf by the config.Manager.
 	// Using a helper function from the config package to define these flags
@@ -84,6 +98,8 @@ func init() {
 	// rootCmd.AddCommand(cli.ServeCmd)       // Assumes cli.ServeCmd uses appManager for config, logger, etc.
 	// rootCmd.AddCommand(license.LicenseCmd) // License commands
 	rootCmd.AddCommand(version.VersionCmd) // Version command
+	rootCmd.AddCommand(cli.DiscoverCmd)    // The command for host and port discovery
+	rootCmd.AddCommand(cli.ScanCmd)        // The command for scanning hosts and ports
 	// rootCmd.AddCommand(cli.ModuleHostCmd)  // The test command for hosting external modules
 }
 

@@ -61,8 +61,7 @@ func init() {
 }
 
 // ConfigureGlobalLogging configures the global logging settings for the application.
-func ConfigureGlobalLogging(levelStr string) error {
-	level := parseLogLevel(levelStr)
+func ConfigureGlobalLogging(level zerolog.Level) error {
 	zerolog.SetGlobalLevel(level)
 
 	w := getLogWriter()
@@ -80,22 +79,6 @@ func ConfigureGlobalLogging(levelStr string) error {
 	stdLog.SetOutput(&stdLogWriter{logger: WithLevelOverride(log.Logger, zerolog.DebugLevel)})
 
 	return nil
-}
-
-// parseLogLevel converts a string log level to zerolog.Level
-func parseLogLevel(levelString string) zerolog.Level {
-	if levelString == "" {
-		levelString = "error"
-	}
-
-	level, err := zerolog.ParseLevel(strings.ToLower(levelString))
-	if err != nil {
-		log.Error().Err(err).
-			Str("logLevel", levelString).
-			Msg("Invalid log level provided. Defaulting to error level.")
-		return zerolog.ErrorLevel
-	}
-	return level
 }
 
 // getLogWriter returns the configured log writer

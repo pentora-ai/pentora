@@ -10,6 +10,7 @@ import (
 	"github.com/pentora-ai/pentora/pkg/hook"
 	"github.com/pentora-ai/pentora/pkg/logging"
 	"github.com/pentora-ai/pentora/pkg/version"
+	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 )
 
@@ -38,10 +39,7 @@ type DefaultAppManagerFactory struct{}
 //   - error:       An error if initialization fails.
 func (f *DefaultAppManagerFactory) Create(flags *pflag.FlagSet, configFile string) (*AppManager, error) {
 
-	logLevel := "info"
-	if flags != nil {
-		logLevel = f.GetRuntimeLogLevel(flags)
-	}
+	logLevel := f.GetRuntimeLogLevel(flags)
 
 	if err := logging.ConfigureGlobalLogging(logLevel); err != nil {
 		return nil, fmt.Errorf("failed to configure global logging: %w", err)
@@ -80,12 +78,23 @@ func (f *DefaultAppManagerFactory) CreateWithNoConfig() (*AppManager, error) {
 
 // GetRuntimeLogLevel determines the runtime log level based on the provided flag set.
 // If the "debug" flag is set to "true", it returns "debug"; otherwise, it defaults to "info".
-func (f *DefaultAppManagerFactory) GetRuntimeLogLevel(flags *pflag.FlagSet) string {
-	logLevel := "info"
-	debugFlag := flags.Lookup("debug")
-	if debugFlag != nil && debugFlag.Value.String() == "true" {
-		logLevel = "debug"
+func (f *DefaultAppManagerFactory) GetRuntimeLogLevel(flags *pflag.FlagSet) zerolog.Level {
+	logLevel := zerolog.WarnLevel // Default log level
+	if flags != nil {
+		verbosityLevel, err := flags.GetCount("verbosity")
+		if err == nil {
+			// If verbosity is set, we can adjust the log level accordingly.
+			switch verbosityLevel {
+			case 1:
+				logLevel = zerolog.InfoLevel
+			case 2:
+				logLevel = zerolog.DebugLevel
+			case 3:
+				logLevel = zerolog.TraceLevel
+			default:
+				logLevel = zerolog.WarnLevel // Default to warn if unknown verbosity
+			}
+		}
 	}
-
 	return logLevel
 }
