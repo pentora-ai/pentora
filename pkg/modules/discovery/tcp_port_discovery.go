@@ -76,7 +76,7 @@ func newTCPPortDiscoveryModule() *TCPPortDiscoveryModule {
 					// Cardinality: engine.CardinalityList, // Expects a list of ICMPPingDiscoveryResult from DataContext
 					DataTypeName: "discovery.ICMPPingDiscoveryResult", // The type of each item in the list
 					Cardinality:  engine.CardinalityList,              // Expects a list of these items
-					IsOptional:   true,
+					IsOptional:   false,
 					Description:  "List of live hosts (as ICMPPingDiscoveryResult) from ICMP ping module.",
 				},
 				{
@@ -244,41 +244,58 @@ func (m *TCPPortDiscoveryModule) Execute(ctx context.Context, inputs map[string]
 	openPortsByTarget := make(map[string][]int)
 	var mapMutex sync.Mutex // To protect openPortsByTarget map
 
-	for _, targetIP := range targetsToScan {
-		for _, port := range parsedPorts {
-			// Check for context cancellation before starting new goroutines
-			select {
-			case <-ctx.Done():
-				fmt.Printf("[INFO] Module '%s' (instance: %s): Context cancelled. Aborting further port scans.\n", m.meta.Name, m.meta.ID)
-				goto endLoops // Break out of both loops
-			default:
-			}
+	batchSize := 10 // Gruplama büyüklüğü
+	for i := 0; i < len(targetsToScan); i += batchSize {
+		end := i + batchSize
+		if end > len(targetsToScan) {
+			end = len(targetsToScan)
+		}
+		ipBatch := targetsToScan[i:end]
 
-			wg.Add(1)
-			go func(ip string, p int) {
-				defer wg.Done()
-				sem <- struct{}{}        // Acquire semaphore
-				defer func() { <-sem }() // Release semaphore
+		logger.Debug().Msgf("Scanning IP batch: %v", ipBatch)
 
-				// Check context again inside the goroutine
+		for _, targetIP := range ipBatch {
+			logger.Debug().Msgf("Scanning target: %s", targetIP)
+			for _, port := range parsedPorts {
+				// Check for context cancellation before starting new goroutines
 				select {
 				case <-ctx.Done():
-					return
+					fmt.Printf("[INFO] Module '%s' (instance: %s): Context cancelled. Aborting further port scans.\n", m.meta.Name, m.meta.ID)
+					goto endLoops // Break out of both loops
 				default:
 				}
 
-				address := net.JoinHostPort(ip, strconv.Itoa(p))
-				conn, err := net.DialTimeout("tcp", address, m.config.Timeout)
-				if err == nil {
-					conn.Close()
-					mapMutex.Lock()
-					openPortsByTarget[ip] = append(openPortsByTarget[ip], p)
-					mapMutex.Unlock()
-					// Optionally, send individual open port findings immediately if needed by other real-time modules.
-					// For aggregated results, wait until all scans for a target (or all targets) are done.
-				}
-			}(targetIP, port)
+				wg.Add(1)
+				go func(ip string, p int) {
+					defer wg.Done()
+					sem <- struct{}{}        // Acquire semaphore
+					defer func() { <-sem }() // Release semaphore
+
+					// Check context again inside the goroutine
+					select {
+					case <-ctx.Done():
+						return
+					default:
+					}
+
+					address := net.JoinHostPort(ip, strconv.Itoa(p))
+					conn, err := net.DialTimeout("tcp", address, m.config.Timeout)
+					if err == nil {
+						conn.Close()
+						mapMutex.Lock()
+						openPortsByTarget[ip] = append(openPortsByTarget[ip], p)
+						mapMutex.Unlock()
+						// Optionally, send individual open port findings immediately if needed by other real-time modules.
+						// For aggregated results, wait until all scans for a target (or all targets) are done.
+					}
+				}(targetIP, port)
+			}
 		}
+
+		wg.Wait()
+
+		logger.Debug().Msgf("Completed batch: %v", ipBatch)
+
 	}
 
 endLoops:

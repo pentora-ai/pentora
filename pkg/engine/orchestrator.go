@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -156,11 +155,6 @@ func (dc *DataContext) AddOrAppendToList(key string, value interface{}) {
 		dc.data[key] = []interface{}{value}
 	}
 	dc.logger.Trace().Str("key", key).Type("new_value_type", value).Msg("Added/Appended value to DataContext list")
-
-	if key == "banner_grabber.service.banner.raw" {
-		fmt.Printf("[DEBUG] Banner Grabber output value: banner_grabber.service.banner.raw len: %s\n", spew.Sprint(len(dc.data["banner_grabber.service.banner.raw"].([]interface{}))))
-
-	}
 }
 
 // NewOrchestrator creates and initializes a new Orchestrator instance based on the provided DAGDefinition.
@@ -417,8 +411,11 @@ func (o *Orchestrator) Run(ctx context.Context, initialInputs map[string]interfa
 				execContext, execCancel := context.WithCancel(ctx) // Create a context for this specific execution
 				defer execCancel()
 
+				mlogger := o.logger.With().
+					Str("module", currentNode.instanceID).Logger()
+
 				currentNode.startTime = time.Now()
-				o.dataCtx.logger.Info().Msgf("Executing module: %s (type: %s)", currentNode.instanceID, currentNode.module.Metadata().Name)
+				mlogger.Info().Msg("Executing module")
 
 				completedMutex.Lock()
 				currentNode.status = StatusRunning
@@ -443,8 +440,6 @@ func (o *Orchestrator) Run(ctx context.Context, initialInputs map[string]interfa
 				}()
 
 				for output := range outputChan {
-					mlogger := log.With().Str("module", currentNode.instanceID).Logger()
-
 					if output.FromModuleName == "" {
 						output.FromModuleName = currentNode.instanceID
 					}
@@ -464,7 +459,8 @@ func (o *Orchestrator) Run(ctx context.Context, initialInputs map[string]interfa
 						// Decide if an output error should fail the module or just be logged.
 						// For now, log it. Module's main error (moduleErr) will determine module status.
 					} else {
-						mlogger.Debug().Msgf("Output from module '%s': DataKey='%s'", currentNode.instanceID, output.DataKey)
+						mlogger.Debug().
+							Str("data_key", output.DataKey).Msgf("Output module")
 					}
 				}
 
@@ -481,7 +477,7 @@ func (o *Orchestrator) Run(ctx context.Context, initialInputs map[string]interfa
 					setOverallError(moduleErr)
 				} else {
 					currentNode.status = StatusCompleted
-					log.Info().Msgf("Module '%s' completed in %s.", currentNode.instanceID, duration)
+					mlogger.Info().Msgf("Module completed in %s.", duration)
 				}
 				executionCompleted[currentNode.instanceID] = true
 				completedMutex.Unlock()
@@ -519,8 +515,7 @@ func (o *Orchestrator) Run(ctx context.Context, initialInputs map[string]interfa
 		oStatus = "failure"
 	}
 
-	log.Info().
-		Str("name", o.dag.Name).
+	o.logger.Info().
 		Str("status", oStatus).Msg("DAG execution finished")
 
 	return o.dataCtx.GetAll(), overallError

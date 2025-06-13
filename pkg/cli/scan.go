@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/pentora-ai/pentora/pkg/engine"
-	"github.com/pentora-ai/pentora/pkg/modules/discovery" // For casting results
-	_ "github.com/pentora-ai/pentora/pkg/modules/parse"   // Register parse modules if needed
-	_ "github.com/pentora-ai/pentora/pkg/modules/scan"    // Register this module
-
+	"github.com/pentora-ai/pentora/pkg/modules/discovery"   // For casting results
+	_ "github.com/pentora-ai/pentora/pkg/modules/parse"     // Register parse modules if needed
+	_ "github.com/pentora-ai/pentora/pkg/modules/reporting" // Register reporting modules if needed
+	_ "github.com/pentora-ai/pentora/pkg/modules/scan"      // Register this module
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -125,6 +125,20 @@ The command automatically plans the execution DAG using available modules.`,
 
 		// 6. Run the Orchestrator
 		finalDataContext, dagErr := orchestrator.Run(orchestratorCtx, initialInputs)
+
+		var assetProfileDataKey string
+
+		for _, node := range dagDefinition.Nodes {
+			if node.ModuleType == "asset-profile-builder" {
+				// If asset profile module is part of the DAG, we can use its output key
+				assetProfileDataKey = "asset.profiles"
+				break
+			}
+		}
+
+		if assetProfileDataKey == "" {
+
+		}
 
 		// 7. Process and Output Results (logic remains similar, but adapts to the planned DAG)
 		outputData := processScanResults(finalDataContext, scanTargetsFromCLI, dagDefinition, dagErr, logger)

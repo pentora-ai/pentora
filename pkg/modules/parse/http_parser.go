@@ -129,7 +129,7 @@ func (m *HTTPParserModule) Execute(ctx context.Context, inputs map[string]interf
 	logger := log.With().Str("module", m.meta.Name).Str("instance_id", m.meta.ID).Logger()
 	logger.Debug().Interface("received_inputs", inputs).Msg("Executing module")
 
-	rawBannerInput, ok := inputs["service.banner.raw"]
+	rawBannerInput, ok := inputs["service.banner.tcp"]
 	if !ok {
 		logger.Info().Msg("'service.banner.tcp' not found in inputs. Nothing to parse.")
 		return nil // Not an error, just no relevant input
