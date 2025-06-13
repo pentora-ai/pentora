@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -85,16 +84,13 @@ func (p *DAGPlanner) PlanDAG(intent ScanIntent) (*DAGDefinition, error) {
 				continue
 			}
 
-			spew.Dump(meta.ID)
-
-			//spew.Dump(meta.Consumes, availableDataKeys)
-
 			// Check if all consumed keys for this module are currently available
 			allConsumesMet := true
 			if len(meta.Consumes) > 0 {
 				for _, consumedContract := range meta.Consumes {
 					consumedKeyString := consumedContract.Key // Use the string Key
-					if _, keyIsAvailable := availableDataKeys[consumedKeyString]; !keyIsAvailable {
+					if _, keyIsAvailable := availableDataKeys[consumedKeyString]; !keyIsAvailable && !consumedContract.IsOptional {
+						// If this key is not available and it's not optional, we cannot add this module yet
 						allConsumesMet = false
 						p.logger.Trace().Str("module", meta.Name).Str("missing_key", consumedKeyString).Msg("Dependency key not yet available for module")
 						break
@@ -195,7 +191,7 @@ func (p *DAGPlanner) selectModulesForIntent(intent ScanIntent) []ModuleFactory {
 		for name, factory := range allModules {
 			meta := factory().Metadata()
 			// Include Discovery, Scan, Parse. Conditionally Evaluation.
-			if meta.Type == DiscoveryModuleType || meta.Type == ScanModuleType || meta.Type == ParseModuleType ||
+			if meta.Type == DiscoveryModuleType || meta.Type == ScanModuleType || meta.Type == ParseModuleType || meta.Type == ReportingModuleType ||
 				(intent.EnableVulnChecks && meta.Type == EvaluationModuleType) {
 				if p.matchesTags(meta.Tags, intent.IncludeTags, intent.ExcludeTags) {
 					selected = append(selected, factory)

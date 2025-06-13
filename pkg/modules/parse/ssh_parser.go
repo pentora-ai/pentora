@@ -128,16 +128,16 @@ func (m *SSHParserModule) Init(instanceID string, configMap map[string]interface
 
 // Execute parses SSH banners.
 func (m *SSHParserModule) Execute(ctx context.Context, inputs map[string]interface{}, outputChan chan<- engine.ModuleOutput) error {
-	rawBannerInput, ok := inputs["service.banner.raw"] // This comes from service-banner-scanner
+	rawBannerInput, ok := inputs["service.banner.tcp"] // This comes from service-banner-scanner
 	if !ok {
-		m.logger.Info().Msg("'service.banner.raw' not found in inputs. Nothing to parse for SSH.")
+		m.logger.Info().Msg("'service.banner.tcp' not found in inputs. Nothing to parse for SSH.")
 		return nil // Not an error for this module, just no relevant input
 	}
 
 	bannerList, listOk := rawBannerInput.([]interface{})
 	if !listOk {
-		m.logger.Error().Type("input_type", rawBannerInput).Msg("'service.banner.raw' input is not a list as expected by ssh-parser.")
-		return fmt.Errorf("input 'service.banner.raw' is not a list, type: %T", rawBannerInput)
+		m.logger.Error().Type("input_type", rawBannerInput).Msg("'service.banner.tcp' input is not a list as expected by ssh-parser.")
+		return fmt.Errorf("input 'service.banner.tcp' is not a list, type: %T", rawBannerInput)
 	}
 
 	m.logger.Info().Int("banner_count_to_process", len(bannerList)).Msg("Processing banners for SSH identification")
@@ -153,7 +153,7 @@ func (m *SSHParserModule) Execute(ctx context.Context, inputs map[string]interfa
 
 		bannerResult, castOk := item.(scan.BannerGrabResult) // This is the output from service-banner-scanner
 		if !castOk {
-			m.logger.Warn().Int("item_index", i).Type("item_type", item).Msg("Item in 'service.banner.raw' list is not scan.BannerScanResult, skipping.")
+			m.logger.Warn().Int("item_index", i).Type("item_type", item).Msg("Item in 'service.banner.tcp' list is not scan.BannerScanResult, skipping.")
 			continue
 		}
 

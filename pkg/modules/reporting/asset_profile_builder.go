@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pentora-ai/pentora/pkg/engine"
 	"github.com/pentora-ai/pentora/pkg/modules/discovery" // For ICMPPingDiscoveryResult, TCPPortDiscoveryResult
 	"github.com/pentora-ai/pentora/pkg/modules/parse"     // For HTTPParsedInfo, SSHParsedInfo
@@ -155,7 +156,8 @@ func (m *AssetProfileBuilderModule) Execute(ctx context.Context, inputs map[stri
 			if vulnList, listOk := data.([]interface{}); listOk {
 				for _, item := range vulnList {
 					if vuln, castOk := item.(engine.VulnerabilityFinding); castOk { // Varsayım: Zafiyet modülleri bu tipi üretir
-						targetPortKey := fmt.Sprintf("%s:%d", vuln.Target /*modülün bu alanı doldurması lazım*/, vuln.Port /*modülün bu alanı doldurması lazım*/)
+						//targetPortKey := fmt.Sprintf("%s:%d", vuln.IP /*modülün bu alanı doldurması lazım*/, vuln.Port /*modülün bu alanı doldurması lazım*/)
+						targetPortKey := "nil"
 						allVulnerabilities[targetPortKey] = append(allVulnerabilities[targetPortKey], vuln)
 					}
 				}
@@ -173,10 +175,10 @@ func (m *AssetProfileBuilderModule) Execute(ctx context.Context, inputs map[stri
 			if _, exists := processedTargets[liveIP]; !exists {
 				now := time.Now()
 				profile := &engine.AssetProfile{
-					Target:              liveIP, // Başlangıçta IP'yi target olarak al, sonra hostname eklenebilir
-					ResolvedIPs:         map[string]time.Time{liveIP: now},
-					IsAlive:             true,
-					ScanStartTime:       now, // Bu, bu modülün başlangıç zamanı, daha iyisi DAG başlangıcı
+					Target:      liveIP, // Başlangıçta IP'yi target olarak al, sonra hostname eklenebilir
+					ResolvedIPs: map[string]time.Time{liveIP: now},
+					IsAlive:     true,
+					//ScanStartTime:       now, // Bu, bu modülün başlangıç zamanı, daha iyisi DAG başlangıcı
 					LastObservationTime: now,
 					OpenPorts:           make(map[string][]engine.PortProfile),
 				}
@@ -196,10 +198,10 @@ func (m *AssetProfileBuilderModule) Execute(ctx context.Context, inputs map[stri
 			if _, exists := processedTargets[target]; !exists {
 				now := time.Now()
 				profile := &engine.AssetProfile{
-					Target:              target,
-					ResolvedIPs:         map[string]time.Time{target: now},
-					IsAlive:             false, // Ping ile doğrulanmadı
-					ScanStartTime:       now,
+					Target:      target,
+					ResolvedIPs: map[string]time.Time{target: now},
+					IsAlive:     false, // Ping ile doğrulanmadı
+					//ScanStartTime:       now,
 					LastObservationTime: now,
 					OpenPorts:           make(map[string][]engine.PortProfile),
 				}
@@ -254,7 +256,7 @@ func (m *AssetProfileBuilderModule) Execute(ctx context.Context, inputs map[stri
 							portProfile.Service.ParsedAttributes["html_title"] = httpDetail.HTMLTitle
 							portProfile.Service.ParsedAttributes["content_type"] = httpDetail.ContentType
 							portProfile.Service.ParsedAttributes["headers"] = httpDetail.Headers
-							portProfile.Service.Scheme = httpDetail.Scheme
+							// portProfile.Service.Scheme = httpDetail.Scheme
 							break
 						}
 					}
@@ -295,6 +297,8 @@ func (m *AssetProfileBuilderModule) Execute(ctx context.Context, inputs map[stri
 		Data:           finalAssetProfiles,     // Bu []types.AssetProfile tipinde olmalı
 		Timestamp:      time.Now(),
 	}
+
+	spew.Dump(finalAssetProfiles)
 
 	logger.Info().Int("profile_count", len(finalAssetProfiles)).Msg("Asset profile aggregation completed")
 	return nil
