@@ -385,7 +385,7 @@ func (o *Orchestrator) Run(ctx context.Context, initialInputs map[string]interfa
 
 						// Optional input not found, module should handle this.
 						// If required and not found, module's Execute should error.
-						log.Debug().Msgf("[DEBUG] Orchestrator: Optional input key '%s' not found in dependencies or initial context for module '%s'.", consumedKeyString, node.instanceID)
+						logger.Debug().Msgf("Orchestrator: Optional input key '%s' not found in dependencies or initial context for module '%s'.", consumedKeyString, node.instanceID)
 					}
 				} else {
 					if dataVal, dataOk := o.dataCtx.Get(consumedKeyString); dataOk {

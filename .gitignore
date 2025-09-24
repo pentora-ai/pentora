@@ -11,3 +11,6 @@ test.license
 ./pentora
 diff.log
 build
+
+*.md
+!README.md
