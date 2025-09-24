@@ -14,6 +14,7 @@ import (
 	_ "github.com/pentora-ai/pentora/pkg/modules/parse"     // Register parse modules if needed
 	_ "github.com/pentora-ai/pentora/pkg/modules/reporting" // Register reporting modules if needed
 	_ "github.com/pentora-ai/pentora/pkg/modules/scan"      // Register this module
+	"github.com/pentora-ai/pentora/pkg/utils"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -137,37 +138,132 @@ The command automatically plans the execution DAG using available modules.`,
 		}
 
 		if assetProfileDataKey == "" {
+			logger.Warn().Msg("AssetProfileBuilder module was not found in the planned DAG. Raw output will be shown if available.")
 
+			if dagErr == nil {
+				dagErr = fmt.Errorf("scan completed, but no asset profile data was generated")
+			}
 		}
 
-		// 7. Process and Output Results (logic remains similar, but adapts to the planned DAG)
-		outputData := processScanResults(finalDataContext, scanTargetsFromCLI, dagDefinition, dagErr, logger)
+		// 2. AssetProfile verisini DataContext'ten al ve cast et
+		var finalProfiles []engine.AssetProfile
+		if rawProfiles, found := finalDataContext[assetProfileDataKey]; found {
+			// DataContext, modül çıktılarını []interface{} listesi olarak saklar.
+			// AssetProfileBuilder tek bir çıktı (bir []AssetProfile listesi) ürettiği için,
+			// DataContext'teki liste tek elemanlıdır: []interface{}{ []engine.AssetProfile{...} }
+			if profileList, listOk := rawProfiles.([]interface{}); listOk && len(profileList) > 0 {
+				if castedProfiles, castOk := profileList[0].([]engine.AssetProfile); castOk {
+					finalProfiles = castedProfiles
+				} else {
+					if dagErr == nil {
+						dagErr = fmt.Errorf("could not cast asset profile data to expected type: %T", profileList[0])
+					}
+				}
+			} else if rawProfiles != nil {
+				if dagErr == nil {
+					dagErr = fmt.Errorf("asset profile data has unexpected type: %T", rawProfiles)
+				}
+			}
+		} else if dagErr == nil {
+			logger.Info().Msg("No 'asset.profiles' data found in scan results.")
+		}
 
+		// 3. Seçilen formata göre çıktıyı yazdır
 		switch strings.ToLower(scanOutputFormat) {
 		case "json":
-			jsonData, jsonErr := json.MarshalIndent(outputData, "", "  ")
+			// Eğer hiç profil yoksa ama hata da yoksa boş bir liste yazdır
+			if finalProfiles == nil {
+				finalProfiles = []engine.AssetProfile{}
+			}
+			jsonData, jsonErr := json.MarshalIndent(finalProfiles, "", "  ")
 			if jsonErr != nil {
-				logger.Error().Err(jsonErr).Msg("Failed to marshal JSON output")
-				fmt.Fprintf(os.Stderr, "[ERROR] Failed to marshal JSON output: %v\n", jsonErr)
-				return
+				logger.Error().Err(jsonErr).Msg("Failed to marshal AssetProfile to JSON")
+				fmt.Fprintf(os.Stderr, "[ERROR] Failed to generate JSON output: %v\n", jsonErr)
+			} else {
+				fmt.Println(string(jsonData))
 			}
-			fmt.Println(string(jsonData))
 		case "yaml":
-			yamlData, yamlErr := yaml.Marshal(outputData)
+			if finalProfiles == nil {
+				finalProfiles = []engine.AssetProfile{}
+			}
+			yamlData, yamlErr := yaml.Marshal(finalProfiles)
 			if yamlErr != nil {
-				logger.Error().Err(yamlErr).Msg("Failed to marshal YAML output")
-				fmt.Fprintf(os.Stderr, "[ERROR] Failed to marshal YAML output: %v\n", yamlErr)
-				return
+				logger.Error().Err(yamlErr).Msg("Failed to marshal AssetProfile to YAML")
+				fmt.Fprintf(os.Stderr, "[ERROR] Failed to generate YAML output: %v\n", yamlErr)
+			} else {
+				fmt.Println(string(yamlData))
 			}
-			fmt.Println(string(yamlData))
-		default:
-			if scanOutputFormat != "" && !strings.EqualFold(scanOutputFormat, "text") {
-				logger.Warn().Str("format_provided", scanOutputFormat).Msg("Unknown output format. Defaulting to text.")
+		default: // "text"
+			if dagErr != nil {
+				fmt.Fprintf(os.Stderr, "\nScan finished with errors: %v\n", dagErr)
 			}
-			printScanTextOutput(outputData, logger, scanIntent.EnablePing) // Pass ping status for context
+			if len(finalProfiles) > 0 {
+				printAssetProfileTextOutput(finalProfiles)
+			} else {
+				fmt.Println("\nScan completed, but no asset profiles were generated.")
+			}
 		}
-		logger.Info().Msg("Scan command finished.")
 	},
+}
+
+func printAssetProfileTextOutput(profiles []engine.AssetProfile) {
+	fmt.Println("\n--- Scan Results ---")
+	for _, asset := range profiles {
+		fmt.Printf("\n## Target: %s (IPs: %v)\n", asset.Target, getMapKeys(asset.ResolvedIPs))
+		fmt.Printf("   Is Alive: %v\n", asset.IsAlive)
+		if len(asset.Hostnames) > 0 {
+			fmt.Printf("   Hostnames: %v\n", asset.Hostnames)
+		}
+
+		if len(asset.OpenPorts) > 0 {
+			fmt.Println("   --- Open Ports ---")
+			// Portları sıralı göstermek için IP'leri sırala
+			var sortedIPs []string
+			for ip := range asset.OpenPorts {
+				sortedIPs = append(sortedIPs, ip)
+			}
+			sort.Strings(sortedIPs)
+
+			for _, ip := range sortedIPs {
+				fmt.Printf("     IP: %s\n", ip)
+				// Portları sıralı göstermek için port numarasına göre sırala
+				portProfiles := asset.OpenPorts[ip]
+				sort.Slice(portProfiles, func(i, j int) bool {
+					return portProfiles[i].PortNumber < portProfiles[j].PortNumber
+				})
+
+				for _, port := range portProfiles {
+					fmt.Printf("       - Port: %d/%s (%s)\n", port.PortNumber, port.Protocol, port.Status)
+					if port.Service.Name != "" || port.Service.Product != "" {
+						fmt.Printf("         Service: %s %s %s\n", port.Service.Name, port.Service.Product, port.Service.Version)
+					}
+					if port.Service.RawBanner != "" {
+						fmt.Printf("         Banner: %s\n", utils.Ellipsis(port.Service.RawBanner, 80))
+					}
+
+					if len(port.Vulnerabilities) > 0 {
+						fmt.Println("         Vulnerabilities:")
+						for _, vuln := range port.Vulnerabilities {
+							fmt.Printf("           - [%s] %s (%s)\n", vuln.Severity, vuln.ID, vuln.Summary)
+						}
+					}
+				}
+			}
+		} else {
+			fmt.Println("   No open ports found.")
+		}
+	}
+	fmt.Println("\n--- End of Scan Results ---")
+}
+
+// Helper function to get keys from a map for printing.
+func getMapKeys(m map[string]time.Time) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 // processScanResults extracts and structures data from the final DataContext.

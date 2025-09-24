@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/pentora-ai/pentora/pkg/engine"
 	"github.com/pentora-ai/pentora/pkg/modules/discovery" // For ICMPPingDiscoveryResult, TCPPortDiscoveryResult
 	"github.com/pentora-ai/pentora/pkg/modules/parse"     // For HTTPParsedInfo, SSHParsedInfo
@@ -52,7 +51,7 @@ func newAssetProfileBuilderModule() *AssetProfileBuilderModule {
 				// Örnek: {Key: "vulnerability.*", DataTypeName: "types.VulnerabilityFinding", Cardinality: engine.CardinalityList, IsOptional: true},
 			},
 			Produces: []engine.DataContractEntry{
-				{Key: "asset.profiles", DataTypeName: "[]types.AssetProfile", Cardinality: engine.CardinalitySingle}, // Tek bir liste üretir
+				{Key: "asset.profiles", DataTypeName: "[]engine.AssetProfile", Cardinality: engine.CardinalitySingle}, // Tek bir liste üretir
 			},
 			ConfigSchema: map[string]engine.ParameterDefinition{},
 		},
@@ -294,11 +293,9 @@ func (m *AssetProfileBuilderModule) Execute(ctx context.Context, inputs map[stri
 	outputChan <- engine.ModuleOutput{
 		FromModuleName: m.meta.ID,
 		DataKey:        m.meta.Produces[0].Key, // "asset.profiles"
-		Data:           finalAssetProfiles,     // Bu []types.AssetProfile tipinde olmalı
+		Data:           finalAssetProfiles,     // Bu []engine.AssetProfile tipinde olmalı
 		Timestamp:      time.Now(),
 	}
-
-	spew.Dump(finalAssetProfiles)
 
 	logger.Info().Int("profile_count", len(finalAssetProfiles)).Msg("Asset profile aggregation completed")
 	return nil
