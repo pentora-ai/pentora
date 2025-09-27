@@ -3,97 +3,66 @@
 package version
 
 import (
-	"context"
 	"fmt"
-	"net/http"
-	"net/url"
-	"time"
-
-	"github.com/google/go-github/v28/github"
-	goversion "github.com/hashicorp/go-version"
-	"github.com/rs/zerolog/log"
+	"runtime"
 )
 
 // These variables are typically injected at build time using -ldflags
+// version holds the current version of pentora. It is set at build time.
+// commit holds the current git commit hash of pentora. It is set at build time.
+// buildDate holds the build date of pentora in RFC3339 format. It is set at build time.
+// tag holds the git tag associated with the build. It is set at build time.
 var (
-	// Version holds the current version of pentora.
-	Version = "dev"
-	// Commit holds the current version commit of pentora.
-	Commit = "none" // beta cheese
-	// BuildDate holds the build date of pentora.
-	BuildDate = "I don't remember exactly"
-	// StartDate holds the start date of pentora.
-	StartDate = time.Now()
+	version   = "dev"                  // Version holds the current version of pentora.
+	commit    = ""                     // Commit holds the current version commit of pentora.
+	buildDate = "1970-01-01T00:00:00Z" // BuildDate holds the build date of pentora.
+	tag       = ""                     // Tag holds the git tag of the build.
 )
 
-// Struct returns version information in a structured format.
-type Struct struct {
-	Version   string `json:"version"`
-	Commit    string `json:"commit"`
-	BuildDate string `json:"buildDate"`
+type Version struct {
+	Version   string
+	Commit    string
+	BuildDate string
+	Tag       string
+	GoVersion string
+	Compiler  string
+	Platform  string
 }
 
-// Info returns a formatted version string.
-func Info() string {
-	return fmt.Sprintf("Pentora %s (commit: %s, date: %s)", Version, Commit, BuildDate)
+// String returns the version as a string.
+func (v Version) String() string {
+	return v.Version
 }
 
 // Get returns version information as a Struct.
-func Get() Struct {
-	return Struct{
-		Version:   Version,
-		Commit:    Commit,
-		BuildDate: BuildDate,
+func GetVersion() Version {
+	var str string
+
+	if commit != "" && tag != "" {
+		str = tag
+	} else {
+		str = "v" + version
+		if len(commit) >= 7 {
+			str += "+" + commit[:7]
+		} else {
+			str += "+unknown"
+		}
+	}
+
+	return Version{
+		Version:   str,
+		Commit:    commit,
+		BuildDate: buildDate,
+		Tag:       tag,
+		GoVersion: runtime.Version(),
+		Compiler:  runtime.Compiler,
+		Platform:  fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
 	}
 }
 
 // CheckNewVersion checks if a new version is available.
-func CheckNewVersion() {
-	if Version == "dev" {
-		return
-	}
-
-	client := github.NewClient(nil)
-
-	updateURL, err := url.Parse("https://update.pentora.ai/")
-	if err != nil {
-		log.Warn().Err(err).Msg("Error checking new version")
-		return
-	}
-	client.BaseURL = updateURL
-
-	releases, resp, err := client.Repositories.ListReleases(context.Background(), "pentora-ai", "pentora", nil)
-	if err != nil {
-		log.Warn().Err(err).Msg("Error checking new version")
-		return
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		log.Warn().Msgf("Error checking new version: status=%s", resp.Status)
-		return
-	}
-
-	currentVersion, err := goversion.NewVersion(Version)
-	if err != nil {
-		log.Warn().Err(err).Msg("Error checking new version")
-		return
-	}
-
-	for _, release := range releases {
-		releaseVersion, err := goversion.NewVersion(*release.TagName)
-		log.Warn().Msg(releaseVersion.String())
-		if err != nil {
-			log.Warn().Err(err).Msg("Error checking new version")
-			return
-		}
-
-		if len(currentVersion.Prerelease()) == 0 && len(releaseVersion.Prerelease()) > 0 {
-			continue
-		}
-
-		if releaseVersion.GreaterThan(currentVersion) {
-			log.Warn().Err(err).Msgf("A new release of Pentora has been found: %s. Please consider updating.", releaseVersion.String())
-			return
-		}
-	}
+func CheckNewVersion() bool {
+	// TODO: check for new version only if the current version is not "dev"
+	// and also not a pre-release
+	return false
 }
