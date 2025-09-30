@@ -170,7 +170,7 @@ func TestTCPPortDiscoveryModule_Init(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			module := newTCPPortDiscoveryModule()
-			err := module.Init(tt.input)
+			err := module.Init("instanceId", tt.input)
 			if err != nil {
 				t.Errorf("Init() returned error: %v", err)
 			}

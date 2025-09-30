@@ -9,8 +9,16 @@ import (
 	"github.com/pentora-ai/pentora/pkg/config"
 	"github.com/pentora-ai/pentora/pkg/event"
 	"github.com/pentora-ai/pentora/pkg/hook"
-	"github.com/pentora-ai/pentora/pkg/version"
 )
+
+// Manager exposes core application services and lifecycle control.
+type Manager interface {
+	Context() context.Context
+	Config() *config.Manager
+	Events() *event.Manager
+	Hooks() *hook.Manager
+	Shutdown()
+}
 
 // AppManagerKeyType is an unexported type for the context key.
 // This prevents collisions with context keys defined in other packages.
@@ -32,9 +40,6 @@ type AppManager struct {
 	EventManager *event.Manager // Event manager for handling events and notifications within the application.
 
 	HookManager *hook.Manager // Hook manager for managing lifecycle hooks and custom event triggers.
-
-	// Version represents the version information of the engine, encapsulated in the version.Struct type.
-	Version version.Struct
 }
 
 // Context returns the context associated with the AppManager instance.
@@ -42,6 +47,21 @@ type AppManager struct {
 // and other request-scoped values across API boundaries and between processes.
 func (a *AppManager) Context() context.Context {
 	return a.ctx
+}
+
+// Config returns the shared configuration manager.
+func (a *AppManager) Config() *config.Manager {
+	return a.ConfigManager
+}
+
+// Events returns the event manager.
+func (a *AppManager) Events() *event.Manager {
+	return a.EventManager
+}
+
+// Hooks returns the hook manager.
+func (a *AppManager) Hooks() *hook.Manager {
+	return a.HookManager
 }
 
 // Shutdown gracefully shuts down the AppManager by invoking its cancellation function.

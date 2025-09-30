@@ -24,6 +24,8 @@ type ScanIntent struct {
 	PingCount        int    // Number of ICMP echo requests to send
 	AllowLoopback    bool   // Whether to allow scanning loopback addresses
 	Concurrency      int    // Number of concurrent modules to run
+	DiscoveryOnly    bool
+	SkipDiscovery    bool
 }
 
 // DAGPlanner is responsible for automatically constructing a DAGDefinition based on scan intent and module metadata.
@@ -175,6 +177,18 @@ func (p *DAGPlanner) selectModulesForIntent(intent ScanIntent) []ModuleFactory {
 	var selected []ModuleFactory
 	allModules := p.moduleRegistry // Assuming this holds ModuleName -> Factory
 
+	if intent.DiscoveryOnly {
+		for name, factory := range allModules {
+			meta := factory().Metadata()
+			if meta.Type == DiscoveryModuleType && p.matchesTags(meta.Tags, intent.IncludeTags, intent.ExcludeTags) {
+				selected = append(selected, factory)
+				p.logger.Debug().Str("module", name).Msg("Selected module for discovery-only run")
+			}
+		}
+		selected = p.addParseModules(selected, allModules, intent)
+		return p.ensureReporter(selected, intent)
+	}
+
 	// Basic filtering based on profile or level (example logic)
 	if intent.Profile == "quick_discovery" || intent.Level == "light" {
 		for name, factory := range allModules {
@@ -199,7 +213,7 @@ func (p *DAGPlanner) selectModulesForIntent(intent ScanIntent) []ModuleFactory {
 				}
 			}
 		}
-	} else { // Default: select all non-intrusive discovery and basic scan modules
+	} else { // Default: select discovery + scan modules
 		for name, factory := range allModules {
 			meta := factory().Metadata()
 			if (meta.Type == DiscoveryModuleType || meta.Type == ScanModuleType) && !containsTag(meta.Tags, "intrusive") {
@@ -209,10 +223,51 @@ func (p *DAGPlanner) selectModulesForIntent(intent ScanIntent) []ModuleFactory {
 				}
 			}
 		}
+		if intent.EnableVulnChecks {
+			for name, factory := range allModules {
+				meta := factory().Metadata()
+				if meta.Type == EvaluationModuleType && p.matchesTags(meta.Tags, intent.IncludeTags, intent.ExcludeTags) {
+					selected = append(selected, factory)
+					p.logger.Debug().Str("module", name).Msg("Selected evaluation module for vuln-enabled default profile")
+				}
+			}
+		}
 	}
 
-	// Always try to add a reporting module if not already present in logic
-	// This part can be more sophisticated
+	selected = p.addParseModules(selected, allModules, intent)
+	if intent.SkipDiscovery {
+		filtered := selected[:0]
+		for _, factory := range selected {
+			if factory().Metadata().Type == DiscoveryModuleType {
+				continue
+			}
+			filtered = append(filtered, factory)
+		}
+		selected = filtered
+	}
+
+	return p.ensureReporter(selected, intent)
+}
+
+func (p *DAGPlanner) addParseModules(selected []ModuleFactory, all map[string]ModuleFactory, intent ScanIntent) []ModuleFactory {
+	for name, factory := range all {
+		meta := factory().Metadata()
+		if meta.Type != ParseModuleType {
+			continue
+		}
+		if !p.matchesTags(meta.Tags, intent.IncludeTags, intent.ExcludeTags) {
+			continue
+		}
+		selected = append(selected, factory)
+		p.logger.Debug().Str("module", name).Msg("Selected parser module")
+	}
+	return selected
+}
+
+func (p *DAGPlanner) ensureReporter(selected []ModuleFactory, intent ScanIntent) []ModuleFactory {
+	if len(selected) == 0 {
+		return selected
+	}
 	hasReporter := false
 	for _, factory := range selected {
 		if factory().Metadata().Type == ReportingModuleType {
@@ -220,19 +275,20 @@ func (p *DAGPlanner) selectModulesForIntent(intent ScanIntent) []ModuleFactory {
 			break
 		}
 	}
-	if !hasReporter {
-		for name, factory := range allModules { // Search all modules again for a reporter
-			if factory().Metadata().Type == ReportingModuleType {
-				// Add a default reporter if none selected and one exists
-				if p.matchesTags(factory().Metadata().Tags, intent.IncludeTags, intent.ExcludeTags) {
-					selected = append(selected, factory)
-					p.logger.Debug().Str("module", name).Msg("Added default reporting module")
-					break // Add one reporter for now
-				}
-			}
-		}
+	if hasReporter {
+		return selected
 	}
-
+	for name, factory := range p.moduleRegistry {
+		if factory().Metadata().Type != ReportingModuleType {
+			continue
+		}
+		if !p.matchesTags(factory().Metadata().Tags, intent.IncludeTags, intent.ExcludeTags) {
+			continue
+		}
+		selected = append(selected, factory)
+		p.logger.Debug().Str("module", name).Msg("Added default reporting module")
+		break
+	}
 	return selected
 }
 

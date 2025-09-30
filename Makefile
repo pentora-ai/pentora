@@ -15,6 +15,18 @@ GOARCH := $(shell go env GOARCH)
 
 LINT_EXECUTABLES = misspell shellcheck
 
+.PHONY: p ps
+
+p: CLI_EXEC=pentora
+ps: CLI_EXEC=pentora-server
+
+p ps:
+	@PENTORA_CLI_EXECUTABLE=$(CLI_EXEC) go run ./cmd/main.go $(word 2,$(MAKECMDGOALS))
+
+# Parametreler hata vermesin diye
+%:
+	@:	
+
 .PHONY: default
 #? default: Run `make generate` and `make binary`
 default: generate binary

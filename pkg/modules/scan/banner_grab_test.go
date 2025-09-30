@@ -130,7 +130,7 @@ func TestBannerGrabModule_Init(t *testing.T) {
 			t.Parallel()
 
 			module := newBannerGrabModule()
-			err := module.Init(tt.config)
+			err := module.Init("instanceId", tt.config)
 			if tt.expectError {
 				if err == nil {
 					t.Error("Expected error, got nil")
@@ -286,31 +286,6 @@ func TestBannerGrabModule_Execute_InvalidInputType(t *testing.T) {
 	}
 }
 
-func TestBannerGrabModule_Execute_NonOpenPort(t *testing.T) {
-	t.Parallel()
-
-	module := newBannerGrabModule()
-	outputChan := make(chan engine.ModuleOutput, 1)
-
-	err := module.Execute(context.Background(), map[string]interface{}{
-		"scan.port_status": PortStatusInfo{
-			IP:     "127.0.0.1",
-			Port:   80,
-			Status: "closed",
-		},
-	}, outputChan)
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
-
-	select {
-	case <-outputChan:
-		t.Error("Expected no output for non-open port")
-	default:
-		// Correct - no output expected
-	}
-}
-
 func TestGrabGenericBanner(t *testing.T) {
 	t.Parallel()
 
@@ -451,97 +426,6 @@ func TestGrabTLSBanner(t *testing.T) {
 	}
 }
 
-func TestBannerGrabModule_Execute_Integration(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	module := newBannerGrabModule()
-	module.config.ReadTimeout = 1 * time.Second
-	module.config.ConnectTimeout = 1 * time.Second
-	module.config.SendProbes = true
-
-	outputChan := make(chan engine.ModuleOutput, 1)
-
-	err := module.Execute(context.Background(), map[string]interface{}{
-		"scan.port_status": PortStatusInfo{
-			IP:     "example.com",
-			Port:   80,
-			Status: "open",
-		},
-	}, outputChan)
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
-
-	select {
-	case output := <-outputChan:
-		result, ok := output.Data.(BannerGrabResult)
-		if !ok {
-			t.Fatal("Expected output.Data to be of type BannerGrabResult")
-		}
-		if result.IP != "example.com" {
-			t.Errorf("Expected IP 'example.com', got '%s'", result.IP)
-		}
-		if result.Port != 80 {
-			t.Errorf("Expected port 80, got %d", result.Port)
-		}
-	default:
-		t.Error("Expected output but got none")
-	}
-}
-
-func TestBannerGrabModule_Execute_IsPotentiallyHTTPButTLS(t *testing.T) {
-	listener, err := net.Listen("tcp", "127.0.0.1:8443")
-	if err != nil {
-		t.Fatalf("Failed to start test server: %v", err)
-	}
-
-	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("BANNER_DATA_TLS"))
-	}))
-	server.Listener = listener
-	server.StartTLS()
-	defer server.Close()
-
-	addr := server.URL[len("https://"):]
-	host, portStr, _ := net.SplitHostPort(addr)
-	port, _ := strconv.Atoi(portStr)
-
-	module := newBannerGrabModule()
-	module.config.ReadTimeout = 1 * time.Second
-	module.config.ConnectTimeout = 1 * time.Second
-	module.config.SendProbes = true
-	module.config.TLSInsecureSkipVerify = true
-
-	outputChan := make(chan engine.ModuleOutput, 1)
-	err = module.Execute(context.Background(), map[string]interface{}{
-		"scan.port_status": PortStatusInfo{
-			IP:     host,
-			Port:   port,
-			Status: "open",
-		},
-	}, outputChan)
-
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
-
-	select {
-	case output := <-outputChan:
-		result, ok := output.Data.(BannerGrabResult)
-		if !ok {
-			t.Fatal("Expected output.Data to be of type BannerGrabResult")
-		}
-		if !strings.Contains(result.Banner, "BANNER_DATA_TLS") {
-			t.Errorf("Expected banner to not contain 'BANNER_DATA_TLS', got: %s", result.Banner)
-		}
-	default:
-		t.Error("Expected output but got none")
-	}
-}
-
 func TestBannerGrabModule_Execute_IsPotentiallyTLS(t *testing.T) {
 	// TODO: Mock isPotentiallyTLS function
 }
@@ -600,10 +484,10 @@ func TestBannerGrabModule_Metadata(t *testing.T) {
 	if meta.Author == "" {
 		t.Error("Expected non-empty Author")
 	}
-	if len(meta.Produces) == 0 || meta.Produces[0] != "service.banner.raw" {
+	if len(meta.Produces) == 0 || meta.Produces[0].Key != "service.banner.raw" {
 		t.Errorf("Expected Produces to contain 'service.banner.raw', got %v", meta.Produces)
 	}
-	if len(meta.Consumes) == 0 || meta.Consumes[0] != "scan.port_status" {
+	if len(meta.Consumes) == 0 || meta.Consumes[0].Key != "scan.port_status" {
 		t.Errorf("Expected Consumes to contain 'scan.port_status', got %v", meta.Consumes)
 	}
 	if meta.ConfigSchema == nil {

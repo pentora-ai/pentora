@@ -36,6 +36,10 @@ func (f *ResolverFactory) Get() (FingerprintResolver, error) {
 		return nil, errors.New("AIResolver is not available in this build")
 	}
 
-	// Default to rule-based resolver
+	if len(f.staticRules) == 0 {
+		WarmWithExternal("")
+		return GetFingerprintResolver(), nil
+	}
+
 	return NewRuleBasedResolver(f.staticRules), nil
 }

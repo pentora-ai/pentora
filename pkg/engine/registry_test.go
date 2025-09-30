@@ -14,9 +14,10 @@ type MockTestModuleConfig struct {
 }
 
 type MockTestModule struct {
-	meta   ModuleMetadata
-	config MockTestModuleConfig
-	inited bool
+	meta    ModuleMetadata
+	config  MockTestModuleConfig
+	inited  bool
+	initErr error
 }
 
 func NewMockTestModule() Module { // Factory signature
@@ -27,7 +28,7 @@ func NewMockTestModule() Module { // Factory signature
 			Version:     "1.0",
 			Description: "A mock module for testing.",
 			Type:        "test",
-			Produces:    []string{"test.output"},
+			Produces:    []DataContractEntry{{Key: "test.output"}},
 		},
 	}
 }
@@ -36,7 +37,7 @@ func (m *MockTestModule) Metadata() ModuleMetadata {
 	return m.meta
 }
 
-func (m *MockTestModule) Init(configMap map[string]interface{}) error {
+func (m *MockTestModule) Init(instanceID string, configMap map[string]interface{}) error {
 	// Simple config parsing for test
 	if val, ok := configMap["TestValue"].(string); ok {
 		m.config.TestValue = val
@@ -54,7 +55,7 @@ func (m *MockTestModule) Execute(ctx context.Context, inputs map[string]interfac
 	}
 	outputChan <- ModuleOutput{
 		FromModuleName: m.meta.ID,
-		DataKey:        m.meta.Produces[0],
+		DataKey:        m.meta.Produces[0].Key,
 		Data:           fmt.Sprintf("Executed with config: %s", m.config.TestValue),
 		Timestamp:      time.Now(),
 	}
@@ -90,7 +91,7 @@ func TestGetModuleInstance_Success(t *testing.T) {
 	RegisterModuleFactory(moduleName, NewMockTestModule)
 
 	config := map[string]interface{}{"TestValue": "hello"}
-	instance, err := GetModuleInstance(moduleName, config)
+	instance, err := GetModuleInstance("", moduleName, config)
 
 	if err != nil {
 		t.Fatalf("GetModuleInstance failed: %v", err)
@@ -119,7 +120,7 @@ func TestGetModuleInstance_Success(t *testing.T) {
 func TestGetModuleInstance_NotFound(t *testing.T) {
 	resetRegistry()
 	config := map[string]interface{}{"TestValue": "world"}
-	_, err := GetModuleInstance("non-existent-module", config)
+	_, err := GetModuleInstance("", "non-existent-module", config)
 
 	if err == nil {
 		t.Fatal("Expected error for non-existent module, got nil.")
@@ -136,7 +137,7 @@ func TestGetModuleInstance_InitFailure(t *testing.T) {
 	RegisterModuleFactory(moduleName, NewMockTestModule)
 
 	configMissingValue := map[string]interface{}{} // Missing TestValue
-	_, err := GetModuleInstance(moduleName, configMissingValue)
+	_, err := GetModuleInstance("", moduleName, configMissingValue)
 
 	if err == nil {
 		t.Fatal("Expected error from module Init, got nil.")

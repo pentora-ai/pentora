@@ -41,7 +41,7 @@ func TestICMPPingDiscoveryModule_Init(t *testing.T) {
 		"interval":       "100ms",
 		"packet_timeout": "1000ms",
 	}
-	err := mod.Init(config)
+	err := mod.Init("instanceId", config)
 	if err != nil {
 		t.Fatalf("Init failed: %v", err)
 	}
@@ -71,7 +71,7 @@ func TestICMPPingDiscoveryModule_Init(t *testing.T) {
 		"targets":        []string{"127.0.0.1"},
 		"allow_loopback": false,
 	}
-	err = modDefaults.Init(configDefaults)
+	err = modDefaults.Init("instanceId", configDefaults)
 	if err != nil {
 		t.Fatalf("Init with defaults failed: %v", err)
 	}
@@ -82,7 +82,7 @@ func TestICMPPingDiscoveryModule_Init(t *testing.T) {
 
 func TestICMPPingDiscoveryModule_Init_InvalidTimeout(t *testing.T) {
 	mod := newICMPPingDiscoveryModule()
-	err := mod.Init(map[string]interface{}{
+	err := mod.Init("instanceId", map[string]interface{}{
 		"timeout": "not-a-duration",
 	})
 	if err != nil {
@@ -92,7 +92,7 @@ func TestICMPPingDiscoveryModule_Init_InvalidTimeout(t *testing.T) {
 
 func TestICMPPingDiscoveryModule_Init_InvalidPacketTimeout(t *testing.T) {
 	mod := newICMPPingDiscoveryModule()
-	err := mod.Init(map[string]interface{}{
+	err := mod.Init("instanceId", map[string]interface{}{
 		"packet_timeout": "not-a-duration",
 	})
 	if err != nil {
@@ -102,7 +102,7 @@ func TestICMPPingDiscoveryModule_Init_InvalidPacketTimeout(t *testing.T) {
 
 func TestICMPPingDiscoveryModule_Init_InvalidInternal(t *testing.T) {
 	mod := newICMPPingDiscoveryModule()
-	err := mod.Init(map[string]interface{}{
+	err := mod.Init("instanceId", map[string]interface{}{
 		"interval": "not-an-interval",
 	})
 	if err != nil {
@@ -112,7 +112,7 @@ func TestICMPPingDiscoveryModule_Init_InvalidInternal(t *testing.T) {
 
 func TestICMPPingDiscoveryModule_Init_CountLessThanOne(t *testing.T) {
 	mod := newICMPPingDiscoveryModule()
-	err := mod.Init(map[string]interface{}{
+	err := mod.Init("instanceId", map[string]interface{}{
 		"targets": []string{"192.168.1.1"},
 		"count":   0,
 	})
@@ -126,7 +126,7 @@ func TestICMPPingDiscoveryModule_Init_CountLessThanOne(t *testing.T) {
 
 func TestICMPPingDiscoveryModule_Init_ConcurrencyLessThanOne(t *testing.T) {
 	mod := newICMPPingDiscoveryModule()
-	err := mod.Init(map[string]interface{}{
+	err := mod.Init("instanceId", map[string]interface{}{
 		"targets":     []string{"192.168.1.1"},
 		"concurrency": 0,
 	})
@@ -140,7 +140,7 @@ func TestICMPPingDiscoveryModule_Init_ConcurrencyLessThanOne(t *testing.T) {
 
 func TestICMPPingDiscoveryModule_Init_PacketTimeoutLessThanOne(t *testing.T) {
 	mod := newICMPPingDiscoveryModule()
-	err := mod.Init(map[string]interface{}{
+	err := mod.Init("instanceId", map[string]interface{}{
 		"targets":        []string{"192.168.1.1"},
 		"packet_timeout": -1,
 	})
@@ -156,7 +156,7 @@ func TestICMPPingDiscoveryModule_Init_PacketTimeoutLessThanOne(t *testing.T) {
 func TestICMPPingDiscoveryModule_Init_InvalidConfigParams(t *testing.T) {
 	timeout := "0s"
 	mod := newICMPPingDiscoveryModule()
-	err := mod.Init(map[string]interface{}{
+	err := mod.Init("instanceId", map[string]interface{}{
 		"timeout":        timeout,
 		"packet_timeout": "0s",
 	})
@@ -193,7 +193,7 @@ func TestICMPPingDiscoveryModule_Execute(t *testing.T) {
 		"concurrency":    2,
 		"allow_loopback": true, // Allow loopback for testing
 	}
-	if err := mod.Init(config); err != nil {
+	if err := mod.Init("instanceId", config); err != nil {
 		t.Fatalf("Init failed: %v", err)
 	}
 

@@ -6,6 +6,7 @@ go.work*
 
 
 internal
+.gocache
 public.pem
 test.license
 ./pentora
@@ -14,3 +15,5 @@ build
 
 *.md
 !README.md
+
+ui/

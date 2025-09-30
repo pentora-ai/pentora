@@ -13,6 +13,8 @@ type ScanRequest struct {
 	Ports   []int    `json:"ports"`
 }
 
+var runScan = scanner.Run
+
 // ScanHandler handles POST /api/scan requests and triggers a scan
 func ScanHandler(w http.ResponseWriter, r *http.Request) {
 	var req ScanRequest
@@ -26,7 +28,7 @@ func ScanHandler(w http.ResponseWriter, r *http.Request) {
 		Ports:   req.Ports,
 	}
 
-	results, err := scanner.Run(job)
+	results, err := runScan(job)
 	if err != nil {
 		http.Error(w, "Scan error: "+err.Error(), http.StatusInternalServerError)
 		return

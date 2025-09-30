@@ -58,7 +58,7 @@ type PortInfo struct {
 }
 
 // newBannerGrabModule is the internal constructor for the BannerGrabModule.
-func newBannerGrabModule1() *BannerGrabModule {
+func newBannerGrabModule() *BannerGrabModule {
 	defaultConfig := BannerGrabConfig{
 		ReadTimeout:           3 * time.Second,
 		ConnectTimeout:        2 * time.Second, // Should be less than or equal to PortScanModule's timeout for that port
@@ -175,7 +175,7 @@ func (m *BannerGrabModule) Init(instanceID string, configMap map[string]interfac
 // isPotentiallyHTTP checks if a port is commonly used for HTTP/HTTPS.
 func isPotentiallyHTTP(port int) bool {
 	switch port {
-	case 80, 81, 88, 443, 8000, 8008, 8080, 8081, 8443, 9080, 9443:
+	case 80, 81, 88, 443, 8000, 8008, 8080, 8081, 8443, 9080, 9443, 5985, 39700:
 		return true
 	default:
 		return false
@@ -186,7 +186,7 @@ func isPotentiallyHTTP(port int) bool {
 // This is a heuristic and not exhaustive.
 func isPotentiallyTLS(port int) bool {
 	switch port {
-	case 443, 8443, 990, 992, 993, 995, 587, 465, 636: // Common TLS ports (HTTPS, FTPS, SMTPS, IMAPS, POP3S, STARTTLS, LDAPS)
+	case 443, 8443, 990, 992, 993, 995, 587, 465, 636, 5986: // Common TLS ports (HTTPS, FTPS, SMTPS, IMAPS, POP3S, STARTTLS, LDAPS, WinRM HTTPS)
 		return true
 	default:
 		return false
@@ -441,14 +441,14 @@ func (m *BannerGrabModule) grabHTTPBanner(ctx context.Context, host string, port
 
 	response := responseBuilder.String()
 	if strings.HasPrefix(response, "HTTP/") {
-		statusLine := strings.SplitN(response, "\r\n", 2)[0]
-		statusCode := strings.Split(statusLine, " ")[1]
+		//statusLine := strings.SplitN(response, "\r\n", 2)[0]
+		//statusCode := strings.Split(statusLine, " ")[1]
 
-		code, _ := strconv.Atoi(statusCode)
+		//code, _ := strconv.Atoi(statusCode)
 
-		if code >= 400 {
-			return "", fmt.Errorf("HTTP error: %s", statusLine)
-		}
+		//if code >= 400 {
+		//	return "", fmt.Errorf("HTTP error: %s", statusLine)
+		//}
 
 		// Special cases requiring HTTPS
 		if strings.Contains(response, "Upgrade Required") ||
@@ -524,7 +524,7 @@ func (m *BannerGrabModule) grabTLSBanner(ctx context.Context, address string) (s
 
 // BannerGrabModuleFactory creates a new BannerGrabModule instance.
 func BannerGrabModuleFactory() engine.Module {
-	return newBannerGrabModule1()
+	return newBannerGrabModule()
 }
 
 func init() {

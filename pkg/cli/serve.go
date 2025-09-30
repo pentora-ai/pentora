@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/pentora-ai/pentora/pkg/api/dashboard"
-	"github.com/pentora-ai/pentora/pkg/api/version"
 	"github.com/spf13/cobra"
 )
 
@@ -27,7 +26,7 @@ var ServeCmd = &cobra.Command{
 		// mux.HandleFunc("/api/...", api.SomeHandler)
 
 		// API endpoint register
-		mux.HandleFunc("/api/version", version.VersionHandler)
+		//mux.HandleFunc("/api/version", version.VersionHandler)
 
 		log.Printf("🚀 Pentora UI serving at http://localhost:%d\n", port)
 		if err := http.ListenAndServe(fmt.Sprintf(":%d", port), mux); err != nil {

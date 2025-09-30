@@ -9,23 +9,23 @@ import (
 type FindingSeverity string
 
 const (
-	SeverityCritical    FindingSeverity = "critical"
-	SeverityHigh        FindingSeverity = "high"
-	SeverityMedium      FindingSeverity = "medium"
-	SeverityLow         FindingSeverity = "low"
-	SeverityInfo        FindingSeverity = "informational"
+	SeverityCritical     FindingSeverity = "critical"
+	SeverityHigh         FindingSeverity = "high"
+	SeverityMedium       FindingSeverity = "medium"
+	SeverityLow          FindingSeverity = "low"
+	SeverityInfo         FindingSeverity = "informational"
 	SeverityUndetermined FindingSeverity = "undetermined"
 )
 
 // VulnerabilityFinding details a specific vulnerability found.
 type VulnerabilityFinding struct {
-	ID               string   `json:"id" yaml:"id"` // CVE ID, Pentora Vuln ID, etc.
-	SourceModule     string   `json:"source_module" yaml:"source_module"` // Which module instance found this
-	Summary          string   `json:"summary" yaml:"summary"`
-	Severity         FindingSeverity `json:"severity" yaml:"severity"`
-	Description      string   `json:"description,omitempty" yaml:"description,omitempty"`
-	References       []string `json:"references,omitempty" yaml:"references,omitempty"`
-	Remediation      string   `json:"remediation,omitempty" yaml:"remediation,omitempty"`
+	ID           string          `json:"id" yaml:"id"`                       // CVE ID, Pentora Vuln ID, etc.
+	SourceModule string          `json:"source_module" yaml:"source_module"` // Which module instance found this
+	Summary      string          `json:"summary" yaml:"summary"`
+	Severity     FindingSeverity `json:"severity" yaml:"severity"`
+	Description  string          `json:"description,omitempty" yaml:"description,omitempty"`
+	References   []string        `json:"references,omitempty" yaml:"references,omitempty"`
+	Remediation  string          `json:"remediation,omitempty" yaml:"remediation,omitempty"`
 	// Evidence string `json:"evidence,omitempty" yaml:"evidence,omitempty"` // Specific evidence
 }
 
@@ -50,14 +50,14 @@ type PortProfile struct {
 
 // AssetProfile represents a comprehensive profile for a single scanned target.
 type AssetProfile struct {
-	Target               string                 `json:"target" yaml:"target"` // Original target string (IP, hostname, CIDR)
-	ResolvedIPs          map[string]time.Time   `json:"resolved_ips,omitempty" yaml:"resolved_ips,omitempty"` // Map of IP to first_seen_alive_time
-	Hostnames            []string               `json:"hostnames,omitempty" yaml:"hostnames,omitempty"`
-	IsAlive              bool                   `json:"is_alive" yaml:"is_alive"` // If any IP resolved from target is alive
-	FirstSeenAlive       time.Time              `json:"first_seen_alive,omitempty" yaml:"first_seen_alive,omitempty"`
-	LastObservationTime  time.Time              `json:"last_observation_time" yaml:"last_observation_time"` // When data for this asset was last updated
+	Target               string                   `json:"target" yaml:"target"`                                 // Original target string (IP, hostname, CIDR)
+	ResolvedIPs          map[string]time.Time     `json:"resolved_ips,omitempty" yaml:"resolved_ips,omitempty"` // Map of IP to first_seen_alive_time
+	Hostnames            []string                 `json:"hostnames,omitempty" yaml:"hostnames,omitempty"`
+	IsAlive              bool                     `json:"is_alive" yaml:"is_alive"` // If any IP resolved from target is alive
+	FirstSeenAlive       time.Time                `json:"first_seen_alive,omitempty" yaml:"first_seen_alive,omitempty"`
+	LastObservationTime  time.Time                `json:"last_observation_time" yaml:"last_observation_time"`           // When data for this asset was last updated
 	OpenPorts            map[string][]PortProfile `json:"open_ports_by_ip,omitempty" yaml:"open_ports_by_ip,omitempty"` // Keyed by IP address
-	TotalVulnerabilities int                    `json:"total_vulnerabilities" yaml:"total_vulnerabilities"`
+	TotalVulnerabilities int                      `json:"total_vulnerabilities" yaml:"total_vulnerabilities"`
 	// OperatingSystem string `json:"operating_system,omitempty" yaml:"operating_system,omitempty"`
 	// MACAddress string `json:"mac_address,omitempty" yaml:"mac_address,omitempty"`
 	ErrorsEncountered []string `json:"errors_encountered,omitempty" yaml:"errors_encountered,omitempty"` // Errors specific to this asset during scan
