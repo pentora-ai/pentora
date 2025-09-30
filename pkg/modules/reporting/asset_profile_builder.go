@@ -47,6 +47,7 @@ func newAssetProfileBuilderModule() *AssetProfileBuilderModule {
 				{Key: "service.banner.tcp", DataTypeName: "scan.BannerScanResult", Cardinality: engine.CardinalityList, IsOptional: true},                  // []interface{}{BannerResult1, BannerResult2}
 				{Key: "service.http.details", DataTypeName: "parse.HTTPParsedInfo", Cardinality: engine.CardinalityList, IsOptional: true},                 // []interface{}{HTTPParsedInfo1, ...}
 				{Key: "service.ssh.details", DataTypeName: "parse.SSHParsedInfo", Cardinality: engine.CardinalityList, IsOptional: true},                   // []interface{}{SSHParsedInfo1, ...}
+				{Key: "service.fingerprint.details", DataTypeName: "parse.FingerprintParsedInfo", Cardinality: engine.CardinalityList, IsOptional: true},   // []interface{}{FingerprintParsedInfo1, ...}
 				// Zafiyetler için genel bir pattern veya planner'ın dinamik olarak eklemesi gerekebilir:
 				// Örnek: {Key: "vulnerability.*", DataTypeName: "types.VulnerabilityFinding", Cardinality: engine.CardinalityList, IsOptional: true},
 			},
@@ -118,6 +119,8 @@ func (m *AssetProfileBuilderModule) Execute(ctx context.Context, inputs map[stri
 					bannerResults = append(bannerResults, casted)
 				}
 			}
+		} else if typed, ok := rawBanners.([]scan.BannerGrabResult); ok {
+			bannerResults = append(bannerResults, typed...)
 		}
 	}
 
@@ -138,6 +141,17 @@ func (m *AssetProfileBuilderModule) Execute(ctx context.Context, inputs map[stri
 			for _, item := range list {
 				if casted, castOk := item.(parse.SSHParsedInfo); castOk {
 					sshDetailsResults = append(sshDetailsResults, casted)
+				}
+			}
+		}
+	}
+
+	fingerprintDetails := []parse.FingerprintParsedInfo{}
+	if rawFP, ok := inputs["service.fingerprint.details"]; ok {
+		if list, listOk := rawFP.([]interface{}); listOk {
+			for _, item := range list {
+				if casted, castOk := item.(parse.FingerprintParsedInfo); castOk {
+					fingerprintDetails = append(fingerprintDetails, casted)
 				}
 			}
 		}
@@ -271,6 +285,34 @@ func (m *AssetProfileBuilderModule) Execute(ctx context.Context, inputs map[stri
 							portProfile.Service.ParsedAttributes["ssh_protocol_version"] = sshDetail.SSHVersion
 							portProfile.Service.ParsedAttributes["ssh_full_version_info"] = sshDetail.VersionInfo
 							break
+						}
+					}
+
+					for _, fpDetail := range fingerprintDetails {
+						if fpDetail.Target == targetIP && fpDetail.Port == portNum {
+							if portProfile.Service.Name == "" {
+								portProfile.Service.Name = fpDetail.Protocol
+							}
+							if portProfile.Service.Product == "" {
+								portProfile.Service.Product = fpDetail.Product
+							}
+							if portProfile.Service.Version == "" {
+								portProfile.Service.Version = fpDetail.Version
+							}
+							if portProfile.Service.ParsedAttributes == nil {
+								portProfile.Service.ParsedAttributes = make(map[string]interface{})
+							}
+							if portProfile.Service.Product == fpDetail.Product {
+								portProfile.Service.ParsedAttributes["fingerprint_confidence"] = fpDetail.Confidence
+							}
+							if fpDetail.CPE != "" {
+								portProfile.Service.ParsedAttributes["cpe"] = fpDetail.CPE
+							}
+							if fpDetail.Vendor != "" {
+								portProfile.Service.ParsedAttributes["vendor"] = fpDetail.Vendor
+							}
+							chainKey := fmt.Sprintf("fingerprint_description_%d", portNum)
+							portProfile.Service.ParsedAttributes[chainKey] = fpDetail.Description
 						}
 					}
 

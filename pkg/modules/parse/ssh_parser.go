@@ -136,8 +136,14 @@ func (m *SSHParserModule) Execute(ctx context.Context, inputs map[string]interfa
 
 	bannerList, listOk := rawBannerInput.([]interface{})
 	if !listOk {
-		m.logger.Error().Type("input_type", rawBannerInput).Msg("'service.banner.tcp' input is not a list as expected by ssh-parser.")
-		return fmt.Errorf("input 'service.banner.tcp' is not a list, type: %T", rawBannerInput)
+		if typed, ok := rawBannerInput.([]scan.BannerGrabResult); ok {
+			for _, item := range typed {
+				bannerList = append(bannerList, item)
+			}
+		} else {
+			m.logger.Error().Type("input_type", rawBannerInput).Msg("'service.banner.tcp' input is not a list as expected by ssh-parser.")
+			return fmt.Errorf("input 'service.banner.tcp' is not a list, type: %T", rawBannerInput)
+		}
 	}
 
 	m.logger.Info().Int("banner_count_to_process", len(bannerList)).Msg("Processing banners for SSH identification")

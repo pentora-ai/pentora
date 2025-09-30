@@ -90,8 +90,6 @@ func newTCPPortDiscoveryModule() *TCPPortDiscoveryModule {
 			Produces: []engine.DataContractEntry{
 				{
 					Key: "discovery.open_tcp_ports",
-					// DataTypeName: "discovery.TCPPortDiscoveryResult", // This is the type of EACH item in the list DataContext will store
-					// Cardinality: engine.CardinalityList, // This module produces multiple such items, DataContext will store as list
 					DataTypeName: "discovery.TCPPortDiscoveryResult",
 					Cardinality:  engine.CardinalityList, // Indicates this DataKey will hold a list of results
 					Description:  "List of results, each detailing open TCP ports for a specific target.",

@@ -1,7 +1,7 @@
-// pkg/cli/scan.go
-package cli
+package commands
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -9,11 +9,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
+	"github.com/pentora-ai/pentora/pkg/appctx"
+	cliPkg "github.com/pentora-ai/pentora/pkg/cli"
 	"github.com/pentora-ai/pentora/pkg/engine"
-	"github.com/pentora-ai/pentora/pkg/modules/discovery"   // For casting results
 	_ "github.com/pentora-ai/pentora/pkg/modules/parse"     // Register parse modules if needed
 	_ "github.com/pentora-ai/pentora/pkg/modules/reporting" // Register reporting modules if needed
 	_ "github.com/pentora-ai/pentora/pkg/modules/scan"      // Register this module
+	"github.com/pentora-ai/pentora/pkg/scanexec"
 	"github.com/pentora-ai/pentora/pkg/utils"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -36,6 +39,9 @@ var (
 	scanEnablePing    bool // This now feeds into ScanIntent
 	scanPingCount     int  // This now feeds into ScanIntent
 	scanAllowLoopback bool // This now feeds into ScanIntent
+	scanOnlyDiscover  bool
+	scanSkipDiscover  bool
+	scanInteractive   bool
 )
 
 // ScanCmd defines the 'scan' command for comprehensive scanning.
@@ -51,99 +57,69 @@ The command automatically plans the execution DAG using available modules.`,
 		logger := log.With().Str("command", "scan").Logger()
 		logger.Info().Strs("targets", scanTargetsFromCLI).Msg("Initializing scan command")
 
+		if scanOnlyDiscover && scanSkipDiscover {
+			fmt.Fprintln(os.Stderr, "[ERROR] --only-discover and --no-discover cannot be used together")
+			return
+		}
+		if scanOnlyDiscover {
+			scanEnableVuln = false
+		}
+
+		svc := scanexec.NewService()
+		if scanInteractive {
+			svc = svc.WithProgressSink(&progressLogger{logger: logger})
+		}
+
 		ctxFromCmd := cmd.Context()
+		if ctxFromCmd == nil && cmd.Root() != nil {
+			ctxFromCmd = cmd.Root().Context()
+		}
 		appMgr, ok := ctxFromCmd.Value(engine.AppManagerKey).(*engine.AppManager)
 		if !ok || appMgr == nil {
 			logger.Error().Msg("AppManager not found in context.")
 			fmt.Fprintln(os.Stderr, "[ERROR] Critical: AppManager not found in context.")
 			return
 		}
-		orchestratorCtx := appMgr.Context()
+		orchestratorCtx := context.WithValue(appMgr.Context(), engine.AppManagerKey, appMgr)
+		orchestratorCtx = appctx.WithConfig(orchestratorCtx, appMgr.Config())
 
-		// 1. Create ScanIntent from CLI flags
-		// More fields can be added to ScanIntent to guide the planner
-		scanIntent := engine.ScanIntent{
-			Targets:          scanTargetsFromCLI,
-			Profile:          scanProfile, // e.g., "quick_discovery", "full_vuln_scan"
-			Level:            scanLevel,   // e.g., "light", "comprehensive"
-			IncludeTags:      scanIncludeTags,
-			ExcludeTags:      scanExcludeTags,
-			EnableVulnChecks: scanEnableVuln,
-			CustomPortConfig: scanPorts,         // Planner will use this to configure port scanning modules
-			CustomTimeout:    scanCustomTimeout, // Planner can apply this to relevant modules
-			// Pass ping-related flags to the intent so planner can configure ICMP module if selected
+		params := scanexec.Params{
+			Targets:       scanTargetsFromCLI,
+			Profile:       scanProfile,
+			Level:         scanLevel,
+			IncludeTags:   scanIncludeTags,
+			ExcludeTags:   scanExcludeTags,
+			EnableVuln:    scanEnableVuln,
+			Ports:         scanPorts,
+			CustomTimeout: scanCustomTimeout,
 			EnablePing:    scanEnablePing,
 			PingCount:     scanPingCount,
 			AllowLoopback: scanAllowLoopback,
-			Concurrency:   scanConcurrency, // Global concurrency hint for planner
+			Concurrency:   scanConcurrency,
+			OutputFormat:  scanOutputFormat,
+			RawInputs: map[string]interface{}{
+				"config.scan.requested_profile": scanProfile,
+			},
+			OnlyDiscover: scanOnlyDiscover,
+			SkipDiscover: scanSkipDiscover,
 		}
-		logger.Debug().Interface("scan_intent", scanIntent).Msg("Scan intent created")
-
-		// 2. Initialize DAGPlanner
-		// GetRegisteredModuleFactories provides access to all module metadata for the planner
-		planner, err := engine.NewDAGPlanner(engine.GetRegisteredModuleFactories())
-		if err != nil {
-			logger.Error().Err(err).Msg("Failed to initialize DAGPlanner")
-			fmt.Fprintf(os.Stderr, "[ERROR] Failed to initialize DAGPlanner: %v\n", err)
-			return
-		}
-
-		// 3. Plan the DAG based on the intent
-		// The planner now decides which modules to use (icmp, tcp, etc.) and how to configure them.
-		dagDefinition, err := planner.PlanDAG(scanIntent)
-		if err != nil {
-			logger.Error().Err(err).Msg("Failed to plan DAG")
-			fmt.Fprintf(os.Stderr, "[ERROR] Failed to plan DAG: %v\n", err)
-			return
-		}
-		if dagDefinition == nil || len(dagDefinition.Nodes) == 0 {
-			logger.Error().Msg("DAG planning resulted in an empty DAG. No modules were selected for the scan intent.")
-			fmt.Fprintln(os.Stderr, "[ERROR] DAG planning resulted in an empty DAG. Check scan parameters and available modules.")
-			return
-		}
-		logger.Info().Str("dag_name", dagDefinition.Name).Int("node_count", len(dagDefinition.Nodes)).Msg("DAG planned successfully")
-		logger.Debug().Interface("dag_definition", dagDefinition).Msg("Full automatically planned DAG Definition")
-
-		// 4. Create Orchestrator with the automatically planned DAG
-		orchestrator, err := engine.NewOrchestrator(dagDefinition) // NewOrchestrator uses the planned DAG
-		if err != nil {
-			logger.Error().Err(err).Msg("Failed to initialize orchestrator with planned DAG")
-			fmt.Fprintf(os.Stderr, "[ERROR] Failed to initialize orchestrator: %v\n", err)
-			return
-		}
-
-		// 5. Prepare initial inputs for the Orchestrator (minimal, as planner handles most config)
-		initialInputs := make(map[string]interface{})
-		initialInputs["config.targets"] = scanTargetsFromCLI // The primary input
-		// Other global settings that planner might not have put into individual module configs
-		// but some modules might still consume globally.
-		// For example, if a report module needs the original CLI target strings:
-		initialInputs["config.original_cli_targets"] = scanTargetsFromCLI
 
 		if scanOutputFormat == "text" {
 			logger.Info().Msg("Starting scan execution with automatically planned DAG...")
 		}
 
-		// 6. Run the Orchestrator
-		finalDataContext, dagErr := orchestrator.Run(orchestratorCtx, initialInputs)
-
-		var assetProfileDataKey string
-
-		for _, node := range dagDefinition.Nodes {
-			if node.ModuleType == "asset-profile-builder" {
-				// If asset profile module is part of the DAG, we can use its output key
-				assetProfileDataKey = "asset.profiles"
-				break
-			}
+		res, runErr := svc.Run(orchestratorCtx, params)
+		if runErr != nil {
+			logger.Error().Err(runErr).Msg("Scan execution failed")
 		}
 
-		if assetProfileDataKey == "" {
-			logger.Warn().Msg("AssetProfileBuilder module was not found in the planned DAG. Raw output will be shown if available.")
-
-			if dagErr == nil {
-				dagErr = fmt.Errorf("scan completed, but no asset profile data was generated")
-			}
+		finalDataContext := map[string]interface{}{}
+		if res != nil && res.RawContext != nil {
+			finalDataContext = res.RawContext
 		}
+
+		executionErr := runErr
+		assetProfileDataKey := "asset.profiles"
 
 		// 2. AssetProfile verisini DataContext'ten al ve cast et
 		var finalProfiles []engine.AssetProfile
@@ -154,18 +130,15 @@ The command automatically plans the execution DAG using available modules.`,
 			if profileList, listOk := rawProfiles.([]interface{}); listOk && len(profileList) > 0 {
 				if castedProfiles, castOk := profileList[0].([]engine.AssetProfile); castOk {
 					finalProfiles = castedProfiles
-				} else {
-					if dagErr == nil {
-						dagErr = fmt.Errorf("could not cast asset profile data to expected type: %T", profileList[0])
-					}
+				} else if executionErr == nil {
+					executionErr = fmt.Errorf("could not cast asset profile data to expected type: %T", profileList[0])
 				}
-			} else if rawProfiles != nil {
-				if dagErr == nil {
-					dagErr = fmt.Errorf("asset profile data has unexpected type: %T", rawProfiles)
-				}
+			} else if rawProfiles != nil && executionErr == nil {
+				executionErr = fmt.Errorf("asset profile data has unexpected type: %T", rawProfiles)
 			}
-		} else if dagErr == nil {
+		} else if executionErr == nil {
 			logger.Info().Msg("No 'asset.profiles' data found in scan results.")
+			executionErr = fmt.Errorf("scan completed, but no asset profile data was generated")
 		}
 
 		// 3. Seçilen formata göre çıktıyı yazdır
@@ -194,19 +167,20 @@ The command automatically plans the execution DAG using available modules.`,
 				fmt.Println(string(yamlData))
 			}
 		default: // "text"
-			if dagErr != nil {
-				fmt.Fprintf(os.Stderr, "\nScan finished with errors: %v\n", dagErr)
+			if executionErr != nil {
+				fmt.Fprintf(os.Stderr, "\nScan finished with errors: %v\n", executionErr)
 			}
-			if len(finalProfiles) > 0 {
-				printAssetProfileTextOutput(finalProfiles)
-			} else {
-				fmt.Println("\nScan completed, but no asset profiles were generated.")
-			}
+		if len(finalProfiles) > 0 {
+			printAssetProfileTextOutput(finalProfiles)
+		} else {
+			fmt.Println("\nScan completed, but no asset profiles were generated.")
+		}
 		}
 	},
 }
 
 func printAssetProfileTextOutput(profiles []engine.AssetProfile) {
+	spew.Dump(profiles[0].OpenPorts) // --- IGNORE ---
 	fmt.Println("\n--- Scan Results ---")
 	for _, asset := range profiles {
 		fmt.Printf("\n## Target: %s (IPs: %v)\n", asset.Target, getMapKeys(asset.ResolvedIPs))
@@ -240,6 +214,17 @@ func printAssetProfileTextOutput(profiles []engine.AssetProfile) {
 					if port.Service.RawBanner != "" {
 						fmt.Printf("         Banner: %s\n", utils.Ellipsis(port.Service.RawBanner, 80))
 					}
+					if port.Service.ParsedAttributes != nil {
+						if confidence, ok := port.Service.ParsedAttributes["fingerprint_confidence"]; ok {
+							fmt.Printf("         Fingerprint Confidence: %v\n", confidence)
+						}
+						if vendor, ok := port.Service.ParsedAttributes["vendor"]; ok {
+							fmt.Printf("         Vendor: %v\n", vendor)
+						}
+						if cpe, ok := port.Service.ParsedAttributes["cpe"]; ok {
+							fmt.Printf("         CPE: %v\n", cpe)
+						}
+					}
 
 					if len(port.Vulnerabilities) > 0 {
 						fmt.Println("         Vulnerabilities:")
@@ -266,100 +251,8 @@ func getMapKeys(m map[string]time.Time) []string {
 	return keys
 }
 
-// processScanResults extracts and structures data from the final DataContext.
-// It needs the dagDefinition to know which modules ran and what their instanceIDs are.
-func processScanResults(dataCtx map[string]interface{}, queriedTargets []string, dagDef *engine.DAGDefinition, dagErr error, logger zerolog.Logger) DiscoveryOutput {
-	output := DiscoveryOutput{ // Using DiscoveryOutput for now, can be extended to a more generic ScanOutput
-		Timestamp:      time.Now(),
-		TargetsQueried: queriedTargets,
-		LiveHosts:      []string{},
-		OpenTCPPorts:   []discovery.TCPPortDiscoveryResult{},
-		Errors:         []string{},
-	}
-	if dagErr != nil {
-		output.Errors = append(output.Errors, fmt.Sprintf("DAG execution error: %v", dagErr))
-	}
-
-	// Iterate over the nodes that were actually planned and find their outputs
-	for _, nodeCfg := range dagDef.Nodes {
-		moduleType := nodeCfg.ModuleType // This is the registered name of the module
-
-		// Temporary module instance to get metadata (Produces DataKey)
-		// Ideally, DAGPlanner might also return a list of (InstanceID, ProducedDataKey) mappings
-		// or the ModuleMetadata could be part of DAGNodeConfig after planning.
-		// For now, we'll get metadata again, or assume standard DataKeys.
-
-		// Example for ICMP Ping results
-		if moduleType == "icmp-ping-discovery" {
-			outputKey := "discovery.live_hosts"
-			if rawData, found := dataCtx[outputKey]; found {
-				if listData, ok := rawData.([]interface{}); ok && len(listData) > 0 {
-					if result, castOk := listData[0].(discovery.ICMPPingDiscoveryResult); castOk {
-						output.LiveHosts = append(output.LiveHosts, result.LiveHosts...)
-					} else {
-						output.Errors = append(output.Errors, fmt.Sprintf("Cast error for %s: expected %T, got %T", outputKey, discovery.ICMPPingDiscoveryResult{}, listData[0]))
-					}
-				} else if listData == nil && len(listData) == 0 {
-					// It means key exists but with empty list value (e.g. no live hosts)
-				} else if rawData != nil { // Not a list, but not nil
-					output.Errors = append(output.Errors, fmt.Sprintf("Unexpected data type for %s: expected list, got %T", outputKey, rawData))
-				}
-			}
-		}
-
-		// Example for TCP Port Discovery results
-		if moduleType == "tcp-port-discovery" {
-			outputKey := "discovery.open_tcp_ports"
-			if rawData, found := dataCtx[outputKey]; found {
-				if listData, ok := rawData.([]interface{}); ok {
-					for _, item := range listData {
-						if result, castOk := item.(discovery.TCPPortDiscoveryResult); castOk {
-							output.OpenTCPPorts = append(output.OpenTCPPorts, result)
-						} else {
-							output.Errors = append(output.Errors, fmt.Sprintf("Cast error for item in %s: expected %T, got %T", outputKey, discovery.TCPPortDiscoveryResult{}, item))
-						}
-					}
-				} else if rawData != nil {
-					output.Errors = append(output.Errors, fmt.Sprintf("Unexpected data type for %s: expected list, got %T", outputKey, rawData))
-				}
-			}
-		}
-		// Add more cases here for other module types and their expected DataKeys
-		// e.g., "service-banner-scanner", "ssh-default-creds"
-	}
-
-	// Consolidate and sort
-	if len(output.LiveHosts) > 0 {
-		seen := make(map[string]struct{})
-		uniqueLiveHosts := []string{}
-		for _, h := range output.LiveHosts {
-			if _, exists := seen[h]; !exists {
-				seen[h] = struct{}{}
-				uniqueLiveHosts = append(uniqueLiveHosts, h)
-			}
-		}
-		sort.Strings(uniqueLiveHosts)
-		output.LiveHosts = uniqueLiveHosts
-	}
-	if len(output.OpenTCPPorts) > 0 {
-		sort.Slice(output.OpenTCPPorts, func(i, j int) bool {
-			if output.OpenTCPPorts[i].Target == output.OpenTCPPorts[j].Target {
-				// This case shouldn't happen if tcp-module sends one result per target.
-				// If it does, sort by first port.
-				if len(output.OpenTCPPorts[i].OpenPorts) > 0 && len(output.OpenTCPPorts[j].OpenPorts) > 0 {
-					return output.OpenTCPPorts[i].OpenPorts[0] < output.OpenTCPPorts[j].OpenPorts[0]
-				}
-				return len(output.OpenTCPPorts[i].OpenPorts) < len(output.OpenTCPPorts[j].OpenPorts)
-			}
-			return output.OpenTCPPorts[i].Target < output.OpenTCPPorts[j].Target
-		})
-	}
-
-	return output
-}
-
 // printScanTextOutput needs to be adjusted to use the `enablePing` from intent
-func printScanTextOutput(data DiscoveryOutput, logger zerolog.Logger, pingEnabled bool) {
+func printScanTextOutput(data cliPkg.DiscoveryOutput, logger zerolog.Logger, pingEnabled bool) {
 	// ... (Text output logic, using pingEnabled to determine if "No live hosts" vs "Ping disabled")
 	logger.Info().Msg("Printing scan results in text format...")
 	fmt.Println("\nScan Results (Text):")
@@ -395,6 +288,24 @@ func printScanTextOutput(data DiscoveryOutput, logger zerolog.Logger, pingEnable
 	fmt.Println("\nScan finished.")
 }
 
+type progressLogger struct {
+	logger zerolog.Logger
+}
+
+func (p *progressLogger) OnEvent(ev scanexec.ProgressEvent) {
+	entry := p.logger.Info().
+		Str("phase", ev.Phase).
+		Str("module", ev.Module).
+		Str("status", ev.Status)
+	if ev.ModuleID != "" {
+		entry = entry.Str("module_id", ev.ModuleID)
+	}
+	if ev.Message != "" {
+		entry = entry.Str("message", ev.Message)
+	}
+	entry.Msg("scan progress")
+}
+
 func init() {
 	// Flags for ScanCmd (ensure these are descriptive for the planner)
 	ScanCmd.Flags().StringVarP(&scanPorts, "ports", "p", "", "Ports/port ranges for TCP scan (e.g., 'top-1000', '22,80,443', '1-65535')")
@@ -403,6 +314,10 @@ func init() {
 	ScanCmd.Flags().StringSliceVar(&scanIncludeTags, "tags", []string{}, "Only include modules with these tags (comma-separated)")
 	ScanCmd.Flags().StringSliceVar(&scanExcludeTags, "exclude-tags", []string{}, "Exclude modules with these tags (comma-separated)")
 	ScanCmd.Flags().BoolVar(&scanEnableVuln, "vuln", false, "Enable vulnerability assessment modules (shortcut for a common intent)")
+	ScanCmd.Flags().BoolVar(&scanOnlyDiscover, "only-discover", false, "Run only discovery modules (scan and vuln phases are skipped)")
+	ScanCmd.Flags().BoolVar(&scanSkipDiscover, "no-discover", false, "Skip discovery phase and proceed directly to port scanning/vuln")
+	ScanCmd.Flags().BoolVar(&scanInteractive, "progress", false, "Print live progress updates during the scan")
+	ScanCmd.Flags().String("fingerprint-cache", "", "Path to fingerprint catalog cache directory")
 	ScanCmd.Flags().StringVarP(&scanOutputFormat, "output", "o", "text", "Output format: text, json, yaml")
 	ScanCmd.Flags().StringVar(&scanCustomTimeout, "timeout", "1s", "Default timeout for network operations like ping/port connect")
 	ScanCmd.Flags().IntVar(&scanConcurrency, "concurrency", 50, "Default concurrency for parallel operations")

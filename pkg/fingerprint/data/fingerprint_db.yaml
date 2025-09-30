@@ -1,48 +1,54 @@
 # List of fingerprinting rules for various services
 rules:
-
-  - id: "http.litespeed"
-    protocol: "http"
-    description: "LiteSpeed Web Server HTTP banner"
-    product: "LiteSpeed Web Server"
-    vendor: "LiteSpeed Technologies"
-    cpe: "cpe:2.3:a:litespeedtech:litespeed_web_server:*:*:*:*:*:*:*:*"
-    match: "Server: LiteSpeed"
+  - id: 'http.litespeed'
+    protocol: 'http'
+    description: 'LiteSpeed Web Server HTTP banner'
+    product: 'LiteSpeed Web Server'
+    vendor: 'LiteSpeed Technologies'
+    cpe: 'cpe:2.3:a:litespeedtech:litespeed_web_server:*:*:*:*:*:*:*:*'
+    match: 'Server: LiteSpeed'
     version_extraction: "Server: LiteSpeed(?:\\s|/)([\\w\\.-]+)?"
 
-  - id: "ftp.pureftpd"
-    protocol: "ftp"
-    description: "Pure-FTPd FTP banner"
-    product: "Pure-FTPd"
-    vendor: "PureFTPd Project"
-    cpe: "cpe:2.3:a:pureftpd:pure-ftpd:*:*:*:*:*:*:*:*"
-    match: "Welcome to Pure-FTPd"
+  - id: 'ftp.pureftpd'
+    protocol: 'ftp'
+    description: 'Pure-FTPd FTP banner'
+    product: 'Pure-FTPd'
+    vendor: 'PureFTPd Project'
+    cpe: 'cpe:2.3:a:pureftpd:pure-ftpd:*:*:*:*:*:*:*:*'
+    match: 'Welcome to Pure-FTPd'
     version_extraction: "Pure-FTPd\\s+([\\d\\.]+)"
 
-  - id: "ssh.openssh"
-    protocol: "ssh"
-    description: "OpenSSH server banner"
-    product: "OpenSSH"
-    vendor: "OpenBSD"
-    cpe: "cpe:2.3:a:openbsd:openssh:*:*:*:*:*:*:*:*"
+  - id: 'ssh.openssh'
+    protocol: 'ssh'
+    description: 'OpenSSH server banner'
+    product: 'OpenSSH'
+    vendor: 'OpenBSD'
+    cpe: 'cpe:2.3:a:openbsd:openssh:*:*:*:*:*:*:*:*'
     match: "^SSH-\\d\\.\\d+-OpenSSH_"
     version_extraction: "OpenSSH_([\\d\\.p]+)"
 
-  - id: "mysql.mysql"
-    protocol: "mysql"
-    description: "MySQL handshake banner"
-    product: "MySQL"
-    vendor: "Oracle"
-    cpe: "cpe:2.3:a:oracle:mysql:*:*:*:*:*:*:*:*"
-    match: "^\\[\\x00\\x00\\x00\\x0a"  # MySQL protocol header
+  - id: 'mysql.mysql'
+    protocol: 'mysql'
+    description: 'MySQL handshake banner'
+    product: 'MySQL'
+    vendor: 'Oracle'
+    cpe: 'cpe:2.3:a:oracle:mysql:*:*:*:*:*:*:*:*'
+    match: "^\\[\\x00\\x00\\x00\\x0a" # MySQL protocol header
     version_extraction: "\\x0a([\\w\\.\\-]+)"
 
-  - id: "smtp.postfix"
-    protocol: "smtp"
-    description: "Postfix SMTP server banner"
-    product: "Postfix"
-    vendor: "Postfix Project"
-    cpe: "cpe:2.3:a:postfix:postfix:*:*:*:*:*:*:*:*"
-    match: "ESMTP Postfix"
+  - id: 'smtp.postfix'
+    protocol: 'smtp'
+    description: 'Postfix SMTP server banner'
+    product: 'Postfix'
+    vendor: 'Postfix Project'
+    cpe: 'cpe:2.3:a:postfix:postfix:*:*:*:*:*:*:*:*'
+    match: 'ESMTP Postfix'
     version_extraction: "Postfix\\s+([\\d\\.]+)"
 
+  - id: 'http.winrm'
+    protocol: 'http'
+    description: 'Windows Remote Management (WS-Management)'
+    product: 'WinRM'
+    vendor: 'Microsoft'
+    cpe: 'cpe:2.3:a:microsoft:winrm:*:*:*:*:*:*:*:*'
+    match: "Microsoft-HTTPAPI/2\\.0"

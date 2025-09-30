@@ -137,8 +137,14 @@ func (m *HTTPParserModule) Execute(ctx context.Context, inputs map[string]interf
 
 	bannerList, listOk := rawBannerInput.([]interface{})
 	if !listOk {
-		logger.Error().Type("input_type", rawBannerInput).Msg("'service.banner.tcp' input is not a list as expected.")
-		return fmt.Errorf("input 'service.banner.tcp' is not a list, type: %T", rawBannerInput)
+		if typed, ok := rawBannerInput.([]scan.BannerGrabResult); ok {
+			for _, item := range typed {
+				bannerList = append(bannerList, item)
+			}
+		} else {
+			logger.Error().Type("input_type", rawBannerInput).Msg("'service.banner.tcp' input is not a list as expected.")
+			return fmt.Errorf("input 'service.banner.tcp' is not a list, type: %T", rawBannerInput)
+		}
 	}
 
 	logger.Info().Int("banner_count", len(bannerList)).Msg("Processing HTTP banners")

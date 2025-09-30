@@ -10,15 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestParseLogLevel(t *testing.T) {
-	assert.Equal(t, zerolog.DebugLevel, parseLogLevel("debug"))
-	assert.Equal(t, zerolog.InfoLevel, parseLogLevel("info"))
-	assert.Equal(t, zerolog.WarnLevel, parseLogLevel("warn"))
-	assert.Equal(t, zerolog.ErrorLevel, parseLogLevel("error"))
-	assert.Equal(t, zerolog.ErrorLevel, parseLogLevel("invalid")) // fallback
-	assert.Equal(t, zerolog.ErrorLevel, parseLogLevel(""))        // default
-}
-
 func TestSetAndGetLogWriter(t *testing.T) {
 	var buf bytes.Buffer
 	SetLogWriter(&buf)
@@ -28,7 +19,7 @@ func TestSetAndGetLogWriter(t *testing.T) {
 func TestConfigureGlobalLogging(t *testing.T) {
 	var buf bytes.Buffer
 	SetLogWriter(&buf)
-	err := ConfigureGlobalLogging("debug")
+	err := ConfigureGlobalLogging(zerolog.DebugLevel)
 	assert.NoError(t, err)
 	log.Debug().Msg("test debug message")
 	assert.Contains(t, buf.String(), "test debug message")
@@ -93,7 +84,7 @@ func TestLazyMessage(t *testing.T) {
 func TestConfigureGlobalLoggingStdLogRedirect(t *testing.T) {
 	var buf bytes.Buffer
 	SetLogWriter(&buf)
-	_ = ConfigureGlobalLogging("debug")
+	_ = ConfigureGlobalLogging(zerolog.DebugLevel)
 
 	stdLog.Print("2025/05/23 14:40:15 version.go:35: redirected stdlog message")
 	assert.Contains(t, buf.String(), "redirected stdlog message")

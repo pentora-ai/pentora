@@ -14,7 +14,7 @@ type mockModule struct {
 
 func (m *mockModule) Metadata() ModuleMetadata { return m.meta }
 
-func (m *mockModule) Init(map[string]interface{}) error { return m.initErr }
+func (m *mockModule) Init(instanceID string, config map[string]interface{}) error { return m.initErr }
 
 func (m *mockModule) Execute(ctx context.Context, inputs map[string]interface{}, out chan<- ModuleOutput) error {
 	if m.execFunc != nil {
@@ -209,11 +209,15 @@ func TestNewOrchestrator_DuplicateInstanceID(t *testing.T) {
 	RegisterModuleFactory("mock", func() Module {
 		return &mockModule{
 			meta: ModuleMetadata{
-				ID:       "mod1",
-				Name:     "mock",
-				Type:     ScanModuleType,
-				Produces: []string{"mock.output"},
-				Consumes: []string{"mock.input"},
+				ID:   "mod1",
+				Name: "mock",
+				Type: ScanModuleType,
+				Produces: []DataContractEntry{
+					{Key: "mock.output"},
+				},
+				Consumes: []DataContractEntry{
+					{Key: "mock.input"},
+				},
 			},
 			execFunc: func(ctx context.Context, inputs map[string]interface{}, out chan<- ModuleOutput) error {
 				out <- ModuleOutput{
@@ -288,7 +292,9 @@ func TestOrchestrator_ConnectsModulesByConsumesAndProduces(t *testing.T) {
 			meta: ModuleMetadata{
 				ID:       "a",
 				Name:     "mock-a",
-				Produces: []string{"a.output"},
+				Produces: []DataContractEntry{
+					{Key: "a.output"},
+				},				
 			},
 		}
 	})
@@ -297,7 +303,9 @@ func TestOrchestrator_ConnectsModulesByConsumesAndProduces(t *testing.T) {
 			meta: ModuleMetadata{
 				ID:       "b",
 				Name:     "mock-b",
-				Consumes: []string{"a.output"},
+				Consumes: []DataContractEntry{
+					{Key: "a.output"},
+				},				
 			},
 		}
 	})
@@ -343,7 +351,7 @@ func TestOrchestrator_Run_ExecutesModulesInOrder(t *testing.T) {
 			meta: ModuleMetadata{
 				ID:       "mod1",
 				Name:     "mock-producer",
-				Produces: []string{"foo"},
+				Produces: []DataContractEntry{{Key: "foo"}},
 			},
 			execFunc: func(ctx context.Context, inputs map[string]interface{}, out chan<- ModuleOutput) error {
 				out <- ModuleOutput{
@@ -360,8 +368,8 @@ func TestOrchestrator_Run_ExecutesModulesInOrder(t *testing.T) {
 			meta: ModuleMetadata{
 				ID:       "mod2",
 				Name:     "mock-consumer",
-				Consumes: []string{"foo"},
-				Produces: []string{"baz"},
+				Consumes: []DataContractEntry{{Key: "foo"}},
+				Produces: []DataContractEntry{{Key: "baz"}},
 			},
 			execFunc: func(ctx context.Context, inputs map[string]interface{}, out chan<- ModuleOutput) error {
 				if val, ok := inputs["foo"]; !ok || val != "bar" {
@@ -394,7 +402,7 @@ func TestOrchestrator_Run_ExecutesModulesInOrder(t *testing.T) {
 		t.Fatalf("Failed to create orchestrator: %v", err)
 	}
 
-	results, err := orc.Run(context.Background())
+	results, err := orc.Run(context.Background(), nil)
 	if err != nil {
 		t.Fatalf("DAG run failed: %v", err)
 	}
