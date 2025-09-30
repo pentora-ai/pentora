@@ -11,7 +11,6 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pentora-ai/pentora/pkg/appctx"
-	cliPkg "github.com/pentora-ai/pentora/pkg/cli"
 	"github.com/pentora-ai/pentora/pkg/engine"
 	_ "github.com/pentora-ai/pentora/pkg/modules/parse"     // Register parse modules if needed
 	_ "github.com/pentora-ai/pentora/pkg/modules/reporting" // Register reporting modules if needed
@@ -26,7 +25,7 @@ import (
 
 // Flags for the scan command (remains the same)
 var (
-	scanTargets       []string
+	//scanTargets       []string
 	scanPorts         string
 	scanProfile       string
 	scanLevel         string
@@ -249,43 +248,6 @@ func getMapKeys(m map[string]time.Time) []string {
 	}
 	sort.Strings(keys)
 	return keys
-}
-
-// printScanTextOutput needs to be adjusted to use the `enablePing` from intent
-func printScanTextOutput(data cliPkg.DiscoveryOutput, logger zerolog.Logger, pingEnabled bool) {
-	// ... (Text output logic, using pingEnabled to determine if "No live hosts" vs "Ping disabled")
-	logger.Info().Msg("Printing scan results in text format...")
-	fmt.Println("\nScan Results (Text):")
-	fmt.Printf("  Timestamp: %s\n", data.Timestamp.Format(time.RFC3339))
-	fmt.Printf("  Targets Queried: %v\n", data.TargetsQueried)
-
-	if len(data.LiveHosts) > 0 {
-		fmt.Printf("  Live Hosts (ICMP):\n")
-		for _, host := range data.LiveHosts { // Already sorted
-			fmt.Printf("    - %s\n", host)
-		}
-	} else if pingEnabled {
-		fmt.Println("  No live hosts found via ICMP ping.")
-	} else {
-		fmt.Println("  ICMP Ping was disabled for this scan.")
-	}
-
-	if len(data.OpenTCPPorts) > 0 {
-		fmt.Printf("\n  Open TCP Ports:\n")
-		for _, result := range data.OpenTCPPorts { // Already sorted by target
-			fmt.Printf("    - Target %s: %v\n", result.Target, result.OpenPorts) // Ports are sorted within TCPPortDiscoveryResult
-		}
-	} else {
-		fmt.Println("  No open TCP ports found (or no live hosts to scan ports on).")
-	}
-
-	if len(data.Errors) > 0 {
-		fmt.Printf("\n  Errors/Warnings Encountered During Scan:\n")
-		for _, errMsg := range data.Errors {
-			fmt.Printf("    - %s\n", errMsg)
-		}
-	}
-	fmt.Println("\nScan finished.")
 }
 
 type progressLogger struct {

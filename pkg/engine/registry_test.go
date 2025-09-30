@@ -17,7 +17,6 @@ type MockTestModule struct {
 	meta    ModuleMetadata
 	config  MockTestModuleConfig
 	inited  bool
-	initErr error
 }
 
 func NewMockTestModule() Module { // Factory signature
