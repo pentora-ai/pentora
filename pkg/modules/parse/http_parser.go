@@ -227,11 +227,9 @@ func (m *HTTPParserModule) Execute(ctx context.Context, inputs map[string]interf
 			logger.Warn().Str("target", bannerResult.IP).Int("port", bannerResult.Port).Err(err).Msg("HTTP MIME header parsing error")
 			// Headers might be partially parsed, so continue
 		}
-		if mimeHeader != nil {
-			for k, v := range mimeHeader {
-				if len(v) > 0 {
-					parsedInfo.Headers[http.CanonicalHeaderKey(k)] = v[0] // Store first value, canonical key
-				}
+		for k, v := range mimeHeader {
+			if len(v) > 0 {
+				parsedInfo.Headers[http.CanonicalHeaderKey(k)] = v[0] // Store first value, canonical key
 			}
 		}
 
