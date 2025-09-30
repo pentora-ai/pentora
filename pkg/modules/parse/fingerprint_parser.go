@@ -151,7 +151,7 @@ func (m *FingerprintParserModule) Execute(ctx context.Context, inputs map[string
 	return nil
 }
 
-func fingerprintProtocolHint(port int, banner string) string {
+func fingerprintProtocolHint(_ int, banner string) string {
 	banner = strings.ToLower(banner)
 	switch {
 	case strings.HasPrefix(banner, "ssh-"):

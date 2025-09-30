@@ -275,10 +275,8 @@ func (o *Orchestrator) Run(ctx context.Context, initialInputs map[string]interfa
 	logger.Info().Msg("Starting DAG execution")
 
 	// Store initial inputs in the global data context
-	if initialInputs != nil {
-		for key, value := range initialInputs {
-			o.dataCtx.SetInitial(key, value) // Use SetInitial for direct storage
-		}
+	for key, value := range initialInputs {
+		o.dataCtx.SetInitial(key, value) // Use SetInitial for direct storage
 	}
 
 	// Keep track of nodes that have finished execution
