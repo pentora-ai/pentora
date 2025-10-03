@@ -34,6 +34,7 @@ func TestInitGlobalConfig_KoanfUsesDotDelimiter(t *testing.T) {
 	InitGlobalConfig()
 	assert.Equal(t, ".", k.Delim(), "Koanf delimiter should be '.'")
 }
+
 func TestNewManager_InitializesManagerWithGlobalKoanf(t *testing.T) {
 	resetGlobalConfig()
 	manager := NewManager()
@@ -54,12 +55,14 @@ func TestNewManager_MultipleManagersShareGlobalKoanf(t *testing.T) {
 	manager2 := NewManager()
 	assert.Equal(t, manager1.koanfInstance, manager2.koanfInstance, "All managers should share the same global Koanf instance")
 }
+
 func TestDefaultConfig_ReturnsExpectedDefaults(t *testing.T) {
 	cfg := DefaultConfig()
 	assert.Equal(t, "info", cfg.Log.Level, "Default log level should be 'info'")
 	assert.Equal(t, "text", cfg.Log.Format, "Default log format should be 'text'")
 	assert.Equal(t, "", cfg.Log.File, "Default log file should be empty")
 }
+
 func TestManager_Load_LoadsDefaultsWhenNoFlags(t *testing.T) {
 	resetGlobalConfig()
 	manager := NewManager()
@@ -75,9 +78,9 @@ func TestManager_Load_OverridesWithFlags(t *testing.T) {
 	resetGlobalConfig()
 	manager := NewManager()
 	flags := newTestFlagSet()
-	flags.Set("log.level", "error")
-	flags.Set("log.format", "json")
-	flags.Set("log.file", "/tmp/test.log")
+	_ = flags.Set("log.level", "error")
+	_ = flags.Set("log.format", "json")
+	_ = flags.Set("log.file", "/tmp/test.log")
 	err := manager.Load(flags, "")
 	assert.NoError(t, err, "Load should not return error when loading with flags")
 	cfg := manager.Get()
@@ -90,7 +93,7 @@ func TestManager_Load_DebugFlagSetsLogLevelToDebug(t *testing.T) {
 	resetGlobalConfig()
 	manager := NewManager()
 	flags := newTestFlagSet()
-	flags.Set("debug", "true")
+	_ = flags.Set("debug", "true")
 	err := manager.Load(flags, "")
 	assert.NoError(t, err, "Load should not return error when loading with debug flag")
 	cfg := manager.Get()

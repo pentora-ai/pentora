@@ -1,4 +1,3 @@
-// pkg/modules/scan/port_utils.go
 package scan
 
 import (

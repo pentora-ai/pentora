@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -16,6 +17,7 @@ import (
 	"time"
 
 	"github.com/pentora-ai/pentora/pkg/engine" // Your engine/core package
+	"github.com/pentora-ai/pentora/pkg/fingerprint"
 	"github.com/pentora-ai/pentora/pkg/modules/discovery"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -39,33 +41,66 @@ type BannerGrabConfig struct {
 // BannerGrabResult holds the banner information for a specific port.
 // This will be the 'Data' in ModuleOutput with DataKey "service.banner.raw".
 type BannerGrabResult struct {
-	IP       string `json:"ip"`
-	Port     int    `json:"port"`
-	Protocol string `json:"protocol"` // "tcp" for now
-	Banner   string `json:"banner"`
-	IsTLS    bool   `json:"is_tls"` // Indicates if the banner was grabbed over a TLS handshake
-	Error    string `json:"error,omitempty"`
+	IP       string             `json:"ip"`
+	Port     int                `json:"port"`
+	Protocol string             `json:"protocol"`
+	Banner   string             `json:"banner"`
+	IsTLS    bool               `json:"is_tls"`
+	Error    string             `json:"error,omitempty"`
+	Evidence []ProbeObservation `json:"evidence,omitempty"`
+}
+
+// ProbeObservation captures the outcome of a single probe execution in the layered banner grabbing flow.
+type ProbeObservation struct {
+	ProbeID     string          `json:"probe_id"`
+	Description string          `json:"description,omitempty"`
+	Protocol    string          `json:"protocol,omitempty"`
+	IsTLS       bool            `json:"is_tls,omitempty"`
+	Duration    time.Duration   `json:"duration_ns,omitempty"`
+	Response    string          `json:"response,omitempty"`
+	Error       string          `json:"error,omitempty"`
+	TLS         *TLSObservation `json:"tls,omitempty"`
+}
+
+// TLSObservation holds key facts collected during a TLS handshake so downstream modules
+// can reason about certificate metadata without re-dialing the host.
+type TLSObservation struct {
+	Version        string   `json:"version,omitempty"`
+	CipherSuite    string   `json:"cipher_suite,omitempty"`
+	ServerName     string   `json:"server_name,omitempty"`
+	PeerCommonName string   `json:"peer_common_name,omitempty"`
+	PeerDNSNames   []string `json:"peer_dns_names,omitempty"`
+}
+
+type commandProbeSpec struct {
+	ProbeID         string
+	Description     string
+	Protocol        string
+	Commands        []string
+	UseTLS          bool
+	SkipInitialRead bool
 }
 
 // BannerGrabModule attempts to grab banners from open TCP ports.
 type BannerGrabModule struct {
 	meta   engine.ModuleMetadata
 	config BannerGrabConfig
-	logger zerolog.Logger // Optional: Use zerolog for structured logging
+	logger zerolog.Logger
 }
+
 type PortInfo struct {
-	*discovery.TCPPortDiscoveryResult // Embedding discovery.TCPPortDiscoveryResult for convenience
+	*discovery.TCPPortDiscoveryResult
 }
 
 // newBannerGrabModule is the internal constructor for the BannerGrabModule.
 func newBannerGrabModule() *BannerGrabModule {
 	defaultConfig := BannerGrabConfig{
 		ReadTimeout:           3 * time.Second,
-		ConnectTimeout:        2 * time.Second, // Should be less than or equal to PortScanModule's timeout for that port
-		BufferSize:            2048,            // Increased buffer size
+		ConnectTimeout:        2 * time.Second,
+		BufferSize:            2048,
 		Concurrency:           50,
-		SendProbes:            true,  // Send basic probes by default
-		TLSInsecureSkipVerify: false, // Default to secure TLS verification
+		SendProbes:            true,
+		TLSInsecureSkipVerify: false,
 	}
 
 	return &BannerGrabModule{
@@ -73,31 +108,24 @@ func newBannerGrabModule() *BannerGrabModule {
 			ID:          "banner-grab-instance",
 			Name:        "banner-grabber",
 			Version:     "0.1.0",
-			Description: "Grabs banners from open TCP ports, attempting generic and HTTP probes.",
-			Type:        engine.ScanModuleType, // Could also be a more specific "fingerprint" type
+			Description: "Grabs banners from open TCP ports, attempting generic and protocol-aware probes.",
+			Type:        engine.ScanModuleType,
 			Author:      "Pentora Team",
 			Tags:        []string{"scan", "banner", "fingerprint", "tcp"},
 			Consumes: []engine.DataContractEntry{
 				{
-					Key: "discovery.open_tcp_ports",
-					// This is the type of *each item* within the []interface{} list that DataContext stores.
+					Key:          "discovery.open_tcp_ports",
 					DataTypeName: "discovery.TCPPortDiscoveryResult",
-					// DataContext stores the output of "tcp-port-discovery" (which are individual TCPPortDiscoveryResult structs)
-					// as a list: []interface{}{TCPPortDiscoveryResult1, TCPPortDiscoveryResult2, ...}
-					Cardinality: engine.CardinalityList,
-					IsOptional:  false, // This module relies on open port information
-					Description: "List of results, where each item details open TCP ports for a specific target.",
+					Cardinality:  engine.CardinalityList,
+					IsOptional:   false,
+					Description:  "List of results, where each item details open TCP ports for a specific target.",
 				},
-				// Optionally, could consume a global config for probes if not part of module config
-				// {Key: "config.banner_probes", DataTypeName: "map[string]string", Cardinality: engine.CardinalitySingle, IsOptional: true},
 			},
 			Produces: []engine.DataContractEntry{
 				{
-					Key: "service.banner.tcp", // Changed from .raw to be more specific if other banner types arise
-					// This module will send multiple ModuleOutput messages, each containing one BannerScanResult.
-					// DataContext will aggregate these into a list: []interface{}{BannerScanResult1, BannerScanResult2, ...}
-					DataTypeName: "scan.BannerScanResult", // The type of the Data field in each ModuleOutput
-					Cardinality:  engine.CardinalityList,  // Indicates that the DataKey "service.banner.tcp" in DataContext will hold a list of these.
+					Key:          "service.banner.tcp",
+					DataTypeName: "scan.BannerScanResult",
+					Cardinality:  engine.CardinalityList,
 					Description:  "List of banners (or errors) captured from TCP services, one result per target/port.",
 				},
 			},
@@ -106,10 +134,9 @@ func newBannerGrabModule() *BannerGrabModule {
 				"connect_timeout": {Description: "Timeout for establishing connection if re-dialing (e.g., '2s').", Type: "duration", Required: false, Default: defaultConfig.ConnectTimeout.String()},
 				"buffer_size":     {Description: "Size of the buffer (in bytes) for reading banner data.", Type: "int", Required: false, Default: defaultConfig.BufferSize},
 				"concurrency":     {Description: "Number of concurrent banner grabbing operations.", Type: "int", Required: false, Default: defaultConfig.Concurrency},
-				"send_probes":     {Description: "Whether to send basic HTTP/generic probes to elicit banners.", Type: "bool", Required: false, Default: defaultConfig.SendProbes},
+				"send_probes":     {Description: "Whether to send protocol-specific probes after passive banner capture.", Type: "bool", Required: false, Default: defaultConfig.SendProbes},
 			},
-			EstimatedCost: 2, // 1-5 scale, can be network intensive.
-
+			EstimatedCost: 2,
 		},
 		config: defaultConfig,
 	}
@@ -124,7 +151,7 @@ func (m *BannerGrabModule) Metadata() engine.ModuleMetadata {
 func (m *BannerGrabModule) Init(instanceID string, configMap map[string]interface{}) error {
 	m.logger = log.With().Str("module", m.meta.Name).Str("instance_id", m.meta.ID).Logger()
 
-	cfg := m.config // Start with defaults
+	cfg := m.config
 
 	if readTimeoutStr, ok := configMap["read_timeout"].(string); ok {
 		if dur, err := time.ParseDuration(readTimeoutStr); err == nil {
@@ -153,14 +180,13 @@ func (m *BannerGrabModule) Init(instanceID string, configMap map[string]interfac
 		cfg.TLSInsecureSkipVerify = cast.ToBool(tlsInsecureSkipVerify)
 	}
 
-	// Sanitize
 	if cfg.ReadTimeout <= 0 {
 		cfg.ReadTimeout = 3 * time.Second
 	}
 	if cfg.ConnectTimeout <= 0 {
 		cfg.ConnectTimeout = 2 * time.Second
 	}
-	if cfg.BufferSize <= 0 || cfg.BufferSize > 16384 { // Max 16KB buffer
+	if cfg.BufferSize <= 0 || cfg.BufferSize > 16384 {
 		cfg.BufferSize = 2048
 	}
 	if cfg.Concurrency < 1 {
@@ -170,27 +196,6 @@ func (m *BannerGrabModule) Init(instanceID string, configMap map[string]interfac
 	m.config = cfg
 	m.logger.Debug().Interface("final_config", m.config).Msgf("Module initialized.")
 	return nil
-}
-
-// isPotentiallyHTTP checks if a port is commonly used for HTTP/HTTPS.
-func isPotentiallyHTTP(port int) bool {
-	switch port {
-	case 80, 81, 88, 443, 8000, 8008, 8080, 8081, 8443, 9080, 9443, 5985, 39700:
-		return true
-	default:
-		return false
-	}
-}
-
-// isPotentiallyTLS checks if a port is commonly used for TLS services.
-// This is a heuristic and not exhaustive.
-func isPotentiallyTLS(port int) bool {
-	switch port {
-	case 443, 8443, 990, 992, 993, 995, 587, 465, 636, 5986: // Common TLS ports (HTTPS, FTPS, SMTPS, IMAPS, POP3S, STARTTLS, LDAPS, WinRM HTTPS)
-		return true
-	default:
-		return false
-	}
 }
 
 // TargetPortData represents a target IP and a port to scan.
@@ -206,7 +211,6 @@ func (m *BannerGrabModule) Execute(ctx context.Context, inputs map[string]interf
 
 	var scanTasks []TargetPortData
 
-	// Prefer "discovery.open_tcp_ports" from input
 	if rawOpenTCPPorts, ok := inputs["discovery.open_tcp_ports"]; ok {
 		m.logger.Debug().Type("type", rawOpenTCPPorts).Msg("Found 'discovery.open_tcp_ports' in inputs")
 		if openTCPPortsList, listOk := rawOpenTCPPorts.([]interface{}); listOk {
@@ -224,20 +228,15 @@ func (m *BannerGrabModule) Execute(ctx context.Context, inputs map[string]interf
 			m.logger.Warn().Type("type", rawOpenTCPPorts).Msg("'discovery.open_tcp_ports' input is not a list as expected")
 		}
 	} else {
-		// Fallback: if explicit targets and ports are given (less common for this module if chained after discovery)
-		// This logic might be simplified if the DAG always ensures open_tcp_ports is provided.
 		m.logger.Warn().Msg("'discovery.open_tcp_ports' not found in inputs. Banner grabbing will be limited or skipped unless targets/ports provided via other means (not fully implemented in this example).")
-		// For a robust fallback, you would parse config.targets and config.ports here, similar to discovery modules.
-		// However, a banner grabber typically relies on prior port discovery.
 	}
 
 	if len(scanTasks) == 0 {
 		m.logger.Info().Msg("No target/port pairs to grab banners from. Module execution complete.")
-		// Send an empty data output if needed, or just complete.
 		outputChan <- engine.ModuleOutput{
 			FromModuleName: m.meta.ID,
-			DataKey:        m.meta.Produces[0].Key, // "service.banner.tcp"
-			Data:           []BannerGrabResult{},   // Empty list of banners
+			DataKey:        m.meta.Produces[0].Key,
+			Data:           []BannerGrabResult{},
 			Timestamp:      time.Now(),
 		}
 		return nil
@@ -245,10 +244,10 @@ func (m *BannerGrabModule) Execute(ctx context.Context, inputs map[string]interf
 
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, m.config.Concurrency)
-	m.logger.Info().Int("tasks", len(scanTasks)).Int("concurrency", m.config.Concurrency).Msg("Starting banner grabbing")
-
-	// Prepare the output channel for results
+	var resultsMu sync.Mutex
 	grabbedBanners := make([]BannerGrabResult, 0, len(scanTasks))
+
+	m.logger.Info().Int("tasks", len(scanTasks)).Int("concurrency", m.config.Concurrency).Msg("Starting banner grabbing")
 
 	for _, task := range scanTasks {
 		select {
@@ -259,83 +258,22 @@ func (m *BannerGrabModule) Execute(ctx context.Context, inputs map[string]interf
 		}
 
 		wg.Add(1)
-		sem <- struct{}{} // Acquire semaphore
+		sem <- struct{}{}
 
 		go func(currentTarget string, currentPort int) {
 			defer wg.Done()
-			defer func() {
-				<-sem
-			}()
+			defer func() { <-sem }()
 
-			address := net.JoinHostPort(currentTarget, strconv.Itoa(currentPort))
-			var banner string
-			var err error
-			isTLS := false
+			result := m.runProbes(ctx, currentTarget, currentPort)
 
-			// 1. Attempt a simple TCP read (for non-HTTP, non-TLS services)
-			// Only if not a common TLS port, or if SendProbes is off for those.
-			if !isPotentiallyTLS(currentPort) || !m.config.SendProbes {
-				banner, err = m.grabGenericBanner(ctx, address)
-				if err != nil {
-					m.logger.Debug().Msgf("Generic banner grab for %s failed: %v", address, err)
-				}
-			}
-
-			// 2. If generic banner is empty or failed, and SendProbes is true, try specific probes
-			if (banner == "" || err != nil) && m.config.SendProbes {
-				if isPotentiallyHTTP(currentPort) {
-					// Try HTTP GET probe
-					httpBanner, httpErr := m.grabHTTPBanner(ctx, currentTarget, currentPort, false)
-					if httpErr == nil && httpBanner != "" {
-						banner = httpBanner
-						err = nil // Clear previous generic error
-					} else {
-						// If HTTP failed, and it's a common HTTPS port, try HTTPS
-						if isPotentiallyTLS(currentPort) { // Typically 443, 8443
-							httpsBanner, httpsErr := m.grabHTTPBanner(ctx, currentTarget, currentPort, true)
-							if httpsErr == nil && httpsBanner != "" {
-								banner = httpsBanner
-								isTLS = true
-								err = nil // Clear previous errors
-							} else if httpErr != nil && banner == "" { // Preserve original httpErr if https also fails
-								err = httpErr
-							} else if httpsErr != nil && banner == "" {
-								err = httpsErr
-							}
-						} else if httpErr != nil && banner == "" {
-							err = httpErr // Preserve HTTP error if not trying HTTPS
-						}
-					}
-				} else if isPotentiallyTLS(currentPort) && banner == "" { // Non-HTTP TLS port (e.g. SMTPS, IMAPS)
-					tlsBanner, tlsErr := m.grabTLSBanner(ctx, address)
-					if tlsErr == nil && tlsBanner != "" {
-						banner = tlsBanner
-						isTLS = true
-						err = nil
-					} else if tlsErr != nil && banner == "" {
-						err = tlsErr
-					}
-				}
-				// Future: Add more probes for FTP, SMTP, SSH (though SSH usually sends banner first)
-			}
-
-			result := BannerGrabResult{
-				IP:       currentTarget,
-				Port:     currentPort,
-				Protocol: "tcp",
-				Banner:   strings.TrimSpace(banner),
-				IsTLS:    isTLS,
-			}
-			if err != nil {
-				result.Error = err.Error()
-			}
-
+			resultsMu.Lock()
 			grabbedBanners = append(grabbedBanners, result)
+			resultsMu.Unlock()
 
 			select {
 			case outputChan <- engine.ModuleOutput{
 				FromModuleName: m.meta.ID,
-				DataKey:        m.meta.Produces[0].Key, // "service.banner.raw"
+				DataKey:        m.meta.Produces[0].Key,
 				Target:         currentTarget,
 				Data:           result,
 				Timestamp:      time.Now(),
@@ -348,178 +286,433 @@ func (m *BannerGrabModule) Execute(ctx context.Context, inputs map[string]interf
 
 endLoop:
 	wg.Wait()
-	m.logger.Info().Msg("Service banner scanning completed.")
+	m.logger.Info().Int("results", len(grabbedBanners)).Msg("Service banner scanning completed.")
 
 	return nil
 }
 
-func (m *BannerGrabModule) grabGenericBanner(ctx context.Context, address string) (string, error) {
-	conn, err := net.DialTimeout("tcp", address, m.config.ConnectTimeout)
-	if err != nil {
-		return "", err
-	}
-	defer conn.Close()
+func (m *BannerGrabModule) runProbes(ctx context.Context, target string, port int) BannerGrabResult {
+	observations := make([]ProbeObservation, 0, 8)
+	bestBanner := ""
+	bestIsTLS := false
+	var lastError string
 
-	conn.SetReadDeadline(time.Now().Add(m.config.ReadTimeout))
-	reader := bufio.NewReader(conn)
-	buffer := make([]byte, m.config.BufferSize)
-	n, readErr := reader.Read(buffer)
+	passive := m.runPassiveProbe(ctx, target, port)
+	hintAcc := newHintAccumulator()
 
-	// Prefer context error if available
-	if ctx.Err() != nil {
-		return "", ctx.Err()
+	catalog, catalogErr := fingerprint.GetProbeCatalog()
+	if catalogErr != nil {
+		m.logger.Warn().Err(catalogErr).Msg("failed to load probe catalog; continuing with passive banner only")
+	} else {
+		hintAcc.addAll(portHintsFromCatalog(catalog, port))
 	}
-	if readErr != nil && readErr != io.EOF {
-		return "", readErr
+
+	if respHint := protocolHintFromBanner(passive.Response); respHint != "" {
+		hintAcc.add(respHint)
 	}
-	return string(buffer[:n]), nil
+
+	m.collectObservation(&observations, passive, &bestBanner, &bestIsTLS, &lastError)
+
+	if m.config.SendProbes && ctx.Err() == nil && catalogErr == nil {
+		candidateProbes := catalog.ProbesFor(port, hintAcc.slice())
+		seen := make(map[string]struct{}, len(candidateProbes))
+
+		for _, spec := range candidateProbes {
+			if ctx.Err() != nil {
+				break
+			}
+			if _, exists := seen[spec.ID]; exists {
+				continue
+			}
+			seen[spec.ID] = struct{}{}
+
+			obs := m.executeProbeSpec(ctx, target, port, spec)
+			if respHint := protocolHintFromBanner(obs.Response); respHint != "" {
+				hintAcc.add(respHint)
+			}
+			m.collectObservation(&observations, obs, &bestBanner, &bestIsTLS, &lastError)
+		}
+	}
+
+	result := BannerGrabResult{
+		IP:       target,
+		Port:     port,
+		Protocol: "tcp",
+		Banner:   strings.TrimSpace(bestBanner),
+		IsTLS:    bestIsTLS,
+		Evidence: observations,
+	}
+
+	if result.Banner == "" && lastError != "" {
+		result.Error = lastError
+	}
+
+	return result
 }
 
-func (m *BannerGrabModule) grabHTTPBanner(ctx context.Context, host string, port int, useTLS bool) (string, error) {
-	var conn net.Conn
-	var err error
-	address := net.JoinHostPort(host, strconv.Itoa(port))
+func (m *BannerGrabModule) collectObservation(observations *[]ProbeObservation, obs ProbeObservation, bestBanner *string, bestIsTLS *bool, lastError *string) {
+	if obs.ProbeID == "" {
+		return
+	}
 
-	dialer := &net.Dialer{Timeout: m.config.ConnectTimeout}
-
-	if useTLS {
-		// #nosec G402 -- InsecureSkipVerify can be a user option in the future if needed for self-signed certs
-		// For now, we are not skipping verification. If it's a common need, add a config option.
-		tlsConfig := &tls.Config{
-			InsecureSkipVerify: m.config.TLSInsecureSkipVerify, // Default to secure
-			ServerName:         host,                           // For SNI
+	if obs.Response != "" {
+		trimmed := strings.TrimSpace(obs.Response)
+		obs.Response = trimmed
+		if trimmed != "" {
+			if *bestBanner == "" || strings.HasPrefix(obs.ProbeID, "http") || strings.HasPrefix(obs.ProbeID, "https") {
+				*bestBanner = trimmed
+				*bestIsTLS = obs.IsTLS
+			}
+			if obs.Error == "" {
+				*lastError = ""
+			}
 		}
-		conn, err = tls.DialWithDialer(dialer, "tcp", address, tlsConfig)
+	}
+
+	if obs.Error != "" {
+		*lastError = obs.Error
+	}
+
+	*observations = append(*observations, obs)
+}
+
+func (m *BannerGrabModule) runPassiveProbe(ctx context.Context, target string, port int) ProbeObservation {
+	obs := ProbeObservation{
+		ProbeID:     "tcp-passive",
+		Description: "Initial TCP banner read",
+		Protocol:    "tcp",
+	}
+
+	banner, duration, err := m.grabGenericBanner(ctx, target, port)
+	obs.Duration = duration
+	obs.Response = banner
+	if err != nil {
+		obs.Error = err.Error()
+	}
+
+	return obs
+}
+
+func (m *BannerGrabModule) executeProbeSpec(ctx context.Context, host string, port int, spec fingerprint.ProbeSpec) ProbeObservation {
+	commands := prepareProbeCommands(spec, host, port)
+	cmdSpec := commandProbeSpec{
+		ProbeID:         spec.ID,
+		Description:     spec.Description,
+		Protocol:        spec.Protocol,
+		Commands:        commands,
+		UseTLS:          spec.UseTLS,
+		SkipInitialRead: spec.SkipInitialRead,
+	}
+	return m.runCommandProbe(ctx, host, port, cmdSpec)
+}
+
+func (m *BannerGrabModule) runCommandProbe(ctx context.Context, host string, port int, spec commandProbeSpec) ProbeObservation {
+	obs := ProbeObservation{
+		ProbeID:     spec.ProbeID,
+		Description: spec.Description,
+		Protocol:    spec.Protocol,
+		IsTLS:       spec.UseTLS,
+	}
+
+	address := net.JoinHostPort(host, strconv.Itoa(port))
+	dialer := &net.Dialer{Timeout: m.config.ConnectTimeout}
+	start := time.Now()
+
+	var (
+		conn    net.Conn
+		err     error
+		tlsInfo *TLSObservation
+	)
+
+	if spec.UseTLS {
+		var tlsConn *tls.Conn
+		tlsConn, err = tls.DialWithDialer(dialer, "tcp", address, &tls.Config{
+			InsecureSkipVerify: m.config.TLSInsecureSkipVerify,
+			ServerName:         host,
+		})
+		if err == nil {
+			tlsInfo = extractTLSObservation(tlsConn.ConnectionState())
+			conn = tlsConn
+		}
 	} else {
 		conn, err = dialer.DialContext(ctx, "tcp", address)
 	}
 
 	if err != nil {
-		return "", err
+		obs.Duration = time.Since(start)
+		obs.Error = err.Error()
+		return obs
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
-	// Simple HTTP GET request
-	// Using Host header that matches the target IP/hostname is important for virtual hosting.
-	// If 'host' is an IP, some servers might not respond as expected without a proper hostname.
-	request := fmt.Sprintf("GET / HTTP/1.1\r\nHost: %s\r\nConnection: close\r\nUser-Agent: PentoraBannerGrabber/0.1\r\n\r\n", host)
-	_, err = conn.Write([]byte(request))
-	if err != nil {
-		return "", err
+	if tlsInfo != nil {
+		obs.TLS = tlsInfo
 	}
 
-	conn.SetReadDeadline(time.Now().Add(m.config.ReadTimeout))
-	// Read up to BufferSize or until EOF/timeout
-	var responseBuilder strings.Builder
-	buffer := make([]byte, m.config.BufferSize)
-	totalRead := 0
-
-	for {
-		select {
-		case <-ctx.Done(): // Check context cancellation during read loop
-			return responseBuilder.String(), ctx.Err()
-		default:
+	responses := make([]string, 0, len(spec.Commands)+1)
+	if !spec.SkipInitialRead {
+		initial, readErr := m.readProbeResponse(ctx, conn)
+		if initial != "" {
+			responses = append(responses, initial)
 		}
-
-		n, readErr := conn.Read(buffer)
-		if n > 0 {
-			responseBuilder.Write(buffer[:n])
-			totalRead += n
-			// Stop if we've filled the buffer to avoid excessively large banners
-			// or if we have enough data (e.g., just headers). This can be refined.
-			if totalRead >= m.config.BufferSize {
-				break
-			}
-		}
-		if readErr != nil {
-			if readErr != io.EOF { // EOF is expected when connection is closed by server
-				err = readErr
-			}
-			break // EOF or other error
+		if readErr != nil && readErr != io.EOF && ctx.Err() == nil {
+			obs.Error = readErr.Error()
 		}
 	}
 
-	response := responseBuilder.String()
-	if strings.HasPrefix(response, "HTTP/") {
-		//statusLine := strings.SplitN(response, "\r\n", 2)[0]
-		//statusCode := strings.Split(statusLine, " ")[1]
-
-		//code, _ := strconv.Atoi(statusCode)
-
-		//if code >= 400 {
-		//	return "", fmt.Errorf("HTTP error: %s", statusLine)
-		//}
-
-		// Special cases requiring HTTPS
-		if strings.Contains(response, "Upgrade Required") ||
-			strings.Contains(response, "HTTP to HTTPS") {
-			return "", fmt.Errorf("server requires HTTPS")
+	for _, cmd := range spec.Commands {
+		if ctx.Err() != nil {
+			obs.Error = ctx.Err().Error()
+			break
+		}
+		if _, writeErr := conn.Write([]byte(cmd)); writeErr != nil {
+			obs.Error = writeErr.Error()
+			break
+		}
+		resp, rErr := m.readProbeResponse(ctx, conn)
+		if resp != "" {
+			responses = append(responses, resp)
+		}
+		if rErr != nil && rErr != io.EOF && ctx.Err() == nil {
+			obs.Error = rErr.Error()
+			break
 		}
 	}
 
-	return response, err // Return last error encountered during read, or nil
+	obs.Duration = time.Since(start)
+
+	if len(responses) > 0 {
+		obs.Response = strings.TrimSpace(strings.Join(responses, "\n"))
+	}
+
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		obs.Error = ctxErr.Error()
+	}
+
+	return obs
 }
 
-// grabTLSBanner attempts a TLS handshake and reads initial data.
-// This is very basic and might only get server certificate info or an initial TLS alert.
-// A more sophisticated approach would involve parsing the TLS handshake.
-func (m *BannerGrabModule) grabTLSBanner(ctx context.Context, address string) (string, error) {
+func (m *BannerGrabModule) grabGenericBanner(ctx context.Context, host string, port int) (string, time.Duration, error) {
+	address := net.JoinHostPort(host, strconv.Itoa(port))
 	dialer := &net.Dialer{Timeout: m.config.ConnectTimeout}
-	// #nosec G402 -- InsecureSkipVerify: false by default. Add config if needed.
-	conn, err := tls.DialWithDialer(dialer, "tcp", address, &tls.Config{
-		InsecureSkipVerify: m.config.TLSInsecureSkipVerify, // Consider making this configurable for testing self-signed certs
-	})
+	start := time.Now()
+
+	conn, err := dialer.DialContext(ctx, "tcp", address)
 	if err != nil {
-		return "", fmt.Errorf("TLS dial error: %w", err)
+		return "", time.Since(start), err
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
-	// Attempt to get some info from the handshake state
-	// This isn't a "banner" in the traditional sense for many TLS services without an app protocol.
-	// For HTTPS, the HTTP banner is grabbed over TLS. For others (SMTPS, IMAPS), the app protocol starts after TLS.
-	// This might just confirm TLS is present.
+	if err := conn.SetReadDeadline(time.Now().Add(m.config.ReadTimeout)); err != nil {
+		return "", time.Since(start), err
+	}
 
-	// Try to read a small amount of data after handshake. Some services send an initial message.
-	conn.SetReadDeadline(time.Now().Add(m.config.ReadTimeout))
+	reader := bufio.NewReader(conn)
 	buffer := make([]byte, m.config.BufferSize)
-	n, readErr := conn.Read(buffer)
+	n, readErr := reader.Read(buffer)
+	duration := time.Since(start)
 
 	if ctx.Err() != nil {
-		return "", ctx.Err()
+		return "", duration, ctx.Err()
+	}
+	if readErr != nil && readErr != io.EOF {
+		return "", duration, readErr
+	}
+	if n == 0 {
+		return "", duration, nil
 	}
 
-	var bannerParts []string
-	if state := conn.ConnectionState(); state.HandshakeComplete {
-		bannerParts = append(bannerParts, fmt.Sprintf("TLSv%x", state.Version))
-		if len(state.PeerCertificates) > 0 {
-			cert := state.PeerCertificates[0]
-			if cert.Subject.CommonName != "" {
-				bannerParts = append(bannerParts, fmt.Sprintf("CN=%s", cert.Subject.CommonName))
+	return string(buffer[:n]), duration, nil
+}
+
+func (m *BannerGrabModule) readProbeResponse(ctx context.Context, conn net.Conn) (string, error) {
+	buffer := make([]byte, m.config.BufferSize)
+	var builder strings.Builder
+
+	for {
+		if ctx.Err() != nil {
+			return builder.String(), ctx.Err()
+		}
+
+		if err := conn.SetReadDeadline(time.Now().Add(m.config.ReadTimeout)); err != nil {
+			return builder.String(), err
+		}
+
+		n, err := conn.Read(buffer)
+		if n > 0 {
+			builder.Write(buffer[:n])
+			if n < len(buffer) || builder.Len() >= m.config.BufferSize {
+				return builder.String(), nil
 			}
-			if len(cert.DNSNames) > 0 {
-				bannerParts = append(bannerParts, fmt.Sprintf("SANs=%s", strings.Join(cert.DNSNames, ",")))
+			continue
+		}
+
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return builder.String(), nil
 			}
+			if ne, ok := err.(net.Error); ok && ne.Timeout() {
+				if builder.Len() == 0 {
+					return "", nil
+				}
+				return builder.String(), nil
+			}
+			return builder.String(), err
+		}
+
+		if builder.Len() > 0 {
+			return builder.String(), nil
+		}
+
+		return "", nil
+	}
+}
+
+func prepareProbeCommands(spec fingerprint.ProbeSpec, host string, port int) []string {
+	if spec.Payload == "" {
+		return nil
+	}
+
+	payload := strings.ReplaceAll(spec.Payload, "{HOST}", host)
+	if port > 0 {
+		payload = strings.ReplaceAll(payload, "{PORT}", strconv.Itoa(port))
+	}
+
+	return []string{payload}
+}
+
+func portHintsFromCatalog(catalog *fingerprint.ProbeCatalog, port int) []string {
+	if catalog == nil {
+		return nil
+	}
+
+	hints := make(map[string]struct{})
+	for _, group := range catalog.Groups {
+		if len(group.PortHints) > 0 && !portInList(group.PortHints, port) {
+			continue
+		}
+		if group.ID != "" {
+			hints[strings.ToLower(group.ID)] = struct{}{}
+		}
+		for _, hint := range group.ProtocolHints {
+			if hint == "" {
+				continue
+			}
+			hints[strings.ToLower(hint)] = struct{}{}
 		}
 	}
 
-	if n > 0 {
-		bannerParts = append(bannerParts, "DATA="+strings.TrimSpace(string(buffer[:n])))
-	} else if readErr != nil && readErr != io.EOF {
-		// If there's a read error and we have no other TLS info, return the error
-		if len(bannerParts) == 0 {
-			return "", fmt.Errorf("TLS read error: %w", readErr)
+	if len(hints) == 0 {
+		return nil
+	}
+
+	out := make([]string, 0, len(hints))
+	for hint := range hints {
+		out = append(out, hint)
+	}
+	return out
+}
+
+func portInList(list []int, port int) bool {
+	for _, v := range list {
+		if v == port {
+			return true
+		}
+	}
+	return false
+}
+
+func protocolHintFromBanner(banner string) string {
+	banner = strings.ToLower(banner)
+	switch {
+	case strings.HasPrefix(banner, "ssh-"):
+		return "ssh"
+	case strings.Contains(banner, "http/") || strings.Contains(banner, "server:"):
+		return "http"
+	case strings.Contains(banner, "smtp"):
+		return "smtp"
+	case strings.Contains(banner, "ftp"):
+		return "ftp"
+	case strings.Contains(banner, "imap"):
+		return "imap"
+	case strings.Contains(banner, "pop3"):
+		return "pop3"
+	case strings.Contains(banner, "redis"):
+		return "redis"
+	}
+	return ""
+}
+
+type hintAccumulator struct {
+	set map[string]struct{}
+}
+
+func newHintAccumulator() hintAccumulator {
+	return hintAccumulator{set: make(map[string]struct{})}
+}
+
+func (h *hintAccumulator) add(hint string) {
+	if hint == "" {
+		return
+	}
+	if h.set == nil {
+		h.set = make(map[string]struct{})
+	}
+	h.set[strings.ToLower(hint)] = struct{}{}
+}
+
+func (h *hintAccumulator) addAll(hints []string) {
+	for _, hint := range hints {
+		h.add(hint)
+	}
+}
+
+func (h hintAccumulator) slice() []string {
+	if len(h.set) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(h.set))
+	for hint := range h.set {
+		out = append(out, hint)
+	}
+	return out
+}
+
+func extractTLSObservation(state tls.ConnectionState) *TLSObservation {
+	if !state.HandshakeComplete {
+		return nil
+	}
+
+	obs := &TLSObservation{
+		Version:     tlsVersionString(state.Version),
+		CipherSuite: tls.CipherSuiteName(state.CipherSuite),
+		ServerName:  state.ServerName,
+	}
+
+	if len(state.PeerCertificates) > 0 {
+		cert := state.PeerCertificates[0]
+		obs.PeerCommonName = cert.Subject.CommonName
+		if len(cert.DNSNames) > 0 {
+			obs.PeerDNSNames = append([]string(nil), cert.DNSNames...)
 		}
 	}
 
-	if len(bannerParts) > 0 {
-		return strings.Join(bannerParts, "; "), nil
-	}
-	// If handshake completed but no data and no specific info, indicate TLS was established
-	if conn.ConnectionState().HandshakeComplete {
-		return "TLS Handshake Successful", nil
-	}
+	return obs
+}
 
-	return "", fmt.Errorf("no data or significant TLS info received")
+func tlsVersionString(version uint16) string {
+	switch version {
+	case tls.VersionTLS13:
+		return "TLS1.3"
+	case tls.VersionTLS12:
+		return "TLS1.2"
+	case tls.VersionTLS11:
+		return "TLS1.1"
+	case tls.VersionTLS10:
+		return "TLS1.0"
+	default:
+		return fmt.Sprintf("0x%x", version)
+	}
 }
 
 // BannerGrabModuleFactory creates a new BannerGrabModule instance.

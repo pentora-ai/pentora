@@ -1,0 +1,33 @@
+version: '2'
+formatters:
+  enable:
+    - gofumpt
+linters:
+  enable:
+    - misspell
+    - revive
+    - staticcheck
+    - govet
+  exclusions:
+    rules:
+      - path: (.+)_test.go
+        linters:
+          - canonicalheader
+          - fatcontext
+          - funlen
+          - goconst
+          - godot
+      - path: (.+)_test.go
+        text: ' always receives '
+        linters:
+          - unparam
+  settings:
+    errcheck:
+      exclude-functions:
+        - fmt.Fprintln
+    revive:
+      rules:
+        - name: package-comments
+          disabled: true
+        - name: unused-parameter
+          disabled: true

@@ -45,7 +45,7 @@ type runtimeNode struct {
 	outputs      map[string]ModuleOutput
 	dependencies []*runtimeNode
 	dependents   []*runtimeNode
-	inputData    map[string]interface{}
+	// inputData    map[string]interface{}
 }
 
 type DataContext struct {
@@ -351,9 +351,9 @@ func (o *Orchestrator) Run(ctx context.Context, initialInputs map[string]interfa
 			}
 
 			if !dependenciesMet {
-				if node.status == StatusFailed && overallError != nil { // If already marked as failed due to dependency
-					// Already handled, just make sure to break the outer loop if an error requires halting.
-				}
+				// if node.status == StatusFailed && overallError != nil { // If already marked as failed due to dependency
+				// Already handled, just make sure to break the outer loop if an error requires halting.
+				// }
 				continue
 			}
 
@@ -362,7 +362,7 @@ func (o *Orchestrator) Run(ctx context.Context, initialInputs map[string]interfa
 				consumedKeyString := consumedContract.Key // Use the string Key
 				if _, providedByDependency := nodeInputs[consumedKeyString]; !providedByDependency {
 					// Key not provided by a direct DAG dependency, try to get it from the global/initial context
-					//if val, found := o.dataCtx.Get(consumedKey); found {
+					// if val, found := o.dataCtx.Get(consumedKey); found {
 					if val, found := o.dataCtx.Get(consumedKeyString); found {
 						// config.targets was set by SetInitial, so it should be []string directly.
 						// Module outputs (like discovery.live_hosts from icmp_ping) were set by AddOrAppendToList,
@@ -380,7 +380,6 @@ func (o *Orchestrator) Run(ctx context.Context, initialInputs map[string]interfa
 							log.Debug().Str("node", node.instanceID).Str("input_key", consumedKeyString).Str("source_dependency", "dep.instanceID").Type("type_passed_to_module", val).Msg("Input from dependency added to nodeInputs")
 						}
 					} else {
-
 						// Optional input not found, module should handle this.
 						// If required and not found, module's Execute should error.
 						logger.Debug().Msgf("Orchestrator: Optional input key '%s' not found in dependencies or initial context for module '%s'.", consumedKeyString, node.instanceID)
@@ -452,7 +451,7 @@ func (o *Orchestrator) Run(ctx context.Context, initialInputs map[string]interfa
 					o.dataCtx.AddOrAppendToList(dataCtxKey, output.Data) // Use AddOrAppendToList for module outputs
 
 					if output.Error != nil {
-						//fmt.Fprintf(os.Stderr, "[ERROR] Output error from module '%s' for DataKey '%s': %v\n", currentNode.instanceID, output.DataKey, output.Error)
+						// fmt.Fprintf(os.Stderr, "[ERROR] Output error from module '%s' for DataKey '%s': %v\n", currentNode.instanceID, output.DataKey, output.Error)
 						log.Error().Msgf("[ERROR] Output error from module '%s' for DataKey '%s': %v", currentNode.instanceID, output.DataKey, output.Error)
 						// Decide if an output error should fail the module or just be logged.
 						// For now, log it. Module's main error (moduleErr) will determine module status.

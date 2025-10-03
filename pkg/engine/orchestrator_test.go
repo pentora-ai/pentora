@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"testing"
 )
 
@@ -45,6 +46,7 @@ func TestStatus_String(t *testing.T) {
 		}
 	}
 }
+
 func TestNewDataContext(t *testing.T) {
 	dc := NewDataContext()
 	if dc == nil {
@@ -57,6 +59,7 @@ func TestNewDataContext(t *testing.T) {
 		t.Errorf("Expected DataContext.data to be empty, got length %d", len(dc.data))
 	}
 }
+
 func TestDataContext_Set(t *testing.T) {
 	dc := NewDataContext()
 	key := "module1.output"
@@ -70,7 +73,7 @@ func TestDataContext_Set(t *testing.T) {
 	if !exists {
 		t.Errorf("Expected key %q to exist in DataContext.data", key)
 	}
-	if got != value {
+	if got.([]interface{})[0] != value {
 		t.Errorf("Expected value %q for key %q, got %q", value, key, got)
 	}
 }
@@ -90,10 +93,11 @@ func TestDataContext_Set_Overwrite(t *testing.T) {
 	if !exists {
 		t.Errorf("Expected key %q to exist in DataContext.data", key)
 	}
-	if got != value2 {
-		t.Errorf("Expected value %q for key %q after overwrite, got %q", value2, key, got)
+	if reflect.DeepEqual(got, []interface{}{value1, value2}) == false {
+		t.Errorf("Expected value %q, %q for key %q after overwrite, got %q", value1, value2, key, got)
 	}
 }
+
 func TestDataContext_Get(t *testing.T) {
 	dc := NewDataContext()
 	key := "module1.output"
@@ -114,7 +118,7 @@ func TestDataContext_Get(t *testing.T) {
 	if !exists {
 		t.Errorf("Expected key %q to exist after Set, but exists=false", key)
 	}
-	if got != value {
+	if got.([]interface{})[0] != value {
 		t.Errorf("Expected value %q for key %q, got %v", value, key, got)
 	}
 
@@ -128,6 +132,7 @@ func TestDataContext_Get(t *testing.T) {
 		t.Errorf("Expected value to be nil for non-existent key %q, got %v", otherKey, got)
 	}
 }
+
 func TestDataContext_GetAll_Empty(t *testing.T) {
 	dc := NewDataContext()
 	all := dc.GetAll()
@@ -141,22 +146,27 @@ func TestDataContext_GetAll_Empty(t *testing.T) {
 
 func TestDataContext_GetAll_NonEmpty(t *testing.T) {
 	dc := NewDataContext()
-	dc.Set("key1", "value1")
-	dc.Set("key2", 42)
-	dc.Set("key3", []string{"a", "b"})
+	key1Val := "value1"
+	key2val := 42
+	key3Val := []string{"a", "b"}
+
+	dc.Set("key1", key1Val)
+	dc.Set("key2", key2val)
+	dc.Set("key3", key3Val)
 
 	all := dc.GetAll()
 	if len(all) != 3 {
 		t.Errorf("Expected map of length 3, got %d", len(all))
 	}
-	if all["key1"] != "value1" {
-		t.Errorf("Expected key1 to be 'value1', got %v", all["key1"])
+
+	if !reflect.DeepEqual(all["key1"], []interface{}{key1Val}) {
+		t.Errorf("Expected key1 to be '%s', got '%s'", key1Val, all["key1"])
 	}
-	if all["key2"] != 42 {
+	if !reflect.DeepEqual(all["key2"], []interface{}{key2val}) {
 		t.Errorf("Expected key2 to be 42, got %v", all["key2"])
 	}
-	if got, ok := all["key3"].([]string); !ok || len(got) != 2 || got[0] != "a" || got[1] != "b" {
-		t.Errorf("Expected key3 to be [a b], got %v", all["key3"])
+	if !reflect.DeepEqual(all["key3"], []interface{}{key3Val}) {
+		t.Errorf("Expected key3 to be %v, got %v", key3Val, all["key3"])
 	}
 }
 
@@ -167,7 +177,7 @@ func TestDataContext_GetAll_Independence(t *testing.T) {
 	all["k"] = "changed"
 
 	got, _ := dc.Get("k")
-	if got != "v" {
+	if !reflect.DeepEqual(got, []interface{}{"v"}) {
 		t.Errorf("Modifying GetAll() result should not affect DataContext, but got %v", got)
 	}
 }
@@ -205,7 +215,6 @@ func TestNewOrchestrator_MissingInstanceID(t *testing.T) {
 }
 
 func TestNewOrchestrator_DuplicateInstanceID(t *testing.T) {
-
 	RegisterModuleFactory("mock", func() Module {
 		return &mockModule{
 			meta: ModuleMetadata{
@@ -290,22 +299,22 @@ func TestOrchestrator_ConnectsModulesByConsumesAndProduces(t *testing.T) {
 	RegisterModuleFactory("mock-a", func() Module {
 		return &mockModule{
 			meta: ModuleMetadata{
-				ID:       "a",
-				Name:     "mock-a",
+				ID:   "a",
+				Name: "mock-a",
 				Produces: []DataContractEntry{
 					{Key: "a.output"},
-				},				
+				},
 			},
 		}
 	})
 	RegisterModuleFactory("mock-b", func() Module {
 		return &mockModule{
 			meta: ModuleMetadata{
-				ID:       "b",
-				Name:     "mock-b",
+				ID:   "b",
+				Name: "mock-b",
 				Consumes: []DataContractEntry{
 					{Key: "a.output"},
-				},				
+				},
 			},
 		}
 	})
@@ -372,7 +381,7 @@ func TestOrchestrator_Run_ExecutesModulesInOrder(t *testing.T) {
 				Produces: []DataContractEntry{{Key: "baz"}},
 			},
 			execFunc: func(ctx context.Context, inputs map[string]interface{}, out chan<- ModuleOutput) error {
-				if val, ok := inputs["foo"]; !ok || val != "bar" {
+				if val, ok := inputs["foo"]; !ok || !reflect.DeepEqual(val, []interface{}{"bar"}) {
 					t.Errorf("Expected input 'foo' = 'bar', got %v", val)
 				}
 				out <- ModuleOutput{
@@ -409,17 +418,11 @@ func TestOrchestrator_Run_ExecutesModulesInOrder(t *testing.T) {
 
 	// Check final results
 	want := map[string]interface{}{
-		"mod1.foo": "bar",
-		"mod2.baz": "qux",
+		"foo": []interface{}{"bar"},
+		"baz": []interface{}{"qux"},
 	}
 
-	for k, v := range want {
-		got, ok := results[k]
-		if !ok {
-			t.Errorf("Expected result key '%s' not found", k)
-		}
-		if got != v {
-			t.Errorf("Result mismatch for '%s': got %v, want %v", k, got, v)
-		}
+	if !reflect.DeepEqual(results, want) {
+		t.Errorf("Final results mismatch:\ngot:  %v\nwant: %v", results, want)
 	}
 }

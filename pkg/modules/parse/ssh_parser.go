@@ -248,7 +248,7 @@ func extractSSHSoftwareAndVersion(versionInfo string) (software string, swVersio
 			if len(spaceParts) > 1 {
 				swVersion = spaceParts[1]
 			}
-			return
+			return software, swVersion
 		}
 	}
 	return versionInfo, "" // Default to full string as software, no specific version

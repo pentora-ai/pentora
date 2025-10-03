@@ -13,14 +13,14 @@ import (
 // Orchestrator coordinates the execution of scan plugins.
 type orchestrator struct {
 	Registry plugin.RegistryInterface
-	Hook     hook.Manager
+	Hook     *hook.Manager
 }
 
 // New creates a new ScanOrchestrator with the given plugin registry.
 func New(reg plugin.RegistryInterface, h *hook.Manager) Orchestrator {
 	return &orchestrator{
 		Registry: reg,
-		Hook:     *h,
+		Hook:     h,
 	}
 }
 
@@ -149,7 +149,7 @@ func (o *orchestrator) RunPluginsDAGParallelLayers(ctx context.Context, target s
 					Target: target,
 					ScanID: scanID,
 					Logger: log.With().Str("plugin", p.Name()).Str("scan_id", scanID).Logger(),
-					Hooks:  &o.Hook,
+					Hooks:  o.Hook,
 				}
 
 				pc.Hooks.Trigger(ctx, "plugin:beforeRun:"+p.Name())

@@ -13,10 +13,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var (
-	// logWriter stores the current log writer globally
-	logWriter io.Writer
-)
+// logWriter stores the current log writer globally
+var logWriter io.Writer
 
 // stdLogWriter is a custom writer that reformats stdlog output to match zerolog's format
 type stdLogWriter struct {

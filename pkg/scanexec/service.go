@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pentora-ai/pentora/pkg/appctx"
 	"github.com/pentora-ai/pentora/pkg/engine"
 )
 
@@ -79,9 +78,9 @@ func (s *Service) Run(ctx context.Context, params Params) (*Result, error) {
 		return nil, fmt.Errorf("app manager missing from context")
 	}
 
-	if _, ok := appctx.Config(ctx); !ok {
-		ctx = appctx.WithConfig(ctx, appMgr.Config())
-	}
+	// if _, ok := appctx.Config(ctx); !ok {
+	// 	ctx = appctx.WithConfig(ctx, appMgr.Config())
+	// }
 
 	planner, err := s.plannerFactory()
 	if err != nil {
