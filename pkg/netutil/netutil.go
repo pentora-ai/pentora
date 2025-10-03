@@ -176,7 +176,7 @@ func ParseAndExpandTargets(targets []string) []string {
 						}
 
 						currentCompareVal := bytes.Compare(currentIP, endIP)
-						if (startIsV4 && bytes.Equal(currentIP.To4(), endIP.To4())) || (!startIsV4 && currentCompareVal == 0) {
+						if (startIsV4 && currentIP.Equal(endIP)) || (!startIsV4 && currentCompareVal == 0) {
 							break // Reached endIP
 						}
 						incIP(currentIP)
@@ -237,7 +237,7 @@ func lookupAndAdd(target string, expandedIPs *[]string, seenIPs map[string]struc
 
 // filterNonScanableIPs removes IPs that are generally not useful targets.
 // Loopback is handled by module config, this filters others.
-func filterNonScanableIPs(ips []string, alreadySeen map[string]struct{}) []string {
+func filterNonScanableIPs(ips []string, _ map[string]struct{}) []string {
 	// This function assumes `alreadySeen` was used to populate `ips` with unique strings.
 	// If `ips` might contain duplicates or IPs that were added bypassing `seenIPs` in `ParseAndExpandTargets`,
 	// it's better to re-initialize `seen` here or pass `seenIPs` by reference and modify it.
