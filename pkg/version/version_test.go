@@ -5,7 +5,6 @@ import (
 	"testing"
 )
 
-
 func TestVersion_String_ReturnsVersionField(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -152,7 +151,3 @@ func TestGetVersion(t *testing.T) {
 		})
 	}
 }
-
-
-
-
