@@ -89,9 +89,9 @@ func (c *Coordinator) Identify(ctx context.Context, obs PassiveObservation, exec
 			return nil, fmt.Errorf("fingerprinter %s passive analysis failed: %w", fp.ID(), err)
 		}
 		if cand != nil {
-			copy := *cand
-			copy.Source = fp.ID()
-			candidates = append(candidates, candidate{data: &copy, finalized: done})
+			copied := *cand
+			copied.Source = fp.ID()
+			candidates = append(candidates, candidate{data: &copied, finalized: done})
 			if done {
 				continue
 			}
@@ -114,10 +114,10 @@ func (c *Coordinator) Identify(ctx context.Context, obs PassiveObservation, exec
 			if cand == nil {
 				continue
 			}
-			copy := *cand
-			copy.Source = fp.ID()
-			copy.MatchedProbe = probe.ID
-			candidates = append(candidates, candidate{data: &copy, finalized: done})
+			copied := *cand
+			copied.Source = fp.ID()
+			copied.MatchedProbe = probe.ID
+			candidates = append(candidates, candidate{data: &copied, finalized: done})
 			if done {
 				break
 			}

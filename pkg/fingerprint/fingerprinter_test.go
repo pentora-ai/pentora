@@ -38,6 +38,7 @@ type stubExecutor struct {
 	failProbe string
 }
 
+//nolint:revive
 func (e *stubExecutor) Execute(ctx context.Context, probe Probe) ([]byte, error) {
 	if probe.ID == e.failProbe {
 		return nil, errors.New("probe failed")
@@ -48,6 +49,7 @@ func (e *stubExecutor) Execute(ctx context.Context, probe Probe) ([]byte, error)
 	return nil, nil
 }
 
+//nolint:revive
 func TestCoordinatorPassivePriority(t *testing.T) {
 	ctx := context.Background()
 	obs := PassiveObservation{Banner: []byte("SSH-2.0-OpenSSH"), Port: 2222}
@@ -82,6 +84,7 @@ func TestCoordinatorPassivePriority(t *testing.T) {
 	}
 }
 
+//nolint:revive
 func TestCoordinatorActiveProbe(t *testing.T) {
 	ctx := context.Background()
 	obs := PassiveObservation{Port: 80}

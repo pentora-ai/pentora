@@ -34,8 +34,21 @@ func NewRuleBasedResolver(rules []StaticRule) *RuleBasedResolver {
 	return &RuleBasedResolver{rules: rules}
 }
 
-// Resolve applies all matching rules to the input and returns a FingerprintResult if successful.
-func (r *RuleBasedResolver) Resolve(ctx context.Context, in FingerprintInput) (FingerprintResult, error) {
+// Resolve attempts to identify a fingerprint based on the provided FingerprintInput.
+// It normalizes the input banner, iterates through the resolver's rules, and checks for a matching protocol and banner pattern.
+// If a rule matches, it extracts the version (if available) using the rule's versionRegex, and returns a FingerprintResult
+// populated with the rule's metadata and a high confidence score. If no rule matches, it returns an error.
+//
+// Parameters:
+//
+//	ctx - The context for cancellation and deadlines.
+//	in  - The FingerprintInput containing protocol and banner information.
+//
+// Returns:
+//
+//	Result - The result of the fingerprinting process, populated if a rule matches.
+//	error             - An error if no matching rule is found.
+func (r *RuleBasedResolver) Resolve(_ context.Context, in Input) (Result, error) {
 	normalizedBanner := strings.ToLower(in.Banner)
 
 	for _, rule := range r.rules {
@@ -50,7 +63,7 @@ func (r *RuleBasedResolver) Resolve(ctx context.Context, in FingerprintInput) (F
 				version = matches[1]
 			}
 
-			return FingerprintResult{
+			return Result{
 				Product:     rule.Product,
 				Vendor:      rule.Vendor,
 				Version:     version,
@@ -62,5 +75,5 @@ func (r *RuleBasedResolver) Resolve(ctx context.Context, in FingerprintInput) (F
 		}
 	}
 
-	return FingerprintResult{}, fmt.Errorf("no matching rule found")
+	return Result{}, fmt.Errorf("no matching rule found")
 }

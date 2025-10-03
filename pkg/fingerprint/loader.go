@@ -1,11 +1,8 @@
-// pkg/fingerprint/loader.go
 // Package fingerprint provides functionality to resolve service banners into structured metadata.
 package fingerprint
 
 import (
-	"crypto/sha256"
 	_ "embed"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -44,21 +41,4 @@ func loadExternalCatalog(cacheDir string) ([]StaticRule, error) {
 		return nil, fmt.Errorf("parse cache: %w", err)
 	}
 	return rules, nil
-}
-
-// writeCatalogCache writes fingerprint rules to cache.
-func writeCatalogCache(cacheDir string, data []byte) error {
-	if cacheDir == "" {
-		return errors.New("cache directory not specified")
-	}
-	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
-		return err
-	}
-	cachedPath := filepath.Join(cacheDir, "fingerprint.cache")
-	return os.WriteFile(cachedPath, data, 0o644)
-}
-
-func checksum(data []byte) string {
-	sum := sha256.Sum256(data)
-	return hex.EncodeToString(sum[:])
 }
