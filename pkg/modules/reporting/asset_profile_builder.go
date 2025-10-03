@@ -1,5 +1,5 @@
 // pkg/modules/reporting/asset_profile_builder.go
-package reporting // veya uygun bir paket adı
+package reporting
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"github.com/pentora-ai/pentora/pkg/modules/discovery" // For ICMPPingDiscoveryResult, TCPPortDiscoveryResult
 	"github.com/pentora-ai/pentora/pkg/modules/parse"     // For HTTPParsedInfo, SSHParsedInfo
 	"github.com/pentora-ai/pentora/pkg/modules/scan"      // For BannerScanResult
-	"github.com/pentora-ai/pentora/pkg/utils"
+	"github.com/pentora-ai/pentora/pkg/netutil"
 	"github.com/rs/zerolog/log"
 )
 
@@ -169,7 +169,6 @@ func (m *AssetProfileBuilderModule) Execute(ctx context.Context, inputs map[stri
 			if vulnList, listOk := data.([]interface{}); listOk {
 				for _, item := range vulnList {
 					if vuln, castOk := item.(engine.VulnerabilityFinding); castOk { // Varsayım: Zafiyet modülleri bu tipi üretir
-						//targetPortKey := fmt.Sprintf("%s:%d", vuln.IP /*modülün bu alanı doldurması lazım*/, vuln.Port /*modülün bu alanı doldurması lazım*/)
 						targetPortKey := "nil"
 						allVulnerabilities[targetPortKey] = append(allVulnerabilities[targetPortKey], vuln)
 					}
@@ -188,10 +187,9 @@ func (m *AssetProfileBuilderModule) Execute(ctx context.Context, inputs map[stri
 			if _, exists := processedTargets[liveIP]; !exists {
 				now := time.Now()
 				profile := &engine.AssetProfile{
-					Target:      liveIP, // Başlangıçta IP'yi target olarak al, sonra hostname eklenebilir
-					ResolvedIPs: map[string]time.Time{liveIP: now},
-					IsAlive:     true,
-					//ScanStartTime:       now, // Bu, bu modülün başlangıç zamanı, daha iyisi DAG başlangıcı
+					Target:              liveIP,
+					ResolvedIPs:         map[string]time.Time{liveIP: now},
+					IsAlive:             true,
 					LastObservationTime: now,
 					OpenPorts:           make(map[string][]engine.PortProfile),
 				}
@@ -206,7 +204,7 @@ func (m *AssetProfileBuilderModule) Execute(ctx context.Context, inputs map[stri
 
 	// Eğer canlı host bilgisi yoksa, initialTargets'ı kullan (ping kapalıysa veya yanıt yoksa)
 	if len(liveHostResults) == 0 {
-		expandedInitialTargets := utils.ParseAndExpandTargets(initialTargets) // utils'dan
+		expandedInitialTargets := netutil.ParseAndExpandTargets(initialTargets) // utils'dan
 		for _, target := range expandedInitialTargets {
 			if _, exists := processedTargets[target]; !exists {
 				now := time.Now()
@@ -214,7 +212,7 @@ func (m *AssetProfileBuilderModule) Execute(ctx context.Context, inputs map[stri
 					Target:      target,
 					ResolvedIPs: map[string]time.Time{target: now},
 					IsAlive:     false, // Ping ile doğrulanmadı
-					//ScanStartTime:       now,
+					// ScanStartTime:       now,
 					LastObservationTime: now,
 					OpenPorts:           make(map[string][]engine.PortProfile),
 				}
@@ -288,32 +286,47 @@ func (m *AssetProfileBuilderModule) Execute(ctx context.Context, inputs map[stri
 						}
 					}
 
+					var fpMatches []parse.FingerprintParsedInfo
+					var primaryFP *parse.FingerprintParsedInfo
 					for _, fpDetail := range fingerprintDetails {
-						if fpDetail.Target == targetIP && fpDetail.Port == portNum {
+						if fpDetail.Target != targetIP || fpDetail.Port != portNum {
+							continue
+						}
+						matchCopy := fpDetail
+						fpMatches = append(fpMatches, matchCopy)
+						if primaryFP == nil {
+							primaryFP = &matchCopy
+						}
+					}
+					if len(fpMatches) > 0 {
+						if portProfile.Service.ParsedAttributes == nil {
+							portProfile.Service.ParsedAttributes = make(map[string]interface{})
+						}
+						if primaryFP != nil {
 							if portProfile.Service.Name == "" {
-								portProfile.Service.Name = fpDetail.Protocol
+								portProfile.Service.Name = primaryFP.Protocol
 							}
 							if portProfile.Service.Product == "" {
-								portProfile.Service.Product = fpDetail.Product
+								portProfile.Service.Product = primaryFP.Product
 							}
 							if portProfile.Service.Version == "" {
-								portProfile.Service.Version = fpDetail.Version
+								portProfile.Service.Version = primaryFP.Version
 							}
-							if portProfile.Service.ParsedAttributes == nil {
-								portProfile.Service.ParsedAttributes = make(map[string]interface{})
+							portProfile.Service.ParsedAttributes["fingerprint_confidence"] = primaryFP.Confidence
+							if primaryFP.CPE != "" {
+								portProfile.Service.ParsedAttributes["cpe"] = primaryFP.CPE
 							}
-							if portProfile.Service.Product == fpDetail.Product {
-								portProfile.Service.ParsedAttributes["fingerprint_confidence"] = fpDetail.Confidence
+							if primaryFP.Vendor != "" {
+								portProfile.Service.ParsedAttributes["vendor"] = primaryFP.Vendor
 							}
-							if fpDetail.CPE != "" {
-								portProfile.Service.ParsedAttributes["cpe"] = fpDetail.CPE
+							if primaryFP.Description != "" {
+								portProfile.Service.ParsedAttributes["fingerprint_primary_description"] = primaryFP.Description
 							}
-							if fpDetail.Vendor != "" {
-								portProfile.Service.ParsedAttributes["vendor"] = fpDetail.Vendor
+							if primaryFP.SourceProbe != "" {
+								portProfile.Service.ParsedAttributes["fingerprint_primary_probe"] = primaryFP.SourceProbe
 							}
-							chainKey := fmt.Sprintf("fingerprint_description_%d", portNum)
-							portProfile.Service.ParsedAttributes[chainKey] = fpDetail.Description
 						}
+						portProfile.Service.ParsedAttributes["fingerprints"] = fpMatches
 					}
 
 					// Bu porta ait zafiyetleri bul

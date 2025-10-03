@@ -11,7 +11,9 @@ import (
 	"time"
 
 	"github.com/pentora-ai/pentora/pkg/engine" // Engine interfaces
-	"github.com/pentora-ai/pentora/pkg/utils"  // Utilities like target and port parsing
+	"github.com/pentora-ai/pentora/pkg/netutil"
+
+	// Utilities like target and port parsing
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cast"
 )
@@ -89,7 +91,7 @@ func newTCPPortDiscoveryModule() *TCPPortDiscoveryModule {
 			},
 			Produces: []engine.DataContractEntry{
 				{
-					Key: "discovery.open_tcp_ports",
+					Key:          "discovery.open_tcp_ports",
 					DataTypeName: "discovery.TCPPortDiscoveryResult",
 					Cardinality:  engine.CardinalityList, // Indicates this DataKey will hold a list of results
 					Description:  "List of results, each detailing open TCP ports for a specific target.",
@@ -191,10 +193,10 @@ func (m *TCPPortDiscoveryModule) Execute(ctx context.Context, inputs map[string]
 		targetsToScan = append(targetsToScan, liveHosts.LiveHosts...) // Assuming LiveHosts contains IP addresses
 		logger.Debug().Msgf("Using %d live hosts from input 'discovery.live_hosts'.", len(targetsToScan))
 	} else if configTargets, ok := inputs["config.targets"].([]string); ok && len(configTargets) > 0 {
-		targetsToScan = utils.ParseAndExpandTargets(configTargets)
+		targetsToScan = netutil.ParseAndExpandTargets(configTargets)
 		logger.Debug().Msgf("Using %d targets from input 'config.targets', expanded to %d IPs.", len(configTargets), len(targetsToScan))
 	} else if len(m.config.Targets) > 0 {
-		targetsToScan = utils.ParseAndExpandTargets(m.config.Targets)
+		targetsToScan = netutil.ParseAndExpandTargets(m.config.Targets)
 		fmt.Printf("[DEBUG] Module '%s': Using %d targets from module config, expanded to %d IPs.\n", m.meta.Name, len(m.config.Targets), len(targetsToScan))
 	} else {
 		err := fmt.Errorf("module '%s': no targets specified through inputs or module configuration", m.meta.Name)
@@ -203,7 +205,7 @@ func (m *TCPPortDiscoveryModule) Execute(ctx context.Context, inputs map[string]
 	}
 
 	portsToScanStr := strings.Join(m.config.Ports, ",")
-	parsedPorts, err := utils.ParsePortString(portsToScanStr)
+	parsedPorts, err := netutil.ParsePortString(portsToScanStr)
 	if err != nil {
 		err = fmt.Errorf("module '%s': invalid port configuration '%s': %w", m.meta.Name, portsToScanStr, err)
 		outputChan <- engine.ModuleOutput{FromModuleName: m.meta.ID, Error: err, Timestamp: time.Now()}
@@ -279,7 +281,7 @@ func (m *TCPPortDiscoveryModule) Execute(ctx context.Context, inputs map[string]
 					address := net.JoinHostPort(ip, strconv.Itoa(p))
 					conn, err := net.DialTimeout("tcp", address, m.config.Timeout)
 					if err == nil {
-						conn.Close()
+						_ = conn.Close()
 						mapMutex.Lock()
 						openPortsByTarget[ip] = append(openPortsByTarget[ip], p)
 						mapMutex.Unlock()
