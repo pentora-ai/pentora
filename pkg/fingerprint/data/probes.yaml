@@ -1,0 +1,96 @@
+# Built-in probe catalog for banner grabbing.
+groups:
+  - id: http
+    description: Standard HTTP and HTTPS probes
+    port_hints: [80, 81, 88, 443, 8000, 8008, 8080, 8081, 8443, 9080, 9443, 5985, 39700]
+    protocol_hints: ["http", "https", "web"]
+    probes:
+      - id: http-get
+        protocol: http
+        use_tls: false
+        skip_initial_read: true
+        payload: |
+          GET / HTTP/1.1\r\nHost: {HOST}\r\nConnection: close\r\nUser-Agent: PentoraProbe/0.1\r\n\r\n
+      - id: https-get
+        description: HTTPS GET fallback when HTTP indicates upgrade
+        protocol: https
+        use_tls: true
+        skip_initial_read: true
+        payload: |
+          GET / HTTP/1.1\r\nHost: {HOST}\r\nConnection: close\r\nUser-Agent: PentoraProbe/0.1\r\n\r\n
+        port_include: [443, 8443, 9443]
+  - id: smtp
+    description: SMTP greeting and EHLO probe
+    port_hints: [25, 465, 587, 2525]
+    protocol_hints: ["smtp"]
+    probes:
+      - id: smtp-ehlo
+        protocol: smtp
+        use_tls: false
+        payload: "EHLO pentora.local\r\n"
+        port_exclude: [465]
+      - id: smtp-ehlo-tls
+        protocol: smtp
+        use_tls: true
+        payload: "EHLO pentora.local\r\n"
+        port_include: [465]
+  - id: imap
+    description: IMAP capability probe
+    port_hints: [143, 993]
+    protocol_hints: ["imap"]
+    probes:
+      - id: imap-capability
+        protocol: imap
+        payload: "A1 CAPABILITY\r\n"
+        use_tls: false
+        port_exclude: [993]
+      - id: imap-capability-tls
+        protocol: imap
+        payload: "A1 CAPABILITY\r\n"
+        use_tls: true
+        port_include: [993]
+  - id: pop3
+    description: POP3 capability probe
+    port_hints: [110, 995]
+    protocol_hints: ["pop3"]
+    probes:
+      - id: pop3-capa
+        protocol: pop3
+        payload: "CAPA\r\n"
+        use_tls: false
+        port_exclude: [995]
+      - id: pop3-capa-tls
+        protocol: pop3
+        payload: "CAPA\r\n"
+        use_tls: true
+        port_include: [995]
+  - id: ftp
+    description: FTP feature request
+    port_hints: [21, 990]
+    protocol_hints: ["ftp"]
+    probes:
+      - id: ftp-feat
+        protocol: ftp
+        payload: "FEAT\r\n"
+        use_tls: false
+        port_exclude: [990]
+      - id: ftp-feat-tls
+        protocol: ftp
+        payload: "FEAT\r\n"
+        use_tls: true
+        port_include: [990]
+  - id: redis
+    description: Redis ping command
+    port_hints: [6379, 6380]
+    protocol_hints: ["redis"]
+    probes:
+      - id: redis-ping
+        protocol: redis
+        payload: "PING\r\n"
+        use_tls: false
+        port_exclude: [6380]
+      - id: redis-ping-tls
+        protocol: redis
+        payload: "PING\r\n"
+        use_tls: true
+        port_include: [6380]

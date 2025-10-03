@@ -35,11 +35,12 @@ type Matcher struct {
 // MatcherType enumerates supported matcher styles.
 type MatcherType string
 
+// MatcherContains specifies a matcher type that checks if a value contains a specified substring.
 const (
-	MatcherContains MatcherType = "contains"
-	MatcherPrefix   MatcherType = "prefix"
-	MatcherRegex    MatcherType = "regex"
-	MatcherEquals   MatcherType = "equals"
+	MatcherContains MatcherType = "contains" // Case-insensitive substring match
+	MatcherPrefix   MatcherType = "prefix"   // Case-insensitive prefix match
+	MatcherRegex    MatcherType = "regex"    // Case-insensitive regex match
+	MatcherEquals   MatcherType = "equals"   // Case-insensitive exact match
 )
 
 // ProbeDefinition describes an active probe to run when matching a service.

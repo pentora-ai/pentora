@@ -1,4 +1,4 @@
-// pkg/fingerprint/parse.go
+// Package fingerprint provides mechanisms for managing and resolving fingerprinting rules.
 package fingerprint
 
 import (
@@ -9,6 +9,10 @@ import (
 
 // parseFingerprintYAML parses raw YAML bytes into a list of StaticRule entries.
 // Each rule defines how to identify a software or service by inspecting banner content.
+// parseFingerprintYAML attempts to parse the provided YAML data into a slice of StaticRule.
+// It first tries to unmarshal the data directly into a []StaticRule. If that fails or results in an empty slice,
+// it then attempts to unmarshal the data into a struct containing a "rules" field with a []StaticRule.
+// Returns the parsed rules and any validation error encountered, or an error if parsing fails.
 func parseFingerprintYAML(data []byte) ([]StaticRule, error) {
 	var rules []StaticRule
 

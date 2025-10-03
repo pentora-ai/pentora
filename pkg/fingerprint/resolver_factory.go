@@ -1,4 +1,3 @@
-// pkg/fingerprint/resolver_factory.go
 // Package fingerprint provides resolver selection mechanism.
 package fingerprint
 
@@ -9,6 +8,7 @@ import (
 // ResolverType defines which implementation to use.
 type ResolverType string
 
+// ResolverRuleBased represents a resolver type that uses rule-based logic for fingerprint resolution.
 const (
 	ResolverRuleBased ResolverType = "rule_based"
 	ResolverAI        ResolverType = "ai"
@@ -30,7 +30,7 @@ func NewResolverFactory(staticRules []StaticRule, enableAI bool) *ResolverFactor
 }
 
 // Get returns the correct resolver implementation based on configuration or feature flag.
-func (f *ResolverFactory) Get() (FingerprintResolver, error) {
+func (f *ResolverFactory) Get() (Resolver, error) {
 	if f.enableAI {
 		// In OSS build, this must return an error to avoid dependency leaks.
 		return nil, errors.New("AIResolver is not available in this build")
