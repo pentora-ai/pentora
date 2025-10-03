@@ -34,6 +34,6 @@ func main() {
 
 	err := command.Execute()
 	if err != nil {
-		os.Exit(1) 
+		os.Exit(1)
 	}
 }

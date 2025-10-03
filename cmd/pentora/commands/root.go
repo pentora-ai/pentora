@@ -39,7 +39,6 @@ func NewCommand() *cobra.Command {
 
 			ctx := context.WithValue(cmd.Context(), engine.AppManagerKey, appManager)
 			ctx = appctx.WithConfig(ctx, appManager.Config())
-			
 
 			if !workspaceDisabled {
 				prepared, err := workspace.Prepare(workspaceDir)
@@ -74,10 +73,14 @@ func NewCommand() *cobra.Command {
 
 	config.BindFlags(cmd.PersistentFlags())
 
+	cmd.AddGroup(&cobra.Group{ID: "scan", Title: "Scan Commands"})
+	cmd.AddGroup(&cobra.Group{ID: "core", Title: "Core Commands"})
+
 	cmd.AddCommand(cli.DiscoverCmd)
 	cmd.AddCommand(cli.ServeCmd)
 	cmd.AddCommand(cli.NewVersionCommand(cliExecutable))
 	cmd.AddCommand(ScanCmd)
+	cmd.AddCommand(NewFingerprintCommand())
 
 	return cmd
 }
