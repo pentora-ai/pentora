@@ -124,6 +124,7 @@ func TestParsePortString(t *testing.T) {
 		})
 	}
 }
+
 func TestFilterNonScanableIPs(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -202,6 +203,7 @@ func TestFilterNonScanableIPs(t *testing.T) {
 		})
 	}
 }
+
 func TestIncIP(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -251,6 +253,7 @@ func TestIncIP(t *testing.T) {
 		})
 	}
 }
+
 func TestParseAndExpandTargets(t *testing.T) {
 	tests := []struct {
 		name  string
