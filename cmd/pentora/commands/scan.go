@@ -12,11 +12,11 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pentora-ai/pentora/pkg/appctx"
 	"github.com/pentora-ai/pentora/pkg/engine"
-	_ "github.com/pentora-ai/pentora/pkg/modules/parse"     // Register parse modules if needed
-	_ "github.com/pentora-ai/pentora/pkg/modules/reporting" // Register reporting modules if needed
-	_ "github.com/pentora-ai/pentora/pkg/modules/scan"      // Register this module
+	parsepkg "github.com/pentora-ai/pentora/pkg/modules/parse" // Register parse modules if needed
+	_ "github.com/pentora-ai/pentora/pkg/modules/reporting"    // Register reporting modules if needed
+	_ "github.com/pentora-ai/pentora/pkg/modules/scan"         // Register this module
 	"github.com/pentora-ai/pentora/pkg/scanexec"
-	"github.com/pentora-ai/pentora/pkg/utils"
+	"github.com/pentora-ai/pentora/pkg/stringutil"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -49,7 +49,8 @@ var ScanCmd = &cobra.Command{
 	Short: "Perform a comprehensive scan on specified targets",
 	Long: `Performs various scanning stages based on selected profile, level, or flags.
 The command automatically plans the execution DAG using available modules.`,
-	Args: cobra.MinimumNArgs(1),
+	GroupID: "scan",
+	Args:    cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		scanTargetsFromCLI := args
 
@@ -169,11 +170,11 @@ The command automatically plans the execution DAG using available modules.`,
 			if executionErr != nil {
 				fmt.Fprintf(os.Stderr, "\nScan finished with errors: %v\n", executionErr)
 			}
-		if len(finalProfiles) > 0 {
-			printAssetProfileTextOutput(finalProfiles)
-		} else {
-			fmt.Println("\nScan completed, but no asset profiles were generated.")
-		}
+			if len(finalProfiles) > 0 {
+				printAssetProfileTextOutput(finalProfiles)
+			} else {
+				fmt.Println("\nScan completed, but no asset profiles were generated.")
+			}
 		}
 	},
 }
@@ -211,17 +212,47 @@ func printAssetProfileTextOutput(profiles []engine.AssetProfile) {
 						fmt.Printf("         Service: %s %s %s\n", port.Service.Name, port.Service.Product, port.Service.Version)
 					}
 					if port.Service.RawBanner != "" {
-						fmt.Printf("         Banner: %s\n", utils.Ellipsis(port.Service.RawBanner, 80))
+						fmt.Printf("         Banner: %s\n", stringutil.Ellipsis(port.Service.RawBanner, 80))
 					}
 					if port.Service.ParsedAttributes != nil {
-						if confidence, ok := port.Service.ParsedAttributes["fingerprint_confidence"]; ok {
-							fmt.Printf("         Fingerprint Confidence: %v\n", confidence)
+						attrs := port.Service.ParsedAttributes
+						printedFingerprintList := false
+						if rawMatches, ok := attrs["fingerprints"]; ok {
+							if matches, ok := rawMatches.([]parsepkg.FingerprintParsedInfo); ok && len(matches) > 0 {
+								printedFingerprintList = true
+								fmt.Println("         Fingerprints:")
+								for _, match := range matches {
+									fmt.Printf("           - %s", match.Product)
+									if match.Version != "" {
+										fmt.Printf(" %s", match.Version)
+									}
+									if match.Vendor != "" {
+										fmt.Printf(" [%s]", match.Vendor)
+									}
+									fmt.Printf(" (confidence %.2f", match.Confidence)
+									if match.SourceProbe != "" {
+										fmt.Printf(", probe %s", match.SourceProbe)
+									}
+									fmt.Println(")")
+									if match.CPE != "" {
+										fmt.Printf("             CPE: %s\n", match.CPE)
+									}
+									if match.Description != "" {
+										fmt.Printf("             Notes: %s\n", match.Description)
+									}
+								}
+							}
 						}
-						if vendor, ok := port.Service.ParsedAttributes["vendor"]; ok {
-							fmt.Printf("         Vendor: %v\n", vendor)
-						}
-						if cpe, ok := port.Service.ParsedAttributes["cpe"]; ok {
-							fmt.Printf("         CPE: %v\n", cpe)
+						if !printedFingerprintList {
+							if confidence, ok := attrs["fingerprint_confidence"]; ok {
+								fmt.Printf("         Fingerprint Confidence: %v\n", confidence)
+							}
+							if vendor, ok := attrs["vendor"]; ok {
+								fmt.Printf("         Vendor: %v\n", vendor)
+							}
+							if cpe, ok := attrs["cpe"]; ok {
+								fmt.Printf("         CPE: %v\n", cpe)
+							}
 						}
 					}
 
