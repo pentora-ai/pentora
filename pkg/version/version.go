@@ -1,4 +1,3 @@
-// pkg/version/version.go
 // Package version provides version metadata for the application.
 package version
 
@@ -19,6 +18,9 @@ var (
 	tag       = ""                     // Tag holds the git tag of the build.
 )
 
+// Version holds metadata information about the application build, including
+// the semantic version, commit hash, build date, git tag, Go version, compiler,
+// and platform details.
 type Version struct {
 	Version   string
 	Commit    string
@@ -34,7 +36,7 @@ func (v Version) String() string {
 	return v.Version
 }
 
-// Get returns version information as a Struct.
+// GetVersion returns version information as a Struct.
 func GetVersion() Version {
 	var str string
 
