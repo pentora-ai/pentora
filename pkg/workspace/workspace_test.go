@@ -108,6 +108,7 @@ func TestContextHelpers(t *testing.T) {
 		t.Fatalf("expected missing workspace root from empty context")
 	}
 }
+
 func TestWithContext_NilContext(t *testing.T) {
 	//nolint:staticcheck
 	ctx := WithContext(nil, "/tmp/ws")
@@ -162,7 +163,6 @@ func TestDefaultRoot_DarwinSuccess(t *testing.T) {
 	}
 
 	dir, err := defaultRoot()
-
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -189,5 +189,4 @@ func TestDefaultRoot_WindowsError(t *testing.T) {
 	dir, err := defaultRoot()
 
 	spew.Dump(dir, err)
-
 }

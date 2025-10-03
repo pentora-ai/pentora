@@ -37,6 +37,7 @@ func TestVersion_String_ReturnsVersionField(t *testing.T) {
 		})
 	}
 }
+
 func TestGetVersion(t *testing.T) {
 	origVersion := version
 	origCommit := commit

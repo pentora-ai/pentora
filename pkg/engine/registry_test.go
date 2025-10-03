@@ -14,9 +14,9 @@ type MockTestModuleConfig struct {
 }
 
 type MockTestModule struct {
-	meta    ModuleMetadata
-	config  MockTestModuleConfig
-	inited  bool
+	meta   ModuleMetadata
+	config MockTestModuleConfig
+	inited bool
 }
 
 func NewMockTestModule() Module { // Factory signature
@@ -91,7 +91,6 @@ func TestGetModuleInstance_Success(t *testing.T) {
 
 	config := map[string]interface{}{"TestValue": "hello"}
 	instance, err := GetModuleInstance("", moduleName, config)
-
 	if err != nil {
 		t.Fatalf("GetModuleInstance failed: %v", err)
 	}

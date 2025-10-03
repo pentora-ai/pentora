@@ -26,7 +26,7 @@ var ServeCmd = &cobra.Command{
 		// mux.HandleFunc("/api/...", api.SomeHandler)
 
 		// API endpoint register
-		//mux.HandleFunc("/api/version", version.VersionHandler)
+		// mux.HandleFunc("/api/version", version.VersionHandler)
 
 		log.Printf("🚀 Pentora UI serving at http://localhost:%d\n", port)
 		if err := http.ListenAndServe(fmt.Sprintf(":%d", port), mux); err != nil {

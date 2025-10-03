@@ -9,7 +9,7 @@ import (
 )
 
 func TestHookManager_OnShutdown(t *testing.T) {
-	t.Parallel() // Paralel test
+	t.Parallel() // Parallel test
 
 	mgr := NewManager()
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)

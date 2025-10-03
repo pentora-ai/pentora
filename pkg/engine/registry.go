@@ -63,12 +63,12 @@ func GetAllModuleMetadata() ([]ModuleMetadata, error) {
 	// logger.Debug().Int("registry_size", len(moduleRegistry)).Msg("Getting metadata for all registered modules")
 
 	allMetadata := make([]ModuleMetadata, 0, len(moduleRegistry))
-	if len(moduleRegistry) == 0 {
-		// logger.Warn().Msg("No modules are registered in the moduleRegistry.")
-		// It might be an error or just an early stage of initialization.
-		// Depending on when this is called, returning an error might be appropriate.
-		// For now, return empty list and no error if registry is empty.
-	}
+	// if len(moduleRegistry) == 0 {
+	// logger.Warn().Msg("No modules are registered in the moduleRegistry.")
+	// It might be an error or just an early stage of initialization.
+	// Depending on when this is called, returning an error might be appropriate.
+	// For now, return empty list and no error if registry is empty.
+	// }
 
 	for name, factory := range moduleRegistry {
 		// It's important that factory() creates a lightweight instance

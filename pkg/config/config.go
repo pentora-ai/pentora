@@ -75,7 +75,7 @@ func (m *Manager) Load(flags *pflag.FlagSet, customConfigFilePath string) error 
 
 		debugFlag := flags.Lookup("debug")
 		if debugFlag != nil && debugFlag.Value.String() == "true" {
-			m.koanfInstance.Set("log.level", "debug")
+			_ = m.koanfInstance.Set("log.level", "debug")
 		}
 	}
 
@@ -136,7 +136,7 @@ func DefaultConfigAsMap() map[string]interface{} {
 // This function should be called when setting up Cobra commands.
 func BindFlags(flags *pflag.FlagSet) {
 	// Get default config to provide default values for flags' help text
-	//defaults := DefaultConfig()
+	// defaults := DefaultConfig()
 
 	// Log flags
 	// flags.String("log.level", defaults.Log.Level, "Log level (debug, info, warn, error)")

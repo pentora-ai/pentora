@@ -37,7 +37,6 @@ type DefaultAppManagerFactory struct{}
 //   - *AppManager: A pointer to the initialized AppManager.
 //   - error:       An error if initialization fails.
 func (f *DefaultAppManagerFactory) Create(flags *pflag.FlagSet, configFile string) (*AppManager, error) {
-
 	logLevel := f.GetRuntimeLogLevel(flags)
 
 	if err := logging.ConfigureGlobalLogging(logLevel); err != nil {

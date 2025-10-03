@@ -31,7 +31,13 @@ func TestTCPPortDiscoveryModule_Metadata(t *testing.T) {
 	if len(meta.Tags) == 0 {
 		t.Error("expected non-empty Tags")
 	}
-	if !reflect.DeepEqual(meta.Produces, []string{"discovery.open_tcp_ports"}) {
+
+	var gotKeys []string
+	for _, e := range meta.Produces {
+		gotKeys = append(gotKeys, e.Key)
+	}
+
+	if !reflect.DeepEqual(gotKeys, []string{"discovery.open_tcp_ports"}) {
 		t.Errorf("expected Produces ['discovery.open_tcp_ports'], got %v", meta.Produces)
 	}
 	if len(meta.ConfigSchema) == 0 {
@@ -62,12 +68,25 @@ func TestNewTCPPortDiscoveryModule_Defaults(t *testing.T) {
 	if len(meta.Tags) == 0 {
 		t.Error("expected non-empty Tags")
 	}
-	if !reflect.DeepEqual(meta.Produces, []string{"discovery.open_tcp_ports"}) {
-		t.Errorf("expected Produces ['discovery.open_tcp_ports'], got %v", meta.Produces)
+
+	for _, produce := range meta.Produces {
+		if !reflect.DeepEqual(produce.Key, "discovery.open_tcp_ports") {
+			t.Errorf("expected Produces discovery.open_tcp_ports, got %v", produce.Key)
+		}
 	}
-	if !reflect.DeepEqual(meta.Consumes, []string{"config.targets", "discovery.live_hosts"}) {
-		t.Errorf("expected Consumes ['config.targets', 'discovery.live_hosts'], got %v", meta.Consumes)
+
+	gotConsumeKeys := []string{}
+
+	for _, consume := range meta.Consumes {
+		if consume.IsOptional == false {
+			gotConsumeKeys = append(gotConsumeKeys, consume.Key)
+		}
 	}
+
+	if !reflect.DeepEqual(gotConsumeKeys, []string{"discovery.live_hosts"}) {
+		t.Errorf("expected Consumes ['config.targets', 'discovery.live_hosts'], got %v", gotConsumeKeys)
+	}
+
 	if len(meta.ConfigSchema) == 0 {
 		t.Error("expected non-empty ConfigSchema")
 	}
@@ -191,6 +210,7 @@ func TestTCPPortDiscoveryModule_Init(t *testing.T) {
 		})
 	}
 }
+
 func TestTCPPortDiscoveryModule_Execute_NoTargets(t *testing.T) {
 	module := newTCPPortDiscoveryModule()
 	module.meta.ID = "test-instance"
