@@ -18,6 +18,13 @@ var defaultSubdirs = []string{
 	"audit",
 }
 
+var userHomeDir = os.UserHomeDir // for testing
+
+// GetUserHomeDir returns the current user's home directory.
+func GetUserHomeDir() (string, error) {
+	return userHomeDir()
+}
+
 // Prepare ensures the workspace root and required subdirectories exist.
 // It returns the absolute path to the workspace root that was prepared.
 func Prepare(root string) (string, error) {
@@ -72,14 +79,31 @@ func FromContext(ctx context.Context) (string, bool) {
 	return "", false
 }
 
+// getGOOS returns the current operating system target as a string,
+// as defined by the Go runtime (e.g., "windows", "darwin", "linux").
+// This function can be overridden for testing purposes.
+var getGOOS = func() string {
+	return runtime.GOOS
+}
+
+// defaultRoot determines the default root directory for the Pentora workspace.
+// It checks for the "PENTORA_WORKSPACE" environment variable first. If not set,
+// it selects a platform-specific default location:
+//   - On macOS ("darwin"), it uses "$HOME/Library/Application Support/Pentora".
+//   - On Windows, it prefers "%AppData%\Pentora", falling back to
+//     "$HOME/AppData/Roaming/Pentora" if "AppData" is not set.
+//   - On other systems (e.g., Linux), it uses "$XDG_DATA_HOME/pentora" if set,
+//     otherwise defaults to "$HOME/.local/share/pentora".
+//
+// Returns the resolved directory path or an error if the home directory cannot be determined.
 func defaultRoot() (string, error) {
 	if dir := os.Getenv("PENTORA_WORKSPACE"); dir != "" {
 		return dir, nil
 	}
 
-	switch runtime.GOOS {
+	switch getGOOS() {
 	case "darwin":
-		home, err := os.UserHomeDir()
+		home, err := GetUserHomeDir()
 		if err != nil {
 			return "", fmt.Errorf("resolve home directory: %w", err)
 		}
@@ -88,7 +112,7 @@ func defaultRoot() (string, error) {
 		if appData := os.Getenv("AppData"); appData != "" {
 			return filepath.Join(appData, "Pentora"), nil
 		}
-		home, err := os.UserHomeDir()
+		home, err := GetUserHomeDir()
 		if err != nil {
 			return "", fmt.Errorf("resolve home directory: %w", err)
 		}
