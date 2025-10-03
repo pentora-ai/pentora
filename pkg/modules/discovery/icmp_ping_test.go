@@ -10,9 +10,11 @@ import (
 	"testing"
 	"time"
 
+	// TODO: Replace with your actual ping library import path
+	//nolint:staticcheck // Ignore staticcheck warning for this import
 	"github.com/go-ping/ping"
 	"github.com/pentora-ai/pentora/pkg/engine"
-	"github.com/pentora-ai/pentora/pkg/utils"
+	"github.com/pentora-ai/pentora/pkg/netutil"
 )
 
 type fakePinger struct {
@@ -144,7 +146,6 @@ func TestICMPPingDiscoveryModule_Init_PacketTimeoutLessThanOne(t *testing.T) {
 		"targets":        []string{"192.168.1.1"},
 		"packet_timeout": -1,
 	})
-
 	if err != nil {
 		t.Fatalf("Init failed: %v", err)
 	}
@@ -160,7 +161,6 @@ func TestICMPPingDiscoveryModule_Init_InvalidConfigParams(t *testing.T) {
 		"timeout":        timeout,
 		"packet_timeout": "0s",
 	})
-
 	if err != nil {
 		t.Fatalf("Init failed: %v", err)
 	}
@@ -205,6 +205,7 @@ func TestICMPPingDiscoveryModule_Execute(t *testing.T) {
 	if err != nil {
 		// Depending on how Execute handles errors (e.g., if context is cancelled before completion)
 		// t.Logf("Execute returned an error (may be expected if context timed out): %v", err)
+		t.Fatalf("Module execution resulted in an error: %v", err)
 	}
 
 	select {
@@ -310,7 +311,7 @@ func TestICMPPingDiscoveryModule_Execute_TargetsFromInput(t *testing.T) {
 
 	out := make(chan engine.ModuleOutput, 1)
 	input := map[string]interface{}{
-		"targets": []string{"127.0.0.1"},
+		"config.targets": []string{"127.0.0.1"},
 	}
 	err := mod.Execute(context.Background(), input, out)
 	if err != nil {
@@ -385,7 +386,7 @@ func TestParseAndExpandTargets(t *testing.T) {
 			// Note: The current parseAndExpandTargets and uniqueAndFilterSpecialIPs have limitations.
 			// This test is written against the *ideal* behavior.
 			// You might need to adjust expectations or improve the functions.
-			actual := utils.ParseAndExpandTargets(tt.inputs)
+			actual := netutil.ParseAndExpandTargets(tt.inputs)
 			sort.Strings(actual) // Sort for consistent comparison
 			sort.Strings(tt.expected)
 
@@ -402,6 +403,7 @@ func TestParseAndExpandTargets(t *testing.T) {
 		})
 	}
 }
+
 func TestICMPPingModuleFactory_ReturnsModule(t *testing.T) {
 	mod := ICMPPingModuleFactory()
 	if mod == nil {

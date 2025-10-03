@@ -1,5 +1,29 @@
-// pkg/utils/networkutils.go
-package utils
+// Package netutil provides utilities for parsing and expanding network targets and port specifications.
+//
+// It includes functions to:
+//   - Expand target strings (IP addresses, CIDR blocks, IP ranges, or hostnames) into a flat list of unique, individual IP addresses.
+//   - Parse and expand port strings (including ranges) into sorted, unique integer slices.
+//   - Filter out non-targetable IPs such as multicast, unspecified, and link-local addresses.
+//   - Safely increment IP addresses (IPv4 and IPv6) for range and CIDR expansion.
+//   - Resolve hostnames to their corresponding IP addresses.
+//
+// Functions:
+//
+//   - ParseAndExpandTargets(targets []string) []string
+//     Expands a list of target strings (IPs, hostnames, CIDRs, or ranges) into a unique list of IP addresses, filtering out non-scanable addresses.
+//
+//   - ParsePortString(portStr string) ([]int, error)
+//     Parses a comma-separated string of ports and port ranges into a sorted, unique slice of integers.
+//
+//   - incIP(ip net.IP)
+//     Increments an IP address in place (supports both IPv4 and IPv6).
+//
+//   - lookupAndAdd(target string, expandedIPs *[]string, seenIPs map[string]struct{})
+//     Attempts to parse a target as an IP or resolve it as a hostname, adding unique results to the provided slice.
+//
+//   - filterNonScanableIPs(ips []string, alreadySeen map[string]struct{}) []string
+//     Removes IPs that are generally not useful scan targets (e.g., multicast, unspecified, link-local).
+package netutil
 
 import (
 	"bytes"
@@ -89,10 +113,11 @@ func ParseAndExpandTargets(targets []string) []string {
 							break
 						}
 					}
-				} else if ipToAdd.To16() != nil { // IPv6
-					// Similar logic for IPv6 if needed, more complex due to size.
-					// For now, assume incIP handles IPv6 correctly.
 				}
+				//else if ipToAdd.To16() != nil { // IPv6
+				// Similar logic for IPv6 if needed, more complex due to size.
+				// For now, assume incIP handles IPv6 correctly.
+				//}
 
 				if isLastIP && ipNet.Contains(ipToAdd) { // If it's the broadcast/last address and still in network
 					break // Stop for this CIDR
@@ -151,7 +176,7 @@ func ParseAndExpandTargets(targets []string) []string {
 						}
 
 						currentCompareVal := bytes.Compare(currentIP, endIP)
-						if (startIsV4 && bytes.Compare(currentIP.To4(), endIP.To4()) == 0) || (!startIsV4 && currentCompareVal == 0) {
+						if (startIsV4 && bytes.Equal(currentIP.To4(), endIP.To4())) || (!startIsV4 && currentCompareVal == 0) {
 							break // Reached endIP
 						}
 						incIP(currentIP)

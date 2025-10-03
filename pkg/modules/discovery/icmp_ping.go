@@ -3,8 +3,8 @@
 package discovery
 
 import (
-	// Required for bytes.Compare
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -12,9 +12,11 @@ import (
 	"sync"
 	"time"
 
+	// TODO: Replace with your actual ping library import path
+	//nolint:staticcheck // Ignore staticcheck warning for this import
 	"github.com/go-ping/ping"
 	"github.com/pentora-ai/pentora/pkg/engine" // Assuming your core module interfaces are in pkg/engine
-	"github.com/pentora-ai/pentora/pkg/utils"
+	"github.com/pentora-ai/pentora/pkg/netutil"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cast"
 )
@@ -219,13 +221,13 @@ func (m *ICMPPingDiscoveryModule) Execute(ctx context.Context, inputs map[string
 	logger.Debug().Interface("received_inputs", inputs).Msg("Executing module")
 
 	var targetsToProcess []string
-	var targetsInputSource = "module_config_fallback" // To log which source was used
+	targetsInputSource := "module_config_fallback" // To log which source was used
 
 	// "config.targets" is an initial input, assumed to be set directly by DataContext.SetInitial
 	if rawTargetsInput, ok := inputs["config.targets"]; ok {
 		logger.Debug().Interface("config.targets_input_raw", rawTargetsInput).Type("type", rawTargetsInput).Msg("Found 'config.targets' in inputs")
 		if stringSlice, isStringSlice := rawTargetsInput.([]string); isStringSlice {
-			targetsToProcess = utils.ParseAndExpandTargets(stringSlice)
+			targetsToProcess = netutil.ParseAndExpandTargets(stringSlice)
 			targetsInputSource = "inputs[\"config.targets\"] (direct []string)"
 		} else if rawTargetsInput != nil {
 			logger.Error().Type("type", rawTargetsInput).Msg("'config.targets' input has unexpected type, expected []string")
@@ -233,13 +235,12 @@ func (m *ICMPPingDiscoveryModule) Execute(ctx context.Context, inputs map[string
 	}
 
 	if len(targetsToProcess) == 0 && len(m.config.Targets) > 0 {
-		targetsToProcess = utils.ParseAndExpandTargets(m.config.Targets)
+		targetsToProcess = netutil.ParseAndExpandTargets(m.config.Targets)
 		targetsInputSource = "module.config.Targets (from Init)"
 		logger.Debug().Interface("module_config_targets", m.config.Targets).Msg("Using targets from module's own config as fallback")
 	}
 
 	logger.Debug().Strs("parsed_targets", targetsToProcess).Str("source", targetsInputSource).Msg("Targets after attempting to read from all sources")
-
 	if len(targetsToProcess) == 0 {
 		err := fmt.Errorf("no targets specified (source evaluated: %s, instance: %s)", targetsInputSource, m.meta.ID)
 		logger.Error().Err(err).Msg("Module execution cannot proceed")
@@ -292,7 +293,7 @@ func (m *ICMPPingDiscoveryModule) Execute(ctx context.Context, inputs map[string
 			DataKey:        m.meta.Produces[0].Key,
 			Data:           ICMPPingDiscoveryResult{LiveHosts: []string{}},
 			Timestamp:      time.Now(),
-			// Error: // No actual module execution error, just no results.
+			Error:          errors.New("no hosts to ping: " + msg),
 		}
 		return nil // Module itself didn't fail, just had no work.
 	}
@@ -358,7 +359,7 @@ func (m *ICMPPingDiscoveryModule) Execute(ctx context.Context, inputs map[string
 			if err != nil {
 				// Depending on verbosity, this might be a debug or warn.
 				// If stats.PacketsRecv > 0, it's not a complete failure for host discovery.
-				// logger.Debug().Err(err).Str("target", ip).Msg("Pinger.Run() error")
+				logger.Debug().Err(err).Str("target", ip).Msg("Pinger.Run() error")
 			}
 
 			if stats != nil && stats.PacketsRecv > 0 {
@@ -367,7 +368,7 @@ func (m *ICMPPingDiscoveryModule) Execute(ctx context.Context, inputs map[string
 				mu.Unlock()
 				logger.Debug().Str("target", ip).Msg("Host is live")
 			} else {
-				// logger.Debug().Str("target", ip).Int("sent", stats.PacketsSent).Int("recv", stats.PacketsRecv).Msg("Host did not respond")
+				logger.Debug().Str("target", ip).Int("sent", stats.PacketsSent).Int("recv", stats.PacketsRecv).Msg("Host did not respond")
 			}
 		}(targetIP)
 	}
@@ -409,7 +410,7 @@ func (r *realPingerAdapter) Statistics() *ping.Statistics { return r.p.Statistic
 
 func (r *realPingerAdapter) SetPrivileged(v bool)        { r.p.SetPrivileged(v) }
 func (r *realPingerAdapter) SetNetwork(n string)         { r.p.SetNetwork(n) }
-func (r *realPingerAdapter) SetAddr(a string)            { r.p.SetAddr(a) }
+func (r *realPingerAdapter) SetAddr(a string)            { _ = r.p.SetAddr(a) }
 func (r *realPingerAdapter) SetCount(c int)              { r.p.Count = c }
 func (r *realPingerAdapter) SetInterval(i time.Duration) { r.p.Interval = i }
 func (r *realPingerAdapter) SetTimeout(t time.Duration)  { r.p.Timeout = t }
