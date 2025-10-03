@@ -25,7 +25,7 @@ import (
 
 // Flags for the scan command (remains the same)
 var (
-	//scanTargets       []string
+	// scanTargets       []string
 	scanPorts         string
 	scanProfile       string
 	scanLevel         string

@@ -3,6 +3,7 @@ package parse
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -31,6 +32,7 @@ type FingerprintParsedInfo struct {
 	CPE         string  `json:"cpe,omitempty"`
 	Confidence  float64 `json:"confidence"`
 	Description string  `json:"description,omitempty"`
+	SourceProbe string  `json:"source_probe,omitempty"`
 }
 
 // FingerprintParserModule consumes banner results and produces fingerprint matches.
@@ -69,6 +71,8 @@ func newFingerprintParserModule() *FingerprintParserModule {
 	}
 }
 
+// Metadata returns the metadata information for the FingerprintParserModule.
+// It implements the engine.Module interface.
 func (m *FingerprintParserModule) Metadata() engine.ModuleMetadata { return m.meta }
 
 func (m *FingerprintParserModule) Init(instanceID string, _ map[string]interface{}) error {
@@ -105,50 +109,106 @@ func (m *FingerprintParserModule) Execute(ctx context.Context, inputs map[string
 		if !castOk {
 			continue
 		}
-		if banner.Banner == "" {
-			continue
-		}
 
-		// Heuristic protocol hint from banner if available
-		protocolHint := strings.ToLower(banner.Protocol)
-		if protocolHint == "" {
-			protocolHint = fingerprintProtocolHint(banner.Port, banner.Banner)
-		}
+		seenResponses := make(map[string]struct{})
+		seenMatches := make(map[string]struct{})
 
-		result, err := resolver.Resolve(ctx, fingerprint.FingerprintInput{
-			Protocol:    protocolHint,
-			Banner:      banner.Banner,
-			Port:        banner.Port,
-			ServiceHint: "",
-		})
-		if err != nil || result.Product == "" {
-			continue
-		}
+		for _, candidate := range gatherBannerCandidates(banner) {
+			response := strings.TrimSpace(candidate.Response)
+			if response == "" {
+				continue
+			}
+			if _, exists := seenResponses[response]; exists {
+				continue
+			}
+			seenResponses[response] = struct{}{}
 
-		parsed := FingerprintParsedInfo{
-			Target:      banner.IP,
-			Port:        banner.Port,
-			Protocol:    protocolHint,
-			Product:     result.Product,
-			Vendor:      result.Vendor,
-			Version:     result.Version,
-			CPE:         result.CPE,
-			Confidence:  result.Confidence,
-			Description: result.Description,
-		}
+			protocolHint := strings.ToLower(candidate.Protocol)
+			if protocolHint == "" {
+				protocolHint = strings.ToLower(banner.Protocol)
+			}
+			if protocolHint == "" {
+				protocolHint = fingerprintProtocolHint(banner.Port, response)
+			}
 
-		outputChan <- engine.ModuleOutput{
-			FromModuleName: m.meta.ID,
-			DataKey:        m.meta.Produces[0].Key,
-			Data:           parsed,
-			Timestamp:      time.Now(),
-			Target:         banner.IP,
+			result, err := resolver.Resolve(ctx, fingerprint.Input{
+				Protocol:    protocolHint,
+				Banner:      response,
+				Port:        banner.Port,
+				ServiceHint: "",
+			})
+			if err != nil || result.Product == "" {
+				continue
+			}
+
+			matchKey := fmt.Sprintf("%s|%s|%s", result.Product, result.Version, protocolHint)
+			if _, exists := seenMatches[matchKey]; exists {
+				continue
+			}
+			seenMatches[matchKey] = struct{}{}
+
+			parsed := FingerprintParsedInfo{
+				Target:      banner.IP,
+				Port:        banner.Port,
+				Protocol:    protocolHint,
+				Product:     result.Product,
+				Vendor:      result.Vendor,
+				Version:     result.Version,
+				CPE:         result.CPE,
+				Confidence:  result.Confidence,
+				Description: result.Description,
+				SourceProbe: candidate.ProbeID,
+			}
+
+			outputChan <- engine.ModuleOutput{
+				FromModuleName: m.meta.ID,
+				DataKey:        m.meta.Produces[0].Key,
+				Data:           parsed,
+				Timestamp:      time.Now(),
+				Target:         banner.IP,
+			}
+			matches++
 		}
-		matches++
 	}
 
 	logger.Info().Int("matches", matches).Msg("Fingerprint parsing completed")
 	return nil
+}
+
+type bannerCandidate struct {
+	Response string
+	Protocol string
+	ProbeID  string
+}
+
+func gatherBannerCandidates(banner scan.BannerGrabResult) []bannerCandidate {
+	candidates := make([]bannerCandidate, 0, len(banner.Evidence)+1)
+
+	if trimmed := strings.TrimSpace(banner.Banner); trimmed != "" {
+		candidates = append(candidates, bannerCandidate{
+			Response: trimmed,
+			Protocol: banner.Protocol,
+			ProbeID:  "tcp-passive",
+		})
+	}
+
+	for _, obs := range banner.Evidence {
+		resp := strings.TrimSpace(obs.Response)
+		if resp == "" {
+			continue
+		}
+		protocol := obs.Protocol
+		if protocol == "" {
+			protocol = banner.Protocol
+		}
+		candidates = append(candidates, bannerCandidate{
+			Response: resp,
+			Protocol: protocol,
+			ProbeID:  obs.ProbeID,
+		})
+	}
+
+	return candidates
 }
 
 func fingerprintProtocolHint(_ int, banner string) string {
