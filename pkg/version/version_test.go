@@ -152,3 +152,10 @@ func TestGetVersion(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckNewVersion(t *testing.T) {
+	got := CheckNewVersion()
+	if got != false {
+		t.Errorf("CheckNewVersion() = %v, want false", got)
+	}
+}
