@@ -23,6 +23,7 @@ func NewCommand() *cobra.Command {
 		workspaceDir      string
 		workspaceDisabled bool
 		appManager        engine.Manager
+		verbosityCount    int
 	)
 
 	cmd := &cobra.Command{
@@ -70,6 +71,7 @@ func NewCommand() *cobra.Command {
 	cmd.PersistentFlags().StringVarP(&configFile, "config", "c", "", "Configuration file path")
 	cmd.PersistentFlags().StringVar(&workspaceDir, "workspace-dir", "", "Override workspace root directory")
 	cmd.PersistentFlags().BoolVar(&workspaceDisabled, "no-workspace", false, "Disable workspace persistence for this run")
+	cmd.PersistentFlags().CountVarP(&verbosityCount, "verbosity", "v", "Increase logging verbosity (repeatable)")
 
 	config.BindFlags(cmd.PersistentFlags())
 
