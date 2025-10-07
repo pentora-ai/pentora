@@ -11,7 +11,7 @@ body:
 
         DO NOT FILE ISSUES FOR GENERAL SUPPORT QUESTIONS.
       options:
-        - label: Yes, I've searched similar issues on [GitHub](https://github.com/pentora/pentora/issues) and didn't find any.
+        - label: Yes, I've searched similar issues on [GitHub](https://github.com/pentora-ai/pentora/issues) and didn't find any.
           required: true
         - label: Yes, I've searched similar issues on the [Pentora community forum](https://community.pentora.ai) and didn't find any.
           required: true
