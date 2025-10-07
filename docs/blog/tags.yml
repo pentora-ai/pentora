@@ -1,0 +1,39 @@
+security:
+  label: Security
+  permalink: /security
+  description: Security scanning and vulnerability assessment
+
+network-scanning:
+  label: Network Scanning
+  permalink: /network-scanning
+  description: Network discovery and port scanning techniques
+
+vulnerability-assessment:
+  label: Vulnerability Assessment
+  permalink: /vulnerability-assessment
+  description: Vulnerability detection and analysis
+
+compliance:
+  label: Compliance
+  permalink: /compliance
+  description: Compliance frameworks and security standards
+
+enterprise:
+  label: Enterprise
+  permalink: /enterprise
+  description: Enterprise features and deployment
+
+release:
+  label: Release
+  permalink: /release
+  description: Product releases and updates
+
+tutorial:
+  label: Tutorial
+  permalink: /tutorial
+  description: Step-by-step guides and tutorials
+
+best-practices:
+  label: Best Practices
+  permalink: /best-practices
+  description: Security best practices and recommendations
