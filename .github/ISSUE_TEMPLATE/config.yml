@@ -4,5 +4,5 @@ contact_links:
     url: https://community.pentora.ai/
     about: If you have a question, or are looking for advice, please post on our Discuss forum! The community loves to chime in to help. Happy Coding!
   - name: Pentora Helm Chart Issues
-    url: https://github.com/pentora/pentora-helm-chart
+    url: https://github.com/pentora-ai/pentora-helm-chart
     about: Are you submitting an issue or feature enhancement for the Pentora helm chart? Please post in the pentora-helm-chart GitHub Issues.
