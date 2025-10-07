@@ -9,9 +9,18 @@ sidebar_position: 1
   <img src="/img/pentora-banner.svg" alt="Pentora Banner" style={{maxWidth: '600px', width: '100%'}} />
 </div>
 
-:::info What is Pentora?
-**Pentora** is a modular, high-performance security scanner that rapidly discovers network services, captures banners, and maps findings into vulnerability intelligence. Built with a powerful DAG-based execution engine, Pentora enables security teams to perform comprehensive network assessments with precision and efficiency.
-:::
+<div className="card" style={{
+  background: 'linear-gradient(135deg, rgba(0, 217, 255, 0.1) 0%, rgba(0, 217, 255, 0.05) 100%)',
+  border: '2px solid rgba(0, 217, 255, 0.3)',
+  borderRadius: '12px',
+  padding: '1.5rem',
+  marginBottom: '2rem'
+}}>
+  <h3 style={{color: '#00d9ff', marginTop: 0}}>What is Pentora?</h3>
+  <p style={{marginBottom: 0}}>
+    <strong>Pentora</strong> is a modular, high-performance security scanner that rapidly discovers network services, captures banners, and maps findings into vulnerability intelligence. Built with a powerful DAG-based execution engine, Pentora enables security teams to perform comprehensive network assessments with precision and efficiency.
+  </p>
+</div>
 
 ## What Makes Pentora Special?
 
@@ -77,7 +86,6 @@ sidebar_position: 1
 <div className="timeline" style={{position: 'relative', maxWidth: '900px', margin: '3rem auto'}}>
   <div style={{position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 0, bottom: 0, width: '3px', background: 'linear-gradient(180deg, #00d9ff 0%, #6366f1 100%)'}}></div>
 
-
   <div style={{position: 'relative', marginBottom: '3rem', paddingRight: '50%', paddingLeft: 0}}>
     <div style={{textAlign: 'right', paddingRight: '2.5rem'}}>
       <h4 style={{color: '#00d9ff', marginBottom: '0.5rem'}}>🔍 Fast Network Discovery</h4>
@@ -85,7 +93,6 @@ sidebar_position: 1
     </div>
     <div style={{position: 'absolute', right: 'calc(50% - 10px)', top: '5px', width: '20px', height: '20px', borderRadius: '50%', background: '#00d9ff', border: '3px solid var(--ifm-background-color)', boxShadow: '0 0 10px rgba(0,217,255,0.5)', zIndex: 1}}></div>
   </div>
-
 
   <div style={{position: 'relative', marginBottom: '3rem', paddingLeft: '50%', paddingRight: 0}}>
     <div style={{textAlign: 'left', paddingLeft: '2.5rem'}}>
@@ -95,7 +102,6 @@ sidebar_position: 1
     <div style={{position: 'absolute', left: 'calc(50% - 10px)', top: '5px', width: '20px', height: '20px', borderRadius: '50%', background: '#4a9eff', border: '3px solid var(--ifm-background-color)', boxShadow: '0 0 10px rgba(74,158,255,0.5)', zIndex: 1}}></div>
   </div>
 
-
   <div style={{position: 'relative', marginBottom: '3rem', paddingRight: '50%', paddingLeft: 0}}>
     <div style={{textAlign: 'right', paddingRight: '2.5rem'}}>
       <h4 style={{color: '#8b5cf6', marginBottom: '0.5rem'}}>🔬 Layered Fingerprinting</h4>
@@ -103,7 +109,6 @@ sidebar_position: 1
     </div>
     <div style={{position: 'absolute', right: 'calc(50% - 10px)', top: '5px', width: '20px', height: '20px', borderRadius: '50%', background: '#8b5cf6', border: '3px solid var(--ifm-background-color)', boxShadow: '0 0 10px rgba(139,92,246,0.5)', zIndex: 1}}></div>
   </div>
-
 
   <div style={{position: 'relative', marginBottom: '3rem', paddingLeft: '50%', paddingRight: 0}}>
     <div style={{textAlign: 'left', paddingLeft: '2.5rem'}}>
@@ -113,7 +118,6 @@ sidebar_position: 1
     <div style={{position: 'absolute', left: 'calc(50% - 10px)', top: '5px', width: '20px', height: '20px', borderRadius: '50%', background: '#10b981', border: '3px solid var(--ifm-background-color)', boxShadow: '0 0 10px rgba(16,185,129,0.5)', zIndex: 1}}></div>
   </div>
 
-
   <div style={{position: 'relative', marginBottom: '3rem', paddingRight: '50%', paddingLeft: 0}}>
     <div style={{textAlign: 'right', paddingRight: '2.5rem'}}>
       <h4 style={{color: '#f59e0b', marginBottom: '0.5rem'}}>✅ Compliance Assessment</h4>
@@ -122,7 +126,6 @@ sidebar_position: 1
     <div style={{position: 'absolute', right: 'calc(50% - 10px)', top: '5px', width: '20px', height: '20px', borderRadius: '50%', background: '#f59e0b', border: '3px solid var(--ifm-background-color)', boxShadow: '0 0 10px rgba(245,158,11,0.5)', zIndex: 1}}></div>
   </div>
 
-
   <div style={{position: 'relative', marginBottom: '3rem', paddingLeft: '50%', paddingRight: 0}}>
     <div style={{textAlign: 'left', paddingLeft: '2.5rem'}}>
       <h4 style={{color: '#ec4899', marginBottom: '0.5rem'}}>🧩 Modular Architecture</h4>
@@ -130,7 +133,6 @@ sidebar_position: 1
     </div>
     <div style={{position: 'absolute', left: 'calc(50% - 10px)', top: '5px', width: '20px', height: '20px', borderRadius: '50%', background: '#ec4899', border: '3px solid var(--ifm-background-color)', boxShadow: '0 0 10px rgba(236,72,153,0.5)', zIndex: 1}}></div>
   </div>
-
 
   <div style={{position: 'relative', marginBottom: '0', paddingRight: '50%', paddingLeft: 0}}>
     <div style={{textAlign: 'right', paddingRight: '2.5rem'}}>
@@ -188,15 +190,13 @@ sidebar_position: 1
 
 ## Core Philosophy
 
-:::tip Design Principles
-Pentora is built on five core principles:
+**Design Principles** - Pentora is built on five core principles:
 
 1. 🧩 **Modularity**: Every scan phase is a composable module in a directed acyclic graph (DAG)
 2. ⚡ **Performance**: Concurrent execution with intelligent rate limiting
 3. 🎯 **Accuracy**: Layered fingerprinting with confidence scoring
 4. 🔄 **Flexibility**: Both stateless (Nmap-style) and workspace-backed operations
 5. 📊 **Transparency**: Structured logging and comprehensive audit trails
-   :::
 
 ## Key Features
 
@@ -324,9 +324,7 @@ pentora workspace list
 
 ## Architecture Overview
 
-:::info DAG-Based Execution Engine
 Pentora uses a **DAG-based execution engine** where each scan phase is represented as a node:
-:::
 
 <div style={{display: 'flex', justifyContent: 'center', margin: '2rem 0'}}>
 
@@ -447,9 +445,7 @@ graph TD
 
 ## Getting Started
 
-:::tip Ready to dive in?
-Head over to the [Installation Guide](./getting-started/installation.md) to install Pentora, or jump to the [Quick Start Guide](./getting-started/quick-start.md) to run your first scan.
-:::
+**Ready to dive in?** Head over to the [Installation Guide](./getting-started/installation.md) to install Pentora, or jump to the [Quick Start Guide](./getting-started/quick-start.md) to run your first scan.
 
 <div className="row" style={{marginTop: '2rem'}}>
   <div className="col col--4">
@@ -520,6 +516,4 @@ Head over to the [Installation Guide](./getting-started/installation.md) to inst
 
 ---
 
-:::note
-Pentora is actively developed. Features marked with 🔒 are available in the Enterprise Edition. Check the [Pricing Page](https://pentora.io/pricing) for licensing options.
-:::
+> **Note:** Pentora is actively developed. Features marked with 🔒 are available in the Enterprise Edition. Check the [Pricing Page](https://pentora.io/pricing) for licensing options.
