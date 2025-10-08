@@ -17,9 +17,9 @@ sidebar_position: 1
   marginBottom: '2rem'
 }}>
   <h3 style={{color: '#00d9ff', marginTop: 0}}>What is Pentora?</h3>
-  <p style={{marginBottom: 0}}>
+  <span>
     <strong>Pentora</strong> is a modular, high-performance security scanner that rapidly discovers network services, captures banners, and maps findings into vulnerability intelligence. Built with a powerful DAG-based execution engine, Pentora enables security teams to perform comprehensive network assessments with precision and efficiency.
-  </p>
+  </span>
 </div>
 
 ## What Makes Pentora Special?
@@ -37,9 +37,9 @@ sidebar_position: 1
       <div className="card__body" style={{textAlign: 'center', padding: '2rem 1.5rem'}}>
         <div style={{fontSize: '3rem', marginBottom: '1rem'}}>⚡</div>
         <h3 style={{color: '#00d9ff', marginBottom: '1rem'}}>Lightning Fast</h3>
-        <p style={{color: 'var(--ifm-color-emphasis-700)', margin: 0}}>
+        <span style={{color: 'var(--ifm-color-emphasis-700)', margin: 0}}>
           Efficiently discover live hosts using ICMP/ARP/TCP probes with intelligent rate limiting
-        </p>
+        </span>
       </div>
     </div>
   </div>
@@ -55,9 +55,9 @@ sidebar_position: 1
       <div className="card__body" style={{textAlign: 'center', padding: '2rem 1.5rem'}}>
         <div style={{fontSize: '3rem', marginBottom: '1rem'}}>🎯</div>
         <h3 style={{color: '#8b5cf6', marginBottom: '1rem'}}>Accurate</h3>
-        <p style={{color: 'var(--ifm-color-emphasis-700)', margin: 0}}>
+        <span style={{color: 'var(--ifm-color-emphasis-700)', margin: 0}}>
           Protocol-specific probes with layered fingerprinting and confidence scoring
-        </p>
+        </span>
       </div>
     </div>
   </div>
@@ -73,9 +73,9 @@ sidebar_position: 1
       <div className="card__body" style={{textAlign: 'center', padding: '2rem 1.5rem'}}>
         <div style={{fontSize: '3rem', marginBottom: '1rem'}}>🔧</div>
         <h3 style={{color: '#10b981', marginBottom: '1rem'}}>Modular</h3>
-        <p style={{color: 'var(--ifm-color-emphasis-700)', margin: 0}}>
+        <span style={{color: 'var(--ifm-color-emphasis-700)', margin: 0}}>
           Extensible plugin system for custom scanning logic and integrations
-        </p>
+        </span>
       </div>
     </div>
   </div>
@@ -146,7 +146,7 @@ sidebar_position: 1
 ## Who Should Use Pentora?
 
 <div className="row" style={{marginTop: '1.5rem', marginBottom: '2rem'}}>
-  <div className="col col--6">
+  <div className="col col--6" style={{marginBottom: '1rem'}}>
     <div className="card" style={{height: '100%'}}>
       <div className="card__header">
         <h3>🔐 Security Professionals</h3>
@@ -156,7 +156,7 @@ sidebar_position: 1
       </div>
     </div>
   </div>
-  <div className="col col--6">
+  <div className="col col--6" style={{marginBottom: '1rem'}}>
     <div className="card" style={{height: '100%'}}>
       <div className="card__header">
         <h3>⚙️ DevSecOps Teams</h3>
@@ -166,7 +166,7 @@ sidebar_position: 1
       </div>
     </div>
   </div>
-  <div className="col col--6">
+  <div className="col col--6" style={{marginBottom: '1rem'}}>
     <div className="card" style={{height: '100%'}}>
       <div className="card__header">
         <h3>📋 Compliance Officers</h3>
@@ -176,7 +176,7 @@ sidebar_position: 1
       </div>
     </div>
   </div>
-  <div className="col col--6">
+  <div className="col col--6" style={{marginBottom: '1rem'}}>
     <div className="card" style={{height: '100%'}}>
       <div className="card__header">
         <h3>🏢 Enterprise Security Teams</h3>
@@ -327,30 +327,7 @@ pentora workspace list
 Pentora uses a **DAG-based execution engine** where each scan phase is represented as a node:
 
 <div style={{display: 'flex', justifyContent: 'center', margin: '2rem 0'}}>
-
-```mermaid
-%%{init: {'theme':'dark','themeVariables': {'darkMode': true}}}%%
-graph TD
-    A[🎯 Target Ingestion] --> B[🔍 Asset Discovery]
-    B --> C[🔌 Port Scanning]
-    C --> D[📡 Banner Collection]
-    D --> E[🔬 Service Fingerprinting]
-    E --> F[📋 Asset Profiling]
-    F --> G[🛡️ Vulnerability Evaluation]
-    G --> H[✅ Compliance & Risk Scoring]
-    H --> I[📊 Reporting & Notification]
-
-    style A fill:#1e3a5f,stroke:#4a9eff,stroke-width:2px,color:#fff
-    style B fill:#5f3a1e,stroke:#ffa94a,stroke-width:2px,color:#fff
-    style C fill:#4a1e5f,stroke:#c94aff,stroke-width:2px,color:#fff
-    style D fill:#1e5f3a,stroke:#4aff9e,stroke-width:2px,color:#fff
-    style E fill:#5f1e4a,stroke:#ff4a9e,stroke-width:2px,color:#fff
-    style F fill:#1e5f5f,stroke:#4affc9,stroke-width:2px,color:#fff
-    style G fill:#5f4a1e,stroke:#ffc94a,stroke-width:2px,color:#fff
-    style H fill:#3a5f1e,stroke:#9eff4a,stroke-width:2px,color:#fff
-    style I fill:#3a1e5f,stroke:#9e4aff,stroke-width:2px,color:#fff
-```
-
+  <img src="/img/dag-sketch.svg" alt="DAG Pipeline Sketch" style={{maxWidth: '800px', width: '100%', borderRadius: '8px'}} />
 </div>
 
 ### Module Types
@@ -390,8 +367,8 @@ graph TD
 
 ## Use Cases
 
-<div className="row" style={{marginTop: '1.5rem'}}>
-  <div className="col col--6">
+<div className="row" style={{marginTop: '1.5rem', display: 'flex', flexWrap: 'wrap', alignItems: 'stretch' }}>
+  <div className="col col--6" style={{display: 'flex', marginBottom: '1rem'}}>
     <div className="card">
       <div className="card__header">
         <h3>🔍 Network Asset Discovery</h3>
@@ -401,7 +378,7 @@ graph TD
       </div>
     </div>
   </div>
-  <div className="col col--6">
+  <div className="col col--6" style={{display: 'flex', marginBottom: '1rem'}}>
     <div className="card">
       <div className="card__header">
         <h3>🛡️ Vulnerability Assessment</h3>
@@ -411,7 +388,7 @@ graph TD
       </div>
     </div>
   </div>
-  <div className="col col--6">
+  <div className="col col--6" style={{display: 'flex', marginBottom: '1rem'}}>
     <div className="card">
       <div className="card__header">
         <h3>✅ Compliance Auditing</h3>
@@ -421,7 +398,7 @@ graph TD
       </div>
     </div>
   </div>
-  <div className="col col--6">
+  <div className="col col--6" style={{display: 'flex', marginBottom: '1rem'}}>
     <div className="card">
       <div className="card__header">
         <h3>📊 Continuous Monitoring</h3>
@@ -431,7 +408,7 @@ graph TD
       </div>
     </div>
   </div>
-  <div className="col col--6">
+  <div className="col col--6" style={{display: 'flex', marginBottom: '1rem'}}>
     <div className="card">
       <div className="card__header">
         <h3>👻 Shadow IT Detection</h3>
