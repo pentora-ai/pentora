@@ -96,7 +96,7 @@ const config: Config = {
           to: '/',
           label: 'Docs',
           position: 'left',
-          class: 'navbar__item navbar__link docs__link',
+          className: 'navbar__item navbar__link docs__link',
         },
         { to: '/blog', label: 'Blog', position: 'right' },
         {
@@ -106,7 +106,7 @@ const config: Config = {
         },
       ],
     },
-    footer: {
+    /*footer: {
       style: 'dark',
       links: [
         {
@@ -154,7 +154,7 @@ const config: Config = {
         },
       ],
       copyright: `Copyright © ${new Date().getFullYear()} Pentora Project. Open Source Security Scanner.`,
-    },
+    },*/
     prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,

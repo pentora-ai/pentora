@@ -7,14 +7,14 @@
    ============================================ */
 :root {
   /* Primary Brand Colors - Deep Purple/Blue for Security */
-  --ifm-color-primary: #ff2056ff;
-  /* --ifm-color-primary: #5b47fb; */
-  --ifm-color-primary-dark: #4633fa;
-  --ifm-color-primary-darker: #3d28f9;
-  --ifm-color-primary-darkest: #2610e8;
-  --ifm-color-primary-light: #6f5bfc;
-  --ifm-color-primary-lighter: #7c66fc;
-  --ifm-color-primary-lightest: #9d8ffd;
+  /*--ifm-color-primary: #ff2056ff;*/
+  --ifm-color-primary: #ff2056;
+  --ifm-color-primary-dark: #e0104b;
+  --ifm-color-primary-darker: #c00041;
+  --ifm-color-primary-darkest: #8b0030;
+  --ifm-color-primary-light: #ff4d7a;
+  --ifm-color-primary-lighter: #ff6a91;
+  --ifm-color-primary-lightest: #ff8fb0;
 
   /* Accent Colors */
   --pentora-accent-cyan: #06b6d4;
@@ -96,14 +96,14 @@
    ============================================ */
 [data-theme='dark'] {
   /* Primary Colors - Brighter for Dark Mode */
-  /* --ifm-color-primary: #7c66fc; */
-  --ifm-color-primary: #ff2056ff;
-  --ifm-color-primary-dark: #6f5bfc;
-  --ifm-color-primary-darker: #5b47fb;
-  --ifm-color-primary-darkest: #4633fa;
-  --ifm-color-primary-light: #8a78fd;
-  --ifm-color-primary-lighter: #9d8ffd;
-  --ifm-color-primary-lightest: #b1a5fe;
+  /*--ifm-color-primary: #ff2056ff;*/
+  --ifm-color-primary: #ff4d7a;
+  --ifm-color-primary-dark: #ff2056;
+  --ifm-color-primary-darker: #e0104b;
+  --ifm-color-primary-darkest: #a60038;
+  --ifm-color-primary-light: #ff6a91;
+  --ifm-color-primary-lighter: #ff8fb0;
+  --ifm-color-primary-lightest: #ffb3c8;
 
   /* Backgrounds */
   --ifm-background-color: #0f1419;
@@ -125,7 +125,7 @@
 }
 
 /* ============================================
-   NAVBAR - HashiCorp Inspired
+   NAVBAR
    ============================================ */
 .navbar {
   border-bottom: 1px solid var(--ifm-color-gray-200);
@@ -489,6 +489,26 @@ li:has(> a.menu__link--active) {
 [data-theme='dark']
   .theme-doc-sidebar-container::-webkit-scrollbar-thumb:hover {
   background: var(--ifm-color-emphasis-400);
+}
+
+/* ============================================
+   BACKGROUND - Tech Pattern
+   ============================================ */
+body {
+  background-image: url('/img/tech-background.svg');
+  background-size: cover;
+  background-attachment: fixed;
+  background-position: center;
+}
+
+/* Semi-transparent overlay for readability */
+.main-wrapper {
+  background: rgba(255, 255, 255, 0.95);
+  min-height: 100vh;
+}
+
+[data-theme='dark'] .main-wrapper {
+  background: rgba(15, 20, 25, 0.95);
 }
 
 /* ============================================
@@ -1135,4 +1155,29 @@ html {
   .theme-doc-markdown {
     padding: 0 1rem;
   }
+}
+
+.equal-height-row .col {
+  display: flex;
+  margin-bottom: 1rem;
+}
+
+.equal-height-row .col > .card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+@media screen and (min-width: 996px) {
+  .equal-height-row .col {
+    margin-bottom: 0;
+  }
+}
+
+.markdown a.button {
+  color: white;
+}
+
+.markdown a.button:hover {
+  background-color: var(--ifm-color-primary-dark);
 }
