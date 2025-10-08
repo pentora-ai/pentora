@@ -20,7 +20,7 @@ func loadBuiltinRules() []StaticRule {
 		fmt.Printf("Failed to load embedded fingerprint rules: %v\n", err)
 		return nil
 	}
-	return rules
+	return prepareRules(rules)
 }
 
 // loadExternalCatalog attempts to load fingerprint rules from workspace cache.
@@ -40,5 +40,5 @@ func loadExternalCatalog(cacheDir string) ([]StaticRule, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse cache: %w", err)
 	}
-	return rules, nil
+	return prepareRules(rules), nil
 }
