@@ -16,12 +16,12 @@ jobs:
 
       - name: Configure git
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "pentorabot"
+          git config --global user.email "pentorabot@users.noreply.github.com"
 
       - name: Clone destination repo (pentora-ai/docs)
         env:
-          GITHUB_TOKEN: ${{ secrets.PAT }}
+          GITHUB_TOKEN: ${{ secrets.PENTORABOT_PAT }}
         run: |
           git clone https://x-access-token:${GITHUB_TOKEN}@github.com/pentora-ai/docs.git ../docs-repo
           mkdir -p ../docs-repo/docs
@@ -29,11 +29,13 @@ jobs:
 
       - name: Commit & push if changed
         working-directory: ../docs-repo
+        env:
+          GITHUB_TOKEN: ${{ secrets.PENTORABOT_PAT }}
         run: |
           git add docs
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
             git commit -m "Sync docs from pentora ($(date '+%Y-%m-%d %H:%M:%S'))"
-            git push origin main
+            git push https://x-access-token:${GITHUB_TOKEN}@github.com/pentora-ai/docs.git main
           fi
