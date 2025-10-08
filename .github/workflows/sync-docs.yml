@@ -24,15 +24,19 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.PENTORABOT_PAT }}
         run: |
           git clone https://x-access-token:${GITHUB_TOKEN}@github.com/pentora-ai/docs.git ../docs-repo
-          mkdir -p ../docs-repo/docs
-          cp -R docs/* ../docs-repo/docs/
+          cd ../docs-repo
+          rm -rf ./*
+
+      - name: Copy docs contents to root
+        run: |
+          cp -R docs/* ../docs-repo/
 
       - name: Commit & push if changed
         working-directory: ../docs-repo
         env:
           GITHUB_TOKEN: ${{ secrets.PENTORABOT_PAT }}
         run: |
-          git add docs
+          git add .
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
