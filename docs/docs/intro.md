@@ -24,7 +24,7 @@ sidebar_position: 1
 
 ## What Makes Pentora Special?
 
-<div className="row" style={{marginTop: '1.5rem'}}>
+<div className="row equal-height-row" style={{marginTop: '1.5rem'}}>
   <div className="col col--4">
     <div className="card" style={{
       height: '100%',
@@ -200,7 +200,7 @@ sidebar_position: 1
 
 ## Key Features
 
-<div className="row" style={{marginTop: '2rem'}}>
+<div className="row equal-height-row" style={{marginTop: '2rem'}}>
   <div className="col col--6">
     <div className="card" style={{
       height: '100%',
@@ -332,7 +332,7 @@ Pentora uses a **DAG-based execution engine** where each scan phase is represent
 
 ### Module Types
 
-<div className="row">
+<div className="row equal-height-row">
   <div className="col col--4">
     <div className="card">
       <div className="card__header">
@@ -426,29 +426,29 @@ Pentora uses a **DAG-based execution engine** where each scan phase is represent
 
 <div className="row" style={{marginTop: '2rem'}}>
   <div className="col col--4">
-    <div className="card" style={{textAlign: 'center'}}>
+    <div className="card" style={{textAlign: 'center', height: '100%'}}>
       <div className="card__body">
         <h3>📥 Install</h3>
         <p>Get Pentora up and running</p>
-        <a href="/getting-started/installation" className="button button--primary">Install Now</a>
+        <a href="getting-started/installation" className="button button--primary">Install Now</a>
       </div>
     </div>
   </div>
   <div className="col col--4">
-    <div className="card" style={{textAlign: 'center'}}>
+    <div className="card" style={{textAlign: 'center', height: '100%'}}>
       <div className="card__body">
         <h3>🚀 Quick Start</h3>
         <p>Run your first scan</p>
-        <a href="/getting-started/quick-start" className="button button--primary">Get Started</a>
+        <a href="getting-started/quick-start" className="button button--primary">Get Started</a>
       </div>
     </div>
   </div>
   <div className="col col--4">
-    <div className="card" style={{textAlign: 'center'}}>
+    <div className="card" style={{textAlign: 'center', height: '100%'}}>
       <div className="card__body">
         <h3>📖 Learn More</h3>
         <p>Explore core concepts</p>
-        <a href="/concepts/overview" className="button button--primary">Learn More</a>
+        <a href="concepts/overview" className="button button--primary">Learn More</a>
       </div>
     </div>
   </div>
@@ -456,7 +456,7 @@ Pentora uses a **DAG-based execution engine** where each scan phase is represent
 
 ## Community & Support
 
-<div className="row" style={{marginTop: '1.5rem'}}>
+<div className="row equal-height-row" style={{marginTop: '1.5rem'}}>
   <div className="col col--3">
     <a href="https://docs.pentora.io" className="card" style={{textDecoration: 'none', height: '100%'}}>
       <div className="card__body" style={{textAlign: 'center'}}>
