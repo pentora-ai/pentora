@@ -69,6 +69,10 @@ const sidebars: SidebarsConfig = {
       label: 'CLI Reference',
       items: [
         'cli/overview',
+        'cli/common-workflows',
+        'cli/output-formats',
+        'cli/configuration',
+        'cli/integrations',
         'cli/scan',
         'cli/workspace',
         'cli/server',
