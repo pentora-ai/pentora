@@ -77,6 +77,7 @@ const config: Config = {
         alt: 'Pentora Logo',
         src: 'img/pentora-fill-color-30.svg',
         href: 'https://pentora.ai/',
+        target: '_self',
       },
       items: [
         {
@@ -85,7 +86,12 @@ const config: Config = {
           position: 'left',
           className: 'navbar__item navbar__link docs__link',
         },
-        { href: 'https://pentora.ai/blog', label: 'Blog', position: 'right' },
+        {
+          to: 'https://pentora.ai/blog',
+          label: 'Blog',
+          position: 'right',
+          target: '_self',
+        },
         {
           href: 'https://github.com/pentora-ai/pentora',
           label: 'GitHub',
