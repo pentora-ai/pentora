@@ -76,6 +76,7 @@ const config: Config = {
       logo: {
         alt: 'Pentora Logo',
         src: 'img/pentora-fill-color-30.svg',
+        srcDark: 'img/logo-dark.svg',
         href: 'https://pentora.ai/',
         target: '_self',
       },
