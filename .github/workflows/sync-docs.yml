@@ -13,6 +13,16 @@ jobs:
     steps:
       - name: Checkout source repo (pentora)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get latest commit message
+        id: commitmsg
+        run: |
+          MSG=$(git log -1 --pretty=%B)
+          echo "message<<EOF" >> $GITHUB_OUTPUT
+          echo "$MSG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Configure git
         run: |
@@ -25,11 +35,14 @@ jobs:
         run: |
           git clone https://x-access-token:${GITHUB_TOKEN}@github.com/pentora-ai/docs.git ../docs-repo
           cd ../docs-repo
-          rm -rf ./*
+          # Eski içeriği temizle
+          find . ! -name '.git' -mindepth 1 -maxdepth 1 -exec rm -rf {} +
 
-      - name: Copy docs contents to root
+      - name: Copy docs contents (including hidden files) to root
         run: |
+          shopt -s dotglob
           cp -R docs/* ../docs-repo/
+          shopt -u dotglob
 
       - name: Commit & push if changed
         working-directory: ../docs-repo
@@ -40,6 +53,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "Sync docs from pentora ($(date '+%Y-%m-%d %H:%M:%S'))"
+            git commit -m "${{ steps.commitmsg.outputs.message }}"
             git push https://x-access-token:${GITHUB_TOKEN}@github.com/pentora-ai/docs.git main
           fi
