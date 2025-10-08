@@ -842,8 +842,8 @@ pentora scan 192.168.1.0/24 --no-workspace -o results.json
 
 ## Next Steps
 
-- [Server Mode Deployment](/docs/deployment/server-mode) - Deploy as persistent service
-- [Docker Deployment](/docs/deployment/docker) - Containerized deployment
-- [Scan Profiles](/docs/configuration/scan-profiles) - Customize scan behavior
-- [Network Scanning Guide](/docs/guides/network-scanning) - Best practices
-- [CLI Reference](/docs/cli/scan) - Complete command reference
+- [Server Mode Deployment](/deployment/server-mode) - Deploy as persistent service
+- [Docker Deployment](/deployment/docker) - Containerized deployment
+- [Scan Profiles](/configuration/scan-profiles) - Customize scan behavior
+- [Network Scanning Guide](/guides/network-scanning) - Best practices
+- [CLI Reference](/cli/scan) - Complete command reference

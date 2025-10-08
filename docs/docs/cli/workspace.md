@@ -361,6 +361,6 @@ pentora workspace check
 
 ## See Also
 
-- [Workspace Concept](/docs/concepts/workspace) - Understanding workspace structure
-- [CLI Overview](/docs/cli/overview) - Command structure
-- [Configuration](/docs/configuration/workspace-config) - Workspace configuration
+- [Workspace Concept](/concepts/workspace) - Understanding workspace structure
+- [CLI Overview](/cli/overview) - Command structure
+- [Configuration](/configuration/workspace-config) - Workspace configuration

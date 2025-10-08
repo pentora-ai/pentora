@@ -93,4 +93,4 @@ curl https://pentora.company.com/api/v1/scans/20231006-143022-a1b2c3/results?for
 **Query Parameters**:
 - `format`: json, jsonl, csv (default: json)
 
-See [Workspace API](/docs/api/rest/workspace) for workspace management.
+See [Workspace API](/api/rest/workspace) for workspace management.

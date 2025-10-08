@@ -67,4 +67,4 @@ worker:
   tags: [fast, standard]
 ```
 
-See [Server Mode Deployment](/docs/deployment/server-mode) for setup.
+See [Server Mode Deployment](/deployment/server-mode) for setup.

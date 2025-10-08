@@ -92,4 +92,4 @@ enterprise:
         sync_interval: 24h
 ```
 
-See [Notification Configuration](/docs/configuration/overview) for setup.
+See [Notification Configuration](/configuration/overview) for setup.

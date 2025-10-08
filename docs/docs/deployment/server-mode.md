@@ -931,8 +931,8 @@ logging:
 
 ## Next Steps
 
-- [Docker Deployment](/docs/deployment/docker) - Containerized deployment
-- [Air-Gapped Deployment](/docs/deployment/air-gapped) - Offline environments
-- [REST API Reference](/docs/api/rest/scans) - API documentation
-- [Enterprise Features](/docs/enterprise/overview) - Advanced capabilities
-- [Distributed Scanning](/docs/enterprise/distributed-scanning) - Scale horizontally
+- [Docker Deployment](/deployment/docker) - Containerized deployment
+- [Air-Gapped Deployment](/deployment/air-gapped) - Offline environments
+- [REST API Reference](/api/rest/scans) - API documentation
+- [Enterprise Features](/enterprise/overview) - Advanced capabilities
+- [Distributed Scanning](/enterprise/distributed-scanning) - Scale horizontally

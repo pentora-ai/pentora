@@ -186,4 +186,4 @@ yamllint ~/.config/pentora/config.yaml
 pentora scan --targets 192.168.1.100 --config ""
 ```
 
-See [Performance Troubleshooting](/docs/troubleshooting/performance) for optimization.
+See [Performance Troubleshooting](/troubleshooting/performance) for optimization.

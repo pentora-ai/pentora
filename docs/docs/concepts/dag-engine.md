@@ -439,7 +439,7 @@ registry.Register("fingerprint_parser", &fingerprint.ParserModule{})
 registry.RegisterPlugin("custom_vuln_check", "/path/to/plugin.so")
 ```
 
-See [Module System](/docs/concepts/modules) for registration details.
+See [Module System](/concepts/modules) for registration details.
 
 ## Configuration
 
@@ -558,7 +558,7 @@ orchestrator.OnNodeFailed(func(node Node, err error) {
 })
 ```
 
-See [Hook System](/docs/advanced/hooks-events) for event details.
+See [Hook System](/advanced/hooks-events) for event details.
 
 ### Progress Tracking
 
@@ -716,7 +716,7 @@ pentora dag validate my-dag.yaml
 
 ## Next Steps
 
-- [Module System](/docs/concepts/modules) - Writing custom modules
-- [Data Flow](/docs/architecture/data-flow) - DataContext internals
-- [Hook System](/docs/advanced/hooks-events) - Event-driven customization
-- [Engine Architecture](/docs/architecture/engine) - Implementation details
+- [Module System](/concepts/modules) - Writing custom modules
+- [Data Flow](/architecture/data-flow) - DataContext internals
+- [Hook System](/advanced/hooks-events) - Event-driven customization
+- [Engine Architecture](/architecture/engine) - Implementation details

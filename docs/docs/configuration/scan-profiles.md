@@ -108,4 +108,4 @@ Profiles stored in:
 - User: `~/.config/pentora/profiles/`
 - Workspace: `<workspace>/config/profiles/`
 
-See [Configuration Overview](/docs/configuration/overview) for complete schema.
+See [Configuration Overview](/configuration/overview) for complete schema.

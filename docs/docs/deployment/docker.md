@@ -954,7 +954,7 @@ docker stats pentora-server
 
 ## Next Steps
 
-- [Standalone Deployment](/docs/deployment/standalone) - CLI deployment
-- [Server Mode Deployment](/docs/deployment/server-mode) - Systemd service
-- [Air-Gapped Deployment](/docs/deployment/air-gapped) - Offline deployment
-- [Enterprise Features](/docs/enterprise/overview) - Scale and features
+- [Standalone Deployment](/deployment/standalone) - CLI deployment
+- [Server Mode Deployment](/deployment/server-mode) - Systemd service
+- [Air-Gapped Deployment](/deployment/air-gapped) - Offline deployment
+- [Enterprise Features](/enterprise/overview) - Scale and features

@@ -44,4 +44,4 @@ Shared key-value store passed through pipeline:
 3. **Execution**: Run nodes layer by layer
 4. **Cleanup**: Release resources
 
-See [DAG Engine Concept](/docs/concepts/dag-engine) for usage patterns.
+See [DAG Engine Concept](/concepts/dag-engine) for usage patterns.

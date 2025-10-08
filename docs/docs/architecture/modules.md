@@ -33,4 +33,4 @@ type Module interface {
 - **External**: Separate process via gRPC
 - **WASM**: WebAssembly sandboxed execution
 
-See [Module System](/docs/concepts/modules) for development guide.
+See [Module System](/concepts/modules) for development guide.

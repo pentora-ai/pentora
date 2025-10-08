@@ -94,4 +94,4 @@ export PENTORA_WORKSPACE=/data/pentora
 pentora scan --targets 192.168.1.100
 ```
 
-See [Workspace Concept](/docs/concepts/workspace) for detailed structure.
+See [Workspace Concept](/concepts/workspace) for detailed structure.

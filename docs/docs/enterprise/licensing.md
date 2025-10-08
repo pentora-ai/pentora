@@ -71,4 +71,4 @@ pentora server restart
 
 Expiry warnings: 30 days, 7 days, 1 day before expiration.
 
-See [Server Commands](/docs/cli/server) for management.
+See [Server Commands](/cli/server) for management.

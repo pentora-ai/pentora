@@ -138,4 +138,4 @@ time pentora scan --targets test-network.txt --profile standard
 time pentora scan --targets test-network.txt --profile deep
 ```
 
-See [Configuration Overview](/docs/configuration/overview) for tuning options.
+See [Configuration Overview](/configuration/overview) for tuning options.

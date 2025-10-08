@@ -94,4 +94,4 @@ Create custom dashboards in UI:
 2. Add widgets (scan summary, vulnerability trends)
 3. Save and share
 
-See [UI Dashboard](/docs/api/ui/dashboard) for details.
+See [UI Dashboard](/api/ui/dashboard) for details.

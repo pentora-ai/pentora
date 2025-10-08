@@ -55,4 +55,4 @@ pentora fingerprint validate custom-rules.yaml
 pentora fingerprint test custom-rules.yaml sample-banner.txt
 ```
 
-See [Fingerprint Command](/docs/cli/fingerprint) for management tools.
+See [Fingerprint Command](/cli/fingerprint) for management tools.

@@ -66,7 +66,7 @@ Unlimited users
 | Plugin marketplace | - | - | - | ✓ |
 
 See individual sections for feature details:
-- [Licensing](/docs/enterprise/licensing)
-- [Distributed Scanning](/docs/enterprise/distributed-scanning)
-- [Multi-Tenant](/docs/enterprise/multi-tenant)
-- [Integrations](/docs/enterprise/integrations)
+- [Licensing](/enterprise/licensing)
+- [Distributed Scanning](/enterprise/distributed-scanning)
+- [Multi-Tenant](/enterprise/multi-tenant)
+- [Integrations](/enterprise/integrations)

@@ -48,4 +48,4 @@ curl -X POST https://pentora.company.com/api/v1/jobs/job-123/cancel \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-Requires Enterprise license. See [Distributed Scanning](/docs/enterprise/distributed-scanning).
+Requires Enterprise license. See [Distributed Scanning](/enterprise/distributed-scanning).

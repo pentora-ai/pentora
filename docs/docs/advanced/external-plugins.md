@@ -42,4 +42,4 @@ plugins:
 pentora scan --targets 192.168.1.100 --plugin custom_python_scanner
 ```
 
-See [Plugin Architecture](/docs/architecture/plugins) for design details.
+See [Plugin Architecture](/architecture/plugins) for design details.

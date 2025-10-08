@@ -49,4 +49,4 @@ curl https://pentora.company.com/api/v1/workspace/scans/20231006-143022-a1b2c3/e
   -o export.csv
 ```
 
-See [REST Scans API](/docs/api/rest/scans) for scan operations.
+See [REST Scans API](/api/rest/scans) for scan operations.

@@ -72,7 +72,7 @@ server:
   workers: 4
 ```
 
-See [Configuration Overview](/docs/configuration/overview) for complete schema.
+See [Configuration Overview](/configuration/overview) for complete schema.
 
 ## Shell Completion
 

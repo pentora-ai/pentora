@@ -72,4 +72,4 @@ curl -H "X-Tenant-ID: customer-a" \
      https://pentora.company.com/api/v1/scans
 ```
 
-See [Deployment Guide](/docs/deployment/server-mode) for setup.
+See [Deployment Guide](/deployment/server-mode) for setup.

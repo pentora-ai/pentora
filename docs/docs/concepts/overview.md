@@ -28,7 +28,7 @@ Every scan flows through a structured 9-stage pipeline:
 8. **Reporting & Notification** - Export results and trigger integrations
 9. **Archival & Analytics** - Store results and compute trends
 
-See [Scan Pipeline](/docs/concepts/scan-pipeline) for detailed explanation.
+See [Scan Pipeline](/concepts/scan-pipeline) for detailed explanation.
 
 ### 2. Workspace
 
@@ -46,7 +46,7 @@ Default locations:
 - **macOS**: `~/Library/Application Support/Pentora`
 - **Windows**: `%AppData%\Pentora`
 
-See [Workspace Concept](/docs/concepts/workspace) for structure details.
+See [Workspace Concept](/concepts/workspace) for structure details.
 
 ### 3. DAG Engine
 
@@ -72,7 +72,7 @@ Port Scanner → Banner Grab → Service Parser
                                Reporter
 ```
 
-See [DAG Engine](/docs/concepts/dag-engine) for execution model.
+See [DAG Engine](/concepts/dag-engine) for execution model.
 
 ### 4. Module System
 
@@ -90,7 +90,7 @@ Modules can be:
 - **Embedded**: Compiled into Pentora binary (Go code)
 - **External**: Isolated plugins (gRPC/WASM) with signature verification
 
-See [Module System](/docs/concepts/modules) for details.
+See [Module System](/concepts/modules) for details.
 
 ### 5. Fingerprinting System
 
@@ -121,7 +121,7 @@ Example fingerprint result:
 }
 ```
 
-See [Fingerprinting System](/docs/concepts/fingerprinting) for probe details.
+See [Fingerprinting System](/concepts/fingerprinting) for probe details.
 
 ## Execution Modes
 
@@ -151,7 +151,7 @@ pentora server start
 - Worker pools (Enterprise)
 - Web UI for visualization
 
-See [Server Mode Deployment](/docs/deployment/server-mode) for setup.
+See [Server Mode Deployment](/deployment/server-mode) for setup.
 
 ## Data Flow
 
@@ -182,7 +182,7 @@ Each module:
 3. Writes outputs to context
 4. Passes context to dependent modules
 
-See [Data Flow](/docs/architecture/data-flow) for implementation.
+See [Data Flow](/architecture/data-flow) for implementation.
 
 ## Configuration Model
 
@@ -202,7 +202,7 @@ Configuration sections:
 - `server.*`: API and worker settings
 - `enterprise.*`: Licensing and advanced features (Enterprise edition)
 
-See [Configuration Overview](/docs/configuration/overview) for structure.
+See [Configuration Overview](/configuration/overview) for structure.
 
 ## Licensing Model
 
@@ -228,7 +228,7 @@ License verification:
 - Offline grace period (7 days)
 - Feature gating via `feature.Check("distributed")`
 
-See [Enterprise Overview](/docs/enterprise/overview) for feature matrix.
+See [Enterprise Overview](/enterprise/overview) for feature matrix.
 
 ## Philosophy
 
@@ -291,14 +291,14 @@ POST /api/scans
 
 Dive deeper into specific concepts:
 
-- [Scan Pipeline](/docs/concepts/scan-pipeline) - All 9 stages explained
-- [Workspace](/docs/concepts/workspace) - Directory structure and retention
-- [DAG Engine](/docs/concepts/dag-engine) - Execution orchestration
-- [Modules](/docs/concepts/modules) - Module types and lifecycle
-- [Fingerprinting](/docs/concepts/fingerprinting) - Service detection internals
+- [Scan Pipeline](/concepts/scan-pipeline) - All 9 stages explained
+- [Workspace](/concepts/workspace) - Directory structure and retention
+- [DAG Engine](/concepts/dag-engine) - Execution orchestration
+- [Modules](/concepts/modules) - Module types and lifecycle
+- [Fingerprinting](/concepts/fingerprinting) - Service detection internals
 
 Or explore practical guides:
 
-- [Your First Scan](/docs/getting-started/first-scan) - Hands-on tutorial
-- [Network Scanning](/docs/guides/network-scanning) - Best practices
-- [Vulnerability Assessment](/docs/guides/vulnerability-assessment) - Security testing
+- [Your First Scan](/getting-started/first-scan) - Hands-on tutorial
+- [Network Scanning](/guides/network-scanning) - Best practices
+- [Vulnerability Assessment](/guides/vulnerability-assessment) - Security testing

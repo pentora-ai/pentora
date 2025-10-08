@@ -64,4 +64,4 @@ nodes:
       timeout: 10s
 ```
 
-See [Module API Reference](/docs/api/modules/interface) for complete interface.
+See [Module API Reference](/api/modules/interface) for complete interface.

@@ -31,4 +31,4 @@ WebAssembly modules with sandboxed execution.
 
 Browse, install, and manage plugins via UI with licensing enforcement.
 
-See [External Plugins Guide](/docs/advanced/external-plugins) for development.
+See [External Plugins Guide](/advanced/external-plugins) for development.
