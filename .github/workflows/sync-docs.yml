@@ -1,0 +1,39 @@
+name: Sync /docs to pentora-ai/docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+
+jobs:
+  sync-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source repo (pentora)
+        uses: actions/checkout@v4
+
+      - name: Configure git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Clone destination repo (pentora-ai/docs)
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
+        run: |
+          git clone https://x-access-token:${GITHUB_TOKEN}@github.com/pentora-ai/docs.git ../docs-repo
+          mkdir -p ../docs-repo/docs
+          cp -R docs/* ../docs-repo/docs/
+
+      - name: Commit & push if changed
+        working-directory: ../docs-repo
+        run: |
+          git add docs
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Sync docs from pentora ($(date '+%Y-%m-%d %H:%M:%S'))"
+            git push origin main
+          fi
