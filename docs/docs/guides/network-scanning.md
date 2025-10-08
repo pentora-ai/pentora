@@ -85,4 +85,4 @@ diff scan-1.json scan-2.json
 - Document findings
 - Report responsibly
 
-See [Vulnerability Assessment Guide](/docs/guides/vulnerability-assessment) for CVE analysis.
+See [Vulnerability Assessment Guide](/guides/vulnerability-assessment) for CVE analysis.

@@ -45,4 +45,4 @@ notifications:
         Authorization: "Bearer token"
 ```
 
-See [Reporting & Notification](/docs/concepts/scan-pipeline#stage-8-reporting--notification) for configuration.
+See [Reporting & Notification](/concepts/scan-pipeline#stage-8-reporting--notification) for configuration.

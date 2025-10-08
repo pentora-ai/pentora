@@ -149,7 +149,7 @@ const sidebars: SidebarsConfig = {
     {
       type: 'link',
       label: '📚 Documentation',
-      href: '/intro',
+      href: '/',
       className: 'sidebar-main-link',
     },
     {

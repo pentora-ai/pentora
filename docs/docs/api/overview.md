@@ -70,8 +70,8 @@ Error (4xx/5xx):
 
 ## Available APIs
 
-- [REST API](/docs/api/rest/scans) - Scan management
-- [UI Portal](/docs/api/ui/overview) - Web interface
-- [Module API](/docs/api/modules/interface) - Custom modules
+- [REST API](/api/rest/scans) - Scan management
+- [UI Portal](/api/ui/overview) - Web interface
+- [Module API](/api/modules/interface) - Custom modules
 
 See sections for detailed endpoints.

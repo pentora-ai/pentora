@@ -77,4 +77,4 @@ func (m *Module) Cleanup() error {
 }
 ```
 
-See [Custom Modules](/docs/advanced/custom-modules) for development guide.
+See [Custom Modules](/advanced/custom-modules) for development guide.

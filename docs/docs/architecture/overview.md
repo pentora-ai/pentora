@@ -50,4 +50,4 @@ Pentora is built on a modular architecture centered around a DAG execution engin
 - External gRPC plugins
 - WASM plugins (experimental)
 
-See [Engine Internals](/docs/architecture/engine) for detailed design.
+See [Engine Internals](/architecture/engine) for detailed design.

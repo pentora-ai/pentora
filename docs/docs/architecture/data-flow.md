@@ -35,4 +35,4 @@ Port Scanner → Get("discovered_hosts") → Scan → Set("open_ports", ports)
 Fingerprint → Get("open_ports") → Probe → Set("fingerprints", results)
 ```
 
-See [DAG Engine](/docs/concepts/dag-engine) for execution orchestration.
+See [DAG Engine](/concepts/dag-engine) for execution orchestration.

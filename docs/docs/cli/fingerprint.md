@@ -387,6 +387,6 @@ pentora scan --targets 192.168.1.100
 
 ## See Also
 
-- [Fingerprinting System](/docs/concepts/fingerprinting) - How fingerprinting works
-- [Custom Fingerprints Guide](/docs/advanced/custom-fingerprints) - Advanced rule writing
-- [Scan Command](/docs/cli/scan) - Using fingerprints in scans
+- [Fingerprinting System](/concepts/fingerprinting) - How fingerprinting works
+- [Custom Fingerprints Guide](/advanced/custom-fingerprints) - Advanced rule writing
+- [Scan Command](/cli/scan) - Using fingerprints in scans

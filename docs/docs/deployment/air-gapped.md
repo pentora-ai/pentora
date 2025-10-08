@@ -63,4 +63,4 @@ Manual update process:
 3. Replace binary
 4. Restart service
 
-See [Enterprise Overview](/docs/enterprise/overview) for air-gapped features.
+See [Enterprise Overview](/enterprise/overview) for air-gapped features.

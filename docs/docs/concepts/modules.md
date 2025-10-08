@@ -950,7 +950,7 @@ nodes:
 
 ## Next Steps
 
-- [DAG Engine](/docs/concepts/dag-engine) - How modules are orchestrated
-- [Custom Modules](/docs/advanced/custom-modules) - Writing your own modules
-- [External Plugins](/docs/advanced/external-plugins) - gRPC and WASM plugins
-- [Module API Reference](/docs/api/modules/interface) - Full API documentation
+- [DAG Engine](/concepts/dag-engine) - How modules are orchestrated
+- [Custom Modules](/advanced/custom-modules) - Writing your own modules
+- [External Plugins](/advanced/external-plugins) - gRPC and WASM plugins
+- [Module API Reference](/api/modules/interface) - Full API documentation

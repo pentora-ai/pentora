@@ -4,97 +4,97 @@ Complete documentation for the Pentora security scanner.
 
 ## Getting Started (1 file)
 
-- [Your First Scan](/docs/getting-started/first-scan) - Step-by-step tutorial
+- [Your First Scan](/getting-started/first-scan) - Step-by-step tutorial
 
 ## Core Concepts (7 files)
 
-- [Overview](/docs/concepts/overview) - Core concepts and philosophy
-- [Scan Pipeline](/docs/concepts/scan-pipeline) - 9-stage scan process
-- [Workspace](/docs/concepts/workspace) - Storage and retention
-- [DAG Engine](/docs/concepts/dag-engine) - Execution orchestration
-- [Modules](/docs/concepts/modules) - Module system and types
-- [Fingerprinting](/docs/concepts/fingerprinting) - Service detection
+- [Overview](/concepts/overview) - Core concepts and philosophy
+- [Scan Pipeline](/concepts/scan-pipeline) - 9-stage scan process
+- [Workspace](/concepts/workspace) - Storage and retention
+- [DAG Engine](/concepts/dag-engine) - Execution orchestration
+- [Modules](/concepts/modules) - Module system and types
+- [Fingerprinting](/concepts/fingerprinting) - Service detection
 
 ## CLI Reference (5 files)
 
-- [CLI Overview](/docs/cli/overview) - Command structure and usage
-- [pentora scan](/docs/cli/scan) - Scan command reference
-- [pentora workspace](/docs/cli/workspace) - Workspace management
-- [pentora server](/docs/cli/server) - Server control
-- [pentora fingerprint](/docs/cli/fingerprint) - Fingerprint management
+- [CLI Overview](/cli/overview) - Command structure and usage
+- [pentora scan](/cli/scan) - Scan command reference
+- [pentora workspace](/cli/workspace) - Workspace management
+- [pentora server](/cli/server) - Server control
+- [pentora fingerprint](/cli/fingerprint) - Fingerprint management
 
 ## Configuration (4 files)
 
-- [Configuration Overview](/docs/configuration/overview) - Config structure
-- [Scan Profiles](/docs/configuration/scan-profiles) - Profile definitions
-- [Workspace Config](/docs/configuration/workspace-config) - Workspace settings
-- [Logging](/docs/configuration/logging) - Log configuration
+- [Configuration Overview](/configuration/overview) - Config structure
+- [Scan Profiles](/configuration/scan-profiles) - Profile definitions
+- [Workspace Config](/configuration/workspace-config) - Workspace settings
+- [Logging](/configuration/logging) - Log configuration
 
 ## Architecture (5 files)
 
-- [Architecture Overview](/docs/architecture/overview) - High-level design
-- [Engine Internals](/docs/architecture/engine) - Planner, Orchestrator, Runtime
-- [Module Architecture](/docs/architecture/modules) - Module lifecycle
-- [Plugin Architecture](/docs/architecture/plugins) - Embedded vs External
-- [Data Flow](/docs/architecture/data-flow) - DataContext patterns
+- [Architecture Overview](/architecture/overview) - High-level design
+- [Engine Internals](/architecture/engine) - Planner, Orchestrator, Runtime
+- [Module Architecture](/architecture/modules) - Module lifecycle
+- [Plugin Architecture](/architecture/plugins) - Embedded vs External
+- [Data Flow](/architecture/data-flow) - DataContext patterns
 
 ## Advanced Topics (4 files)
 
-- [Custom Modules](/docs/advanced/custom-modules) - Module development
-- [External Plugins](/docs/advanced/external-plugins) - gRPC/WASM plugins
-- [Hooks & Events](/docs/advanced/hooks-events) - Event system
-- [Custom Fingerprints](/docs/advanced/custom-fingerprints) - Fingerprint rules
+- [Custom Modules](/advanced/custom-modules) - Module development
+- [External Plugins](/advanced/external-plugins) - gRPC/WASM plugins
+- [Hooks & Events](/advanced/hooks-events) - Event system
+- [Custom Fingerprints](/advanced/custom-fingerprints) - Fingerprint rules
 
 ## Enterprise Features (5 files)
 
-- [Enterprise Overview](/docs/enterprise/overview) - Features and pricing
-- [Licensing](/docs/enterprise/licensing) - JWT-based licensing
-- [Distributed Scanning](/docs/enterprise/distributed-scanning) - Worker pools
-- [Multi-Tenant](/docs/enterprise/multi-tenant) - Tenant isolation and RBAC
-- [Integrations](/docs/enterprise/integrations) - SIEM, ticketing, Slack
+- [Enterprise Overview](/enterprise/overview) - Features and pricing
+- [Licensing](/enterprise/licensing) - JWT-based licensing
+- [Distributed Scanning](/enterprise/distributed-scanning) - Worker pools
+- [Multi-Tenant](/enterprise/multi-tenant) - Tenant isolation and RBAC
+- [Integrations](/enterprise/integrations) - SIEM, ticketing, Slack
 
 ## Deployment (4 files)
 
-- [Standalone CLI](/docs/deployment/standalone) - Binary deployment
-- [Server Mode](/docs/deployment/server-mode) - Daemon deployment
-- [Docker](/docs/deployment/docker) - Container deployment
-- [Air-Gapped](/docs/deployment/air-gapped) - Offline deployment
+- [Standalone CLI](/deployment/standalone) - Binary deployment
+- [Server Mode](/deployment/server-mode) - Daemon deployment
+- [Docker](/deployment/docker) - Container deployment
+- [Air-Gapped](/deployment/air-gapped) - Offline deployment
 
 ## Guides (4 files)
 
-- [Network Scanning](/docs/guides/network-scanning) - Best practices
-- [Vulnerability Assessment](/docs/guides/vulnerability-assessment) - CVE analysis
-- [Compliance Checks](/docs/guides/compliance-checks) - CIS/PCI/NIST
-- [Reporting](/docs/guides/reporting) - Report customization
+- [Network Scanning](/guides/network-scanning) - Best practices
+- [Vulnerability Assessment](/guides/vulnerability-assessment) - CVE analysis
+- [Compliance Checks](/guides/compliance-checks) - CIS/PCI/NIST
+- [Reporting](/guides/reporting) - Report customization
 
 ## Troubleshooting (3 files)
 
-- [Common Issues](/docs/troubleshooting/common-issues) - Solutions
-- [Performance](/docs/troubleshooting/performance) - Optimization
-- [Debugging](/docs/troubleshooting/debugging) - Debug mode
+- [Common Issues](/troubleshooting/common-issues) - Solutions
+- [Performance](/troubleshooting/performance) - Optimization
+- [Debugging](/troubleshooting/debugging) - Debug mode
 
 ## API Reference
 
 ### REST API (4 files)
 
-- [API Overview](/docs/api/overview) - Authentication and basics
-- [Authentication](/docs/api/rest/authentication) - Token management
-- [Scans API](/docs/api/rest/scans) - Scan endpoints
-- [Workspace API](/docs/api/rest/workspace) - Workspace endpoints
-- [Jobs API](/docs/api/rest/jobs) - Job management (Enterprise)
+- [API Overview](/api/overview) - Authentication and basics
+- [Authentication](/api/rest/authentication) - Token management
+- [Scans API](/api/rest/scans) - Scan endpoints
+- [Workspace API](/api/rest/workspace) - Workspace endpoints
+- [Jobs API](/api/rest/jobs) - Job management (Enterprise)
 
 ### UI Portal (4 files)
 
-- [UI Overview](/docs/api/ui/overview) - Portal introduction
-- [Dashboard](/docs/api/ui/dashboard) - Dashboard features
-- [Scan Management](/docs/api/ui/scan-management) - Web-based scanning
-- [Notifications](/docs/api/ui/notifications) - Alert configuration
+- [UI Overview](/api/ui/overview) - Portal introduction
+- [Dashboard](/api/ui/dashboard) - Dashboard features
+- [Scan Management](/api/ui/scan-management) - Web-based scanning
+- [Notifications](/api/ui/notifications) - Alert configuration
 
 ### Module API (3 files)
 
-- [Module Interface](/docs/api/modules/interface) - Module contract
-- [DataContext](/docs/api/modules/context) - Shared state API
-- [Lifecycle](/docs/api/modules/lifecycle) - Initialization and cleanup
+- [Module Interface](/api/modules/interface) - Module contract
+- [DataContext](/api/modules/context) - Shared state API
+- [Lifecycle](/api/modules/lifecycle) - Initialization and cleanup
 
 ## Key Features from NOTES.md
 

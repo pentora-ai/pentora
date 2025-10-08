@@ -395,7 +395,7 @@ pentora/
 │   │   └── ...
 ```
 
-Tenant-level ACLs enforce isolation. See [Multi-Tenant Deployment](/docs/enterprise/multi-tenant).
+Tenant-level ACLs enforce isolation. See [Multi-Tenant Deployment](/enterprise/multi-tenant).
 
 ## Workspace Lifecycle
 
@@ -551,7 +551,7 @@ Workers on multiple hosts share a centralized workspace (via NFS, object storage
                   [Worker 3]
 ```
 
-See [Distributed Scanning](/docs/enterprise/distributed-scanning) for architecture.
+See [Distributed Scanning](/enterprise/distributed-scanning) for architecture.
 
 ## Troubleshooting
 
@@ -610,7 +610,7 @@ pentora workspace check --verbose > migration-error.log
 
 ## Next Steps
 
-- [Scan Pipeline](/docs/concepts/scan-pipeline) - How scan data is generated
-- [Server Mode Deployment](/docs/deployment/server-mode) - Running Pentora as a service
-- [Workspace Configuration](/docs/configuration/workspace-config) - Detailed configuration
-- [Distributed Scanning](/docs/enterprise/distributed-scanning) - Multi-host workspace sharing
+- [Scan Pipeline](/concepts/scan-pipeline) - How scan data is generated
+- [Server Mode Deployment](/deployment/server-mode) - Running Pentora as a service
+- [Workspace Configuration](/configuration/workspace-config) - Detailed configuration
+- [Distributed Scanning](/enterprise/distributed-scanning) - Multi-host workspace sharing

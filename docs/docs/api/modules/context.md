@@ -55,4 +55,4 @@ func (m *Module) Execute(ctx context.Context, data DataContext) error {
 }
 ```
 
-See [Module Interface](/docs/api/modules/interface) for complete API.
+See [Module Interface](/api/modules/interface) for complete API.

@@ -215,10 +215,10 @@ Results are stored in line-delimited JSON format:
 
 Now that you've completed your first scan, explore:
 
-- [Scan Pipeline Concepts](/docs/concepts/scan-pipeline) - Understanding the 9-stage pipeline
-- [CLI Reference](/docs/cli/scan) - Complete command reference
-- [Fingerprinting System](/docs/concepts/fingerprinting) - How service detection works
-- [Vulnerability Assessment Guide](/docs/guides/vulnerability-assessment) - Deep dive into vuln checks
+- [Scan Pipeline Concepts](/concepts/scan-pipeline) - Understanding the 9-stage pipeline
+- [CLI Reference](/cli/scan) - Complete command reference
+- [Fingerprinting System](/concepts/fingerprinting) - How service detection works
+- [Vulnerability Assessment Guide](/guides/vulnerability-assessment) - Deep dive into vuln checks
 
 ## Troubleshooting
 
@@ -248,6 +248,6 @@ If scans run slowly:
 
 ## Related Documentation
 
-- [Workspace Concept](/docs/concepts/workspace) - Understanding workspace structure
-- [Scan Profiles](/docs/configuration/scan-profiles) - Customizing scan behavior
-- [Network Scanning Best Practices](/docs/guides/network-scanning) - Advanced techniques
+- [Workspace Concept](/concepts/workspace) - Understanding workspace structure
+- [Scan Profiles](/configuration/scan-profiles) - Customizing scan behavior
+- [Network Scanning Best Practices](/guides/network-scanning) - Advanced techniques

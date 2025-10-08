@@ -9,12 +9,14 @@ The Pentora command-line interface (CLI) provides direct access to all scanning 
 Pentora separates technical and non-technical user experiences:
 
 **CLI** targets:
+
 - Security operators and penetration testers
 - DevOps engineers and SREs
 - Automation and CI/CD pipelines
 - Power users requiring fine-grained control
 
 **UI** targets:
+
 - Security managers and executives
 - Compliance auditors
 - Non-technical stakeholders
@@ -27,12 +29,14 @@ The CLI remains fully functional without the server component, while the UI requ
 The CLI never accesses server internals directly. When interacting with a remote Pentora server, the CLI uses the REST/gRPC API just like any external client.
 
 **Local Mode** (no server):
+
 ```bash
 pentora scan --targets 192.168.1.0/24
 # Executes scan locally, writes to local workspace
 ```
 
 **Remote Mode** (with server):
+
 ```bash
 pentora scan --targets 192.168.1.0/24 --server https://pentora.company.com
 # Submits scan job to server via API
@@ -102,6 +106,7 @@ pentora version
 ```
 
 Output:
+
 ```
 Pentora version 1.0.0
 Build: 20231006-a1b2c3d
@@ -198,11 +203,9 @@ pentora workspace export <scan-id> --format json -o report.json
 
 ## Command Reference
 
-| Command | Description |
-|---------|-------------|
-| [scan](./scan.md) | Execute security scans |
-| [workspace](./workspace.md) | Manage scan results and workspace |
-| [server](./server.md) | Control Pentora server |
-| [fingerprint](./fingerprint.md) | Manage fingerprint database |
-| [dag](./dag.md) | Validate and inspect DAG definitions |
-| [version](./version.md) | Show version information |
+| Command                         | Description                       |
+| ------------------------------- | --------------------------------- |
+| [scan](./scan.md)               | Execute security scans            |
+| [workspace](./workspace.md)     | Manage scan results and workspace |
+| [server](./server.md)           | Control Pentora server            |
+| [fingerprint](./fingerprint.md) | Manage fingerprint database       |

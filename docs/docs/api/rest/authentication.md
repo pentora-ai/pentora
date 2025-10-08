@@ -76,4 +76,4 @@ server:
       sp_entity_id: pentora
 ```
 
-See [Enterprise Multi-Tenant](/docs/enterprise/multi-tenant) for details.
+See [Enterprise Multi-Tenant](/enterprise/multi-tenant) for details.

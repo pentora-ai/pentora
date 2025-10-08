@@ -74,4 +74,4 @@ func (m *CustomModule) Execute(ctx context.Context, data DataContext) error {
 }
 ```
 
-See [Custom Modules Guide](/docs/advanced/custom-modules) for examples.
+See [Custom Modules Guide](/advanced/custom-modules) for examples.

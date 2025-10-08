@@ -295,7 +295,7 @@ pentora scan --targets 192.168.1.100 --fingerprint-cache
 pentora fingerprint sync
 ```
 
-See [Fingerprinting System](/docs/concepts/fingerprinting) for detailed probe specifications.
+See [Fingerprinting System](/concepts/fingerprinting) for detailed probe specifications.
 
 ## Stage 5: Asset Profiling
 
@@ -581,7 +581,7 @@ pentora scan --targets 192.168.1.0/24 --profile standard
 pentora scan --targets 192.168.1.0/24 --profile deep
 ```
 
-See [Scan Profiles](/docs/configuration/scan-profiles) for custom profile creation.
+See [Scan Profiles](/configuration/scan-profiles) for custom profile creation.
 
 ## Performance Characteristics
 
@@ -635,7 +635,7 @@ Reporting stage always runs to capture partial results.
 
 ## Next Steps
 
-- [DAG Engine](/docs/concepts/dag-engine) - How stages are orchestrated
-- [Fingerprinting](/docs/concepts/fingerprinting) - Deep dive into Layer 4
-- [Workspace](/docs/concepts/workspace) - Where results are stored
-- [Scan Profiles](/docs/configuration/scan-profiles) - Customizing pipeline behavior
+- [DAG Engine](/concepts/dag-engine) - How stages are orchestrated
+- [Fingerprinting](/concepts/fingerprinting) - Deep dive into Layer 4
+- [Workspace](/concepts/workspace) - Where results are stored
+- [Scan Profiles](/configuration/scan-profiles) - Customizing pipeline behavior

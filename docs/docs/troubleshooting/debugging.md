@@ -118,4 +118,4 @@ pentora scan --targets 192.168.1.100 --memprofile mem.prof
 go tool pprof mem.prof
 ```
 
-See [Common Issues](/docs/troubleshooting/common-issues) for specific problems.
+See [Common Issues](/troubleshooting/common-issues) for specific problems.

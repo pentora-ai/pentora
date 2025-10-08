@@ -43,20 +43,7 @@ const config: Config = {
           routeBasePath: '/',
           sidebarPath: './sidebars.ts',
         },
-        blog: {
-          showReadingTime: true,
-          feedOptions: {
-            type: ['rss', 'atom'],
-            xslt: true,
-          },
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl: 'https://github.com/pentora-ai/pentora/tree/main/docs/',
-          // Useful options to enforce blogging best practices
-          onInlineTags: 'warn',
-          onInlineAuthors: 'warn',
-          onUntruncatedBlogPosts: 'warn',
-        },
+        blog: false,
         theme: {
           customCss: './src/css/custom.css',
         },
@@ -98,7 +85,7 @@ const config: Config = {
           position: 'left',
           className: 'navbar__item navbar__link docs__link',
         },
-        { to: '/blog', label: 'Blog', position: 'right' },
+        { href: 'https://pentora.ai/blog', label: 'Blog', position: 'right' },
         {
           href: 'https://github.com/pentora-ai/pentora',
           label: 'GitHub',

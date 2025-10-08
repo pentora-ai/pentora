@@ -75,4 +75,4 @@ pentora scan --targets prod.txt \
   --notify email://compliance-team@company.com
 ```
 
-Requires Enterprise license. See [Enterprise Overview](/docs/enterprise/overview).
+Requires Enterprise license. See [Enterprise Overview](/enterprise/overview).

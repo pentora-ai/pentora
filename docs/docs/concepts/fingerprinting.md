@@ -341,7 +341,7 @@ Load custom rules:
 pentora scan --targets 192.168.1.100 --fingerprint-rules custom.yaml
 ```
 
-See [Custom Fingerprints Guide](/docs/advanced/custom-fingerprints) for rule syntax.
+See [Custom Fingerprints Guide](/advanced/custom-fingerprints) for rule syntax.
 
 ## Probe Execution
 
@@ -672,7 +672,7 @@ Asset Profile:
     - PHP version (check for CVEs)
 ```
 
-See [Asset Profiling](/docs/concepts/scan-pipeline#stage-5-asset-profiling) for details.
+See [Asset Profiling](/concepts/scan-pipeline#stage-5-asset-profiling) for details.
 
 ## Troubleshooting
 
@@ -721,7 +721,7 @@ WARN Fingerprint probe timeout on 192.168.1.100:443
 
 ## Next Steps
 
-- [Scan Pipeline](/docs/concepts/scan-pipeline) - How fingerprinting fits in the pipeline
-- [Custom Fingerprints](/docs/advanced/custom-fingerprints) - Writing custom rules
-- [Module System](/docs/concepts/modules) - Fingerprint module internals
-- [Vulnerability Assessment](/docs/guides/vulnerability-assessment) - Using fingerprints for CVE matching
+- [Scan Pipeline](/concepts/scan-pipeline) - How fingerprinting fits in the pipeline
+- [Custom Fingerprints](/advanced/custom-fingerprints) - Writing custom rules
+- [Module System](/concepts/modules) - Fingerprint module internals
+- [Vulnerability Assessment](/guides/vulnerability-assessment) - Using fingerprints for CVE matching
