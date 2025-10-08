@@ -76,7 +76,7 @@ func (f *DefaultAppManagerFactory) CreateWithNoConfig() (*AppManager, error) {
 // GetRuntimeLogLevel determines the runtime log level based on the provided flag set.
 // If the "debug" flag is set to "true", it returns "debug"; otherwise, it defaults to "info".
 func (f *DefaultAppManagerFactory) GetRuntimeLogLevel(flags *pflag.FlagSet) zerolog.Level {
-	logLevel := zerolog.WarnLevel // Default log level
+	logLevel := zerolog.DebugLevel // Default log level
 	if flags != nil {
 		verbosityLevel, err := flags.GetCount("verbosity")
 		if err == nil {

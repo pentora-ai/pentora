@@ -31,7 +31,7 @@ type RuleBasedResolver struct {
 
 // NewRuleBasedResolver initializes a resolver using fingerprint rules loaded from a YAML file.
 func NewRuleBasedResolver(rules []StaticRule) *RuleBasedResolver {
-	return &RuleBasedResolver{rules: rules}
+	return &RuleBasedResolver{rules: prepareRules(rules)}
 }
 
 // Resolve attempts to identify a fingerprint based on the provided FingerprintInput.
@@ -76,4 +76,19 @@ func (r *RuleBasedResolver) Resolve(_ context.Context, in Input) (Result, error)
 	}
 
 	return Result{}, fmt.Errorf("no matching rule found")
+}
+
+func prepareRules(rules []StaticRule) []StaticRule {
+	compiled := make([]StaticRule, 0, len(rules))
+	for _, rule := range rules {
+		copy := rule
+		if copy.matchRegex == nil {
+			copy.matchRegex = regexp.MustCompile(copy.Match)
+		}
+		if copy.versionRegex == nil && copy.VersionExtraction != "" {
+			copy.versionRegex = regexp.MustCompile(copy.VersionExtraction)
+		}
+		compiled = append(compiled, copy)
+	}
+	return compiled
 }
