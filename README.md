@@ -1,90 +1,267 @@
-![Pentora](https://pentora.ai/logo.png)
-
 # Pentora
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/pentora-ai/pentora)](https://goreportcard.com/report/github.com/pentora-ai/pentora)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://opensource.org/license/apache-2-0)
-[![Build](https://img.shields.io/github/actions/workflow/status/pentoraai/pentora/test.yml?branch=main)](https://github.com/pentora-ai/pentora/actions)
+[![Build](https://img.shields.io/github/actions/workflow/status/pentora-ai/pentora/test.yml?branch=main)](https://github.com/pentora-ai/pentora/actions)
 
-**Pentora** is a fast, modular, and extensible security scanner designed for modern networks. It detects open ports, collects service banners, and performs optional CVE matching for basic vulnerability assessments.
+> ⚠️ **Active Development Notice**: Pentora is currently under active development and has not been released yet. APIs, CLI commands, and core features are subject to change. This project is not production-ready.
 
-## 🚀 Features
+**Pentora** is a modular, high-performance security scanner that rapidly discovers network services, captures banners, and maps findings into vulnerability intelligence. Built with a powerful DAG-based execution engine, Pentora enables security teams to perform comprehensive network assessments with precision and efficiency.
 
-- 🔍 Fast port scanning on target IPs
-- 📦 Modular service detection with parsers (SSH, HTTP, FTP, ...)
-- 🔐 Plugin-based CVE matching (optional)
-- 💻 Lightweight CLI interface
-- 🌐 API and Web UI support (WIP)
-- ⚙️ Cross-platform binaries (macOS, Linux, Windows)
+## ✨ Key Features
 
-## 🧪 CLI Usage
+### 🚀 Performance & Scalability
+- **Lightning-fast scanning** with intelligent rate limiting and concurrent execution
+- **DAG-based execution engine** for parallel task processing and optimized workflows
+- **Adaptive host discovery** using ICMP, ARP, and TCP probes
+- **Efficient resource management** with configurable concurrency controls
 
-```bash
-# Basic scan (default ports: 22,80,443)
-pentora scan 192.168.1.1
+### 🔍 Advanced Capabilities
+- **Modular service detection** with extensible protocol parsers (SSH, HTTP, FTP, DNS, and more)
+- **Fingerprint-based asset profiling** for accurate service version identification
+- **Plugin-based vulnerability matching** with CVE correlation
+- **Workspace management** for organizing and querying scan results
+- **Hook system** for custom automation and event-driven workflows
 
-# Custom ports
-pentora scan 192.168.1.1 --ports 21,22,80,8080
+### 🛠️ Deployment Options
+- **Standalone CLI** for quick ad-hoc scans and automation
+- **Server mode** with REST/gRPC API for centralized scanning
+- **Web UI** for interactive scan management and visualization (In Development)
+- **Cross-platform support** (macOS, Linux, Windows)
 
-# Port discovery (range 1–1000)
-pentora scan 192.168.1.1 --discover
+## 🎯 Use Cases
 
-# Scan with CVE plugin matching
-pentora scan 192.168.1.1 --ports 22 --vuln
-```
+- **Network Discovery**: Rapidly identify live hosts and services across large IP ranges
+- **Asset Inventory**: Maintain accurate records of network infrastructure and services
+- **Vulnerability Assessment**: Detect known vulnerabilities through banner analysis and CVE matching
+- **Security Monitoring**: Continuous scanning for unauthorized services and configuration changes
+- **Penetration Testing**: Reconnaissance and information gathering during security assessments
 
-## 🧩 Plugin System
+## 🚀 Quick Start
 
-Pentora uses modular plugins to evaluate specific vulnerabilities based on banner detection:
-
-```go
-plugin.Register(&plugin.Plugin{
-  ID: "ssh_cve_2016_0777",
-  Name: "OpenSSH 7.1p2 Vulnerability",
-  RequirePorts: []int{22},
-  RequireKeys: []string{"ssh/banner"},
-  MatchFunc: func(ctx map[string]string) *plugin.MatchResult {
-    if strings.Contains(ctx["ssh/banner"], "OpenSSH_7.1p2") {
-      return &plugin.MatchResult{
-        CVE: []string{"CVE-2016-0777"},
-        Summary: "Roaming enabled vulnerability in OpenSSH",
-        Port: 22,
-        Info: ctx["ssh/banner"],
-      }
-    }
-    return nil
-  },
-})
-```
-
-## 🔧 Installation
+### Installation
 
 ```bash
+# Clone the repository
 git clone https://github.com/pentora-ai/pentora.git
 cd pentora
+
+# Build the binary
 go build -o pentora ./cmd/pentora
+
+# Verify installation
+./pentora version
 ```
 
-> Or build cross-platform installers via `make pkg` or `make dmg`
+### Basic Usage
+
+```bash
+# Scan a single target with default ports (22,80,443)
+pentora scan --targets 192.168.1.1
+
+# Scan a CIDR range with custom ports
+pentora scan --targets 192.168.1.0/24 --ports 21,22,80,443,8080
+
+# Perform port discovery (scan ports 1-1000)
+pentora scan --targets 192.168.1.1 --discover
+
+# Enable vulnerability detection
+pentora scan --targets 192.168.1.1 --vuln
+
+# Scan with fingerprinting enabled
+pentora scan --targets 10.0.0.0/24 --fingerprint
+
+# List previous scan results
+pentora workspace list
+
+# Export scan results to JSON
+pentora workspace export <scan-id> --format json -o results.json
+```
+
+### Server Mode
+
+```bash
+# Start the Pentora server
+pentora server start --host 0.0.0.0 --port 8080
+
+# Submit a scan via API
+curl -X POST http://localhost:8080/api/v1/scans \
+  -H "Content-Type: application/json" \
+  -d '{"targets": ["192.168.1.0/24"], "ports": [22,80,443]}'
+
+# Check scan status
+pentora server status
+```
 
 ## 📂 Project Structure
 
-- `cmd/pentora` – CLI entrypoint
-- `cli/` – Cobra-based command definitions
-- `scanner/` – Port scanner and banner probe engine
-- `parser/` – Protocol-aware service detection
-- `plugin/` – Rule-based CVE matching framework
-- `api/` – REST API (WIP)
-- `ui/` – Web UI (WIP)
+```
+pentora/
+├── cmd/pentora/           # CLI entry point
+├── pkg/
+│   ├── api/              # REST and gRPC API servers
+│   ├── appctx/           # Application context management
+│   ├── cli/              # CLI command implementations
+│   ├── config/           # Configuration loading and validation
+│   ├── engine/           # DAG execution engine
+│   ├── event/            # Event system for hooks and notifications
+│   ├── fingerprint/      # Service fingerprinting engine
+│   ├── hook/             # Hook system for custom automation
+│   ├── logging/          # Structured logging utilities
+│   ├── modules/          # Core scanning modules (discovery, probing, etc.)
+│   ├── netutil/          # Network utilities and helpers
+│   ├── parser/           # Protocol parsers (SSH, HTTP, FTP, etc.)
+│   ├── plugin/           # CVE matching and vulnerability plugins
+│   ├── scan/             # Scan orchestration and coordination
+│   ├── scanexec/         # Scan execution logic
+│   ├── scanner/          # Port scanner and banner grabber
+│   ├── server/           # HTTP/gRPC server implementation
+│   ├── workspace/        # Scan result storage and queries
+│   └── version/          # Version information
+├── ui/                   # Web UI (React/TypeScript) - In Development
+├── docs/                 # Documentation website (Docusaurus)
+└── script/               # Build and packaging scripts
+```
+
+## 🔧 Architecture
+
+Pentora is built around several core concepts:
+
+### DAG Execution Engine
+The DAG (Directed Acyclic Graph) engine orchestrates scan workflows by modeling dependencies between tasks. This enables:
+- Parallel execution of independent tasks
+- Automatic dependency resolution
+- Efficient resource utilization
+- Flexible workflow composition
+
+### Module System
+Modules are self-contained units that perform specific scan phases:
+- **Discovery Module**: Host discovery using multiple techniques
+- **Port Scanner Module**: Fast TCP/UDP port scanning
+- **Banner Grabber Module**: Service banner collection
+- **Fingerprint Module**: Service version identification
+- **Vulnerability Module**: CVE matching and risk assessment
+
+### Workspace
+All scan results are stored in a local workspace with:
+- SQLite database for structured data
+- File-based artifact storage
+- Full-text search capabilities
+- Historical scan tracking
+
+## 🔌 Extending Pentora
+
+### Custom Parsers
+
+Add support for new protocols:
+
+```go
+package parser
+
+func init() {
+    Register("myprotocol", &MyProtocolParser{})
+}
+
+type MyProtocolParser struct{}
+
+func (p *MyProtocolParser) Parse(banner string) (map[string]string, error) {
+    // Parse banner and extract metadata
+    return map[string]string{
+        "service": "myservice",
+        "version": "1.0.0",
+    }, nil
+}
+```
+
+### Custom Plugins
+
+Create vulnerability detection rules:
+
+```go
+package plugin
+
+func init() {
+    Register(&Plugin{
+        ID:   "custom_vuln_check",
+        Name: "Custom Vulnerability Check",
+        RequirePorts: []int{8080},
+        RequireKeys:  []string{"http/server"},
+        MatchFunc: func(ctx map[string]string) *MatchResult {
+            if strings.Contains(ctx["http/server"], "VulnerableApp/1.0") {
+                return &MatchResult{
+                    CVE:     []string{"CVE-2024-XXXXX"},
+                    Summary: "Vulnerable application detected",
+                    Severity: "HIGH",
+                }
+            }
+            return nil
+        },
+    })
+}
+```
+
+### Event Hooks
+
+React to scan events:
+
+```go
+package main
+
+import "github.com/pentora-ai/pentora/pkg/hook"
+
+func init() {
+    hook.Register("on_scan_complete", func(data interface{}) error {
+        // Send notification, update database, etc.
+        return nil
+    })
+}
+```
+
+## 📖 Documentation
+
+For comprehensive documentation, visit:
+- **Documentation Site**: https://docs.pentora.ai (In Development)
+- **Getting Started Guide**: [docs/getting-started/installation.md](docs/docs/getting-started/installation.md)
+- **CLI Reference**: [docs/cli/overview.md](docs/docs/cli/overview.md)
+- **Architecture Overview**: [docs/architecture/overview.md](docs/docs/architecture/overview.md)
+
+## 🤝 Contributing
+
+We welcome contributions! Pentora is in active development, and we're building the foundation for a powerful security scanning platform.
+
+Areas where we need help:
+- Core scanning engine improvements
+- Protocol parser implementations
+- Vulnerability detection plugins
+- Documentation and examples
+- UI/UX design and implementation
+- Testing and bug reports
+
+Please read our contributing guidelines before submitting pull requests.
+
+## 📋 Roadmap
+
+- [ ] Complete core scanning engine
+- [ ] REST/gRPC API implementation
+- [ ] Web UI for scan management
+- [ ] Distributed scanning support
+- [ ] Enhanced reporting capabilities
+- [ ] Integration with popular security tools
+- [ ] Cloud deployment guides
+- [ ] First stable release (v1.0.0)
 
 ## 📜 License
 
-Apache-2.0 License. See the `LICENSE` file for more details.
+Licensed under the Apache License, Version 2.0. See [LICENSE.md](LICENSE.md) for details.
+
+## 🔗 Links
+
+- **Website**: https://pentora.ai
+- **Documentation**: https://docs.pentora.ai
+- **GitHub**: https://github.com/pentora-ai/pentora
+- **Issues**: https://github.com/pentora-ai/pentora/issues
+- **Discussions**: https://github.com/pentora-ai/pentora/discussions
 
 ---
 
-Join the community or contribute to the project 💬
-
-> https://pentora.ai
-
---
+**Note**: Pentora is under active development. Star the repository to stay updated on releases and new features!
