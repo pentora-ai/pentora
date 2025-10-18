@@ -67,8 +67,6 @@ The command automatically plans the execution DAG using available modules.`,
 
 		svc := scanexec.NewService()
 
-		var uiSink *progressUISink
-
 		ctxFromCmd := cmd.Context()
 		if ctxFromCmd == nil && cmd.Root() != nil {
 			ctxFromCmd = cmd.Root().Context()
@@ -83,13 +81,7 @@ The command automatically plans the execution DAG using available modules.`,
 		orchestratorCtx = appctx.WithConfig(orchestratorCtx, appMgr.Config())
 
 		if scanInteractive {
-			if progress, err := newProgressUISink(); err != nil {
-				logger.Warn().Err(err).Msg("progress UI unavailable; falling back to structured logs")
-				svc = svc.WithProgressSink(&progressLogger{logger: logger})
-			} else {
-				uiSink = progress
-				svc = svc.WithProgressSink(uiSink)
-			}
+			svc = svc.WithProgressSink(&progressLogger{logger: logger})
 		}
 
 		params := scanexec.Params{
@@ -118,15 +110,6 @@ The command automatically plans the execution DAG using available modules.`,
 		}
 
 		res, runErr := svc.Run(orchestratorCtx, params)
-		if uiSink != nil {
-			finalStatus := "completed"
-			if res != nil && res.Status != "" {
-				finalStatus = res.Status
-			} else if runErr != nil {
-				finalStatus = "failed"
-			}
-			uiSink.Stop(finalStatus, runErr)
-		}
 		if runErr != nil {
 			logger.Error().Err(runErr).Msg("Scan execution failed")
 		}
