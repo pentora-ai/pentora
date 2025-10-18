@@ -11,12 +11,14 @@
 ## ✨ Key Features
 
 ### 🚀 Performance & Scalability
+
 - **Lightning-fast scanning** with intelligent rate limiting and concurrent execution
 - **DAG-based execution engine** for parallel task processing and optimized workflows
 - **Adaptive host discovery** using ICMP, ARP, and TCP probes
 - **Efficient resource management** with configurable concurrency controls
 
 ### 🔍 Advanced Capabilities
+
 - **Modular service detection** with extensible protocol parsers (SSH, HTTP, FTP, DNS, and more)
 - **Fingerprint-based asset profiling** for accurate service version identification
 - **Plugin-based vulnerability matching** with CVE correlation
@@ -24,6 +26,7 @@
 - **Hook system** for custom automation and event-driven workflows
 
 ### 🛠️ Deployment Options
+
 - **Standalone CLI** for quick ad-hoc scans and automation
 - **Server mode** with REST/gRPC API for centralized scanning
 - **Web UI** for interactive scan management and visualization (In Development)
@@ -120,7 +123,7 @@ pentora/
 │   └── version/          # Version information
 ├── ui/                   # Web UI (React/TypeScript) - In Development
 ├── docs/                 # Documentation website (Docusaurus)
-└── script/               # Build and packaging scripts
+└── scripts/              # Build and packaging scripts
 ```
 
 ## 🔧 Architecture
@@ -128,14 +131,18 @@ pentora/
 Pentora is built around several core concepts:
 
 ### DAG Execution Engine
+
 The DAG (Directed Acyclic Graph) engine orchestrates scan workflows by modeling dependencies between tasks. This enables:
+
 - Parallel execution of independent tasks
 - Automatic dependency resolution
 - Efficient resource utilization
 - Flexible workflow composition
 
 ### Module System
+
 Modules are self-contained units that perform specific scan phases:
+
 - **Discovery Module**: Host discovery using multiple techniques
 - **Port Scanner Module**: Fast TCP/UDP port scanning
 - **Banner Grabber Module**: Service banner collection
@@ -143,7 +150,9 @@ Modules are self-contained units that perform specific scan phases:
 - **Vulnerability Module**: CVE matching and risk assessment
 
 ### Workspace
+
 All scan results are stored in a local workspace with:
+
 - SQLite database for structured data
 - File-based artifact storage
 - Full-text search capabilities
@@ -220,6 +229,7 @@ func init() {
 ## 📖 Documentation
 
 For comprehensive documentation, visit:
+
 - **Documentation Site**: https://docs.pentora.ai (In Development)
 - **Getting Started Guide**: [docs/getting-started/installation.md](docs/docs/getting-started/installation.md)
 - **CLI Reference**: [docs/cli/overview.md](docs/docs/cli/overview.md)
@@ -230,6 +240,7 @@ For comprehensive documentation, visit:
 We welcome contributions! Pentora is in active development, and we're building the foundation for a powerful security scanning platform.
 
 Areas where we need help:
+
 - Core scanning engine improvements
 - Protocol parser implementations
 - Vulnerability detection plugins

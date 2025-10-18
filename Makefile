@@ -95,9 +95,9 @@ lint:
 validate-files:
 	$(foreach exec,$(LINT_EXECUTABLES),\
             $(if $(shell which $(exec)),,$(error "No $(exec) in PATH")))
-	$(CURDIR)/script/validate-vendor.sh
-	$(CURDIR)/script/validate-misspell.sh
-	$(CURDIR)/script/validate-shell-script.sh
+	$(CURDIR)/scripts/validate-vendor.sh
+	$(CURDIR)/scripts/validate-misspell.sh
+	$(CURDIR)/scripts/validate-shell-script.sh
 
 .PHONY: validate
 #? validate: Validate code, docs, and vendor
