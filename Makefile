@@ -49,26 +49,28 @@ fmt:
 dist:
 	mkdir -p dist
 
-.PHONY: build-ui-image
-#? build-ui-image: Build UI Docker image
-build-ui-image:
-	docker build -t pentora-ui -f ui/Dockerfile ui	
+.PHONY: install-ui-deps
+#? install-ui-deps: Install UI dependencies
+install-ui-deps:
+	cd ui/web && npm install
+
+.PHONY: build-ui
+#? build-ui: Build UI for production (outputs to pkg/server/ui/dist)
+build-ui: install-ui-deps
+	cd ui/web && npm run build
+	@echo "✅ UI built successfully → pkg/server/ui/dist"
+
+.PHONY: dev-ui
+#? dev-ui: Start UI development server (with API proxy to :8080)
+dev-ui:
+	cd ui/web && npm run dev
 
 .PHONY: clean-ui
-#? clean-ui: Clean UI static generated assets
+#? clean-ui: Clean UI build artifacts
 clean-ui:
-	rm -r ui/static
-	mkdir -p ui/static
-	printf 'For more information see `ui/readme.md`' > ui/static/DONT-EDIT-FILES-IN-THIS-DIRECTORY.md	
-
-ui/static/index.html:
-	$(MAKE) build-ui-image
-	docker run --rm -v "$(PWD)/ui/static":'/src/ui/static' pentora-ui npm run build:nc
-	docker run --rm -v "$(PWD)/ui/static":'/src/ui/static' pentora-ui chown -R $(shell id -u):$(shell id -g) ./static
-
-.PHONY: generate-ui
-#? generate-ui: Generate UI
-generate-ui: ui/static/index.html	
+	rm -rf pkg/server/ui/dist
+	rm -rf ui/web/dist
+	@echo "✅ UI build artifacts cleaned"	
 
 .PHONY: generate
 #? generate: Generate code (Dynamic and Static configuration documentation reference files)
@@ -76,14 +78,16 @@ generate:
 #	go generate
 
 .PHONY: binary
-#? binary: Build the binary
-binary: generate-ui dist
-	@echo SHA: $(VERSION) $(CODENAME) $(DATE)
+#? binary: Build the binary with embedded UI
+binary: build-ui generate dist
+	@echo "🔨 Building binary with embedded UI..."
+	@echo "SHA: $(VERSION) $(CODENAME) $(DATE)"
 	CGO_ENABLED=0 GOGC=off GOOS=${GOOS} GOARCH=${GOARCH} go build ${FLAGS[*]} -ldflags "-s -w \
     -X github.com/pentora-ai/pentora/pkg/version.Version=$(VERSION) \
     -X github.com/pentora-ai/pentora/pkg/version.Commit=$(CODENAME) \
     -X github.com/pentora-ai/pentora/pkg/version.BuildDate=$(DATE)" \
     -installsuffix nocgo -o "./dist/${GOOS}/${GOARCH}/$(BIN_NAME)" ./cmd/pentora
+	@echo "✅ Binary built → ./dist/${GOOS}/${GOARCH}/$(BIN_NAME)"
 
 .PHONY: lint
 #? lint: Run golangci-lint
