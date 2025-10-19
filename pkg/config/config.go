@@ -52,6 +52,7 @@ func DefaultConfig() Config {
 			Format: "text", // Default log format
 			File:   "",     // Default log file path
 		},
+		Server: DefaultServerConfig(),
 	}
 }
 
@@ -123,11 +124,22 @@ func DefaultConfigAsMap() map[string]interface{} {
 	def := DefaultConfig()
 	// This can be done more elegantly with reflection or a library if the struct is very large.
 	return map[string]interface{}{
-		// Add your default configuration fields here
+		// Log configuration
 		"log.level":  def.Log.Level,
 		"log.format": def.Log.Format,
 		"log.file":   def.Log.File,
-		// Add other fields as needed
+
+		// Server configuration
+		"server.addr":           def.Server.Addr,
+		"server.port":           def.Server.Port,
+		"server.ui_enabled":     def.Server.UIEnabled,
+		"server.api_enabled":    def.Server.APIEnabled,
+		"server.jobs_enabled":   def.Server.JobsEnabled,
+		"server.workspace_dir":  def.Server.WorkspaceDir,
+		"server.ui_assets_path": def.Server.UIAssetsPath,
+		"server.concurrency":    def.Server.Concurrency,
+		"server.read_timeout":   def.Server.ReadTimeout,
+		"server.write_timeout":  def.Server.WriteTimeout,
 	}
 }
 
