@@ -41,9 +41,16 @@ test-unit:
 	GOOS=$(GOOS) GOARCH=$(GOARCH) go test -cover "-coverprofile=cover.out" -v $(TESTFLAGS) ./pkg/... ./cmd/...
 
 .PHONY: test-integration
-#? test-integration: Run integration tests (requires build tags)
+#? test-integration: Run integration tests only (*_integration_test.go files)
 test-integration:
-	GOOS=$(GOOS) GOARCH=$(GOARCH) go test -tags=integration -v $(TESTFLAGS) ./pkg/... ./cmd/...
+	@echo "🔍 Finding integration test files..."
+	@files=$$(find ./pkg ./cmd -name '*_integration_test.go' 2>/dev/null | sed 's|/[^/]*$$||' | sort -u); \
+	if [ -n "$$files" ]; then \
+		echo "📦 Running integration tests in: $$files"; \
+		GOOS=$(GOOS) GOARCH=$(GOARCH) go test -tags=integration -v $(TESTFLAGS) $$files; \
+	else \
+		echo "⚠️  No integration tests found (*_integration_test.go)"; \
+	fi
 
 .PHONY: test-all
 #? test-all: Run all tests (unit + integration)
@@ -61,18 +68,18 @@ dist:
 .PHONY: install-ui-deps
 #? install-ui-deps: Install UI dependencies
 install-ui-deps:
-	cd ui && npm install
+	cd ui && pnpm install
 
 .PHONY: build-ui
 #? build-ui: Build UI for production (outputs to pkg/ui/dist)
 build-ui: install-ui-deps
-	cd ui && npm run build
+	cd ui && pnpm run build
 	@echo "✅ UI built successfully → pkg/ui/dist"
 
 .PHONY: dev-ui
 #? dev-ui: Start UI development server (with API proxy to :8080)
 dev-ui:
-	cd ui && npm run dev
+	cd ui && pnpm run dev
 
 .PHONY: clean-ui
 #? clean-ui: Clean UI build artifacts

@@ -68,12 +68,17 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           check-latest: true
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - name: Set up Node.js ${{ env.NODE_VERSION }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: ui/package-lock.json
+          cache: 'pnpm'
+          cache-dependency-path: ui/pnpm-lock.yaml
 
       - name: Cache Go modules
         uses: actions/cache@v4
@@ -84,14 +89,6 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-
-      - name: Cache UI dependencies
-        uses: actions/cache@v4
-        with:
-          path: ui/node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('ui/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
 
       - name: Build UI (required for integration tests)
         run: make build-ui
@@ -118,12 +115,17 @@ jobs:
           go-version: ${{ matrix.go-version }}
           check-latest: true
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - name: Set up Node.js ${{ env.NODE_VERSION }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: ui/package-lock.json
+          cache: 'pnpm'
+          cache-dependency-path: ui/pnpm-lock.yaml
 
       - name: Build binary
         run: make binary
