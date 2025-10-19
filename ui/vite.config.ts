@@ -28,7 +28,7 @@ export default defineConfig({
     manifest: true,
 
     // Optimize for production
-    minify: 'terser',
+    minify: 'esbuild',
     sourcemap: false,
   },
   server: {
