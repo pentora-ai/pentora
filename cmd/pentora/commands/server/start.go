@@ -3,9 +3,28 @@
 package server
 
 import (
-	"github.com/pentora-ai/pentora/pkg/server"
+	"fmt"
+	"time"
+
+	"github.com/pentora-ai/pentora/pkg/appctx"
+	"github.com/pentora-ai/pentora/pkg/config"
+	"github.com/pentora-ai/pentora/pkg/server/api"
+	"github.com/pentora-ai/pentora/pkg/server/app"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
+
+// stubWorkspace is a temporary workspace implementation.
+// TODO: Replace with real workspace implementation from pkg/workspace
+type stubWorkspace struct{}
+
+func (s *stubWorkspace) ListScans() ([]api.ScanMetadata, error) {
+	return []api.ScanMetadata{}, nil
+}
+
+func (s *stubWorkspace) GetScan(id string) (*api.ScanDetail, error) {
+	return nil, fmt.Errorf("scan not found: %s", id)
+}
 
 // newStartServerCommand creates and returns the 'pentora server start' command.
 //
@@ -32,6 +51,15 @@ import (
 //
 // See NOTES.md#30 for detailed server architecture design.
 func newStartServerCommand() *cobra.Command {
+	var (
+		addr         string
+		port         int
+		noUI         bool
+		noAPI        bool
+		concurrency  int
+		uiAssetsPath string
+	)
+
 	cmd := &cobra.Command{
 		Use:   "start",
 		Short: "Start the Pentora server",
@@ -45,33 +73,54 @@ The server hosts multiple components in a single runtime:
 The server runs until interrupted (Ctrl+C) or killed, performing graceful
 shutdown to drain in-flight requests and complete running jobs.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// TODO: Extract configuration from cmd.Context() (AppManager config)
-			// TODO: Wire flags to config.Server struct (--addr, --port, etc.)
-			// TODO: Initialize dependencies (workspace, engine manager, logging)
-			// TODO: Pass config and deps to server.NewServer()
+			// Build server config
+			cfg := config.ServerConfig{
+				Addr:         addr,
+				Port:         port,
+				UIEnabled:    !noUI,
+				APIEnabled:   !noAPI,
+				JobsEnabled:  true,
+				Concurrency:  concurrency,
+				UIAssetsPath: uiAssetsPath,
+				ReadTimeout:  30 * time.Second,
+				WriteTimeout: 30 * time.Second,
+			}
 
-			// Create server instance with nil config (temporary - will be wired properly)
-			server := server.NewServer(nil)
+			// TODO: Get real workspace from context when workspace implementation is ready
+			// For now, use stub workspace
+			ws := &stubWorkspace{}
 
-			// Start the server (begins HTTP listener and background workers)
-			// Uses context from CLI root for cancellation/shutdown signaling
-			server.Start(cmd.Context())
+			// Get config manager from context
+			cfgMgr, ok := appctx.Config(cmd.Context())
+			if !ok {
+				return fmt.Errorf("config manager not available in context")
+			}
 
-			// Block until server shutdown completes
-			server.Wait()
+			// Build dependencies
+			deps := &app.Deps{
+				Workspace: ws,
+				Config:    cfgMgr,
+				Logger:    &log.Logger,
+			}
 
-			return nil
+			// Create server app
+			serverApp, err := app.New(cmd.Context(), cfg, deps)
+			if err != nil {
+				return fmt.Errorf("create server: %w", err)
+			}
+
+			// Run server (blocks until shutdown)
+			return serverApp.Run(cmd.Context())
 		},
 	}
 
-	// TODO: Add server-specific flags:
-	// cmd.Flags().String("addr", "127.0.0.1", "Server listen address")
-	// cmd.Flags().Int("port", 8080, "Server listen port")
-	// cmd.Flags().Bool("no-ui", false, "Disable UI static serving")
-	// cmd.Flags().Bool("no-api", false, "Disable REST API endpoints")
-	// cmd.Flags().Int("jobs-concurrency", 4, "Number of concurrent background workers")
-	// cmd.Flags().Duration("read-timeout", 30*time.Second, "HTTP read timeout")
-	// cmd.Flags().Duration("write-timeout", 30*time.Second, "HTTP write timeout")
+	// Server-specific flags
+	cmd.Flags().StringVar(&addr, "addr", "127.0.0.1", "Server listen address")
+	cmd.Flags().IntVar(&port, "port", 8080, "Server listen port")
+	cmd.Flags().BoolVar(&noUI, "no-ui", false, "Disable UI static serving")
+	cmd.Flags().BoolVar(&noAPI, "no-api", false, "Disable REST API endpoints")
+	cmd.Flags().IntVar(&concurrency, "jobs-concurrency", 4, "Number of concurrent background workers")
+	cmd.Flags().StringVar(&uiAssetsPath, "ui-assets-path", "", "UI assets directory (dev mode: serve from disk)")
 
 	return cmd
 }
