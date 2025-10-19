@@ -17,3 +17,7 @@ build
 !README.md
 
 /ui/
+
+# UI build artifacts
+/pkg/ui/dist/*
+!/pkg/ui/dist/.gitkeep

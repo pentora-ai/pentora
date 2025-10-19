@@ -8,5 +8,5 @@ import "embed"
 // The build outputs to pkg/ui/dist/ which is then embedded here.
 // This allows the UI to be served from the Go binary without external files.
 //
-//go:embed dist/*
+//go:embed all:dist
 var DistFS embed.FS
