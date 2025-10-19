@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	serverCmd "github.com/pentora-ai/pentora/cmd/pentora/commands/server"
 	"github.com/pentora-ai/pentora/pkg/appctx"
 	"github.com/pentora-ai/pentora/pkg/cli"
 	"github.com/pentora-ai/pentora/pkg/config"
@@ -78,6 +79,7 @@ func NewCommand() *cobra.Command {
 	cmd.AddGroup(&cobra.Group{ID: "scan", Title: "Scan Commands"})
 	cmd.AddGroup(&cobra.Group{ID: "core", Title: "Core Commands"})
 
+	cmd.AddCommand(serverCmd.NewCommand())
 	cmd.AddCommand(cli.DiscoverCmd)
 	cmd.AddCommand(cli.ServeCmd)
 	cmd.AddCommand(cli.NewVersionCommand(cliExecutable))
