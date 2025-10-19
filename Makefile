@@ -32,13 +32,22 @@ p ps:
 default: generate binary
 
 .PHONY: test
-#? test: Run the unit and integration tests
+#? test: Run the unit tests
 test: test-unit
 
 .PHONY: test-unit
-#? test-unit: Run the unit tests
+#? test-unit: Run the unit tests (excludes integration tests)
 test-unit:
-	GOOS=$(GOOS) GOARCH=$(GOARCH) go test -cover "-coverprofile=cover.out" -v $(TESTFLAGS) ./pkg/... ./cmd/...	
+	GOOS=$(GOOS) GOARCH=$(GOARCH) go test -cover "-coverprofile=cover.out" -v $(TESTFLAGS) ./pkg/... ./cmd/...
+
+.PHONY: test-integration
+#? test-integration: Run integration tests (requires build tags)
+test-integration:
+	GOOS=$(GOOS) GOARCH=$(GOARCH) go test -tags=integration -v $(TESTFLAGS) ./pkg/... ./cmd/...
+
+.PHONY: test-all
+#? test-all: Run all tests (unit + integration)
+test-all: test-unit test-integration	
 
 .PHONY: fmt
 #? fmt: Format the Code
