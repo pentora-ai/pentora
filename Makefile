@@ -52,24 +52,24 @@ dist:
 .PHONY: install-ui-deps
 #? install-ui-deps: Install UI dependencies
 install-ui-deps:
-	cd ui/web && npm install
+	cd ui && npm install
 
 .PHONY: build-ui
-#? build-ui: Build UI for production (outputs to pkg/server/ui/dist)
+#? build-ui: Build UI for production (outputs to pkg/ui/dist)
 build-ui: install-ui-deps
-	cd ui/web && npm run build
-	@echo "✅ UI built successfully → pkg/server/ui/dist"
+	cd ui && npm run build
+	@echo "✅ UI built successfully → pkg/ui/dist"
 
 .PHONY: dev-ui
 #? dev-ui: Start UI development server (with API proxy to :8080)
 dev-ui:
-	cd ui/web && npm run dev
+	cd ui && npm run dev
 
 .PHONY: clean-ui
 #? clean-ui: Clean UI build artifacts
 clean-ui:
-	rm -rf pkg/server/ui/dist
-	rm -rf ui/web/dist
+	rm -rf pkg/ui/dist
+	rm -rf ui/dist
 	@echo "✅ UI build artifacts cleaned"	
 
 .PHONY: generate

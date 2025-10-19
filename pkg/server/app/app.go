@@ -12,7 +12,7 @@ import (
 	"github.com/pentora-ai/pentora/pkg/server/api/v1"
 	"github.com/pentora-ai/pentora/pkg/server/httpx"
 	"github.com/pentora-ai/pentora/pkg/server/jobs"
-	"github.com/pentora-ai/pentora/pkg/server/ui"
+	"github.com/pentora-ai/pentora/pkg/ui"
 	"github.com/rs/zerolog/log"
 )
 

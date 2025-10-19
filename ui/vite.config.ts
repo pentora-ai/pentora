@@ -20,8 +20,8 @@ export default defineConfig({
     },
   },
   build: {
-    // Output to pkg/server/ui/dist for Go embedding
-    outDir: '../../pkg/server/ui/dist',
+    // Output to pkg/ui/dist for Go embedding
+    outDir: '../pkg/ui/dist',
     emptyOutDir: true,
 
     // Generate manifest for asset mapping
