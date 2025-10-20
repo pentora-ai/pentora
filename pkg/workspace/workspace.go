@@ -121,7 +121,7 @@ func defaultRoot() (string, error) {
 		if xdg := os.Getenv("XDG_DATA_HOME"); xdg != "" {
 			return filepath.Join(xdg, "pentora"), nil
 		}
-		home, err := os.UserHomeDir()
+		home, err := GetUserHomeDir()
 		if err != nil {
 			return "", fmt.Errorf("resolve home directory: %w", err)
 		}

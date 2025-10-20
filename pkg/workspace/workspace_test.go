@@ -135,6 +135,11 @@ func TestGetGOOS(t *testing.T) {
 }
 
 func TestDefaultRoot_DarwinError(t *testing.T) {
+	oldGOOS := getGOOS
+	defer func() { getGOOS = oldGOOS }()
+
+	getGOOS = func() string { return "darwin" }
+
 	old := userHomeDir
 	defer func() { userHomeDir = old }()
 

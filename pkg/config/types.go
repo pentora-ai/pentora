@@ -1,10 +1,13 @@
 // pkg/config/types.go
 package config
 
+import "time"
+
 // Config is the root configuration structure for the Pentora application.
 // It aggregates all other specific configuration structs.
 type Config struct {
-	Log LogConfig `description:"Logging configuration" koanf:"log"` // Logging configuration
+	Log    LogConfig    `description:"Logging configuration" koanf:"log"`   // Logging configuration
+	Server ServerConfig `description:"Server configuration" koanf:"server"` // Server configuration
 }
 
 // LogConfig holds logging related configuration.
@@ -12,4 +15,28 @@ type LogConfig struct {
 	Level  string `description:"Log level set to pentora logs." koanf:"level"`   // Log level (e.g., "debug", "info", "warn", "error")
 	Format string `description:"Pentora log format: json | text" koanf:"format"` // Log format (e.g., "json", "text")
 	File   string `description:"Log file path" koanf:"file"`                     // Log file path (optional)
+}
+
+// ServerConfig holds configuration for the Pentora server runtime.
+// Used by 'pentora server start' command.
+type ServerConfig struct {
+	// Network settings
+	Addr string `description:"Server listen address" koanf:"addr"`
+	Port int    `description:"Server listen port" koanf:"port"`
+
+	// Component toggles
+	UIEnabled   bool `description:"Enable UI static serving" koanf:"ui_enabled"`
+	APIEnabled  bool `description:"Enable REST API endpoints" koanf:"api_enabled"`
+	JobsEnabled bool `description:"Enable background job workers" koanf:"jobs_enabled"`
+
+	// Paths
+	WorkspaceDir string `description:"Workspace root directory" koanf:"workspace_dir"`
+	UIAssetsPath string `description:"UI assets directory (dev mode: serve from disk)" koanf:"ui_assets_path"`
+
+	// Performance
+	Concurrency int `description:"Number of concurrent background workers" koanf:"concurrency"`
+
+	// HTTP timeouts
+	ReadTimeout  time.Duration `description:"HTTP read timeout" koanf:"read_timeout"`
+	WriteTimeout time.Duration `description:"HTTP write timeout" koanf:"write_timeout"`
 }
