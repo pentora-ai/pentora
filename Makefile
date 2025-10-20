@@ -1,13 +1,11 @@
-# Makefile for macOS .pkg + .dmg installer
-
 SRCS = $(shell git ls-files '*.go' | grep -v '^vendor/')
 
-APP_NAME=pentora
-VERSION=1.0.0
-IDENTIFIER=com.pentora.cli
-PKG_ROOT=pkgroot
-BUILD_DIR=build
-DMG_ROOT=dmgroot
+BIN_NAME=pentora
+TAG_NAME := $(shell git describe --abbrev=0 --tags --exact-match || echo "unknown")
+COMMIT := $(shell git rev-parse HEAD)
+VERSION_GIT := $(if $(TAG_NAME),$(TAG_NAME),$(SHA))
+VERSION := $(if $(VERSION),$(VERSION),$(VERSION_GIT))
+DATE=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 # Default build target
 GOOS := $(shell go env GOOS)
@@ -97,11 +95,11 @@ generate:
 #? binary: Build the binary with embedded UI
 binary: build-ui generate dist
 	@echo "🔨 Building binary with embedded UI..."
-	@echo "SHA: $(VERSION) $(CODENAME) $(DATE)"
+	@echo "Version: $(VERSION) | Commit: $(COMMIT) | Date: $(DATE)"
 	CGO_ENABLED=0 GOGC=off GOOS=${GOOS} GOARCH=${GOARCH} go build ${FLAGS[*]} -ldflags "-s -w \
-    -X github.com/pentora-ai/pentora/pkg/version.Version=$(VERSION) \
-    -X github.com/pentora-ai/pentora/pkg/version.Commit=$(CODENAME) \
-    -X github.com/pentora-ai/pentora/pkg/version.BuildDate=$(DATE)" \
+    -X github.com/pentora-ai/pentora/pkg/version.version=$(VERSION) \
+    -X github.com/pentora-ai/pentora/pkg/version.commit=$(COMMIT) \
+    -X github.com/pentora-ai/pentora/pkg/version.buildDate=$(DATE)" \
     -installsuffix nocgo -o "./dist/${GOOS}/${GOARCH}/$(BIN_NAME)" ./cmd
 	@echo "✅ Binary built → ./dist/${GOOS}/${GOARCH}/$(BIN_NAME)"
 
