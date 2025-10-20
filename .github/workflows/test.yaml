@@ -1,0 +1,150 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - main
+      - feat/*
+  pull_request:
+    branches:
+      - '*'
+
+env:
+  GO_VERSION: '1.25'
+  NODE_VERSION: '20'
+  VERSION: 'dev'
+
+jobs:
+  test-unit:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go ${{ env.GO_VERSION }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Run unit tests
+        run: make test-unit
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        if: success()
+        with:
+          files: ./cover.out
+          flags: unittests
+          fail_ci_if_error: false
+
+  test-integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: test-unit  # Run after unit tests pass
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go ${{ env.GO_VERSION }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: ui/pnpm-lock.yaml
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Build UI (required for integration tests)
+        run: make build-ui
+
+      - name: Run integration tests
+        run: make test-integration
+
+  test-build:
+    name: Build Binary
+    runs-on: ${{ matrix.os }}
+    needs: test-unit
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        go-version: ['1.25']
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+          check-latest: true
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: ui/pnpm-lock.yaml
+
+      - name: Build binary
+        run: make binary
+
+      - name: Test binary version
+        run: |
+          GOOS=$(uname -s | tr '[:upper:]' '[:lower:]')
+          GOARCH=$(uname -m)
+          # Map uname -m output to Go GOARCH values
+          case "$GOARCH" in
+            x86_64) GOARCH=amd64 ;;
+            aarch64) GOARCH=arm64 ;;
+          esac
+          ./dist/${GOOS}/${GOARCH}/pentora version
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pentora-${{ runner.os }}-${{ runner.arch }}
+          path: dist/
+          retention-days: 7

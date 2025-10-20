@@ -1,13 +1,11 @@
-# Makefile for macOS .pkg + .dmg installer
-
 SRCS = $(shell git ls-files '*.go' | grep -v '^vendor/')
 
-APP_NAME=pentora
-VERSION=1.0.0
-IDENTIFIER=com.pentora.cli
-PKG_ROOT=pkgroot
-BUILD_DIR=build
-DMG_ROOT=dmgroot
+BIN_NAME=pentora
+TAG_NAME := $(shell git describe --abbrev=0 --tags --exact-match || echo "unknown")
+COMMIT := $(shell git rev-parse HEAD)
+VERSION_GIT := $(if $(TAG_NAME),$(TAG_NAME),$(SHA))
+VERSION := $(if $(VERSION),$(VERSION),$(VERSION_GIT))
+DATE=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 # Default build target
 GOOS := $(shell go env GOOS)
@@ -32,13 +30,29 @@ p ps:
 default: generate binary
 
 .PHONY: test
-#? test: Run the unit and integration tests
+#? test: Run the unit tests
 test: test-unit
 
 .PHONY: test-unit
-#? test-unit: Run the unit tests
+#? test-unit: Run the unit tests (excludes integration tests)
 test-unit:
-	GOOS=$(GOOS) GOARCH=$(GOARCH) go test -cover "-coverprofile=cover.out" -v $(TESTFLAGS) ./pkg/... ./cmd/...	
+	GOOS=$(GOOS) GOARCH=$(GOARCH) go test -cover "-coverprofile=cover.out" -v $(TESTFLAGS) ./pkg/... ./cmd/...
+
+.PHONY: test-integration
+#? test-integration: Run integration tests only (*_integration_test.go files)
+test-integration:
+	@echo "🔍 Finding integration test files..."
+	@files=$$(find ./pkg ./cmd -name '*_integration_test.go' 2>/dev/null | sed 's|/[^/]*$$||' | sort -u); \
+	if [ -n "$$files" ]; then \
+		echo "📦 Running integration tests in: $$files"; \
+		GOOS=$(GOOS) GOARCH=$(GOARCH) go test -tags=integration -v $(TESTFLAGS) $$files; \
+	else \
+		echo "⚠️  No integration tests found (*_integration_test.go)"; \
+	fi
+
+.PHONY: test-all
+#? test-all: Run all tests (unit + integration)
+test-all: test-unit test-integration	
 
 .PHONY: fmt
 #? fmt: Format the Code
@@ -49,26 +63,28 @@ fmt:
 dist:
 	mkdir -p dist
 
-.PHONY: build-ui-image
-#? build-ui-image: Build UI Docker image
-build-ui-image:
-	docker build -t pentora-ui -f ui/Dockerfile ui	
+.PHONY: install-ui-deps
+#? install-ui-deps: Install UI dependencies
+install-ui-deps:
+	cd ui && pnpm install
+
+.PHONY: build-ui
+#? build-ui: Build UI for production (outputs to pkg/ui/dist)
+build-ui: install-ui-deps
+	cd ui && pnpm run build
+	@echo "✅ UI built successfully → pkg/ui/dist"
+
+.PHONY: dev-ui
+#? dev-ui: Start UI development server (with API proxy to :8080)
+dev-ui:
+	cd ui && pnpm run dev
 
 .PHONY: clean-ui
-#? clean-ui: Clean UI static generated assets
+#? clean-ui: Clean UI build artifacts
 clean-ui:
-	rm -r ui/static
-	mkdir -p ui/static
-	printf 'For more information see `ui/readme.md`' > ui/static/DONT-EDIT-FILES-IN-THIS-DIRECTORY.md	
-
-ui/static/index.html:
-	$(MAKE) build-ui-image
-	docker run --rm -v "$(PWD)/ui/static":'/src/ui/static' pentora-ui npm run build:nc
-	docker run --rm -v "$(PWD)/ui/static":'/src/ui/static' pentora-ui chown -R $(shell id -u):$(shell id -g) ./static
-
-.PHONY: generate-ui
-#? generate-ui: Generate UI
-generate-ui: ui/static/index.html	
+	rm -rf pkg/ui/dist
+	rm -rf ui/dist
+	@echo "✅ UI build artifacts cleaned"	
 
 .PHONY: generate
 #? generate: Generate code (Dynamic and Static configuration documentation reference files)
@@ -76,14 +92,16 @@ generate:
 #	go generate
 
 .PHONY: binary
-#? binary: Build the binary
-binary: generate-ui dist
-	@echo SHA: $(VERSION) $(CODENAME) $(DATE)
+#? binary: Build the binary with embedded UI
+binary: build-ui generate dist
+	@echo "🔨 Building binary with embedded UI..."
+	@echo "Version: $(VERSION) | Commit: $(COMMIT) | Date: $(DATE)"
 	CGO_ENABLED=0 GOGC=off GOOS=${GOOS} GOARCH=${GOARCH} go build ${FLAGS[*]} -ldflags "-s -w \
-    -X github.com/pentora-ai/pentora/pkg/version.Version=$(VERSION) \
-    -X github.com/pentora-ai/pentora/pkg/version.Commit=$(CODENAME) \
-    -X github.com/pentora-ai/pentora/pkg/version.BuildDate=$(DATE)" \
-    -installsuffix nocgo -o "./dist/${GOOS}/${GOARCH}/$(BIN_NAME)" ./cmd/pentora
+    -X github.com/pentora-ai/pentora/pkg/version.version=$(VERSION) \
+    -X github.com/pentora-ai/pentora/pkg/version.commit=$(COMMIT) \
+    -X github.com/pentora-ai/pentora/pkg/version.buildDate=$(DATE)" \
+    -installsuffix nocgo -o "./dist/${GOOS}/${GOARCH}/$(BIN_NAME)" ./cmd
+	@echo "✅ Binary built → ./dist/${GOOS}/${GOARCH}/$(BIN_NAME)"
 
 .PHONY: lint
 #? lint: Run golangci-lint
@@ -95,9 +113,9 @@ lint:
 validate-files:
 	$(foreach exec,$(LINT_EXECUTABLES),\
             $(if $(shell which $(exec)),,$(error "No $(exec) in PATH")))
-	$(CURDIR)/script/validate-vendor.sh
-	$(CURDIR)/script/validate-misspell.sh
-	$(CURDIR)/script/validate-shell-script.sh
+	$(CURDIR)/scripts/validate-vendor.sh
+	$(CURDIR)/scripts/validate-misspell.sh
+	$(CURDIR)/scripts/validate-shell-script.sh
 
 .PHONY: validate
 #? validate: Validate code, docs, and vendor

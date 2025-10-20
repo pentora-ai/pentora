@@ -6,6 +6,7 @@ go.work*
 
 
 internal
+/dist
 .gocache
 public.pem
 test.license
@@ -16,4 +17,6 @@ build
 *.md
 !README.md
 
-/ui/
+# UI build artifacts
+/pkg/ui/dist/*
+!/pkg/ui/dist/.gitkeep

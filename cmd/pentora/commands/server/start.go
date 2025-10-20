@@ -1,0 +1,126 @@
+// Package server provides the Cobra command implementation for the Pentora server lifecycle.
+// It wires CLI flags to the server runtime and handles the start/stop commands.
+package server
+
+import (
+	"fmt"
+	"time"
+
+	"github.com/pentora-ai/pentora/pkg/appctx"
+	"github.com/pentora-ai/pentora/pkg/config"
+	"github.com/pentora-ai/pentora/pkg/server/api"
+	"github.com/pentora-ai/pentora/pkg/server/app"
+	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
+)
+
+// stubWorkspace is a temporary workspace implementation.
+// TODO: Replace with real workspace implementation from pkg/workspace
+type stubWorkspace struct{}
+
+func (s *stubWorkspace) ListScans() ([]api.ScanMetadata, error) {
+	return []api.ScanMetadata{}, nil
+}
+
+func (s *stubWorkspace) GetScan(id string) (*api.ScanDetail, error) {
+	return nil, fmt.Errorf("scan not found: %s", id)
+}
+
+// newStartServerCommand creates and returns the 'pentora server start' command.
+//
+// This command initializes the Pentora server runtime, which includes:
+//   - HTTP API server with REST endpoints (/api/v1/scans, etc.)
+//   - Static UI asset serving (/ui/*)
+//   - Health and readiness endpoints (/healthz, /readyz)
+//   - Background job workers (scan execution, scheduling, notifications)
+//
+// The server runs until interrupted (SIGINT/SIGTERM) or context cancellation,
+// then performs graceful shutdown (HTTP close → jobs stop).
+//
+// Configuration is loaded from:
+//   - Global flags (--workspace-dir, --config, etc.)
+//   - Server-specific flags (--addr, --port, --no-ui, --no-api, --jobs-concurrency)
+//   - Environment variables (PENTORA_*)
+//   - Config file (pentora.yaml)
+//
+// Example usage:
+//
+//	pentora server start
+//	pentora server start --addr 0.0.0.0 --port 8080
+//	pentora server start --workspace-dir /data/pentora --jobs-concurrency 10
+//
+// See NOTES.md#30 for detailed server architecture design.
+func newStartServerCommand() *cobra.Command {
+	var (
+		addr         string
+		port         int
+		noUI         bool
+		noAPI        bool
+		concurrency  int
+		uiAssetsPath string
+	)
+
+	cmd := &cobra.Command{
+		Use:   "start",
+		Short: "Start the Pentora server",
+		Long: `Start the Pentora server process.
+
+The server hosts multiple components in a single runtime:
+  - HTTP API (REST endpoints for scan management and workspace queries)
+  - Web UI (static SPA with client-side routing)
+  - Background workers (job queue, scheduler, notifier)
+
+The server runs until interrupted (Ctrl+C) or killed, performing graceful
+shutdown to drain in-flight requests and complete running jobs.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Build server config
+			cfg := config.ServerConfig{
+				Addr:         addr,
+				Port:         port,
+				UIEnabled:    !noUI,
+				APIEnabled:   !noAPI,
+				JobsEnabled:  true,
+				Concurrency:  concurrency,
+				UIAssetsPath: uiAssetsPath,
+				ReadTimeout:  30 * time.Second,
+				WriteTimeout: 30 * time.Second,
+			}
+
+			// TODO: Get real workspace from context when workspace implementation is ready
+			// For now, use stub workspace
+			ws := &stubWorkspace{}
+
+			// Get config manager from context
+			cfgMgr, ok := appctx.Config(cmd.Context())
+			if !ok {
+				return fmt.Errorf("config manager not available in context")
+			}
+
+			// Build dependencies
+			deps := &app.Deps{
+				Workspace: ws,
+				Config:    cfgMgr,
+				Logger:    &log.Logger,
+			}
+
+			// Create server app
+			serverApp, err := app.New(cmd.Context(), cfg, deps)
+			if err != nil {
+				return fmt.Errorf("create server: %w", err)
+			}
+
+			// Run server (blocks until shutdown)
+			return serverApp.Run(cmd.Context())
+		},
+	}
+
+	// Server-specific flags
+	cmd.Flags().StringVar(&addr, "addr", "127.0.0.1", "Server listen address")
+	cmd.Flags().IntVar(&port, "port", 8080, "Server listen port")
+	cmd.Flags().BoolVar(&noUI, "no-ui", false, "Disable UI static serving")
+	cmd.Flags().BoolVar(&noAPI, "no-api", false, "Disable REST API endpoints")
+	cmd.Flags().IntVar(&concurrency, "jobs-concurrency", 4, "Number of concurrent background workers")
+	cmd.Flags().StringVar(&uiAssetsPath, "ui-assets-path", "", "UI assets directory (dev mode: serve from disk)")
+
+	return cmd
+}
