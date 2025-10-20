@@ -102,7 +102,7 @@ binary: build-ui generate dist
     -X github.com/pentora-ai/pentora/pkg/version.Version=$(VERSION) \
     -X github.com/pentora-ai/pentora/pkg/version.Commit=$(CODENAME) \
     -X github.com/pentora-ai/pentora/pkg/version.BuildDate=$(DATE)" \
-    -installsuffix nocgo -o "./dist/${GOOS}/${GOARCH}/$(BIN_NAME)" ./cmd/pentora
+    -installsuffix nocgo -o "./dist/${GOOS}/${GOARCH}/$(BIN_NAME)" ./cmd
 	@echo "✅ Binary built → ./dist/${GOOS}/${GOARCH}/$(BIN_NAME)"
 
 .PHONY: lint

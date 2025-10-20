@@ -6,6 +6,7 @@ go.work*
 
 
 internal
+/dist
 .gocache
 public.pem
 test.license
