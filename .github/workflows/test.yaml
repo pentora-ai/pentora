@@ -12,6 +12,7 @@ on:
 env:
   GO_VERSION: '1.25'
   NODE_VERSION: '20'
+  VERSION: 'dev'
 
 jobs:
   test-unit:
@@ -131,7 +132,15 @@ jobs:
         run: make binary
 
       - name: Test binary version
-        run: ./dist/$(uname -s | tr '[:upper:]' '[:lower:]')/$(uname -m)/pentora version
+        run: |
+          GOOS=$(uname -s | tr '[:upper:]' '[:lower:]')
+          GOARCH=$(uname -m)
+          # Map uname -m output to Go GOARCH values
+          case "$GOARCH" in
+            x86_64) GOARCH=amd64 ;;
+            aarch64) GOARCH=arm64 ;;
+          esac
+          ./dist/${GOOS}/${GOARCH}/pentora version
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
