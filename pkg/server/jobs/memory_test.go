@@ -119,4 +119,70 @@ func TestMemoryManager_GracefulShutdown(t *testing.T) {
 		err = m.Stop(stopCtx)
 		require.NoError(t, err, "Should stop gracefully after context cancellation")
 	})
+
+	t.Run("stop timeout triggers error", func(t *testing.T) {
+		m := NewMemoryManager(2)
+		ctx := context.Background()
+
+		err := m.Start(ctx)
+		require.NoError(t, err)
+
+		// Create already-cancelled context for immediate timeout
+		stopCtx, cancel := context.WithCancel(context.Background())
+		cancel() // Cancel immediately
+
+		// Manually prevent workers from stopping by not calling cancelFunc
+		// This simulates workers being stuck and not responding to cancellation
+		originalCancelFunc := m.cancelFunc
+		m.mu.Lock()
+		m.cancelFunc = func() {} // No-op cancel function
+		m.mu.Unlock()
+
+		err = m.Stop(stopCtx)
+		require.Error(t, err, "Should return error when stop times out")
+		require.ErrorIs(t, err, context.Canceled)
+
+		// Cleanup: restore cancel function and actually stop workers
+		m.mu.Lock()
+		m.cancelFunc = originalCancelFunc
+		m.mu.Unlock()
+		if originalCancelFunc != nil {
+			originalCancelFunc()
+		}
+		time.Sleep(50 * time.Millisecond)
+	})
+}
+
+func TestMemoryManager_JobProcessing(t *testing.T) {
+	t.Run("workers process jobs from queue", func(t *testing.T) {
+		m := NewMemoryManager(2)
+		ctx := context.Background()
+
+		err := m.Start(ctx)
+		require.NoError(t, err)
+
+		// Give workers time to start
+		time.Sleep(10 * time.Millisecond)
+
+		// Submit jobs to the queue
+		testJobs := []Job{
+			{ID: "job-1", Type: "test-type-1", Payload: "data-1"},
+			{ID: "job-2", Type: "test-type-2", Payload: "data-2"},
+			{ID: "job-3", Type: "test-type-3", Payload: "data-3"},
+		}
+
+		for _, job := range testJobs {
+			m.jobQueue <- job
+		}
+
+		// Give workers time to process jobs
+		time.Sleep(50 * time.Millisecond)
+
+		// Stop manager
+		stopCtx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+
+		err = m.Stop(stopCtx)
+		require.NoError(t, err, "Should stop after processing jobs")
+	})
 }
