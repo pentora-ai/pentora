@@ -6,6 +6,7 @@ require (
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/containous/mux v0.0.0-20220627093034-b2dd784e613f
 	github.com/go-ping/ping v1.2.0
+	github.com/gofrs/flock v0.13.0
 	github.com/knadh/koanf/providers/confmap v1.0.0
 	github.com/knadh/koanf/providers/posflag v1.0.0
 	github.com/knadh/koanf/v2 v2.2.0
@@ -19,7 +20,6 @@ require (
 )
 
 require (
-	github.com/gofrs/flock v0.13.0 // indirect
 	golang.org/x/text v0.27.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250804133106-a7a43d27e69b // indirect
 )
