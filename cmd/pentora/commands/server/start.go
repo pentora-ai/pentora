@@ -10,6 +10,7 @@ import (
 	"github.com/pentora-ai/pentora/pkg/config"
 	"github.com/pentora-ai/pentora/pkg/server/api"
 	"github.com/pentora-ai/pentora/pkg/server/app"
+	"github.com/pentora-ai/pentora/pkg/storage"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -86,18 +87,30 @@ shutdown to drain in-flight requests and complete running jobs.`,
 				WriteTimeout: 30 * time.Second,
 			}
 
-			// TODO: Get real workspace from context when workspace implementation is ready
-			// For now, use stub workspace
-			ws := &stubWorkspace{}
-
 			// Get config manager from context
 			cfgMgr, ok := appctx.Config(cmd.Context())
 			if !ok {
 				return fmt.Errorf("config manager not available in context")
 			}
 
+			// Create storage backend
+			storageConfig, err := storage.DefaultConfig()
+			if err != nil {
+				return fmt.Errorf("get storage config: %w", err)
+			}
+
+			storageBackend, err := storage.NewBackend(cmd.Context(), storageConfig)
+			if err != nil {
+				return fmt.Errorf("create storage backend: %w", err)
+			}
+
+			// TODO: Keep stub workspace for backward compatibility during transition
+			// Remove this when all code paths use storage
+			ws := &stubWorkspace{}
+
 			// Build dependencies
 			deps := &app.Deps{
+				Storage:   storageBackend,
 				Workspace: ws,
 				Config:    cfgMgr,
 				Logger:    &log.Logger,

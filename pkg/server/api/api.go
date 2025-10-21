@@ -2,12 +2,18 @@ package api
 
 import (
 	"sync/atomic"
+
+	"github.com/pentora-ai/pentora/pkg/storage"
 )
 
 // Deps holds dependencies for API handlers.
 // This pattern enables dependency injection and easier testing.
 type Deps struct {
-	// Workspace provides access to scan data
+	// Storage backend for scan data (NEW - preferred)
+	Storage storage.Backend
+
+	// Workspace provides access to scan data (DEPRECATED - use Storage instead)
+	// Kept for backward compatibility during migration
 	Workspace WorkspaceInterface
 
 	// Ready flag for readiness check
