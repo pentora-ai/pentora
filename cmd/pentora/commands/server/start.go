@@ -82,9 +82,16 @@ shutdown to drain in-flight requests and complete running jobs.`,
 				APIEnabled:   !noAPI,
 				JobsEnabled:  true,
 				Concurrency:  concurrency,
-				UIAssetsPath: uiAssetsPath,
 				ReadTimeout:  30 * time.Second,
 				WriteTimeout: 30 * time.Second,
+				UI: config.UIConfig{
+					AssetsPath: uiAssetsPath,
+				},
+			}
+
+			// Validate configuration
+			if err := cfg.Validate(); err != nil {
+				return fmt.Errorf("invalid server configuration: %w", err)
 			}
 
 			// Get config manager from context

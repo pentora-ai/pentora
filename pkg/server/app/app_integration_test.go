@@ -96,9 +96,14 @@ func TestServerFullLifecycle(t *testing.T) {
 		APIEnabled:   true,
 		JobsEnabled:  true,
 		Concurrency:  2,
-		UIAssetsPath: "", // Production mode (embedded assets)
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
+		UI: config.UIConfig{
+			AssetsPath: "", // Production mode (embedded assets)
+		},
+		Auth: config.AuthConfig{
+			Mode: "none", // Disable auth for integration tests
+		},
 	}
 
 	// Prepare dependencies
@@ -289,6 +294,9 @@ func TestServerWithoutUI(t *testing.T) {
 		JobsEnabled: false,
 		Concurrency: 1,
 		ReadTimeout: 10 * time.Second,
+		Auth: config.AuthConfig{
+			Mode: "none", // Disable auth for tests
+		},
 	}
 
 	logger := zerolog.Nop()
@@ -341,6 +349,9 @@ func TestServerWithoutAPI(t *testing.T) {
 		JobsEnabled: false,
 		Concurrency: 1,
 		ReadTimeout: 10 * time.Second,
+		Auth: config.AuthConfig{
+			Mode: "none", // Disable auth for tests
+		},
 	}
 
 	logger := zerolog.Nop()

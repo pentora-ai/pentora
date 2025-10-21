@@ -4,6 +4,9 @@ import (
 	"net/http"
 
 	"github.com/pentora-ai/pentora/pkg/config"
+	"github.com/pentora-ai/pentora/pkg/server/api"
+	v1 "github.com/pentora-ai/pentora/pkg/server/api/v1"
+	"github.com/pentora-ai/pentora/pkg/ui"
 )
 
 // NewRouter creates and configures the main HTTP router.
@@ -13,13 +16,24 @@ import (
 // Routes are mounted conditionally based on cfg.APIEnabled and cfg.UIEnabled.
 //
 // Health endpoints are always enabled for liveness/readiness checks.
-func NewRouter(cfg config.ServerConfig) *http.ServeMux {
+func NewRouter(cfg config.ServerConfig, deps *api.Deps) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	// Health endpoints (always enabled)
 	mux.HandleFunc("GET /healthz", HealthzHandler)
+	mux.HandleFunc("GET /readyz", v1.ReadyzHandler(deps.Ready))
 
-	// Note: /readyz will be wired in Phase 3 with Ready atomic.Bool
+	// API endpoints (conditional)
+	if cfg.APIEnabled {
+		mux.HandleFunc("GET /api/v1/scans", v1.ListScansHandler(deps))
+		mux.HandleFunc("GET /api/v1/scans/{id}", v1.GetScanHandler(deps))
+	}
+
+	// UI static serving (conditional)
+	if cfg.UIEnabled {
+		uiHandler := ui.NewHandler(cfg)
+		mux.Handle("/", uiHandler)
+	}
 
 	return mux
 }

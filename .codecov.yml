@@ -1,0 +1,55 @@
+# Codecov configuration for Pentora
+# https://docs.codecov.com/docs/codecov-yaml
+
+# Coverage targets
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+    patch:
+      default:
+        target: auto
+        threshold: 1%
+
+  # Ignore paths that don't need coverage
+  ignore:
+    # CLI entry points - thin wrappers around pkg/
+    - "cmd/**/*.go"
+
+    # CLI command implementations - integration tested
+    - "pkg/cli/**/*.go"
+
+    # Generated code
+    - "**/*.pb.go"           # Protobuf generated files
+    - "**/*_generated.go"    # Any generated Go files
+    - "pkg/engine/proto/**"  # Protocol buffer definitions
+
+    # Not yet implemented / future work
+    - "pkg/api/dashboard/**"
+    - "pkg/fingerprint/catalogsync/**"
+
+    # Test files (already excluded by default but explicit)
+    - "**/*_test.go"
+    - "**/testdata/**"
+    - "**/mock_*.go"
+
+# Comment behavior on PRs
+comment:
+  layout: "diff, flags, files"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true
+
+# Flags for different components (optional)
+flags:
+  unit:
+    paths:
+      - pkg/
+    carryforward: true
+  integration:
+    paths:
+      - pkg/server/
+    carryforward: true

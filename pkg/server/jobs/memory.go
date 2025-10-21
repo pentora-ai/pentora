@@ -1,3 +1,4 @@
+// pkg/server/jobs/memory.go
 package jobs
 
 import (
@@ -8,63 +9,76 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// MemoryManager is an in-memory job queue implementation.
-// Suitable for single-instance OSS deployments.
+// MemoryManager is an in-memory implementation of Manager for OSS.
+// It processes jobs using a worker pool with configurable concurrency.
 type MemoryManager struct {
 	concurrency int
-	workers     []*worker
-	queue       chan Job
+	jobQueue    chan Job
 	wg          sync.WaitGroup
-	mu          sync.Mutex
+	cancelFunc  context.CancelFunc
+	mu          sync.RWMutex
+	started     bool
 }
 
 // NewMemoryManager creates a new in-memory job manager.
+// concurrency controls the number of worker goroutines.
+// If concurrency <= 0, defaults to 4.
 func NewMemoryManager(concurrency int) *MemoryManager {
 	if concurrency <= 0 {
-		concurrency = 4
+		concurrency = 4 // Default worker count
 	}
 
 	return &MemoryManager{
 		concurrency: concurrency,
-		queue:       make(chan Job, 100), // Buffer for 100 jobs
-		workers:     make([]*worker, 0, concurrency),
+		jobQueue:    make(chan Job, 100), // Buffered channel for jobs
+		started:     false,
 	}
 }
 
-// Start launches worker goroutines.
+// Start begins processing jobs in the background.
+// It spawns worker goroutines that process jobs from the queue.
 func (m *MemoryManager) Start(ctx context.Context) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	if m.started {
+		return fmt.Errorf("job manager already started")
+	}
+
+	// Create cancellable context for workers
+	workerCtx, cancel := context.WithCancel(ctx)
+	m.cancelFunc = cancel
+
+	// Start worker pool
+	for i := 0; i < m.concurrency; i++ {
+		m.wg.Add(1)
+		go m.worker(workerCtx, i)
+	}
+
+	m.started = true
 	log.Info().
 		Str("component", "jobs").
 		Int("workers", m.concurrency).
-		Msg("Starting job manager")
+		Msg("Job manager started")
 
-	for i := 0; i < m.concurrency; i++ {
-		w := &worker{
-			id:    i,
-			queue: m.queue,
-		}
-		m.workers = append(m.workers, w)
-
-		m.wg.Add(1)
-		go func(w *worker) {
-			defer m.wg.Done()
-			w.run(ctx)
-		}(w)
-	}
-
-	log.Info().Msg("Job manager started")
 	return nil
 }
 
-// Stop gracefully shuts down workers.
+// Stop gracefully stops all workers and waits for in-flight jobs to complete.
+// It respects the context deadline for shutdown timeout.
 func (m *MemoryManager) Stop(ctx context.Context) error {
-	log.Info().Msg("Stopping job manager...")
+	m.mu.Lock()
+	if !m.started {
+		m.mu.Unlock()
+		return nil // Already stopped
+	}
 
-	// Close queue to signal workers
-	close(m.queue)
+	// Signal workers to stop
+	if m.cancelFunc != nil {
+		m.cancelFunc()
+	}
+	m.started = false
+	m.mu.Unlock()
 
 	// Wait for workers to finish with timeout
 	done := make(chan struct{})
@@ -75,50 +89,44 @@ func (m *MemoryManager) Stop(ctx context.Context) error {
 
 	select {
 	case <-done:
-		log.Info().Msg("Job manager stopped gracefully")
+		log.Info().
+			Str("component", "jobs").
+			Msg("Job manager stopped gracefully")
 		return nil
 	case <-ctx.Done():
-		return fmt.Errorf("job manager stop timeout: %w", ctx.Err())
+		log.Warn().
+			Str("component", "jobs").
+			Msg("Job manager shutdown timed out")
+		return ctx.Err()
 	}
 }
 
-// worker processes jobs from the queue
-type worker struct {
-	id    int
-	queue <-chan Job
-}
+// worker processes jobs from the queue until the context is cancelled.
+func (m *MemoryManager) worker(ctx context.Context, id int) {
+	defer m.wg.Done()
 
-func (w *worker) run(ctx context.Context) {
-	log.Info().
+	log.Debug().
 		Str("component", "jobs").
-		Int("worker_id", w.id).
+		Int("worker_id", id).
 		Msg("Worker started")
 
 	for {
 		select {
 		case <-ctx.Done():
-			log.Info().Int("worker_id", w.id).Msg("Worker stopping (context cancelled)")
+			log.Debug().
+				Str("component", "jobs").
+				Int("worker_id", id).
+				Msg("Worker stopping")
 			return
-
-		case job, ok := <-w.queue:
-			if !ok {
-				log.Info().Int("worker_id", w.id).Msg("Worker stopping (queue closed)")
-				return
-			}
-
-			w.process(job)
+		case job := <-m.jobQueue:
+			// Process job (placeholder for MVP)
+			log.Debug().
+				Str("component", "jobs").
+				Int("worker_id", id).
+				Str("job_id", job.ID).
+				Str("job_type", job.Type).
+				Msg("Processing job")
+			// Actual job processing logic would go here
 		}
 	}
-}
-
-func (w *worker) process(job Job) {
-	log.Info().
-		Str("component", "jobs").
-		Int("worker_id", w.id).
-		Str("job_id", job.ID).
-		Str("job_type", job.Type).
-		Msg("Processing job")
-
-	// TODO: Actual job processing logic
-	// For now, just log
 }

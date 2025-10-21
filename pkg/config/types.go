@@ -31,7 +31,6 @@ type ServerConfig struct {
 
 	// Paths
 	WorkspaceDir string `description:"Workspace root directory" koanf:"workspace_dir"`
-	UIAssetsPath string `description:"UI assets directory (dev mode: serve from disk)" koanf:"ui_assets_path"`
 
 	// Performance
 	Concurrency int `description:"Number of concurrent background workers" koanf:"concurrency"`
@@ -39,4 +38,20 @@ type ServerConfig struct {
 	// HTTP timeouts
 	ReadTimeout  time.Duration `description:"HTTP read timeout" koanf:"read_timeout"`
 	WriteTimeout time.Duration `description:"HTTP write timeout" koanf:"write_timeout"`
+
+	// Sub-configurations
+	UI   UIConfig   `description:"UI configuration" koanf:"ui"`
+	Auth AuthConfig `description:"Authentication configuration" koanf:"auth"`
+}
+
+// UIConfig holds UI-specific configuration.
+type UIConfig struct {
+	DevMode    bool   `description:"Enable dev mode (disables auth, localhost only)" koanf:"dev_mode"`
+	AssetsPath string `description:"Override embedded assets with disk path (for development)" koanf:"assets_path"`
+}
+
+// AuthConfig holds authentication configuration.
+type AuthConfig struct {
+	Mode  string `description:"Authentication mode: none|token|oidc" koanf:"mode"`
+	Token string `description:"Static bearer token (required for token mode)" koanf:"token"`
 }
