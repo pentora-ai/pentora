@@ -3,22 +3,30 @@ package httpx
 import (
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 
 	"github.com/pentora-ai/pentora/pkg/config"
+	"github.com/pentora-ai/pentora/pkg/server/api"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNewRouter(t *testing.T) {
 	cfg := config.DefaultServerConfig()
-	router := NewRouter(cfg)
+	deps := &api.Deps{
+		Ready: &atomic.Bool{},
+	}
+	router := NewRouter(cfg, deps)
 
 	require.NotNil(t, router)
 }
 
 func TestNewRouter_HealthzMounted(t *testing.T) {
 	cfg := config.DefaultServerConfig()
-	router := NewRouter(cfg)
+	deps := &api.Deps{
+		Ready: &atomic.Bool{},
+	}
+	router := NewRouter(cfg, deps)
 
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	w := httptest.NewRecorder()

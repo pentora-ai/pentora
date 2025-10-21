@@ -9,7 +9,6 @@ import (
 
 	"github.com/pentora-ai/pentora/pkg/config"
 	"github.com/pentora-ai/pentora/pkg/server/api"
-	"github.com/pentora-ai/pentora/pkg/server/api/v1"
 	"github.com/pentora-ai/pentora/pkg/server/httpx"
 	"github.com/pentora-ai/pentora/pkg/server/jobs"
 	"github.com/pentora-ai/pentora/pkg/ui"
@@ -44,9 +43,6 @@ func New(ctx context.Context, cfg config.ServerConfig, deps *Deps) (*App, error)
 		}
 	}
 
-	// Create router
-	router := httpx.NewRouter(cfg)
-
 	// Prepare API dependencies
 	ready := &atomic.Bool{}
 	apiDeps := &api.Deps{
@@ -55,18 +51,13 @@ func New(ctx context.Context, cfg config.ServerConfig, deps *Deps) (*App, error)
 		Ready:     ready,
 	}
 
-	// Mount API endpoints
+	// Create router with all endpoints mounted
+	router := httpx.NewRouter(cfg, apiDeps)
+
 	if cfg.APIEnabled {
 		log.Info().
 			Str("component", "app").
-			Msg("Mounting API endpoints")
-
-		// Mount readiness endpoint
-		router.HandleFunc("GET /readyz", v1.ReadyzHandler(ready))
-
-		// Mount API v1 routes
-		router.HandleFunc("GET /api/v1/scans", v1.ListScansHandler(apiDeps))
-		router.HandleFunc("GET /api/v1/scans/{id}", v1.GetScanHandler(apiDeps))
+			Msg("API endpoints enabled")
 	} else {
 		log.Warn().
 			Str("component", "app").
