@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/pentora-ai/pentora/pkg/config"
@@ -75,10 +77,116 @@ func TestFileExists(t *testing.T) {
 	require.False(t, FileExists("."))
 }
 
+func TestSPAHandler_ServeStaticFiles(t *testing.T) {
+	// Create a mock file server
+	mockFS := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Simulate serving a static file
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("static file content"))
+	})
+
+	handler := spaHandler(mockFS)
+
+	// Test serving a static asset
+	req := httptest.NewRequest(http.MethodGet, "/assets/main.js", nil)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Equal(t, "static file content", w.Body.String())
+	require.Equal(t, "/assets/main.js", req.URL.Path) // Path unchanged
+}
+
+func TestSPAHandler_FallbackToIndex(t *testing.T) {
+	// Create a mock file server that serves index.html for root
+	mockFS := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			w.Header().Set("Content-Type", "text/html")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("<html>index</html>"))
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	})
+
+	handler := spaHandler(mockFS)
+
+	// Test SPA route fallback (e.g., /dashboard should serve index.html)
+	req := httptest.NewRequest(http.MethodGet, "/dashboard", nil)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Equal(t, "<html>index</html>", w.Body.String())
+	require.Equal(t, "/", req.URL.Path) // Path rewritten to "/"
+}
+
+func TestSPAHandler_NestedRoutes(t *testing.T) {
+	mockFS := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("index"))
+		}
+	})
+
+	handler := spaHandler(mockFS)
+
+	// Test nested SPA routes
+	tests := []struct {
+		name string
+		path string
+	}{
+		{"settings route", "/settings"},
+		{"nested settings", "/settings/profile"},
+		{"deep nested", "/app/users/123/edit"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.path, nil)
+			w := httptest.NewRecorder()
+
+			handler.ServeHTTP(w, req)
+
+			require.Equal(t, http.StatusOK, w.Code)
+			require.Equal(t, "index", w.Body.String())
+			require.Equal(t, "/", req.URL.Path) // All rewritten to "/"
+		})
+	}
+}
+
+func TestShouldServeFile_EdgeCases(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		expected bool
+	}{
+		// Additional edge cases
+		{"favicon.ico", "/favicon.ico", true},
+		{"favicon.png", "/favicon.png", true},
+		{"nested assets", "/assets/js/app.js", true},
+		{"query params", "/assets/main.js?v=123", true}, // Extension still .js
+		{"double extension", "/file.tar.gz", true},
+		{"dot file", "/.htaccess", true},
+		{"empty extension html", "/about.html", false}, // HTML routes use SPA
+		{"uppercase extension", "/IMAGE.PNG", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := shouldServeFile(tt.path)
+			require.Equal(t, tt.expected, result, "shouldServeFile(%s) = %v, want %v", tt.path, result, tt.expected)
+		})
+	}
+}
+
 // Note: Full integration test requires built UI assets
 // To run manually:
-//  1. cd ui/web && npm run build
-//  2. go test ./pkg/server/ui -v
+//  1. cd ui && npm run build
+//  2. go test ./pkg/ui -v
 //
 // The test below is skipped in CI until UI is built
 func TestNewHandler_Integration(t *testing.T) {
