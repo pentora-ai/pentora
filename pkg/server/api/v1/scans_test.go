@@ -1,11 +1,14 @@
 package v1
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/pentora-ai/pentora/pkg/server/api"
 	"github.com/pentora-ai/pentora/pkg/storage"
@@ -235,4 +238,302 @@ func TestGetScanHandler_DifferentIDs(t *testing.T) {
 	err = json.NewDecoder(w2.Body).Decode(&scan2)
 	require.NoError(t, err)
 	require.Equal(t, "scan-2", scan2.ID)
+}
+
+// Mock storage backend for testing storage path
+type mockStorageBackend struct {
+	scans     []*storage.ScanMetadata
+	scanByID  map[string]*storage.ScanMetadata
+	listError error
+	getError  error
+}
+
+type mockScanStore struct {
+	backend *mockStorageBackend
+}
+
+func (m *mockStorageBackend) Scans() storage.ScanStore {
+	return &mockScanStore{backend: m}
+}
+
+func (m *mockScanStore) List(ctx context.Context, orgID string, filter storage.ScanFilter) ([]*storage.ScanMetadata, error) {
+	if m.backend.listError != nil {
+		return nil, m.backend.listError
+	}
+	return m.backend.scans, nil
+}
+
+func (m *mockScanStore) Get(ctx context.Context, orgID, scanID string) (*storage.ScanMetadata, error) {
+	if m.backend.getError != nil {
+		return nil, m.backend.getError
+	}
+	if scan, ok := m.backend.scanByID[scanID]; ok {
+		return scan, nil
+	}
+	return nil, &storage.NotFoundError{
+		ResourceType: "scan",
+		ResourceID:   scanID,
+	}
+}
+
+func (m *mockScanStore) Create(ctx context.Context, orgID string, metadata *storage.ScanMetadata) error {
+	return nil
+}
+
+func (m *mockScanStore) Update(ctx context.Context, orgID, scanID string, updates storage.ScanUpdates) error {
+	return nil
+}
+
+func (m *mockScanStore) Delete(ctx context.Context, orgID, scanID string) error {
+	return nil
+}
+
+func (m *mockScanStore) ReadData(ctx context.Context, orgID, scanID string, dataType storage.DataType) (io.ReadCloser, error) {
+	return nil, storage.ErrNotSupported
+}
+
+func (m *mockScanStore) WriteData(ctx context.Context, orgID, scanID string, dataType storage.DataType, data io.Reader) error {
+	return nil
+}
+
+func (m *mockScanStore) AppendData(ctx context.Context, orgID, scanID string, dataType storage.DataType, data []byte) error {
+	return nil
+}
+
+func (m *mockScanStore) GetAnalytics(ctx context.Context, orgID string, period storage.TimePeriod) (*storage.Analytics, error) {
+	return nil, storage.ErrNotSupported
+}
+
+func (m *mockStorageBackend) Initialize(ctx context.Context) error {
+	return nil
+}
+
+func (m *mockStorageBackend) Close() error {
+	return nil
+}
+
+func TestListScansHandler_WithStorage(t *testing.T) {
+	now := time.Now()
+	mockStorage := &mockStorageBackend{
+		scans: []*storage.ScanMetadata{
+			{
+				ID:        "storage-scan-1",
+				Status:    "completed",
+				StartedAt: now.Add(-1 * time.Hour),
+			},
+			{
+				ID:        "storage-scan-2",
+				Status:    "running",
+				StartedAt: now,
+			},
+		},
+	}
+
+	deps := &api.Deps{
+		Storage: mockStorage,
+	}
+
+	handler := ListScansHandler(deps)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/scans", nil)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Equal(t, "application/json", w.Header().Get("Content-Type"))
+
+	var scans []api.ScanMetadata
+	err := json.NewDecoder(w.Body).Decode(&scans)
+	require.NoError(t, err)
+	require.Len(t, scans, 2)
+	require.Equal(t, "storage-scan-1", scans[0].ID)
+	require.Equal(t, "completed", scans[0].Status)
+}
+
+func TestListScansHandler_StorageError(t *testing.T) {
+	mockStorage := &mockStorageBackend{
+		listError: fmt.Errorf("storage backend error"),
+	}
+
+	deps := &api.Deps{
+		Storage: mockStorage,
+	}
+
+	handler := ListScansHandler(deps)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/scans", nil)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusInternalServerError, w.Code)
+	require.Contains(t, w.Body.String(), "Internal Server Error")
+}
+
+func TestGetScanHandler_WithStorage(t *testing.T) {
+	now := time.Now()
+	completedAt := now.Add(5 * time.Minute)
+
+	mockStorage := &mockStorageBackend{
+		scanByID: map[string]*storage.ScanMetadata{
+			"storage-scan-1": {
+				ID:              "storage-scan-1",
+				Status:          "completed",
+				StartedAt:       now,
+				CompletedAt:     completedAt,
+				HostCount:       15,
+				ServiceCount:    42,
+				Duration:        300,
+				StorageLocation: "/path/to/scan",
+				VulnCount: storage.VulnCounts{
+					Critical: 2,
+					High:     5,
+					Medium:   8,
+					Low:      12,
+					Info:     20,
+				},
+			},
+		},
+	}
+
+	deps := &api.Deps{
+		Storage: mockStorage,
+	}
+
+	handler := GetScanHandler(deps)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/scans/storage-scan-1", nil)
+	req.SetPathValue("id", "storage-scan-1")
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Equal(t, "application/json", w.Header().Get("Content-Type"))
+
+	var scan api.ScanDetail
+	err := json.NewDecoder(w.Body).Decode(&scan)
+	require.NoError(t, err)
+	require.Equal(t, "storage-scan-1", scan.ID)
+	require.Equal(t, "completed", scan.Status)
+	require.NotEmpty(t, scan.EndTime)
+	require.Equal(t, float64(15), scan.Results["hosts_found"])
+	require.Equal(t, float64(42), scan.Results["services_found"])
+	require.Equal(t, float64(47), scan.Results["vulnerabilities"]) // 2+5+8+12+20
+	require.Equal(t, float64(2), scan.Results["vuln_critical"])
+	require.Equal(t, float64(5), scan.Results["vuln_high"])
+	require.Equal(t, float64(300), scan.Results["duration_seconds"])
+}
+
+func TestGetScanHandler_StorageNotFound(t *testing.T) {
+	mockStorage := &mockStorageBackend{
+		scanByID: map[string]*storage.ScanMetadata{},
+	}
+
+	deps := &api.Deps{
+		Storage: mockStorage,
+	}
+
+	handler := GetScanHandler(deps)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/scans/nonexistent", nil)
+	req.SetPathValue("id", "nonexistent")
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusNotFound, w.Code)
+	require.Contains(t, w.Body.String(), "Not Found")
+}
+
+func TestGetScanHandler_StorageError(t *testing.T) {
+	mockStorage := &mockStorageBackend{
+		getError: fmt.Errorf("storage backend error"),
+	}
+
+	deps := &api.Deps{
+		Storage: mockStorage,
+	}
+
+	handler := GetScanHandler(deps)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/scans/scan-1", nil)
+	req.SetPathValue("id", "scan-1")
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+func TestGetScanHandler_WithErrorMessage(t *testing.T) {
+	now := time.Now()
+
+	mockStorage := &mockStorageBackend{
+		scanByID: map[string]*storage.ScanMetadata{
+			"failed-scan": {
+				ID:           "failed-scan",
+				Status:       "failed",
+				StartedAt:    now,
+				CompletedAt:  now.Add(1 * time.Minute),
+				ErrorMessage: "Connection timeout",
+			},
+		},
+	}
+
+	deps := &api.Deps{
+		Storage: mockStorage,
+	}
+
+	handler := GetScanHandler(deps)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/scans/failed-scan", nil)
+	req.SetPathValue("id", "failed-scan")
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var scan api.ScanDetail
+	err := json.NewDecoder(w.Body).Decode(&scan)
+	require.NoError(t, err)
+	require.Equal(t, "failed", scan.Status)
+	require.Equal(t, "Connection timeout", scan.Results["error"])
+}
+
+func TestListScansHandler_NoBackend(t *testing.T) {
+	deps := &api.Deps{
+		Storage:   nil,
+		Workspace: nil,
+	}
+
+	handler := ListScansHandler(deps)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/scans", nil)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusInternalServerError, w.Code)
+	require.Contains(t, w.Body.String(), "no storage backend configured")
+}
+
+func TestGetScanHandler_NoBackend(t *testing.T) {
+	deps := &api.Deps{
+		Storage:   nil,
+		Workspace: nil,
+	}
+
+	handler := GetScanHandler(deps)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/scans/scan-1", nil)
+	req.SetPathValue("id", "scan-1")
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusInternalServerError, w.Code)
+	require.Contains(t, w.Body.String(), "no storage backend configured")
 }
