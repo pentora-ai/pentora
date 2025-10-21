@@ -9,7 +9,9 @@ import (
 
 func TestNewHandler_ProductionMode(t *testing.T) {
 	cfg := config.ServerConfig{
-		UIAssetsPath: "", // Production mode (empty path)
+		UI: config.UIConfig{
+			AssetsPath: "", // Production mode (empty path)
+		},
 	}
 
 	handler := NewHandler(cfg)
@@ -18,7 +20,9 @@ func TestNewHandler_ProductionMode(t *testing.T) {
 
 func TestNewHandler_DevMode(t *testing.T) {
 	cfg := config.ServerConfig{
-		UIAssetsPath: "./testdata", // Dev mode (disk path)
+		UI: config.UIConfig{
+			AssetsPath: "./testdata", // Dev mode (disk path)
+		},
 	}
 
 	handler := NewHandler(cfg)

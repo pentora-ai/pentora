@@ -31,7 +31,6 @@ type ServerConfig struct {
 
 	// Paths
 	WorkspaceDir string `description:"Workspace root directory" koanf:"workspace_dir"`
-	UIAssetsPath string `description:"UI assets directory (dev mode: serve from disk)" koanf:"ui_assets_path"`
 
 	// Performance
 	Concurrency int `description:"Number of concurrent background workers" koanf:"concurrency"`

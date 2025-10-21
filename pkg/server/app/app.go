@@ -11,7 +11,6 @@ import (
 	"github.com/pentora-ai/pentora/pkg/server/api"
 	"github.com/pentora-ai/pentora/pkg/server/httpx"
 	"github.com/pentora-ai/pentora/pkg/server/jobs"
-	"github.com/pentora-ai/pentora/pkg/ui"
 	"github.com/rs/zerolog/log"
 )
 
@@ -64,14 +63,8 @@ func New(ctx context.Context, cfg config.ServerConfig, deps *Deps) (*App, error)
 			Msg("API endpoints disabled")
 	}
 
-	// Mount UI handler
-	if cfg.UIEnabled {
-		log.Info().
-			Str("component", "app").
-			Msg("Mounting UI handler")
-		uiHandler := ui.NewHandler(cfg)
-		router.Handle("/", uiHandler)
-	} else {
+	// UI handler is already mounted in router.NewRouter()
+	if !cfg.UIEnabled {
 		log.Warn().
 			Str("component", "app").
 			Msg("UI serving disabled")

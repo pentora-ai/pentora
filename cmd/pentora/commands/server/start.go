@@ -82,9 +82,11 @@ shutdown to drain in-flight requests and complete running jobs.`,
 				APIEnabled:   !noAPI,
 				JobsEnabled:  true,
 				Concurrency:  concurrency,
-				UIAssetsPath: uiAssetsPath,
 				ReadTimeout:  30 * time.Second,
 				WriteTimeout: 30 * time.Second,
+				UI: config.UIConfig{
+					AssetsPath: uiAssetsPath,
+				},
 			}
 
 			// Validate configuration

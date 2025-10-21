@@ -29,7 +29,6 @@ func TestDefaultServerConfig(t *testing.T) {
 
 	// Paths should be empty by default
 	require.Empty(t, cfg.WorkspaceDir)
-	require.Empty(t, cfg.UIAssetsPath)
 
 	// UI config
 	require.False(t, cfg.UI.DevMode)

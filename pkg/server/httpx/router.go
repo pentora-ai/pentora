@@ -6,6 +6,7 @@ import (
 	"github.com/pentora-ai/pentora/pkg/config"
 	"github.com/pentora-ai/pentora/pkg/server/api"
 	v1 "github.com/pentora-ai/pentora/pkg/server/api/v1"
+	"github.com/pentora-ai/pentora/pkg/ui"
 )
 
 // NewRouter creates and configures the main HTTP router.
@@ -28,7 +29,11 @@ func NewRouter(cfg config.ServerConfig, deps *api.Deps) *http.ServeMux {
 		mux.HandleFunc("GET /api/v1/scans/{id}", v1.GetScanHandler(deps))
 	}
 
-	// TODO: UI static serving will be added in Phase 4
+	// UI static serving (conditional)
+	if cfg.UIEnabled {
+		uiHandler := ui.NewHandler(cfg)
+		mux.Handle("/", uiHandler)
+	}
 
 	return mux
 }

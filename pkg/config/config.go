@@ -130,16 +130,23 @@ func DefaultConfigAsMap() map[string]interface{} {
 		"log.file":   def.Log.File,
 
 		// Server configuration
-		"server.addr":           def.Server.Addr,
-		"server.port":           def.Server.Port,
-		"server.ui_enabled":     def.Server.UIEnabled,
-		"server.api_enabled":    def.Server.APIEnabled,
-		"server.jobs_enabled":   def.Server.JobsEnabled,
-		"server.workspace_dir":  def.Server.WorkspaceDir,
-		"server.ui_assets_path": def.Server.UIAssetsPath,
-		"server.concurrency":    def.Server.Concurrency,
-		"server.read_timeout":   def.Server.ReadTimeout,
-		"server.write_timeout":  def.Server.WriteTimeout,
+		"server.addr":          def.Server.Addr,
+		"server.port":          def.Server.Port,
+		"server.ui_enabled":    def.Server.UIEnabled,
+		"server.api_enabled":   def.Server.APIEnabled,
+		"server.jobs_enabled":  def.Server.JobsEnabled,
+		"server.workspace_dir": def.Server.WorkspaceDir,
+		"server.concurrency":   def.Server.Concurrency,
+		"server.read_timeout":  def.Server.ReadTimeout,
+		"server.write_timeout": def.Server.WriteTimeout,
+
+		// UI configuration
+		"server.ui.dev_mode":    def.Server.UI.DevMode,
+		"server.ui.assets_path": def.Server.UI.AssetsPath,
+
+		// Auth configuration
+		"server.auth.mode":  def.Server.Auth.Mode,
+		"server.auth.token": def.Server.Auth.Token,
 	}
 }
 
