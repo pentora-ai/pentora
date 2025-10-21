@@ -177,6 +177,17 @@ func TestServerConfig_Validate(t *testing.T) {
 			errMsg:  "invalid read_timeout",
 		},
 		{
+			name: "invalid write timeout",
+			cfg: ServerConfig{
+				Port:         8080,
+				Concurrency:  1,
+				WriteTimeout: -1 * time.Second,
+				Auth:         AuthConfig{Mode: "none"},
+			},
+			wantErr: true,
+			errMsg:  "invalid write_timeout",
+		},
+		{
 			name: "token mode without token",
 			cfg: ServerConfig{
 				Port:        8080,
