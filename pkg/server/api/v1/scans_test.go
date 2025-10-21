@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/pentora-ai/pentora/pkg/server/api"
+	"github.com/pentora-ai/pentora/pkg/storage"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,7 +34,11 @@ func (m *mockWorkspace) GetScan(id string) (*api.ScanDetail, error) {
 	if detail, ok := m.scanDetail[id]; ok {
 		return detail, nil
 	}
-	return nil, fmt.Errorf("scan not found: %s", id)
+	// Return storage.NotFoundError so handler correctly returns 404
+	return nil, &storage.NotFoundError{
+		ResourceType: "scan",
+		ResourceID:   id,
+	}
 }
 
 func TestListScansHandler_Success(t *testing.T) {
@@ -188,7 +193,9 @@ func TestGetScanHandler_WorkspaceError(t *testing.T) {
 
 	handler.ServeHTTP(w, req)
 
-	require.Equal(t, http.StatusNotFound, w.Code)
+	// Generic workspace errors should return 500, not 404
+	// Only storage.NotFoundError returns 404
+	require.Equal(t, http.StatusInternalServerError, w.Code)
 }
 
 func TestGetScanHandler_DifferentIDs(t *testing.T) {

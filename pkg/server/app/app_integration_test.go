@@ -14,6 +14,7 @@ import (
 	"github.com/pentora-ai/pentora/pkg/config"
 	"github.com/pentora-ai/pentora/pkg/server/api"
 	"github.com/pentora-ai/pentora/pkg/server/app"
+	"github.com/pentora-ai/pentora/pkg/storage"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 )
@@ -64,7 +65,11 @@ func (m *mockWorkspace) ListScans() ([]api.ScanMetadata, error) {
 func (m *mockWorkspace) GetScan(id string) (*api.ScanDetail, error) {
 	scan, ok := m.scans[id]
 	if !ok {
-		return nil, fmt.Errorf("scan not found: %s", id)
+		// Return storage.NotFoundError so API handler returns 404
+		return nil, &storage.NotFoundError{
+			ResourceType: "scan",
+			ResourceID:   id,
+		}
 	}
 	return scan, nil
 }

@@ -34,12 +34,23 @@ func New(ctx context.Context, cfg config.ServerConfig, deps *Deps) (*App, error)
 		Str("component", "app").
 		Msg("Initializing server application")
 
+	// Initialize storage backend if provided
+	if deps.Storage != nil {
+		log.Info().
+			Str("component", "app").
+			Msg("Initializing storage backend")
+		if err := deps.Storage.Initialize(ctx); err != nil {
+			return nil, fmt.Errorf("failed to initialize storage: %w", err)
+		}
+	}
+
 	// Create router
 	router := httpx.NewRouter(cfg)
 
 	// Prepare API dependencies
 	ready := &atomic.Bool{}
 	apiDeps := &api.Deps{
+		Storage:   deps.Storage,
 		Workspace: deps.Workspace,
 		Ready:     ready,
 	}
@@ -189,6 +200,23 @@ func (a *App) shutdown() error {
 		log.Info().
 			Str("component", "app").
 			Msg("Background jobs stopped")
+	}
+
+	// Close storage backend
+	if a.Deps.Storage != nil {
+		log.Info().
+			Str("component", "app").
+			Msg("Closing storage backend...")
+		if err := a.Deps.Storage.Close(); err != nil {
+			log.Error().
+				Str("component", "app").
+				Err(err).
+				Msg("Storage close failed")
+			return err
+		}
+		log.Info().
+			Str("component", "app").
+			Msg("Storage backend closed")
 	}
 
 	log.Info().

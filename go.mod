@@ -6,13 +6,14 @@ require (
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/containous/mux v0.0.0-20220627093034-b2dd784e613f
 	github.com/go-ping/ping v1.2.0
+	github.com/gofrs/flock v0.13.0
 	github.com/knadh/koanf/providers/confmap v1.0.0
 	github.com/knadh/koanf/providers/posflag v1.0.0
 	github.com/knadh/koanf/v2 v2.2.0
 	github.com/rs/zerolog v1.34.0
 	github.com/spf13/cast v1.8.0
 	github.com/spf13/cobra v1.9.1
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.11.1
 	google.golang.org/grpc v1.76.0
 	google.golang.org/protobuf v1.36.10
 	gopkg.in/yaml.v3 v3.0.1
@@ -40,5 +41,5 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/spf13/pflag v1.0.6
-	golang.org/x/sys v0.36.0 // indirect
+	golang.org/x/sys v0.37.0 // indirect
 )
