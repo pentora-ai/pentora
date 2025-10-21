@@ -80,7 +80,7 @@ func New(ctx context.Context, cfg config.ServerConfig, deps *Deps) (*App, error)
 	// Create HTTP server with middleware
 	httpServer := &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", cfg.Addr, cfg.Port),
-		Handler:      httpx.Chain(router),
+		Handler:      httpx.Chain(cfg, router),
 		ReadTimeout:  cfg.ReadTimeout,
 		WriteTimeout: cfg.WriteTimeout,
 	}
