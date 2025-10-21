@@ -16,6 +16,7 @@ import (
 	_ "github.com/pentora-ai/pentora/pkg/modules/reporting"    // Register reporting modules if needed
 	_ "github.com/pentora-ai/pentora/pkg/modules/scan"         // Register this module
 	"github.com/pentora-ai/pentora/pkg/scanexec"
+	"github.com/pentora-ai/pentora/pkg/storage"
 	"github.com/pentora-ai/pentora/pkg/stringutil"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -79,6 +80,32 @@ The command automatically plans the execution DAG using available modules.`,
 		}
 		orchestratorCtx := context.WithValue(appMgr.Context(), engine.AppManagerKey, appMgr)
 		orchestratorCtx = appctx.WithConfig(orchestratorCtx, appMgr.Config())
+
+		// Create and attach storage backend for scan result persistence
+		storageConfig, err := storage.DefaultConfig()
+		if err != nil {
+			logger.Warn().Err(err).Msg("Failed to get storage config, scans will not be persisted")
+		} else {
+			storageBackend, err := storage.NewBackend(orchestratorCtx, storageConfig)
+			if err != nil {
+				logger.Warn().Err(err).Msg("Failed to create storage backend, scans will not be persisted")
+			} else {
+				// Initialize storage
+				if err := storageBackend.Initialize(orchestratorCtx); err != nil {
+					logger.Warn().Err(err).Msg("Failed to initialize storage, scans will not be persisted")
+				} else {
+					svc = svc.WithStorage(storageBackend)
+					logger.Info().Msg("Storage backend initialized for scan persistence")
+
+					// Ensure storage is closed when scan completes
+					defer func() {
+						if err := storageBackend.Close(); err != nil {
+							logger.Warn().Err(err).Msg("Failed to close storage backend")
+						}
+					}()
+				}
+			}
+		}
 
 		if scanInteractive {
 			svc = svc.WithProgressSink(&progressLogger{logger: logger})
