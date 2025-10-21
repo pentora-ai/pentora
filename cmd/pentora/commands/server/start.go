@@ -87,6 +87,11 @@ shutdown to drain in-flight requests and complete running jobs.`,
 				WriteTimeout: 30 * time.Second,
 			}
 
+			// Validate configuration
+			if err := cfg.Validate(); err != nil {
+				return fmt.Errorf("invalid server configuration: %w", err)
+			}
+
 			// Get config manager from context
 			cfgMgr, ok := appctx.Config(cmd.Context())
 			if !ok {
