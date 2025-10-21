@@ -291,3 +291,27 @@ func TestIsHealthEndpoint(t *testing.T) {
 		})
 	}
 }
+
+// TestAuth_UnknownMode tests the edge case where an unknown auth mode
+// is used (should not happen due to config validation, but defensive)
+func TestAuth_UnknownMode(t *testing.T) {
+	cfg := config.ServerConfig{
+		Auth: config.AuthConfig{
+			Mode: "unknown-mode", // Invalid mode bypassing validation
+		},
+	}
+
+	handler := Auth(cfg)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("should not reach here"))
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/scans", nil)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	// Should return 401 Unauthorized for unknown auth mode
+	require.Equal(t, http.StatusUnauthorized, w.Code)
+	require.Contains(t, w.Body.String(), "Authentication configuration error")
+}
