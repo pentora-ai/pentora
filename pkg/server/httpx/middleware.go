@@ -4,17 +4,19 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/pentora-ai/pentora/pkg/config"
 	"github.com/rs/zerolog/log"
 )
 
-// Chain applies middleware in order: Logger → Recovery → CORS → handler
+// Chain applies middleware in order: Logger → Auth → Recovery → CORS → handler
 //
 // This ensures:
-// 1. All requests are logged (even if they panic)
-// 2. Panics are recovered and logged
-// 3. CORS headers are set for all responses
-func Chain(handler http.Handler) http.Handler {
-	return Logger(Recovery(CORS(handler)))
+// 1. All requests are logged (even if they panic or fail auth)
+// 2. Authentication is enforced before business logic
+// 3. Panics are recovered and logged
+// 4. CORS headers are set for all responses
+func Chain(cfg config.ServerConfig, handler http.Handler) http.Handler {
+	return Logger(Auth(cfg)(Recovery(CORS(handler))))
 }
 
 // Logger logs each HTTP request with method, path, status, and duration.

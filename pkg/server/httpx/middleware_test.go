@@ -5,16 +5,23 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/pentora-ai/pentora/pkg/config"
 	"github.com/stretchr/testify/require"
 )
 
 func TestChain(t *testing.T) {
+	cfg := config.ServerConfig{
+		Auth: config.AuthConfig{
+			Mode: "none", // Disable auth for this test
+		},
+	}
+
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("test"))
 	})
 
-	wrapped := Chain(handler)
+	wrapped := Chain(cfg, handler)
 
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	w := httptest.NewRecorder()

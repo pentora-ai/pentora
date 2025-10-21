@@ -14,21 +14,21 @@ import (
 // NewHandler creates an HTTP handler for serving UI assets.
 //
 // Operating modes:
-//   - Dev mode (cfg.UIAssetsPath set): Serves from disk for hot reload
+//   - Dev mode (cfg.UI.AssetsPath set): Serves from disk for hot reload
 //   - Production mode: Serves from embedded FS (go:embed)
 //
 // The handler implements SPA fallback routing:
 //   - Static files (*.js, *.css, etc.) are served directly
 //   - Unknown routes fall back to index.html for client-side routing
 func NewHandler(cfg config.ServerConfig) http.Handler {
-	if cfg.UIAssetsPath != "" {
+	if cfg.UI.AssetsPath != "" {
 		// Dev mode: serve from disk for hot reload
 		log.Info().
 			Str("component", "ui").
-			Str("path", cfg.UIAssetsPath).
+			Str("path", cfg.UI.AssetsPath).
 			Msg("Serving UI from disk (dev mode)")
 
-		return spaHandler(http.FileServer(http.Dir(cfg.UIAssetsPath)))
+		return spaHandler(http.FileServer(http.Dir(cfg.UI.AssetsPath)))
 	}
 
 	// Production: serve from embedded FS

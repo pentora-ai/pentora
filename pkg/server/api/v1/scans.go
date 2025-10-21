@@ -2,12 +2,11 @@ package v1
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/pentora-ai/pentora/pkg/server/api"
 	"github.com/pentora-ai/pentora/pkg/storage"
-	"github.com/rs/zerolog/log"
 )
 
 // ListScansHandler handles GET /api/v1/scans
@@ -32,29 +31,17 @@ func ListScansHandler(deps *api.Deps) http.HandlerFunc {
 		} else if deps.Workspace != nil {
 			scans, err = deps.Workspace.ListScans()
 		} else {
-			log.Error().
-				Str("component", "api").
-				Msg("No storage backend configured")
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			err = errors.New("no storage backend configured")
+			api.WriteError(w, r, err)
 			return
 		}
 
 		if err != nil {
-			log.Error().
-				Str("component", "api").
-				Err(err).
-				Msg("Failed to list scans")
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			api.WriteError(w, r, err)
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(scans); err != nil {
-			log.Error().
-				Str("component", "api").
-				Err(err).
-				Msg("Failed to encode response")
-		}
+		api.WriteJSON(w, http.StatusOK, scans)
 	}
 }
 
@@ -93,39 +80,17 @@ func GetScanHandler(deps *api.Deps) http.HandlerFunc {
 		} else if deps.Workspace != nil {
 			scan, err = deps.Workspace.GetScan(id)
 		} else {
-			log.Error().
-				Str("component", "api").
-				Msg("No storage backend configured")
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			err = errors.New("no storage backend configured")
+			api.WriteError(w, r, err)
 			return
 		}
 
 		if err != nil {
-			if storage.IsNotFound(err) {
-				log.Warn().
-					Str("component", "api").
-					Str("scan_id", id).
-					Msg("Scan not found")
-				http.Error(w, "Not Found", http.StatusNotFound)
-				return
-			}
-
-			log.Error().
-				Str("component", "api").
-				Str("scan_id", id).
-				Err(err).
-				Msg("Failed to get scan")
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			api.WriteError(w, r, err)
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(scan); err != nil {
-			log.Error().
-				Str("component", "api").
-				Err(err).
-				Msg("Failed to encode response")
-		}
+		api.WriteJSON(w, http.StatusOK, scan)
 	}
 }
 
