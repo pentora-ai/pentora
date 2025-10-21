@@ -105,3 +105,70 @@ func TestWriteJSON_Array(t *testing.T) {
 	require.Equal(t, "scan-1", response[0].ID)
 	require.Equal(t, "scan-2", response[1].ID)
 }
+
+// Test JSON encoding error path (unencodable data)
+func TestWriteJSON_EncodingError(t *testing.T) {
+	w := httptest.NewRecorder()
+
+	// Channels are not JSON-encodable
+	data := map[string]interface{}{
+		"channel": make(chan int),
+	}
+
+	// Should not panic, should log error instead
+	WriteJSON(w, http.StatusOK, data)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Equal(t, "application/json", w.Header().Get("Content-Type"))
+	// Body will be empty or partial due to encoding failure
+}
+
+func TestWriteJSONError_EncodingError(t *testing.T) {
+	// Create a broken ResponseWriter that fails on Write
+	w := &brokenResponseWriter{
+		ResponseRecorder: httptest.NewRecorder(),
+		failOnWrite:      true,
+	}
+
+	// This should handle the encoding error gracefully
+	WriteJSONError(w, http.StatusBadRequest, "Test Error", "Test message")
+
+	// Should set status code before attempting to write body
+	require.Equal(t, http.StatusBadRequest, w.statusCode)
+}
+
+func TestWriteError_EncodingError(t *testing.T) {
+	// Create a broken ResponseWriter that fails on Write
+	w := &brokenResponseWriter{
+		ResponseRecorder: httptest.NewRecorder(),
+		failOnWrite:      true,
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/test", nil)
+	err := errors.New("test error")
+
+	// This should handle the encoding error gracefully
+	WriteError(w, req, err)
+
+	// Should set status code before attempting to write body
+	require.Equal(t, http.StatusInternalServerError, w.statusCode)
+}
+
+// brokenResponseWriter is a ResponseWriter that can simulate write failures
+type brokenResponseWriter struct {
+	*httptest.ResponseRecorder
+	failOnWrite bool
+	statusCode  int
+}
+
+func (b *brokenResponseWriter) Write(p []byte) (int, error) {
+	if b.failOnWrite {
+		return 0, errors.New("simulated write failure")
+	}
+	return b.ResponseRecorder.Write(p)
+}
+
+func (b *brokenResponseWriter) WriteHeader(statusCode int) {
+	b.statusCode = statusCode
+	b.ResponseRecorder.WriteHeader(statusCode)
+}
