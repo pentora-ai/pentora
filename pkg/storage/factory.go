@@ -86,13 +86,17 @@ func NewBackend(ctx context.Context, cfg *Config) (Backend, error) {
 	return backend, nil
 }
 
-// init sets the default factory.
-// This will be called when the package is imported.
-func init() {
+func setupDefaultFactory() {
 	// OSS edition: Use LocalBackend by default
 	// This is set here as a placeholder; local.go will override it
 	// when it's included in the build.
 	DefaultFactory = func(ctx context.Context, cfg *Config) (Backend, error) {
 		return nil, fmt.Errorf("no backend implementation available (import pkg/storage/local)")
 	}
+}
+
+// init sets the default factory.
+// This will be called when the package is imported.
+func init() {
+	setupDefaultFactory()
 }

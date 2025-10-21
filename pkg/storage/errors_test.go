@@ -177,3 +177,57 @@ func TestErrorHelpers(t *testing.T) {
 		})
 	}
 }
+
+func TestNotFoundErrorUnwrap(t *testing.T) {
+	t.Run("returns ErrNotFound for concrete error", func(t *testing.T) {
+		err := NewNotFoundError("scan", "scan-123")
+		unwrapped := errors.Unwrap(err)
+		if unwrapped != ErrNotFound {
+			t.Fatalf("errors.Unwrap(err) = %v, expected %v", unwrapped, ErrNotFound)
+		}
+	})
+
+	t.Run("works with nil receiver", func(t *testing.T) {
+		var nf *NotFoundError
+		unwrapped := errors.Unwrap(nf)
+		if unwrapped != ErrNotFound {
+			t.Fatalf("errors.Unwrap(nil *NotFoundError) = %v, expected %v", unwrapped, ErrNotFound)
+		}
+	})
+}
+
+func TestInvalidInputErrorUnwrap(t *testing.T) {
+	t.Run("returns ErrInvalidInput for concrete error", func(t *testing.T) {
+		err := NewInvalidInputError("field", "reason")
+		unwrapped := errors.Unwrap(err)
+		if unwrapped != ErrInvalidInput {
+			t.Fatalf("errors.Unwrap(err) = %v, expected %v", unwrapped, ErrInvalidInput)
+		}
+	})
+
+	t.Run("works with nil receiver", func(t *testing.T) {
+		var ii *InvalidInputError
+		unwrapped := errors.Unwrap(ii)
+		if unwrapped != ErrInvalidInput {
+			t.Fatalf("errors.Unwrap(nil *InvalidInputError) = %v, expected %v", unwrapped, ErrInvalidInput)
+		}
+	})
+}
+
+func TestAlreadyExistsErrorUnwrap(t *testing.T) {
+	t.Run("returns ErrAlreadyExists for concrete error", func(t *testing.T) {
+		err := NewAlreadyExistsError("scan", "scan-456")
+		unwrapped := errors.Unwrap(err)
+		if unwrapped != ErrAlreadyExists {
+			t.Fatalf("errors.Unwrap(err) = %v, expected %v", unwrapped, ErrAlreadyExists)
+		}
+	})
+
+	t.Run("works with nil receiver", func(t *testing.T) {
+		var ae *AlreadyExistsError
+		unwrapped := errors.Unwrap(ae)
+		if unwrapped != ErrAlreadyExists {
+			t.Fatalf("errors.Unwrap(nil *AlreadyExistsError) = %v, expected %v", unwrapped, ErrAlreadyExists)
+		}
+	})
+}
