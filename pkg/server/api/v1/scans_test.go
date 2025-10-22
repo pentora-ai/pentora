@@ -312,6 +312,10 @@ func (m *mockStorageBackend) Close() error {
 	return nil
 }
 
+func (m *mockStorageBackend) GarbageCollect(ctx context.Context, opts storage.GCOptions) (*storage.GCResult, error) {
+	return &storage.GCResult{}, nil
+}
+
 func TestListScansHandler_WithStorage(t *testing.T) {
 	now := time.Now()
 	mockStorage := &mockStorageBackend{

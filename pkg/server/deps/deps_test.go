@@ -16,6 +16,9 @@ type MockStorage struct{}
 func (m *MockStorage) Initialize(ctx context.Context) error { return nil }
 func (m *MockStorage) Close() error                         { return nil }
 func (m *MockStorage) Scans() storage.ScanStore             { return nil }
+func (m *MockStorage) GarbageCollect(ctx context.Context, opts storage.GCOptions) (*storage.GCResult, error) {
+	return &storage.GCResult{}, nil
+}
 
 func TestNew(t *testing.T) {
 	logger := zerolog.Nop()
