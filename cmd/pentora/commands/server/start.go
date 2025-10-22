@@ -87,6 +87,9 @@ shutdown to drain in-flight requests and complete running jobs.`,
 				UI: config.UIConfig{
 					AssetsPath: uiAssetsPath,
 				},
+				Auth: config.AuthConfig{
+					Mode: "none", // TODO: Add auth flags when auth system is implemented
+				},
 			}
 
 			// Validate configuration
