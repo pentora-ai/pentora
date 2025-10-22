@@ -7,6 +7,45 @@ import (
 	"strings"
 )
 
+// RetentionConfig defines scan retention policies for automatic cleanup.
+//
+// Both MaxScans and MaxAgeDays can be set simultaneously. When both are set,
+// scans are deleted if they violate EITHER condition (OR logic).
+//
+// Examples:
+//   - MaxScans=100, MaxAgeDays=0: Keep only the 100 most recent scans
+//   - MaxScans=0, MaxAgeDays=30: Keep scans from last 30 days only
+//   - MaxScans=100, MaxAgeDays=30: Keep max 100 scans AND delete scans older than 30 days
+//
+// A value of 0 means no limit for that policy.
+type RetentionConfig struct {
+	// MaxScans is the maximum number of scans to retain per organization.
+	// Oldest scans are deleted first when this limit is exceeded.
+	// 0 = no limit (default)
+	MaxScans int `yaml:"max_scans" env:"PENTORA_RETENTION_MAX_SCANS"`
+
+	// MaxAgeDays is the maximum age of scans in days.
+	// Scans older than this are deleted.
+	// 0 = no limit (default)
+	MaxAgeDays int `yaml:"max_age_days" env:"PENTORA_RETENTION_MAX_AGE_DAYS"`
+}
+
+// IsEnabled returns true if any retention policy is configured.
+func (r *RetentionConfig) IsEnabled() bool {
+	return r.MaxScans > 0 || r.MaxAgeDays > 0
+}
+
+// Validate checks if the retention configuration is valid.
+func (r *RetentionConfig) Validate() error {
+	if r.MaxScans < 0 {
+		return fmt.Errorf("max_scans must be >= 0, got %d", r.MaxScans)
+	}
+	if r.MaxAgeDays < 0 {
+		return fmt.Errorf("max_age_days must be >= 0, got %d", r.MaxAgeDays)
+	}
+	return nil
+}
+
 // Config holds storage backend configuration.
 //
 // This configuration structure supports both OSS and Enterprise editions.
@@ -20,6 +59,9 @@ type Config struct {
 	//   - macOS:   ~/Library/Application Support/Pentora
 	//   - Windows: %AppData%\Pentora
 	WorkspaceRoot string `yaml:"workspace_root" env:"PENTORA_WORKSPACE"`
+
+	// Retention policy configuration (applies to both OSS and Enterprise)
+	Retention RetentionConfig `yaml:"retention"`
 
 	// Enterprise Edition fields (ignored by OSS)
 
@@ -52,6 +94,11 @@ type Config struct {
 // OSS: Requires WorkspaceRoot
 // Enterprise: Requires DatabaseURL, S3Bucket, S3Region
 func (c *Config) Validate() error {
+	// Validate retention policy
+	if err := c.Retention.Validate(); err != nil {
+		return fmt.Errorf("retention config: %w", err)
+	}
+
 	// This will be implemented differently based on edition
 	// For now, just validate OSS requirements
 	return c.validateOSS()

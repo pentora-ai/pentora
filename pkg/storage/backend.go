@@ -49,6 +49,15 @@ type Backend interface {
 	// All scan-related operations (CRUD, data files, metadata) go through
 	// the returned ScanStore interface.
 	Scans() ScanStore
+
+	// GarbageCollect performs garbage collection based on retention policies.
+	//
+	// This removes scans that violate configured retention policies:
+	//   - Scans older than MaxAgeDays
+	//   - Scans exceeding MaxScans count (oldest deleted first)
+	//
+	// Returns statistics about deleted scans and any errors encountered.
+	GarbageCollect(ctx context.Context, opts GCOptions) (*GCResult, error)
 }
 
 // ScanStore manages scan metadata and data files.
