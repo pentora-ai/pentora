@@ -1,0 +1,37 @@
+name: Redis No Authentication
+version: 1.0.0
+type: evaluation
+author: pentora-security
+
+metadata:
+  severity: critical
+  tags: [redis, database, authentication, misconfiguration, no-auth]
+  references:
+    - https://redis.io/docs/management/security/
+    - https://nvd.nist.gov/vuln/detail/CVE-2022-0543
+
+# Trigger when Redis service is detected
+triggers:
+  - port: 6379
+    service: redis
+
+# Detect Redis without authentication
+match:
+  logic: OR
+  rules:
+    - field: redis.auth_required
+      operator: equals
+      value: false
+    - field: redis.info
+      operator: contains
+      value: "redis_version"
+    - field: redis.banner
+      operator: contains
+      value: "Redis"
+
+output:
+  vulnerability: true
+  severity: critical
+  message: "Redis server detected - likely has no authentication enabled (default configuration)"
+  remediation: "Enable Redis authentication with requirepass in redis.conf. Bind to localhost only if not needed remotely. Use strong passwords and consider Redis ACLs (v6+)"
+  reference: "https://redis.io/docs/management/security/"

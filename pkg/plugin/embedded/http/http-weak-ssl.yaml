@@ -1,0 +1,43 @@
+name: HTTP Weak SSL/TLS Configuration
+version: 1.0.0
+type: evaluation
+author: pentora-security
+
+metadata:
+  severity: high
+  tags: [http, tls, ssl, weak-crypto, encryption]
+  references:
+    - https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/09-Testing_for_Weak_Cryptography/01-Testing_for_Weak_Transport_Layer_Security
+    - https://nvd.nist.gov/vuln/detail/CVE-2014-3566
+
+# Trigger when HTTPS is detected
+triggers:
+  - port: 443
+    service: https
+
+# Detect weak SSL/TLS configuration
+match:
+  logic: OR
+  rules:
+    - field: tls.version
+      operator: equals
+      value: "SSLv2"
+    - field: tls.version
+      operator: equals
+      value: "SSLv3"
+    - field: tls.version
+      operator: equals
+      value: "TLSv1.0"
+    - field: tls.version
+      operator: equals
+      value: "TLSv1.1"
+    - field: http.headers.strict-transport-security
+      operator: exists
+      value: false
+
+output:
+  vulnerability: true
+  severity: high
+  message: "HTTP server supports weak SSL/TLS protocols or missing HSTS"
+  remediation: "Disable SSLv2, SSLv3, TLS 1.0, and TLS 1.1. Use TLS 1.2 or TLS 1.3. Enable HSTS with max-age=31536000"
+  reference: "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/09-Testing_for_Weak_Cryptography/01-Testing_for_Weak_Transport_Layer_Security"

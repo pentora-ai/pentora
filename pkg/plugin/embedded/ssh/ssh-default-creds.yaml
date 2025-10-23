@@ -1,0 +1,43 @@
+name: SSH Default Credentials
+version: 1.0.0
+type: evaluation
+author: pentora-security
+
+metadata:
+  severity: critical
+  tags: [ssh, authentication, default-credentials, brute-force]
+  references:
+    - https://www.cisa.gov/known-exploited-vulnerabilities-catalog
+    - https://owasp.org/www-project-top-ten/2017/A2_2017-Broken_Authentication
+
+# Trigger when SSH service is detected
+triggers:
+  - port: 22
+    service: ssh
+
+# Detect common patterns that suggest default credentials might work
+match:
+  logic: OR
+  rules:
+    - field: ssh.banner
+      operator: contains
+      value: "dropbear"
+    - field: ssh.banner
+      operator: contains
+      value: "IoT"
+    - field: ssh.banner
+      operator: contains
+      value: "embedded"
+    - field: ssh.banner
+      operator: contains
+      value: "Router"
+    - field: ssh.banner
+      operator: matches
+      value: ".*[Cc]am.*"
+
+output:
+  vulnerability: true
+  severity: critical
+  message: "SSH service detected on embedded/IoT device - may use default credentials"
+  remediation: "Test for common default credentials (admin/admin, root/root, admin/password). Change all default passwords immediately"
+  reference: "https://www.cisa.gov/known-exploited-vulnerabilities-catalog"

@@ -1,0 +1,41 @@
+name: SSH Weak MAC Algorithm
+version: 1.0.0
+type: evaluation
+author: pentora-security
+
+metadata:
+  severity: medium
+  tags: [ssh, crypto, weak-crypto, mac]
+  references:
+    - https://www.ssh.com/academy/ssh/mac
+    - https://www.openssh.com/security.html
+
+# Trigger when SSH MAC algorithms are detected
+triggers:
+  - data_key: ssh.mac_algorithms
+    condition: exists
+    value: true
+
+# Detect weak MAC algorithms
+match:
+  logic: OR
+  rules:
+    - field: ssh.mac_algorithms
+      operator: contains
+      value: "hmac-md5"
+    - field: ssh.mac_algorithms
+      operator: contains
+      value: "hmac-md5-96"
+    - field: ssh.mac_algorithms
+      operator: contains
+      value: "hmac-sha1-96"
+    - field: ssh.mac_algorithms
+      operator: contains
+      value: "umac-64@openssh.com"
+
+output:
+  vulnerability: true
+  severity: medium
+  message: "SSH server supports weak MAC algorithms (MD5 or truncated HMAC)"
+  remediation: "Disable weak MAC algorithms. Use hmac-sha2-256, hmac-sha2-512, or umac-128@openssh.com"
+  reference: "https://www.ssh.com/academy/ssh/mac"

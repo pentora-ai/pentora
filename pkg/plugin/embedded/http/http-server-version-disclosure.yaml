@@ -1,0 +1,47 @@
+name: HTTP Server Version Disclosure
+version: 1.0.0
+type: evaluation
+author: pentora-security
+
+metadata:
+  severity: low
+  tags: [http, information-disclosure, fingerprinting, reconnaissance]
+  references:
+    - https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/01-Information_Gathering/02-Fingerprint_Web_Server
+    - https://cwe.mitre.org/data/definitions/200.html
+
+# Trigger when HTTP Server header is detected
+triggers:
+  - data_key: http.headers.server
+    condition: exists
+    value: true
+
+# Detect detailed version information in Server header
+match:
+  logic: OR
+  rules:
+    - field: http.headers.server
+      operator: matches
+      value: ".*/[0-9]+\\.[0-9]+.*"
+    - field: http.headers.server
+      operator: contains
+      value: "Apache/"
+    - field: http.headers.server
+      operator: contains
+      value: "nginx/"
+    - field: http.headers.server
+      operator: contains
+      value: "Microsoft-IIS/"
+    - field: http.headers.server
+      operator: contains
+      value: "OpenSSL/"
+    - field: http.headers.server
+      operator: contains
+      value: "PHP/"
+
+output:
+  vulnerability: true
+  severity: low
+  message: "HTTP server discloses detailed version information in Server header"
+  remediation: "Remove or obfuscate server version information. Configure web server to return generic Server header"
+  reference: "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/01-Information_Gathering/02-Fingerprint_Web_Server"

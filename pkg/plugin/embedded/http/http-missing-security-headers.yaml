@@ -1,0 +1,44 @@
+name: HTTP Missing Security Headers
+version: 1.0.0
+type: evaluation
+author: pentora-security
+
+metadata:
+  severity: medium
+  tags: [http, security-headers, web, configuration]
+  references:
+    - https://owasp.org/www-project-secure-headers/
+    - https://securityheaders.com/
+
+# Trigger when HTTP response headers are detected
+triggers:
+  - data_key: http.headers
+    condition: exists
+    value: true
+
+# Detect missing critical security headers
+match:
+  logic: OR
+  rules:
+    - field: http.headers.x-frame-options
+      operator: exists
+      value: false
+    - field: http.headers.x-content-type-options
+      operator: exists
+      value: false
+    - field: http.headers.x-xss-protection
+      operator: exists
+      value: false
+    - field: http.headers.strict-transport-security
+      operator: exists
+      value: false
+    - field: http.headers.content-security-policy
+      operator: exists
+      value: false
+
+output:
+  vulnerability: true
+  severity: medium
+  message: "HTTP server is missing critical security headers"
+  remediation: "Add security headers: X-Frame-Options, X-Content-Type-Options, X-XSS-Protection, Strict-Transport-Security, Content-Security-Policy"
+  reference: "https://owasp.org/www-project-secure-headers/"

@@ -1,0 +1,34 @@
+name: PostgreSQL Default Credentials
+version: 1.0.0
+type: evaluation
+author: pentora-security
+
+metadata:
+  severity: critical
+  tags: [postgres, postgresql, database, authentication, default-credentials]
+  references:
+    - https://www.postgresql.org/docs/current/auth-password.html
+    - https://owasp.org/www-project-top-ten/2017/A2_2017-Broken_Authentication
+
+# Trigger when PostgreSQL service is detected
+triggers:
+  - port: 5432
+    service: postgresql
+
+# Detect PostgreSQL with potential default credentials
+match:
+  logic: OR
+  rules:
+    - field: postgres.version
+      operator: exists
+      value: true
+    - field: postgres.banner
+      operator: contains
+      value: "PostgreSQL"
+
+output:
+  vulnerability: true
+  severity: critical
+  message: "PostgreSQL database detected - test for default credentials (postgres user with weak or no password)"
+  remediation: "Ensure postgres user has a strong password. Configure pg_hba.conf to require password authentication. Test for: postgres/postgres, postgres/password, postgres/admin"
+  reference: "https://www.postgresql.org/docs/current/auth-password.html"
