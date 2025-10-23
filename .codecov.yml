@@ -28,8 +28,9 @@ coverage:
     - '**/*_generated.go' # Any generated Go files
     - 'pkg/engine/proto/**' # Protocol buffer definitions
 
-    # Embedded plugin YAML files (data files, not code)
-    - 'pkg/plugin/embedded/**/*.yaml'
+    # Embedded plugins (compile-time embedded, error paths untestable)
+    - 'pkg/plugin/embedded.go' # Loader uses embed.FS, cannot mock for error testing
+    - 'pkg/plugin/embedded/**/*.yaml' # YAML data files, not executable code
 
     # Not yet implemented / future work
     - 'pkg/api/dashboard/**'
