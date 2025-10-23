@@ -5,6 +5,7 @@ go 1.25.0
 require (
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/containous/mux v0.0.0-20220627093034-b2dd784e613f
+	github.com/fatih/color v1.18.0
 	github.com/go-ping/ping v1.2.0
 	github.com/gofrs/flock v0.13.0
 	github.com/knadh/koanf/providers/confmap v1.0.0
