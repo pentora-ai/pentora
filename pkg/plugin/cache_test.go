@@ -475,10 +475,10 @@ func TestCacheManager_Remove_NonExistentPlugin(t *testing.T) {
 	cm, err := NewCacheManager(cacheDir)
 	require.NoError(t, err)
 
-	// Try to remove plugin that doesn't exist in registry
+	// Try to remove plugin that doesn't exist in cache directory
 	err = cm.Remove("nonexistent-plugin", "1.0.0")
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "failed to unregister plugin")
+	require.Contains(t, err.Error(), "not found in cache")
 }
 
 func TestCacheManager_Size_ReadDirError(t *testing.T) {
