@@ -459,6 +459,15 @@ output:
 	require.Equal(t, "Valid Plugin", plugins[0].Name)
 }
 
+func TestLoader_LoadRecursive_WalkError(t *testing.T) {
+	loader := NewLoader("/tmp")
+
+	// Non-existent path should cause walk error
+	_, err := loader.LoadRecursive("/nonexistent/directory/path")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to walk directory")
+}
+
 func TestLoader_ClearCache(t *testing.T) {
 	tmpDir := t.TempDir()
 
