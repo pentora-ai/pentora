@@ -425,3 +425,93 @@ version: 1.0.0
 	_, exists := cm.Get("valid-plugin")
 	require.True(t, exists)
 }
+
+func TestNewCacheManager_CreateDirError(t *testing.T) {
+	// Create a file where the cache directory should be
+	tmpDir := t.TempDir()
+	filePath := filepath.Join(tmpDir, "file-not-dir")
+	err := os.WriteFile(filePath, []byte("test"), 0o644)
+	require.NoError(t, err)
+
+	// Try to create cache manager with path that has a file in the way
+	cachePath := filepath.Join(filePath, "cache")
+	cm, err := NewCacheManager(cachePath)
+	require.Error(t, err)
+	require.Nil(t, cm)
+	require.Contains(t, err.Error(), "failed to create cache directory")
+}
+
+func TestCacheManager_Add_MkdirError(t *testing.T) {
+	// Create a file where plugin directory should be
+	cacheDir := t.TempDir()
+	cm, err := NewCacheManager(cacheDir)
+	require.NoError(t, err)
+
+	// Create a file that will block mkdir
+	blockingFile := filepath.Join(cacheDir, "blocked-plugin")
+	err = os.WriteFile(blockingFile, []byte("blocking"), 0o644)
+	require.NoError(t, err)
+
+	plugin := &YAMLPlugin{
+		Name:    "blocked-plugin",
+		Version: "1.0.0",
+		Type:    EvaluationType,
+		Author:  "test",
+		Metadata: PluginMetadata{
+			Severity: HighSeverity,
+			Tags:     []string{"test"},
+		},
+		Output: OutputBlock{Message: "Test"},
+	}
+
+	entry, err := cm.Add(plugin, "sha256:abc", "https://example.com")
+	require.Error(t, err)
+	require.Nil(t, entry)
+	require.Contains(t, err.Error(), "failed to create plugin cache directory")
+}
+
+func TestCacheManager_Remove_NonExistentPlugin(t *testing.T) {
+	cacheDir := t.TempDir()
+	cm, err := NewCacheManager(cacheDir)
+	require.NoError(t, err)
+
+	// Try to remove plugin that doesn't exist in registry
+	err = cm.Remove("nonexistent-plugin", "1.0.0")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to unregister plugin")
+}
+
+func TestCacheManager_Size_ReadDirError(t *testing.T) {
+	// Create cache manager with non-existent directory
+	cm := &CacheManager{
+		cacheDir: "/nonexistent/path/that/does/not/exist",
+		registry: NewYAMLRegistry(),
+	}
+
+	size, err := cm.Size()
+	require.Error(t, err)
+	require.Equal(t, int64(0), size)
+}
+
+func TestCacheManager_Clear_ReadDirError(t *testing.T) {
+	// Create cache manager with non-existent directory
+	cm := &CacheManager{
+		cacheDir: "/nonexistent/path/that/does/not/exist",
+		registry: NewYAMLRegistry(),
+	}
+
+	err := cm.Clear()
+	require.Error(t, err)
+}
+
+func TestCacheManager_Prune_ReadDirError(t *testing.T) {
+	// Create cache manager with non-existent directory
+	cm := &CacheManager{
+		cacheDir: "/nonexistent/path/that/does/not/exist",
+		registry: NewYAMLRegistry(),
+	}
+
+	removed, err := cm.Prune(24 * time.Hour)
+	require.Error(t, err)
+	require.Equal(t, 0, removed)
+}
