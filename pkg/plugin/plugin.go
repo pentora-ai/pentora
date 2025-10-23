@@ -1,6 +1,5 @@
 // pkg/plugin/plugin.go
-// Package plugin provides registration and execution of pluggable scan modules.
-// Plugins are registered at init time and managed by a central registry.
+// Package plugin provides interfaces for pluggable scan modules.
 package plugin
 
 import (
@@ -25,13 +24,12 @@ type RegistryInterface interface {
 }
 
 // Registry holds all registered plugins and provides access to them.
+// NOTE: This implementation is kept for pkg/scan/orchestrator.go compatibility.
+// For new code, use YAMLRegistry from registry.go instead.
 type Registry struct {
 	mu      sync.RWMutex
 	plugins map[string]Plugin
 }
-
-// GlobalRegistry is the shared default plugin registry.
-var GlobalRegistry = NewRegistry()
 
 // NewRegistry creates a new, empty plugin registry.
 func NewRegistry() *Registry {
