@@ -273,6 +273,192 @@ output:
 	require.Contains(t, names, "Sub Plugin")
 }
 
+func TestLoader_Load_FileNotFound(t *testing.T) {
+	tmpDir := t.TempDir()
+	loader := NewLoader(tmpDir)
+
+	_, err := loader.Load(filepath.Join(tmpDir, "nonexistent.yaml"))
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to read plugin file")
+}
+
+func TestLoader_Load_InvalidJSON(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	invalidJSON := `{"name": "Invalid", invalid json here}`
+	jsonPath := filepath.Join(tmpDir, "invalid.json")
+	err := os.WriteFile(jsonPath, []byte(invalidJSON), 0o644)
+	require.NoError(t, err)
+
+	loader := NewLoader(tmpDir)
+
+	_, err = loader.Load(jsonPath)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to parse JSON plugin")
+}
+
+func TestLoader_LoadAll_DirectoryNotFound(t *testing.T) {
+	loader := NewLoader("/tmp")
+
+	_, err := loader.LoadAll("/nonexistent/directory/path")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to read directory")
+}
+
+func TestLoader_LoadAll_WithSubdirectory(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create subdirectory (should be skipped)
+	subDir := filepath.Join(tmpDir, "subdir")
+	err := os.MkdirAll(subDir, 0o755)
+	require.NoError(t, err)
+
+	// Create plugin in root
+	plugin1 := `name: Plugin 1
+version: 1.0.0
+type: evaluation
+author: test
+metadata:
+  severity: high
+  tags: [test]
+output:
+  vulnerability: true
+  message: "Test 1"
+`
+	err = os.WriteFile(filepath.Join(tmpDir, "plugin1.yaml"), []byte(plugin1), 0o644)
+	require.NoError(t, err)
+
+	// Create plugin in subdirectory (should NOT be loaded by LoadAll)
+	plugin2 := `name: Plugin 2
+version: 1.0.0
+type: evaluation
+author: test
+metadata:
+  severity: medium
+  tags: [test]
+output:
+  vulnerability: true
+  message: "Test 2"
+`
+	err = os.WriteFile(filepath.Join(subDir, "plugin2.yaml"), []byte(plugin2), 0o644)
+	require.NoError(t, err)
+
+	loader := NewLoader(tmpDir)
+
+	// LoadAll should only load root-level plugins
+	plugins, err := loader.LoadAll(tmpDir)
+	require.NoError(t, err)
+	require.Len(t, plugins, 1)
+	require.Equal(t, "Plugin 1", plugins[0].Name)
+}
+
+func TestLoader_LoadAll_WithErrors(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create valid plugin
+	validPlugin := `name: Valid Plugin
+version: 1.0.0
+type: evaluation
+author: test
+metadata:
+  severity: high
+  tags: [test]
+output:
+  vulnerability: true
+  message: "Valid"
+`
+	err := os.WriteFile(filepath.Join(tmpDir, "valid.yaml"), []byte(validPlugin), 0o644)
+	require.NoError(t, err)
+
+	// Create invalid plugin (missing required fields)
+	invalidPlugin := `name: Invalid Plugin
+# Missing version and other required fields
+`
+	err = os.WriteFile(filepath.Join(tmpDir, "invalid.yaml"), []byte(invalidPlugin), 0o644)
+	require.NoError(t, err)
+
+	loader := NewLoader(tmpDir)
+
+	// Should return valid plugins but also return error
+	plugins, err := loader.LoadAll(tmpDir)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to load")
+	require.Len(t, plugins, 1) // Only valid plugin loaded
+	require.Equal(t, "Valid Plugin", plugins[0].Name)
+}
+
+func TestLoader_LoadRecursive_WithErrors(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create valid plugin in root
+	validPlugin := `name: Valid Plugin
+version: 1.0.0
+type: evaluation
+author: test
+metadata:
+  severity: high
+  tags: [test]
+output:
+  vulnerability: true
+  message: "Valid"
+`
+	err := os.WriteFile(filepath.Join(tmpDir, "valid.yaml"), []byte(validPlugin), 0o644)
+	require.NoError(t, err)
+
+	// Create subdirectory with invalid plugin
+	subDir := filepath.Join(tmpDir, "subdir")
+	err = os.MkdirAll(subDir, 0o755)
+	require.NoError(t, err)
+
+	invalidPlugin := `name: Invalid
+# Missing required fields
+`
+	err = os.WriteFile(filepath.Join(subDir, "invalid.yaml"), []byte(invalidPlugin), 0o644)
+	require.NoError(t, err)
+
+	loader := NewLoader(tmpDir)
+
+	// Should return valid plugins but also return error
+	plugins, err := loader.LoadRecursive(tmpDir)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to load")
+	require.Len(t, plugins, 1) // Only valid plugin loaded
+	require.Equal(t, "Valid Plugin", plugins[0].Name)
+}
+
+func TestLoader_LoadRecursive_IgnoresNonPluginFiles(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create plugin
+	validPlugin := `name: Valid Plugin
+version: 1.0.0
+type: evaluation
+author: test
+metadata:
+  severity: high
+  tags: [test]
+output:
+  vulnerability: true
+  message: "Valid"
+`
+	err := os.WriteFile(filepath.Join(tmpDir, "plugin.yaml"), []byte(validPlugin), 0o644)
+	require.NoError(t, err)
+
+	// Create non-plugin files (should be ignored)
+	err = os.WriteFile(filepath.Join(tmpDir, "readme.txt"), []byte("readme"), 0o644)
+	require.NoError(t, err)
+
+	err = os.WriteFile(filepath.Join(tmpDir, "config.toml"), []byte("config"), 0o644)
+	require.NoError(t, err)
+
+	loader := NewLoader(tmpDir)
+
+	plugins, err := loader.LoadRecursive(tmpDir)
+	require.NoError(t, err)
+	require.Len(t, plugins, 1)
+	require.Equal(t, "Valid Plugin", plugins[0].Name)
+}
+
 func TestLoader_ClearCache(t *testing.T) {
 	tmpDir := t.TempDir()
 
