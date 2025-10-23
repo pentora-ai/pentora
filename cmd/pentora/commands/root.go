@@ -85,7 +85,6 @@ func NewCommand() *cobra.Command {
 	cmd.AddCommand(serverCmd.NewCommand())
 	cmd.AddCommand(storageCmd.NewStorageCommand())
 	cmd.AddCommand(cli.DiscoverCmd)
-	cmd.AddCommand(cli.ServeCmd)
 	cmd.AddCommand(cli.NewVersionCommand(cliExecutable))
 	cmd.AddCommand(ScanCmd)
 	cmd.AddCommand(NewFingerprintCommand())
