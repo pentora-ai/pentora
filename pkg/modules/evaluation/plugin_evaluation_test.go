@@ -82,14 +82,16 @@ func TestPluginEvaluationModule_Init(t *testing.T) {
 	require.Len(t, module.plugins[plugin.CategoryNetwork], 3, "should have 3 Network plugins")
 }
 
-func TestPluginEvaluationModule_Execute_Skeleton(t *testing.T) {
+func TestPluginEvaluationModule_Execute_WithContext(t *testing.T) {
 	module := NewPluginEvaluationModule()
 	require.NoError(t, module.Init("test-instance", nil))
 
 	ctx := context.Background()
+
+	// Provide input context that should match TLS weak protocol plugin
 	inputs := map[string]interface{}{
-		"ssh.version": "7.4",
-		"ssh.banner":  "OpenSSH_7.4p1",
+		"tls.version":  "TLSv1.0", // Should match tls-weak-protocol plugin
+		"service.port": 443,
 	}
 
 	outputChan := make(chan engine.ModuleOutput, 10)
@@ -110,8 +112,81 @@ func TestPluginEvaluationModule_Execute_Skeleton(t *testing.T) {
 	<-done
 
 	require.NoError(t, err)
-	// Skeleton mode: no outputs yet (will be added in Step 3)
-	require.Empty(t, outputs, "skeleton mode should not produce outputs")
+
+	// Should have at least one vulnerability match (TLS weak protocol)
+	require.NotEmpty(t, outputs, "should produce vulnerability outputs")
+
+	// Verify vulnerability structure
+	vuln, ok := outputs[0].Data.(VulnerabilityResult)
+	require.True(t, ok, "output should be VulnerabilityResult")
+	require.True(t, vuln.Matched, "vulnerability should be matched")
+	require.NotEmpty(t, vuln.Plugin, "plugin name should be set")
+	require.NotEmpty(t, vuln.Severity, "severity should be set")
+	require.NotEmpty(t, vuln.Message, "message should be set")
+	require.Equal(t, 443, vuln.Port, "port should match input")
+}
+
+func TestPluginEvaluationModule_Execute_NoContext(t *testing.T) {
+	module := NewPluginEvaluationModule()
+	require.NoError(t, module.Init("test-instance", nil))
+
+	ctx := context.Background()
+	inputs := map[string]interface{}{} // Empty context
+
+	outputChan := make(chan engine.ModuleOutput, 10)
+	done := make(chan struct{})
+
+	var outputs []engine.ModuleOutput
+	go func() {
+		for output := range outputChan {
+			outputs = append(outputs, output)
+		}
+		close(done)
+	}()
+
+	err := module.Execute(ctx, inputs, outputChan)
+	close(outputChan)
+	<-done
+
+	require.NoError(t, err)
+	require.Empty(t, outputs, "no context should produce no outputs")
+}
+
+func TestPluginEvaluationModule_Execute_TLSWeakCipher(t *testing.T) {
+	module := NewPluginEvaluationModule()
+	require.NoError(t, module.Init("test-instance", nil))
+
+	ctx := context.Background()
+
+	// Context that should match TLS weak cipher plugin
+	inputs := map[string]interface{}{
+		"tls.cipher_suites": []string{"TLS_RSA_WITH_DES_CBC_SHA"}, // Weak cipher
+		"service.port":      443,
+	}
+
+	outputChan := make(chan engine.ModuleOutput, 10)
+	done := make(chan struct{})
+
+	var outputs []engine.ModuleOutput
+	go func() {
+		for output := range outputChan {
+			outputs = append(outputs, output)
+		}
+		close(done)
+	}()
+
+	err := module.Execute(ctx, inputs, outputChan)
+	close(outputChan)
+	<-done
+
+	require.NoError(t, err)
+	require.NotEmpty(t, outputs, "should detect TLS weak cipher vulnerability")
+
+	// Verify the match
+	vuln, ok := outputs[0].Data.(VulnerabilityResult)
+	require.True(t, ok)
+	require.Contains(t, vuln.Plugin, "TLS")
+	require.Equal(t, "high", vuln.Severity) // TLS weak cipher is high severity
 }
 
 func TestPluginEvaluationModuleFactory(t *testing.T) {
