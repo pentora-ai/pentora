@@ -28,6 +28,9 @@ coverage:
     - '**/*_generated.go' # Any generated Go files
     - 'pkg/engine/proto/**' # Protocol buffer definitions
 
+    # Embedded plugin YAML files (data files, not code)
+    - 'pkg/plugin/embedded/**/*.yaml'
+
     # Not yet implemented / future work
     - 'pkg/api/dashboard/**'
     - 'pkg/fingerprint/catalogsync/**'
