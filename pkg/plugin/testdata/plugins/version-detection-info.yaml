@@ -1,0 +1,35 @@
+name: Service Version Detection (Informational)
+version: 1.0.0
+type: evaluation
+author: pentora-core
+
+metadata:
+  severity: info
+  tags: [detection, version, fingerprint]
+
+# No specific triggers - runs on all services
+triggers: []
+
+# Match any service with version information
+match:
+  logic: OR
+  rules:
+    - field: service.version
+      operator: matches
+      value: "\\d+\\.\\d+"
+
+    - field: http.server
+      operator: exists
+      value: true
+
+    - field: ssh.version
+      operator: exists
+      value: true
+
+output:
+  vulnerability: false
+  severity: info
+  message: "Service version information detected"
+  remediation: "Review if version information disclosure is acceptable for your security policy"
+  metadata:
+    category: "information-disclosure"

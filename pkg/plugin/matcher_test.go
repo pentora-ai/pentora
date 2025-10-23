@@ -1,0 +1,671 @@
+// Copyright 2025 Pentora Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+
+package plugin
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
+func TestMatcherEngine_StringOperators(t *testing.T) {
+	m := NewMatcherEngine()
+
+	tests := []struct {
+		name     string
+		operator string
+		actual   any
+		expected any
+		want     bool
+		wantErr  bool
+	}{
+		// Equals
+		{
+			name:     "equals - match",
+			operator: "equals",
+			actual:   "test",
+			expected: "test",
+			want:     true,
+		},
+		{
+			name:     "equals - no match",
+			operator: "equals",
+			actual:   "test",
+			expected: "other",
+			want:     false,
+		},
+
+		// Contains
+		{
+			name:     "contains - match",
+			operator: "contains",
+			actual:   "hello world",
+			expected: "world",
+			want:     true,
+		},
+		{
+			name:     "contains - no match",
+			operator: "contains",
+			actual:   "hello world",
+			expected: "foo",
+			want:     false,
+		},
+
+		// StartsWith
+		{
+			name:     "startsWith - match",
+			operator: "startsWith",
+			actual:   "OpenSSH_8.2",
+			expected: "OpenSSH",
+			want:     true,
+		},
+		{
+			name:     "startsWith - no match",
+			operator: "startsWith",
+			actual:   "OpenSSH_8.2",
+			expected: "Dropbear",
+			want:     false,
+		},
+
+		// EndsWith
+		{
+			name:     "endsWith - match",
+			operator: "endsWith",
+			actual:   "server.conf",
+			expected: ".conf",
+			want:     true,
+		},
+		{
+			name:     "endsWith - no match",
+			operator: "endsWith",
+			actual:   "server.conf",
+			expected: ".txt",
+			want:     false,
+		},
+
+		// Matches (regex)
+		{
+			name:     "matches - simple regex",
+			operator: "matches",
+			actual:   "OpenSSH_8.2",
+			expected: "OpenSSH_\\d+\\.\\d+",
+			want:     true,
+		},
+		{
+			name:     "matches - no match",
+			operator: "matches",
+			actual:   "OpenSSH_8.2",
+			expected: "Dropbear",
+			want:     false,
+		},
+		{
+			name:     "matches - invalid regex",
+			operator: "matches",
+			actual:   "test",
+			expected: "[invalid(regex",
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opFunc, ok := m.operators[tt.operator]
+			require.True(t, ok, "operator not found: %s", tt.operator)
+
+			got, err := opFunc(tt.actual, tt.expected)
+
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestMatcherEngine_NumericOperators(t *testing.T) {
+	m := NewMatcherEngine()
+
+	tests := []struct {
+		name     string
+		operator string
+		actual   any
+		expected any
+		want     bool
+		wantErr  bool
+	}{
+		// Greater than
+		{
+			name:     "gt - true",
+			operator: "gt",
+			actual:   10,
+			expected: 5,
+			want:     true,
+		},
+		{
+			name:     "gt - false",
+			operator: "gt",
+			actual:   5,
+			expected: 10,
+			want:     false,
+		},
+
+		// Greater than or equal
+		{
+			name:     "gte - equal",
+			operator: "gte",
+			actual:   10,
+			expected: 10,
+			want:     true,
+		},
+		{
+			name:     "gte - greater",
+			operator: "gte",
+			actual:   10,
+			expected: 5,
+			want:     true,
+		},
+		{
+			name:     "gte - less",
+			operator: "gte",
+			actual:   5,
+			expected: 10,
+			want:     false,
+		},
+
+		// Less than
+		{
+			name:     "lt - true",
+			operator: "lt",
+			actual:   5,
+			expected: 10,
+			want:     true,
+		},
+		{
+			name:     "lt - false",
+			operator: "lt",
+			actual:   10,
+			expected: 5,
+			want:     false,
+		},
+
+		// Less than or equal
+		{
+			name:     "lte - equal",
+			operator: "lte",
+			actual:   10,
+			expected: 10,
+			want:     true,
+		},
+		{
+			name:     "lte - less",
+			operator: "lte",
+			actual:   5,
+			expected: 10,
+			want:     true,
+		},
+		{
+			name:     "lte - greater",
+			operator: "lte",
+			actual:   10,
+			expected: 5,
+			want:     false,
+		},
+
+		// Between
+		{
+			name:     "between - inside range",
+			operator: "between",
+			actual:   5,
+			expected: []any{1, 10},
+			want:     true,
+		},
+		{
+			name:     "between - outside range",
+			operator: "between",
+			actual:   15,
+			expected: []any{1, 10},
+			want:     false,
+		},
+		{
+			name:     "between - at boundary",
+			operator: "between",
+			actual:   10,
+			expected: []any{1, 10},
+			want:     true,
+		},
+		{
+			name:     "between - invalid format",
+			operator: "between",
+			actual:   5,
+			expected: 10,
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opFunc, ok := m.operators[tt.operator]
+			require.True(t, ok, "operator not found: %s", tt.operator)
+
+			got, err := opFunc(tt.actual, tt.expected)
+
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestMatcherEngine_VersionOperators(t *testing.T) {
+	m := NewMatcherEngine()
+
+	tests := []struct {
+		name     string
+		operator string
+		actual   any
+		expected any
+		want     bool
+		wantErr  bool
+	}{
+		// Version equal
+		{
+			name:     "version_eq - equal",
+			operator: "version_eq",
+			actual:   "1.2.3",
+			expected: "1.2.3",
+			want:     true,
+		},
+		{
+			name:     "version_eq - not equal",
+			operator: "version_eq",
+			actual:   "1.2.3",
+			expected: "1.2.4",
+			want:     false,
+		},
+
+		// Version less than
+		{
+			name:     "version_lt - true",
+			operator: "version_lt",
+			actual:   "1.2.3",
+			expected: "2.0.0",
+			want:     true,
+		},
+		{
+			name:     "version_lt - false",
+			operator: "version_lt",
+			actual:   "2.0.0",
+			expected: "1.2.3",
+			want:     false,
+		},
+
+		// Version greater than
+		{
+			name:     "version_gt - true",
+			operator: "version_gt",
+			actual:   "2.0.0",
+			expected: "1.2.3",
+			want:     true,
+		},
+		{
+			name:     "version_gt - false",
+			operator: "version_gt",
+			actual:   "1.2.3",
+			expected: "2.0.0",
+			want:     false,
+		},
+
+		// Version less than or equal
+		{
+			name:     "version_lte - less",
+			operator: "version_lte",
+			actual:   "1.2.3",
+			expected: "2.0.0",
+			want:     true,
+		},
+		{
+			name:     "version_lte - equal",
+			operator: "version_lte",
+			actual:   "1.2.3",
+			expected: "1.2.3",
+			want:     true,
+		},
+
+		// Version greater than or equal
+		{
+			name:     "version_gte - greater",
+			operator: "version_gte",
+			actual:   "2.0.0",
+			expected: "1.2.3",
+			want:     true,
+		},
+		{
+			name:     "version_gte - equal",
+			operator: "version_gte",
+			actual:   "1.2.3",
+			expected: "1.2.3",
+			want:     true,
+		},
+
+		// Version between
+		{
+			name:     "version_between - inside range",
+			operator: "version_between",
+			actual:   "1.5.0",
+			expected: []any{"1.0.0", "2.0.0"},
+			want:     true,
+		},
+		{
+			name:     "version_between - outside range",
+			operator: "version_between",
+			actual:   "3.0.0",
+			expected: []any{"1.0.0", "2.0.0"},
+			want:     false,
+		},
+
+		// Invalid versions
+		{
+			name:     "version_eq - invalid actual",
+			operator: "version_eq",
+			actual:   "not-a-version",
+			expected: "1.2.3",
+			wantErr:  true,
+		},
+		{
+			name:     "version_eq - invalid expected",
+			operator: "version_eq",
+			actual:   "1.2.3",
+			expected: "not-a-version",
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opFunc, ok := m.operators[tt.operator]
+			require.True(t, ok, "operator not found: %s", tt.operator)
+
+			got, err := opFunc(tt.actual, tt.expected)
+
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestMatcherEngine_LogicalOperators(t *testing.T) {
+	m := NewMatcherEngine()
+
+	tests := []struct {
+		name     string
+		operator string
+		actual   any
+		expected any
+		want     bool
+		wantErr  bool
+	}{
+		// Exists
+		{
+			name:     "exists - true",
+			operator: "exists",
+			actual:   "anything",
+			expected: true,
+			want:     true,
+		},
+		{
+			name:     "exists - invalid expected",
+			operator: "exists",
+			actual:   "anything",
+			expected: "not-a-bool",
+			wantErr:  true,
+		},
+
+		// In
+		{
+			name:     "in - found",
+			operator: "in",
+			actual:   "admin",
+			expected: []any{"admin", "root", "user"},
+			want:     true,
+		},
+		{
+			name:     "in - not found",
+			operator: "in",
+			actual:   "guest",
+			expected: []any{"admin", "root", "user"},
+			want:     false,
+		},
+		{
+			name:     "in - invalid expected",
+			operator: "in",
+			actual:   "admin",
+			expected: "not-an-array",
+			wantErr:  true,
+		},
+
+		// NotIn
+		{
+			name:     "notIn - not found",
+			operator: "notIn",
+			actual:   "guest",
+			expected: []any{"admin", "root", "user"},
+			want:     true,
+		},
+		{
+			name:     "notIn - found",
+			operator: "notIn",
+			actual:   "admin",
+			expected: []any{"admin", "root", "user"},
+			want:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opFunc, ok := m.operators[tt.operator]
+			require.True(t, ok, "operator not found: %s", tt.operator)
+
+			got, err := opFunc(tt.actual, tt.expected)
+
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestMatcherEngine_Evaluate(t *testing.T) {
+	m := NewMatcherEngine()
+
+	tests := []struct {
+		name    string
+		match   *MatchBlock
+		context map[string]any
+		want    bool
+		wantErr bool
+	}{
+		{
+			name: "AND logic - all true",
+			match: &MatchBlock{
+				Logic: "AND",
+				Rules: []MatchRule{
+					{Field: "service", Operator: "equals", Value: "ssh"},
+					{Field: "port", Operator: "equals", Value: "22"},
+				},
+			},
+			context: map[string]any{
+				"service": "ssh",
+				"port":    "22",
+			},
+			want: true,
+		},
+		{
+			name: "AND logic - one false",
+			match: &MatchBlock{
+				Logic: "AND",
+				Rules: []MatchRule{
+					{Field: "service", Operator: "equals", Value: "ssh"},
+					{Field: "port", Operator: "equals", Value: "23"},
+				},
+			},
+			context: map[string]any{
+				"service": "ssh",
+				"port":    "22",
+			},
+			want: false,
+		},
+		{
+			name: "OR logic - one true",
+			match: &MatchBlock{
+				Logic: "OR",
+				Rules: []MatchRule{
+					{Field: "service", Operator: "equals", Value: "ssh"},
+					{Field: "service", Operator: "equals", Value: "telnet"},
+				},
+			},
+			context: map[string]any{
+				"service": "ssh",
+			},
+			want: true,
+		},
+		{
+			name: "OR logic - all false",
+			match: &MatchBlock{
+				Logic: "OR",
+				Rules: []MatchRule{
+					{Field: "service", Operator: "equals", Value: "telnet"},
+					{Field: "service", Operator: "equals", Value: "ftp"},
+				},
+			},
+			context: map[string]any{
+				"service": "ssh",
+			},
+			want: false,
+		},
+		{
+			name: "NOT logic - should be false",
+			match: &MatchBlock{
+				Logic: "NOT",
+				Rules: []MatchRule{
+					{Field: "service", Operator: "equals", Value: "ssh"},
+				},
+			},
+			context: map[string]any{
+				"service": "ssh",
+			},
+			want: false,
+		},
+		{
+			name: "NOT logic - should be true",
+			match: &MatchBlock{
+				Logic: "NOT",
+				Rules: []MatchRule{
+					{Field: "service", Operator: "equals", Value: "telnet"},
+				},
+			},
+			context: map[string]any{
+				"service": "ssh",
+			},
+			want: true,
+		},
+		{
+			name: "complex - version check",
+			match: &MatchBlock{
+				Logic: "AND",
+				Rules: []MatchRule{
+					{Field: "ssh.version", Operator: "version_lt", Value: "8.5"},
+					{Field: "ssh.banner", Operator: "contains", Value: "OpenSSH"},
+				},
+			},
+			context: map[string]any{
+				"ssh.version": "7.4.0",
+				"ssh.banner":  "OpenSSH_7.4p1",
+			},
+			want: true,
+		},
+		{
+			name:    "nil match block",
+			match:   nil,
+			context: map[string]any{},
+			wantErr: true,
+		},
+		{
+			name: "empty rules",
+			match: &MatchBlock{
+				Logic: "AND",
+				Rules: []MatchRule{},
+			},
+			context: map[string]any{},
+			wantErr: true,
+		},
+		{
+			name: "unknown operator",
+			match: &MatchBlock{
+				Logic: "AND",
+				Rules: []MatchRule{
+					{Field: "service", Operator: "unknown_op", Value: "ssh"},
+				},
+			},
+			context: map[string]any{
+				"service": "ssh",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := m.Evaluate(tt.match, tt.context)
+
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestMatcherEngine_CustomOperator(t *testing.T) {
+	m := NewMatcherEngine()
+
+	// Register custom operator
+	m.RegisterOperator("custom_test", func(actual, expected any) (bool, error) {
+		return toString(actual) == "custom", nil
+	})
+
+	match := &MatchBlock{
+		Logic: "AND",
+		Rules: []MatchRule{
+			{Field: "value", Operator: "custom_test", Value: "anything"},
+		},
+	}
+
+	context := map[string]any{
+		"value": "custom",
+	}
+
+	got, err := m.Evaluate(match, context)
+	require.NoError(t, err)
+	require.True(t, got)
+}
