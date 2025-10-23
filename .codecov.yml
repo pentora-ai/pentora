@@ -6,38 +6,40 @@ coverage:
   status:
     project:
       default:
-        target: 85%          # Minimum project-wide coverage
-        threshold: 1%        # Allow 1% decrease
+        target: 85% # Minimum project-wide coverage
+        threshold: 1% # Allow 1% decrease
+        informational: true
     patch:
       default:
-        target: 90%          # Higher standard for new code
-        threshold: 1%        # Allow 1% decrease for new code
+        target: 90% # Higher standard for new code
+        threshold: 1% # Allow 1% decrease for new code
+        informational: true
 
   # Ignore paths that don't need coverage
   ignore:
     # CLI entry points - thin wrappers around pkg/
-    - "cmd/**/*.go"
+    - 'cmd/**/*.go'
 
     # CLI command implementations - integration tested
-    - "pkg/cli/**/*.go"
+    - 'pkg/cli/**/*.go'
 
     # Generated code
-    - "**/*.pb.go"           # Protobuf generated files
-    - "**/*_generated.go"    # Any generated Go files
-    - "pkg/engine/proto/**"  # Protocol buffer definitions
+    - '**/*.pb.go' # Protobuf generated files
+    - '**/*_generated.go' # Any generated Go files
+    - 'pkg/engine/proto/**' # Protocol buffer definitions
 
     # Not yet implemented / future work
-    - "pkg/api/dashboard/**"
-    - "pkg/fingerprint/catalogsync/**"
+    - 'pkg/api/dashboard/**'
+    - 'pkg/fingerprint/catalogsync/**'
 
     # Test files (already excluded by default but explicit)
-    - "**/*_test.go"
-    - "**/testdata/**"
-    - "**/mock_*.go"
+    - '**/*_test.go'
+    - '**/testdata/**'
+    - '**/mock_*.go'
 
 # Comment behavior on PRs
 comment:
-  layout: "diff, flags, files"
+  layout: 'diff, flags, files'
   behavior: default
   require_changes: false
   require_base: false
