@@ -174,3 +174,298 @@ func TestTriggerEvaluator_ShouldTrigger(t *testing.T) {
 		})
 	}
 }
+
+// Additional tests for missing trigger conditions
+
+func TestTriggerEvaluator_AllConditions(t *testing.T) {
+	te := NewTriggerEvaluator()
+
+	tests := []struct {
+		name     string
+		triggers []Trigger
+		context  map[string]any
+		want     bool
+		wantErr  bool
+	}{
+		// matches (regex)
+		{
+			name: "matches - regex match",
+			triggers: []Trigger{
+				{DataKey: "banner", Condition: "matches", Value: "OpenSSH_\\d+\\.\\d+"},
+			},
+			context: map[string]any{
+				"banner": "OpenSSH_7.4p1",
+			},
+			want: true,
+		},
+		{
+			name: "matches - regex no match",
+			triggers: []Trigger{
+				{DataKey: "banner", Condition: "matches", Value: "Dropbear"},
+			},
+			context: map[string]any{
+				"banner": "OpenSSH_7.4p1",
+			},
+			want: false,
+		},
+		{
+			name: "matches - key missing",
+			triggers: []Trigger{
+				{DataKey: "banner", Condition: "matches", Value: "OpenSSH"},
+			},
+			context: map[string]any{},
+			want:    false,
+		},
+
+		// version_gt
+		{
+			name: "version_gt - true",
+			triggers: []Trigger{
+				{DataKey: "version", Condition: "version_gt", Value: "1.0.0"},
+			},
+			context: map[string]any{
+				"version": "2.0.0",
+			},
+			want: true,
+		},
+		{
+			name: "version_gt - false",
+			triggers: []Trigger{
+				{DataKey: "version", Condition: "version_gt", Value: "2.0.0"},
+			},
+			context: map[string]any{
+				"version": "1.0.0",
+			},
+			want: false,
+		},
+
+		// version_eq
+		{
+			name: "version_eq - equal",
+			triggers: []Trigger{
+				{DataKey: "version", Condition: "version_eq", Value: "1.2.3"},
+			},
+			context: map[string]any{
+				"version": "1.2.3",
+			},
+			want: true,
+		},
+		{
+			name: "version_eq - not equal",
+			triggers: []Trigger{
+				{DataKey: "version", Condition: "version_eq", Value: "1.2.3"},
+			},
+			context: map[string]any{
+				"version": "1.2.4",
+			},
+			want: false,
+		},
+
+		// version_lte
+		{
+			name: "version_lte - less",
+			triggers: []Trigger{
+				{DataKey: "version", Condition: "version_lte", Value: "2.0.0"},
+			},
+			context: map[string]any{
+				"version": "1.0.0",
+			},
+			want: true,
+		},
+		{
+			name: "version_lte - equal",
+			triggers: []Trigger{
+				{DataKey: "version", Condition: "version_lte", Value: "2.0.0"},
+			},
+			context: map[string]any{
+				"version": "2.0.0",
+			},
+			want: true,
+		},
+
+		// version_gte
+		{
+			name: "version_gte - greater",
+			triggers: []Trigger{
+				{DataKey: "version", Condition: "version_gte", Value: "1.0.0"},
+			},
+			context: map[string]any{
+				"version": "2.0.0",
+			},
+			want: true,
+		},
+		{
+			name: "version_gte - equal",
+			triggers: []Trigger{
+				{DataKey: "version", Condition: "version_gte", Value: "1.0.0"},
+			},
+			context: map[string]any{
+				"version": "1.0.0",
+			},
+			want: true,
+		},
+
+		// gte (numeric)
+		{
+			name: "gte - greater",
+			triggers: []Trigger{
+				{DataKey: "count", Condition: "gte", Value: 10},
+			},
+			context: map[string]any{
+				"count": 20,
+			},
+			want: true,
+		},
+		{
+			name: "gte - equal",
+			triggers: []Trigger{
+				{DataKey: "count", Condition: "gte", Value: 10},
+			},
+			context: map[string]any{
+				"count": 10,
+			},
+			want: true,
+		},
+		{
+			name: "gte - less",
+			triggers: []Trigger{
+				{DataKey: "count", Condition: "gte", Value: 10},
+			},
+			context: map[string]any{
+				"count": 5,
+			},
+			want: false,
+		},
+
+		// lt (numeric)
+		{
+			name: "lt - true",
+			triggers: []Trigger{
+				{DataKey: "count", Condition: "lt", Value: 10},
+			},
+			context: map[string]any{
+				"count": 5,
+			},
+			want: true,
+		},
+		{
+			name: "lt - false",
+			triggers: []Trigger{
+				{DataKey: "count", Condition: "lt", Value: 10},
+			},
+			context: map[string]any{
+				"count": 20,
+			},
+			want: false,
+		},
+
+		// lte (numeric)
+		{
+			name: "lte - less",
+			triggers: []Trigger{
+				{DataKey: "count", Condition: "lte", Value: 10},
+			},
+			context: map[string]any{
+				"count": 5,
+			},
+			want: true,
+		},
+		{
+			name: "lte - equal",
+			triggers: []Trigger{
+				{DataKey: "count", Condition: "lte", Value: 10},
+			},
+			context: map[string]any{
+				"count": 10,
+			},
+			want: true,
+		},
+		{
+			name: "lte - greater",
+			triggers: []Trigger{
+				{DataKey: "count", Condition: "lte", Value: 10},
+			},
+			context: map[string]any{
+				"count": 20,
+			},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := te.ShouldTrigger(tt.triggers, tt.context)
+
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestTriggerEvaluator_ErrorCases(t *testing.T) {
+	te := NewTriggerEvaluator()
+
+	tests := []struct {
+		name     string
+		triggers []Trigger
+		context  map[string]any
+	}{
+		{
+			name: "exists - invalid value type",
+			triggers: []Trigger{
+				{DataKey: "key", Condition: "exists", Value: "not a bool"},
+			},
+			context: map[string]any{
+				"key": "value",
+			},
+		},
+		{
+			name: "matches - invalid regex",
+			triggers: []Trigger{
+				{DataKey: "banner", Condition: "matches", Value: "[invalid(regex"},
+			},
+			context: map[string]any{
+				"banner": "test",
+			},
+		},
+		{
+			name: "version_lt - invalid version",
+			triggers: []Trigger{
+				{DataKey: "version", Condition: "version_lt", Value: "not.a.version"},
+			},
+			context: map[string]any{
+				"version": "1.0.0",
+			},
+		},
+		{
+			name: "gt - invalid number",
+			triggers: []Trigger{
+				{DataKey: "count", Condition: "gt", Value: 10},
+			},
+			context: map[string]any{
+				"count": "not a number",
+			},
+		},
+		{
+			name: "in - invalid format",
+			triggers: []Trigger{
+				{DataKey: "service", Condition: "in", Value: "not an array"},
+			},
+			context: map[string]any{
+				"service": "ssh",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := te.ShouldTrigger(tt.triggers, tt.context)
+			require.Error(t, err)
+		})
+	}
+}
