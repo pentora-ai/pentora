@@ -771,3 +771,315 @@ func TestDownloader_FetchManifest_InvalidYAML(t *testing.T) {
 	require.Nil(t, manifest)
 	require.Contains(t, err.Error(), "failed to decode manifest")
 }
+
+// Error path tests for downloadFile function
+
+func TestDownloader_downloadFile_InvalidURL(t *testing.T) {
+	cacheDir := t.TempDir()
+	cache, err := NewCacheManager(cacheDir)
+	require.NoError(t, err)
+
+	downloader := NewDownloader(cache)
+	ctx := context.Background()
+
+	// Invalid URL with control characters that fail NewRequestWithContext
+	invalidURL := "http://example.com/\x00invalid"
+	data, err := downloader.downloadFile(ctx, invalidURL)
+	require.Error(t, err)
+	require.Nil(t, data)
+	require.Contains(t, err.Error(), "failed to create request")
+}
+
+func TestDownloader_downloadFile_ContextCancelled(t *testing.T) {
+	// Create a server that delays response
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(100 * time.Millisecond)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("test data"))
+	}))
+	defer server.Close()
+
+	cacheDir := t.TempDir()
+	cache, err := NewCacheManager(cacheDir)
+	require.NoError(t, err)
+
+	downloader := NewDownloader(cache)
+
+	// Create context that cancels immediately
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
+
+	data, err := downloader.downloadFile(ctx, server.URL)
+	require.Error(t, err)
+	require.Nil(t, data)
+	require.Contains(t, err.Error(), "failed to download")
+}
+
+func TestDownloader_downloadFile_NonOKStatus(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	cacheDir := t.TempDir()
+	cache, err := NewCacheManager(cacheDir)
+	require.NoError(t, err)
+
+	downloader := NewDownloader(cache)
+	ctx := context.Background()
+
+	data, err := downloader.downloadFile(ctx, server.URL)
+	require.Error(t, err)
+	require.Nil(t, data)
+	require.Contains(t, err.Error(), "unexpected status code: 404")
+}
+
+// Error path tests for fetchManifestFromURL function
+
+func TestDownloader_fetchManifestFromURL_InvalidURL(t *testing.T) {
+	cacheDir := t.TempDir()
+	cache, err := NewCacheManager(cacheDir)
+	require.NoError(t, err)
+
+	downloader := NewDownloader(cache)
+	ctx := context.Background()
+
+	// Invalid URL with control characters
+	invalidURL := "http://example.com/\x00invalid"
+	manifest, err := downloader.fetchManifestFromURL(ctx, invalidURL)
+	require.Error(t, err)
+	require.Nil(t, manifest)
+	require.Contains(t, err.Error(), "failed to create request")
+}
+
+func TestDownloader_fetchManifestFromURL_NetworkError(t *testing.T) {
+	cacheDir := t.TempDir()
+	cache, err := NewCacheManager(cacheDir)
+	require.NoError(t, err)
+
+	downloader := NewDownloader(cache)
+	ctx := context.Background()
+
+	// Use invalid host to trigger network error
+	invalidHost := "http://invalid-host-that-does-not-exist-12345.com"
+	manifest, err := downloader.fetchManifestFromURL(ctx, invalidHost)
+	require.Error(t, err)
+	require.Nil(t, manifest)
+	require.Contains(t, err.Error(), "failed to fetch manifest")
+}
+
+func TestDownloader_fetchManifestFromURL_NonOKStatus(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	cacheDir := t.TempDir()
+	cache, err := NewCacheManager(cacheDir)
+	require.NoError(t, err)
+
+	downloader := NewDownloader(cache)
+	ctx := context.Background()
+
+	manifest, err := downloader.fetchManifestFromURL(ctx, server.URL)
+	require.Error(t, err)
+	require.Nil(t, manifest)
+	require.Contains(t, err.Error(), "unexpected status code: 500")
+}
+
+// Error path tests for Download function
+
+func TestDownloader_Download_DownloadFileError(t *testing.T) {
+	manifest := PluginManifest{
+		Version: "1.0",
+		Plugins: []PluginManifestEntry{
+			{
+				Name:     "test-plugin",
+				Version:  "1.0.0",
+				URL:      "http://invalid-host-does-not-exist-12345.com/plugin.yaml",
+				Checksum: "sha256:abc123",
+			},
+		},
+	}
+
+	manifestServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_ = yaml.NewEncoder(w).Encode(manifest)
+	}))
+	defer manifestServer.Close()
+
+	cacheDir := t.TempDir()
+	cache, err := NewCacheManager(cacheDir)
+	require.NoError(t, err)
+
+	source := PluginSource{
+		Name:    "test",
+		URL:     manifestServer.URL,
+		Enabled: true,
+	}
+
+	downloader := NewDownloader(cache, WithSources([]PluginSource{source}))
+	ctx := context.Background()
+
+	entry, err := downloader.Download(ctx, "test-plugin", "1.0.0")
+	require.Error(t, err)
+	require.Nil(t, entry)
+	require.Contains(t, err.Error(), "failed to download plugin")
+}
+
+// Error path tests for DownloadByCategory function
+
+func TestDownloader_DownloadByCategory_AllManifestsFail(t *testing.T) {
+	// Create server that returns 500 error
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	cacheDir := t.TempDir()
+	cache, err := NewCacheManager(cacheDir)
+	require.NoError(t, err)
+
+	source := PluginSource{
+		Name:    "test",
+		URL:     server.URL,
+		Enabled: true,
+	}
+
+	downloader := NewDownloader(cache, WithSources([]PluginSource{source}))
+	ctx := context.Background()
+
+	entries, err := downloader.DownloadByCategory(ctx, CategorySSH)
+	require.NoError(t, err) // Should not error, just return empty
+	require.Empty(t, entries)
+}
+
+func TestDownloader_DownloadByCategory_PartialDownloadFailure(t *testing.T) {
+	// Create two plugins: one with valid URL, one with invalid
+	plugin1 := &YAMLPlugin{
+		Name:    "valid-plugin",
+		Version: "1.0.0",
+		Type:    EvaluationType,
+		Author:  "test",
+		Metadata: PluginMetadata{
+			Severity: HighSeverity,
+			Tags:     []string{"ssh"},
+		},
+		Output: OutputBlock{Message: "Test"},
+	}
+
+	plugin1Data, err := yaml.Marshal(plugin1)
+	require.NoError(t, err)
+
+	hash1 := sha256.Sum256(plugin1Data)
+	checksum1 := "sha256:" + hex.EncodeToString(hash1[:])
+
+	// Valid plugin server
+	pluginServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(plugin1Data)
+	}))
+	defer pluginServer.Close()
+
+	manifest := PluginManifest{
+		Version: "1.0",
+		Plugins: []PluginManifestEntry{
+			{
+				Name:       "valid-plugin",
+				Version:    "1.0.0",
+				Categories: []Category{CategorySSH},
+				URL:        pluginServer.URL + "/valid.yaml",
+				Checksum:   checksum1,
+			},
+			{
+				Name:       "invalid-plugin",
+				Version:    "1.0.0",
+				Categories: []Category{CategorySSH},
+				URL:        "http://invalid-host-12345.com/invalid.yaml",
+				Checksum:   "sha256:invalid",
+			},
+		},
+	}
+
+	manifestServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_ = yaml.NewEncoder(w).Encode(manifest)
+	}))
+	defer manifestServer.Close()
+
+	cacheDir := t.TempDir()
+	cache, err := NewCacheManager(cacheDir)
+	require.NoError(t, err)
+
+	source := PluginSource{
+		Name:    "test",
+		URL:     manifestServer.URL,
+		Enabled: true,
+	}
+
+	downloader := NewDownloader(cache, WithSources([]PluginSource{source}))
+	ctx := context.Background()
+
+	// DownloadByCategory continues on error, so it succeeds with only valid plugin
+	entries, err := downloader.DownloadByCategory(ctx, CategorySSH)
+	require.NoError(t, err)    // No error, just logs and continues
+	require.Len(t, entries, 1) // Only the valid plugin downloaded
+	require.Equal(t, "valid-plugin", entries[0].Name)
+}
+
+// Error path tests for Update function
+
+func TestDownloader_Update_DownloadError(t *testing.T) {
+	cacheDir := t.TempDir()
+	cache, err := NewCacheManager(cacheDir)
+	require.NoError(t, err)
+
+	// Add plugin to cache
+	plugin := &YAMLPlugin{
+		Name:    "test-plugin",
+		Version: "1.0.0",
+		Type:    EvaluationType,
+		Author:  "test",
+		Metadata: PluginMetadata{
+			Severity: MediumSeverity,
+			Tags:     []string{"test"},
+		},
+		Output: OutputBlock{Message: "Test"},
+	}
+
+	_, err = cache.Add(plugin, "sha256:abc123", "https://example.com")
+	require.NoError(t, err)
+
+	// Create manifest with newer version but invalid download URL
+	manifest := PluginManifest{
+		Version: "1.0",
+		Plugins: []PluginManifestEntry{
+			{
+				Name:     "test-plugin",
+				Version:  "2.0.0", // Newer version
+				URL:      "http://invalid-host-12345.com/plugin.yaml",
+				Checksum: "sha256:newchecksum",
+			},
+		},
+	}
+
+	manifestServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_ = yaml.NewEncoder(w).Encode(manifest)
+	}))
+	defer manifestServer.Close()
+
+	source := PluginSource{
+		Name:    "test",
+		URL:     manifestServer.URL,
+		Enabled: true,
+	}
+
+	downloader := NewDownloader(cache, WithSources([]PluginSource{source}))
+	ctx := context.Background()
+
+	count, err := downloader.Update(ctx)
+	require.Error(t, err)
+	require.Equal(t, 0, count)
+	require.Contains(t, err.Error(), "failed to update test-plugin")
+}
