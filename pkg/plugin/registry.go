@@ -1,79 +1,206 @@
+// Copyright 2025 Pentora Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+
 package plugin
 
-// Plugin represents a pluggable vulnerability rule
-type Plugins struct {
-	ID           string
-	Name         string
-	RequirePorts []int
-	RequireKeys  []string
-	DependsOn    []string
-	MatchFunc    func(ctx map[string]string) *MatchResult
+import (
+	"fmt"
+	"sync"
+)
+
+// YAMLRegistry manages YAML-based plugins with metadata, categories, and caching.
+// This is the OSS in-memory implementation.
+// Enterprise can replace with distributed registry backed by database.
+type YAMLRegistry struct {
+	// In-memory plugin storage (plugin.Name -> *YAMLPlugin)
+	plugins map[string]*YAMLPlugin
+
+	// Category index (category -> []plugin names)
+	categories map[string][]string
+
+	// Metadata index (for quick lookups)
+	metadata map[string]*PluginMetadata
+
+	// Thread-safe access
+	mu sync.RWMutex
 }
 
-// MatchResult represents the output of a plugin if it detects something
-type MatchResult struct {
-	CVE     []string
-	Summary string
-	Port    int
-	Info    string
-}
-
-var registry = map[string]*Plugins{}
-
-// Register adds a plugin to the global registry
-func Register(p *Plugins) {
-	registry[p.ID] = p
-}
-
-// Filter returns plugins that match the given context
-func Filter(ctx map[string]string, openPorts []int, satisfied []string) []*Plugins {
-	var selected []*Plugins
-
-	portMap := make(map[int]bool)
-	for _, p := range openPorts {
-		portMap[p] = true
+// NewYAMLRegistry creates a new YAML plugin registry.
+func NewYAMLRegistry() *YAMLRegistry {
+	return &YAMLRegistry{
+		plugins:    make(map[string]*YAMLPlugin),
+		categories: make(map[string][]string),
+		metadata:   make(map[string]*PluginMetadata),
 	}
-	satisfiedMap := make(map[string]bool)
-	for _, s := range satisfied {
-		satisfiedMap[s] = true
-	}
-
-	for _, p := range registry {
-		match := true
-		for _, reqPort := range p.RequirePorts {
-			if !portMap[reqPort] {
-				match = false
-				break
-			}
-		}
-		for _, reqKey := range p.RequireKeys {
-			if _, ok := ctx[reqKey]; !ok {
-				match = false
-				break
-			}
-		}
-		for _, dep := range p.DependsOn {
-			if !satisfiedMap[dep] {
-				match = false
-				break
-			}
-		}
-		if match {
-			selected = append(selected, p)
-		}
-	}
-	return selected
 }
 
-// MatchAll runs all matching plugins and returns their results
-func MatchAll(ctx map[string]string, openPorts []int, satisfied []string) []*MatchResult {
-	var results []*MatchResult
-	for _, plugin := range Filter(ctx, openPorts, satisfied) {
-		if res := plugin.MatchFunc(ctx); res != nil {
-			results = append(results, res)
-		}
+// Register adds a plugin to the registry.
+// Returns error if plugin with same name already exists.
+func (r *YAMLRegistry) Register(plugin *YAMLPlugin) error {
+	if plugin == nil {
+		return fmt.Errorf("cannot register nil plugin")
 	}
-	return results
+
+	if plugin.Name == "" {
+		return fmt.Errorf("plugin name cannot be empty")
+	}
+
+	// Validate plugin before registration
+	if err := plugin.Validate(); err != nil {
+		return fmt.Errorf("plugin validation failed: %w", err)
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Check for duplicates
+	if _, exists := r.plugins[plugin.Name]; exists {
+		return fmt.Errorf("plugin '%s' already registered", plugin.Name)
+	}
+
+	// Register plugin
+	r.plugins[plugin.Name] = plugin
+	r.metadata[plugin.Name] = &plugin.Metadata
+
+	// Index by category (using tags as categories)
+	for _, tag := range plugin.Metadata.Tags {
+		r.categories[tag] = append(r.categories[tag], plugin.Name)
+	}
+
+	return nil
 }
 
-// Run executes the plugin's match function and returns the result
+// Unregister removes a plugin from the registry.
+func (r *YAMLRegistry) Unregister(name string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	plugin, exists := r.plugins[name]
+	if !exists {
+		return fmt.Errorf("plugin '%s' not found", name)
+	}
+
+	// Remove from category index
+	for _, tag := range plugin.Metadata.Tags {
+		r.removeFromCategory(tag, name)
+	}
+
+	// Remove from registry
+	delete(r.plugins, name)
+	delete(r.metadata, name)
+
+	return nil
+}
+
+// Get retrieves a plugin by name.
+func (r *YAMLRegistry) Get(name string) (*YAMLPlugin, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	plugin, exists := r.plugins[name]
+	return plugin, exists
+}
+
+// List returns all registered plugins.
+func (r *YAMLRegistry) List() []*YAMLPlugin {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	plugins := make([]*YAMLPlugin, 0, len(r.plugins))
+	for _, plugin := range r.plugins {
+		plugins = append(plugins, plugin)
+	}
+
+	return plugins
+}
+
+// ListByCategory returns plugins belonging to a specific category (tag).
+func (r *YAMLRegistry) ListByCategory(category string) []*YAMLPlugin {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	names, exists := r.categories[category]
+	if !exists {
+		return []*YAMLPlugin{}
+	}
+
+	plugins := make([]*YAMLPlugin, 0, len(names))
+	for _, name := range names {
+		if plugin, ok := r.plugins[name]; ok {
+			plugins = append(plugins, plugin)
+		}
+	}
+
+	return plugins
+}
+
+// Categories returns all available categories with plugin counts.
+func (r *YAMLRegistry) Categories() map[string]int {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	result := make(map[string]int)
+	for category, plugins := range r.categories {
+		result[category] = len(plugins)
+	}
+
+	return result
+}
+
+// Count returns the total number of registered plugins.
+func (r *YAMLRegistry) Count() int {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	return len(r.plugins)
+}
+
+// Clear removes all plugins from the registry.
+func (r *YAMLRegistry) Clear() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	r.plugins = make(map[string]*YAMLPlugin)
+	r.categories = make(map[string][]string)
+	r.metadata = make(map[string]*PluginMetadata)
+}
+
+// RegisterBulk registers multiple plugins at once.
+// Returns the number of successfully registered plugins and any errors encountered.
+func (r *YAMLRegistry) RegisterBulk(plugins []*YAMLPlugin) (int, []error) {
+	var errors []error
+	successCount := 0
+
+	for _, plugin := range plugins {
+		if err := r.Register(plugin); err != nil {
+			errors = append(errors, fmt.Errorf("%s: %w", plugin.Name, err))
+		} else {
+			successCount++
+		}
+	}
+
+	return successCount, errors
+}
+
+// removeFromCategory removes a plugin name from a category slice.
+// Must be called with lock held.
+func (r *YAMLRegistry) removeFromCategory(category, name string) {
+	names, exists := r.categories[category]
+	if !exists {
+		return
+	}
+
+	// Remove name from slice
+	for i, n := range names {
+		if n == name {
+			r.categories[category] = append(names[:i], names[i+1:]...)
+			break
+		}
+	}
+
+	// Remove category if empty
+	if len(r.categories[category]) == 0 {
+		delete(r.categories, category)
+	}
+}
