@@ -390,6 +390,104 @@ func TestTriggerEvaluator_AllConditions(t *testing.T) {
 			},
 			want: false,
 		},
+
+		// Test missing keys for all conditions
+		{
+			name: "equals - key missing",
+			triggers: []Trigger{
+				{DataKey: "service", Condition: "equals", Value: "ssh"},
+			},
+			context: map[string]any{},
+			want:    false,
+		},
+		{
+			name: "contains - key missing",
+			triggers: []Trigger{
+				{DataKey: "banner", Condition: "contains", Value: "OpenSSH"},
+			},
+			context: map[string]any{},
+			want:    false,
+		},
+		{
+			name: "version_gt - key missing",
+			triggers: []Trigger{
+				{DataKey: "version", Condition: "version_gt", Value: "1.0.0"},
+			},
+			context: map[string]any{},
+			want:    false,
+		},
+		{
+			name: "version_eq - key missing",
+			triggers: []Trigger{
+				{DataKey: "version", Condition: "version_eq", Value: "1.0.0"},
+			},
+			context: map[string]any{},
+			want:    false,
+		},
+		{
+			name: "version_lte - key missing",
+			triggers: []Trigger{
+				{DataKey: "version", Condition: "version_lte", Value: "1.0.0"},
+			},
+			context: map[string]any{},
+			want:    false,
+		},
+		{
+			name: "version_gte - key missing",
+			triggers: []Trigger{
+				{DataKey: "version", Condition: "version_gte", Value: "1.0.0"},
+			},
+			context: map[string]any{},
+			want:    false,
+		},
+		{
+			name: "gt - key missing",
+			triggers: []Trigger{
+				{DataKey: "count", Condition: "gt", Value: 10},
+			},
+			context: map[string]any{},
+			want:    false,
+		},
+		{
+			name: "gte - key missing",
+			triggers: []Trigger{
+				{DataKey: "count", Condition: "gte", Value: 10},
+			},
+			context: map[string]any{},
+			want:    false,
+		},
+		{
+			name: "lt - key missing",
+			triggers: []Trigger{
+				{DataKey: "count", Condition: "lt", Value: 10},
+			},
+			context: map[string]any{},
+			want:    false,
+		},
+		{
+			name: "lte - key missing",
+			triggers: []Trigger{
+				{DataKey: "count", Condition: "lte", Value: 10},
+			},
+			context: map[string]any{},
+			want:    false,
+		},
+		{
+			name: "in - key missing",
+			triggers: []Trigger{
+				{DataKey: "service", Condition: "in", Value: []any{"ssh", "http"}},
+			},
+			context: map[string]any{},
+			want:    false,
+		},
+		{
+			name: "notIn - key missing",
+			triggers: []Trigger{
+				{DataKey: "service", Condition: "notIn", Value: []any{"ssh", "http"}},
+			},
+			context: map[string]any{},
+			want:    false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -408,6 +506,69 @@ func TestTriggerEvaluator_AllConditions(t *testing.T) {
 }
 
 func TestTriggerEvaluator_ErrorCases(t *testing.T) {
+	te := NewTriggerEvaluator()
+
+	tests := []struct {
+		name     string
+		triggers []Trigger
+		context  map[string]any
+	}{
+		{
+			name: "exists - invalid value type",
+			triggers: []Trigger{
+				{DataKey: "key", Condition: "exists", Value: "not a bool"},
+			},
+			context: map[string]any{
+				"key": "value",
+			},
+		},
+		{
+			name: "matches - invalid regex",
+			triggers: []Trigger{
+				{DataKey: "banner", Condition: "matches", Value: "[invalid(regex"},
+			},
+			context: map[string]any{
+				"banner": "test",
+			},
+		},
+		{
+			name: "version_lt - invalid version",
+			triggers: []Trigger{
+				{DataKey: "version", Condition: "version_lt", Value: "not.a.version"},
+			},
+			context: map[string]any{
+				"version": "1.0.0",
+			},
+		},
+		{
+			name: "gt - invalid number",
+			triggers: []Trigger{
+				{DataKey: "count", Condition: "gt", Value: 10},
+			},
+			context: map[string]any{
+				"count": "not a number",
+			},
+		},
+		{
+			name: "in - invalid format",
+			triggers: []Trigger{
+				{DataKey: "service", Condition: "in", Value: "not an array"},
+			},
+			context: map[string]any{
+				"service": "ssh",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := te.ShouldTrigger(tt.triggers, tt.context)
+			require.Error(t, err)
+		})
+	}
+}
+
+func TestTriggerEvaluator_NotExists(t *testing.T) {
 	te := NewTriggerEvaluator()
 
 	tests := []struct {
