@@ -21,7 +21,8 @@
 
 - **Modular service detection** with extensible protocol parsers (SSH, HTTP, FTP, DNS, and more)
 - **Fingerprint-based asset profiling** for accurate service version identification
-- **Plugin-based vulnerability matching** with CVE correlation
+- **YAML plugin system** with 18 embedded security checks and support for custom plugins
+- **Plugin-based vulnerability matching** with CVE/CWE correlation and severity ratings
 - **Workspace management** for organizing and querying scan results
 - **Hook system** for custom automation and event-driven workflows
 
@@ -117,9 +118,9 @@ pentora dag validate dag.yaml --strict
 pentora dag validate dag.yaml --json
 ```
 
-### YAML Plugin System (New)
+### YAML Plugin System
 
-Create custom vulnerability checks without writing Go code using YAML plugins:
+**18 essential security check plugins** are embedded in the binary and ready to use immediately. Create custom vulnerability checks without writing Go code using YAML plugins:
 
 ```bash
 # Load and evaluate YAML plugins
@@ -176,7 +177,14 @@ output:
 
 **Match Logic**: `AND`, `OR`, `NOT` for combining rules
 
-See [pkg/plugin/testdata/plugins/](pkg/plugin/testdata/plugins/) for more examples.
+**Embedded Plugins** (18 total, ~50 KB):
+- **SSH** (4): weak-key-exchange, weak-mac, weak-cipher, default-creds
+- **HTTP** (4): missing-security-headers, server-version-disclosure, default-pages, weak-ssl
+- **TLS** (4): weak-cipher, expired-cert, self-signed-cert, weak-protocol
+- **Database** (3): mysql-default-creds, postgres-default-creds, redis-no-auth
+- **Network** (3): open-telnet, open-ftp, weak-snmp-community
+
+See [pkg/plugin/testdata/plugins/](pkg/plugin/testdata/plugins/) and [pkg/plugin/embedded/](pkg/plugin/embedded/) for examples.
 
 ## 📂 Project Structure
 
