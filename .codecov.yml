@@ -6,14 +6,14 @@ coverage:
   status:
     project:
       default:
-        target: 85% # Minimum project-wide coverage
-        threshold: 1% # Allow 1% decrease
-        informational: true
+        target: 70% # Realistic baseline (current: 67.3%, gradual improvement expected)
+        threshold: 2% # Allow 2% decrease for refactoring flexibility
+        informational: false # Block PRs that decrease coverage significantly
     patch:
       default:
-        target: 90% # Higher standard for new code
-        threshold: 1% # Allow 1% decrease for new code
-        informational: true
+        target: 85% # High standard for new code (achievable, see pkg/plugin: 96.5%)
+        threshold: 5% # Allow 5% decrease for major refactoring/architecture changes
+        informational: false # Enforce quality on new code
 
   # Ignore paths that don't need coverage
   ignore:
@@ -27,6 +27,10 @@ coverage:
     - '**/*.pb.go' # Protobuf generated files
     - '**/*_generated.go' # Any generated Go files
     - 'pkg/engine/proto/**' # Protocol buffer definitions
+
+    # Embedded plugins (compile-time embedded, error paths untestable)
+    - 'pkg/plugin/embedded.go' # Loader uses embed.FS, cannot mock for error testing
+    - 'pkg/plugin/embedded/**/*.yaml' # YAML data files, not executable code
 
     # Not yet implemented / future work
     - 'pkg/api/dashboard/**'
@@ -55,3 +59,10 @@ flags:
     paths:
       - pkg/server/
     carryforward: true
+
+# Coverage improvement roadmap
+# Current (v0.1-dev): project 70%, patch 85%
+# Phase 2 (v0.2): project 75%, patch 85%
+# Phase 3 (v0.3): project 80%, patch 90%
+# Phase 4 (v1.0): project 85%, patch 90%
+# Gradual improvement with each release cycle

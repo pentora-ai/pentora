@@ -1,0 +1,34 @@
+name: Open Telnet Service
+version: 1.0.0
+type: evaluation
+author: pentora-security
+
+metadata:
+  severity: critical
+  tags: [telnet, misconfiguration, cleartext, insecure-protocol]
+  references:
+    - https://www.cisa.gov/uscert/ncas/alerts/TA13-175A
+    - https://cwe.mitre.org/data/definitions/319.html
+
+# Trigger when Telnet service is detected
+triggers:
+  - port: 23
+    service: telnet
+
+# Detect Telnet service (always insecure)
+match:
+  logic: OR
+  rules:
+    - field: telnet.banner
+      operator: exists
+      value: true
+    - field: service.name
+      operator: equals
+      value: "telnet"
+
+output:
+  vulnerability: true
+  severity: critical
+  message: "Telnet service detected - transmits all data including credentials in cleartext"
+  remediation: "Disable Telnet service immediately. Use SSH instead for secure remote access. Telnet is obsolete and insecure"
+  reference: "https://www.cisa.gov/uscert/ncas/alerts/TA13-175A"

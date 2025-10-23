@@ -1,0 +1,50 @@
+name: TLS Weak Cipher Suite
+version: 1.0.0
+type: evaluation
+author: pentora-security
+
+metadata:
+  severity: high
+  tags: [tls, ssl, crypto, weak-crypto, cipher]
+  references:
+    - https://www.rfc-editor.org/rfc/rfc7525
+    - https://nvd.nist.gov/vuln/detail/CVE-2015-4000
+
+# Trigger when TLS cipher suites are detected
+triggers:
+  - data_key: tls.cipher_suites
+    condition: exists
+    value: true
+
+# Detect weak cipher suites
+match:
+  logic: OR
+  rules:
+    - field: tls.cipher_suites
+      operator: contains
+      value: "NULL"
+    - field: tls.cipher_suites
+      operator: contains
+      value: "EXPORT"
+    - field: tls.cipher_suites
+      operator: contains
+      value: "DES"
+    - field: tls.cipher_suites
+      operator: contains
+      value: "RC4"
+    - field: tls.cipher_suites
+      operator: contains
+      value: "MD5"
+    - field: tls.cipher_suites
+      operator: contains
+      value: "anon"
+    - field: tls.cipher_suites
+      operator: matches
+      value: ".*CBC.*"
+
+output:
+  vulnerability: true
+  severity: high
+  message: "TLS server supports weak or deprecated cipher suites"
+  remediation: "Disable weak ciphers (NULL, EXPORT, DES, RC4, MD5, anonymous, CBC mode). Use AEAD ciphers like AES-GCM or ChaCha20-Poly1305"
+  reference: "https://www.rfc-editor.org/rfc/rfc7525"
