@@ -1,0 +1,54 @@
+name: TLS Weak Cipher Detection
+version: 1.0.0
+type: evaluation
+author: pentora-core
+
+metadata:
+  severity: high
+  tags: [tls, ssl, cipher, encryption]
+  references:
+    - https://wiki.mozilla.org/Security/Server_Side_TLS
+
+# Trigger when TLS cipher is detected
+triggers:
+  - data_key: tls.cipher
+    condition: exists
+    value: true
+
+# Match weak ciphers
+match:
+  logic: OR
+  rules:
+    # RC4 ciphers
+    - field: tls.cipher
+      operator: contains
+      value: "RC4"
+
+    # DES ciphers
+    - field: tls.cipher
+      operator: contains
+      value: "DES"
+
+    # NULL ciphers
+    - field: tls.cipher
+      operator: contains
+      value: "NULL"
+
+    # EXPORT ciphers
+    - field: tls.cipher
+      operator: contains
+      value: "EXPORT"
+
+    # Anonymous ciphers
+    - field: tls.cipher
+      operator: contains
+      value: "anon"
+
+output:
+  vulnerability: true
+  severity: high
+  message: "TLS connection using weak or insecure cipher"
+  remediation: "Configure server to use strong cipher suites (AES-GCM, ChaCha20-Poly1305)"
+  reference: "https://wiki.mozilla.org/Security/Server_Side_TLS"
+  metadata:
+    category: "cryptography"
