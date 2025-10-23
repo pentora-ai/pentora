@@ -6,12 +6,12 @@ coverage:
   status:
     project:
       default:
-        target: auto
-        threshold: 1%
+        target: 85%          # Minimum project-wide coverage
+        threshold: 1%        # Allow 1% decrease
     patch:
       default:
-        target: auto
-        threshold: 1%
+        target: 90%          # Higher standard for new code
+        threshold: 1%        # Allow 1% decrease for new code
 
   # Ignore paths that don't need coverage
   ignore:

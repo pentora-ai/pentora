@@ -1,0 +1,44 @@
+name: HTTP Weak Security Headers
+version: 1.0.0
+type: evaluation
+author: pentora-core
+
+metadata:
+  severity: medium
+  tags: [http, security, headers, web]
+  references:
+    - https://owasp.org/www-project-secure-headers/
+
+# Trigger when HTTP response is detected
+triggers:
+  - data_key: http.status
+    condition: exists
+    value: true
+
+# Check for missing security headers
+match:
+  logic: OR
+  rules:
+    # Missing X-Frame-Options
+    - field: http.headers.x-frame-options
+      operator: equals
+      value: ""
+
+    # Missing X-Content-Type-Options
+    - field: http.headers.x-content-type-options
+      operator: equals
+      value: ""
+
+    # Missing Strict-Transport-Security
+    - field: http.headers.strict-transport-security
+      operator: equals
+      value: ""
+
+output:
+  vulnerability: true
+  severity: medium
+  message: "HTTP server missing important security headers"
+  remediation: "Configure web server to send security headers (X-Frame-Options, X-Content-Type-Options, Strict-Transport-Security)"
+  reference: "https://owasp.org/www-project-secure-headers/"
+  metadata:
+    owasp: "A05:2021-Security Misconfiguration"

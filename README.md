@@ -117,6 +117,67 @@ pentora dag validate dag.yaml --strict
 pentora dag validate dag.yaml --json
 ```
 
+### YAML Plugin System (New)
+
+Create custom vulnerability checks without writing Go code using YAML plugins:
+
+```bash
+# Load and evaluate YAML plugins
+pentora scan --targets 192.168.1.1 --plugins ./my-plugins/
+
+# List available plugins
+pentora plugin list
+
+# Validate a plugin definition
+pentora plugin validate ssh-cve-check.yaml
+```
+
+Example YAML plugin (`ssh-vuln-check.yaml`):
+
+```yaml
+name: SSH Vulnerability Check
+version: 1.0.0
+type: evaluation
+author: security-team
+
+metadata:
+  cve: CVE-2024-XXXXX
+  severity: high
+  tags: [ssh, authentication, cve]
+
+# Trigger when SSH version is detected
+triggers:
+  - data_key: ssh.version
+    condition: exists
+    value: true
+
+# Match vulnerable versions
+match:
+  logic: AND
+  rules:
+    - field: ssh.version
+      operator: version_lt
+      value: "8.5"
+    - field: ssh.banner
+      operator: contains
+      value: "OpenSSH"
+
+output:
+  vulnerability: true
+  message: "SSH version vulnerable to authentication bypass"
+  remediation: "Upgrade OpenSSH to version 8.5 or higher"
+```
+
+**Supported Operators**:
+- String: `equals`, `contains`, `startsWith`, `endsWith`, `matches` (regex)
+- Numeric: `gt`, `gte`, `lt`, `lte`, `between`
+- Version: `version_eq`, `version_lt`, `version_gt`, `version_lte`, `version_gte`, `version_between`
+- Logical: `exists`, `in`, `notIn`
+
+**Match Logic**: `AND`, `OR`, `NOT` for combining rules
+
+See [pkg/plugin/testdata/plugins/](pkg/plugin/testdata/plugins/) for more examples.
+
 ## 📂 Project Structure
 
 ```
@@ -135,7 +196,7 @@ pentora/
 │   ├── modules/          # Core scanning modules (discovery, probing, etc.)
 │   ├── netutil/          # Network utilities and helpers
 │   ├── parser/           # Protocol parsers (SSH, HTTP, FTP, etc.)
-│   ├── plugin/           # CVE matching and vulnerability plugins
+│   ├── plugin/           # YAML plugin system + legacy CVE matchers
 │   ├── scan/             # Scan orchestration and coordination
 │   ├── scanexec/         # Scan execution logic
 │   ├── scanner/          # Port scanner and banner grabber
@@ -205,13 +266,57 @@ func (p *MyProtocolParser) Parse(banner string) (map[string]string, error) {
 
 ### Custom Plugins
 
-Create vulnerability detection rules:
+#### YAML Plugins (Recommended)
+
+Create vulnerability detection rules without writing Go code:
+
+```yaml
+name: HTTP Vulnerable App Detection
+version: 1.0.0
+type: evaluation
+author: security-team
+
+metadata:
+  cve: CVE-2024-XXXXX
+  severity: high
+  tags: [http, web, cve]
+
+triggers:
+  - data_key: http.server
+    condition: exists
+    value: true
+
+match:
+  logic: AND
+  rules:
+    - field: http.server
+      operator: contains
+      value: "VulnerableApp/1.0"
+    - field: service.port
+      operator: equals
+      value: 8080
+
+output:
+  vulnerability: true
+  message: "Vulnerable application detected"
+  remediation: "Upgrade to version 2.0 or higher"
+```
+
+**Benefits**:
+- ✅ No recompilation needed
+- ✅ Easy to create and share
+- ✅ Declarative and readable
+- ✅ Supports complex matching logic
+
+#### Go Plugins (Legacy)
+
+For advanced use cases, you can still create Go-based plugins:
 
 ```go
 package plugin
 
 func init() {
-    Register(&Plugin{
+    Register(&Plugins{
         ID:   "custom_vuln_check",
         Name: "Custom Vulnerability Check",
         RequirePorts: []int{8080},
@@ -221,7 +326,6 @@ func init() {
                 return &MatchResult{
                     CVE:     []string{"CVE-2024-XXXXX"},
                     Summary: "Vulnerable application detected",
-                    Severity: "HIGH",
                 }
             }
             return nil
