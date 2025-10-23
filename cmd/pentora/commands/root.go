@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	dagCmd "github.com/pentora-ai/pentora/cmd/pentora/commands/dag"
 	serverCmd "github.com/pentora-ai/pentora/cmd/pentora/commands/server"
 	storageCmd "github.com/pentora-ai/pentora/cmd/pentora/commands/storage"
 	"github.com/pentora-ai/pentora/pkg/appctx"
@@ -80,6 +81,7 @@ func NewCommand() *cobra.Command {
 	cmd.AddGroup(&cobra.Group{ID: "scan", Title: "Scan Commands"})
 	cmd.AddGroup(&cobra.Group{ID: "core", Title: "Core Commands"})
 
+	cmd.AddCommand(dagCmd.NewCommand())
 	cmd.AddCommand(serverCmd.NewCommand())
 	cmd.AddCommand(storageCmd.NewStorageCommand())
 	cmd.AddCommand(cli.DiscoverCmd)

@@ -96,6 +96,27 @@ curl -X POST http://localhost:8080/api/v1/scans \
 pentora server status
 ```
 
+### DAG Management
+
+Validate and manage DAG (Directed Acyclic Graph) definitions:
+
+```bash
+# Validate a DAG definition file
+pentora dag validate scan-dag.yaml
+
+# Export the internal scan DAG to YAML for inspection
+pentora dag export --targets 192.168.1.0/24 --output scan.yaml
+
+# Export with vulnerability evaluation enabled
+pentora dag export --targets 10.0.0.1 --vuln --output full-scan.yaml
+
+# Strict validation (treat warnings as errors)
+pentora dag validate dag.yaml --strict
+
+# Output validation results as JSON (for CI/CD)
+pentora dag validate dag.yaml --json
+```
+
 ## 📂 Project Structure
 
 ```
