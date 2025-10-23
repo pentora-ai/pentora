@@ -409,6 +409,14 @@ func TestTriggerEvaluator_AllConditions(t *testing.T) {
 			want:    false,
 		},
 		{
+			name: "version_lt - key missing",
+			triggers: []Trigger{
+				{DataKey: "version", Condition: "version_lt", Value: "1.0.0"},
+			},
+			context: map[string]any{},
+			want:    false,
+		},
+		{
 			name: "version_gt - key missing",
 			triggers: []Trigger{
 				{DataKey: "version", Condition: "version_gt", Value: "1.0.0"},
