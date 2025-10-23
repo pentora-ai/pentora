@@ -953,3 +953,218 @@ func TestBetweenOperator_ErrorCases(t *testing.T) {
 		})
 	}
 }
+
+// Additional coverage tests for missing edge cases
+
+func TestMatcherEngine_Evaluate_NilMatchBlock(t *testing.T) {
+	m := NewMatcherEngine()
+
+	_, err := m.Evaluate(nil, map[string]any{})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "match block is nil")
+}
+
+func TestMatcherEngine_Evaluate_NoRules(t *testing.T) {
+	m := NewMatcherEngine()
+
+	match := &MatchBlock{
+		Logic: "AND",
+		Rules: []MatchRule{},
+	}
+
+	_, err := m.Evaluate(match, map[string]any{})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "no rules to evaluate")
+}
+
+func TestMatcherEngine_EvaluateRule_UnknownOperator(t *testing.T) {
+	m := NewMatcherEngine()
+
+	match := &MatchBlock{
+		Logic: "AND",
+		Rules: []MatchRule{
+			{Field: "test", Operator: "unknown_operator", Value: "test"},
+		},
+	}
+
+	context := map[string]any{
+		"test": "value",
+	}
+
+	_, err := m.Evaluate(match, context)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "unknown operator")
+}
+
+func TestMatcherEngine_EvaluateRule_FieldNotInContext(t *testing.T) {
+	m := NewMatcherEngine()
+
+	match := &MatchBlock{
+		Logic: "AND",
+		Rules: []MatchRule{
+			{Field: "missing_field", Operator: "equals", Value: "test"},
+		},
+	}
+
+	context := map[string]any{
+		"other_field": "value",
+	}
+
+	// Should return false when field is missing
+	result, err := m.Evaluate(match, context)
+	require.NoError(t, err)
+	require.False(t, result)
+}
+
+// Numeric operator expected value error cases
+
+func TestNumericOperators_ExpectedValueErrors(t *testing.T) {
+	tests := []struct {
+		name     string
+		operator func(actual, expected any) (bool, error)
+		actual   any
+		expected any
+	}{
+		{
+			name:     "gte - invalid expected",
+			operator: opGreaterThanOrEqual,
+			actual:   10,
+			expected: "not a number",
+		},
+		{
+			name:     "lt - invalid expected",
+			operator: opLessThan,
+			actual:   10,
+			expected: "not a number",
+		},
+		{
+			name:     "lte - invalid expected",
+			operator: opLessThanOrEqual,
+			actual:   10,
+			expected: "not a number",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := tt.operator(tt.actual, tt.expected)
+			require.Error(t, err)
+		})
+	}
+}
+
+// Version operator expected value error cases
+
+func TestVersionOperators_ExpectedValueErrors(t *testing.T) {
+	tests := []struct {
+		name     string
+		operator func(actual, expected any) (bool, error)
+		actual   any
+		expected any
+	}{
+		{
+			name:     "version_gt - invalid expected",
+			operator: opVersionGreaterThan,
+			actual:   "1.0.0",
+			expected: "invalid.version",
+		},
+		{
+			name:     "version_lte - invalid expected",
+			operator: opVersionLessThanOrEqual,
+			actual:   "1.0.0",
+			expected: "invalid.version",
+		},
+		{
+			name:     "version_gte - invalid expected",
+			operator: opVersionGreaterThanOrEqual,
+			actual:   "1.0.0",
+			expected: "invalid.version",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := tt.operator(tt.actual, tt.expected)
+			require.Error(t, err)
+		})
+	}
+}
+
+func TestVersionBetween_MaxVersionError(t *testing.T) {
+	_, err := opVersionBetween("1.5.0", []any{"1.0.0", "invalid.max"})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "invalid max version")
+}
+
+func TestVersionBetween_ActualVersionError(t *testing.T) {
+	_, err := opVersionBetween("invalid.version", []any{"1.0.0", "2.0.0"})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "invalid actual version")
+}
+
+// Missing actual value error cases
+
+func TestNumericOperators_ActualValueErrors(t *testing.T) {
+	tests := []struct {
+		name     string
+		operator func(actual, expected any) (bool, error)
+		actual   any
+		expected any
+	}{
+		{
+			name:     "lte - invalid actual",
+			operator: opLessThanOrEqual,
+			actual:   "not a number",
+			expected: 10,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := tt.operator(tt.actual, tt.expected)
+			require.Error(t, err)
+		})
+	}
+}
+
+func TestVersionOperators_ActualValueErrors(t *testing.T) {
+	tests := []struct {
+		name     string
+		operator func(actual, expected any) (bool, error)
+		actual   any
+		expected any
+	}{
+		{
+			name:     "version_lte - invalid actual",
+			operator: opVersionLessThanOrEqual,
+			actual:   "invalid.version",
+			expected: "1.0.0",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := tt.operator(tt.actual, tt.expected)
+			require.Error(t, err)
+		})
+	}
+}
+
+func TestMatcherEngine_Evaluate_UnknownLogic(t *testing.T) {
+	m := NewMatcherEngine()
+
+	match := &MatchBlock{
+		Logic: "UNKNOWN_LOGIC",
+		Rules: []MatchRule{
+			{Field: "test", Operator: "equals", Value: "value"},
+		},
+	}
+
+	context := map[string]any{
+		"test": "value",
+	}
+
+	_, err := m.Evaluate(match, context)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "unknown logic")
+}
