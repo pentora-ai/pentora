@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/pentora-ai/pentora/pkg/parser"
-	"github.com/pentora-ai/pentora/pkg/plugin"
 )
 
 // ScanJob defines the structure of a scanning task
@@ -94,19 +93,15 @@ func scanTarget(ip string, port int, vulnScan bool) Result {
 			r.Service = info.Name
 			r.Version = info.Version
 
-			// Optional CVE matching
-			if vulnScan {
-				ctx := map[string]string{
-					strings.ToLower(info.Name) + "/banner": banner,
-				}
-				matches := plugin.MatchAll(ctx, []int{port}, []string{})
-				for _, m := range matches {
-					if m.Port == port {
-						r.CVEs = m.CVE
-						break
-					}
-				}
-			}
+			// TODO: CVE matching will be reintegrated with new YAML-based plugin system
+			// Old code-based vulnerability plugin system removed in Phase 2
+			// New system: pkg/plugin/registry.go (YAMLRegistry) + evaluator.go
+			// if vulnScan {
+			// 	ctx := map[string]string{
+			// 		strings.ToLower(info.Name) + "/banner": banner,
+			// 	}
+			// 	// Will use new YAML plugin evaluator here
+			// }
 		}
 	}
 
