@@ -460,6 +460,136 @@ func TestHasCategory(t *testing.T) {
 			expected: true,
 		},
 		{
+			name: "TLS by data key",
+			plugin: &YAMLPlugin{
+				Triggers: []Trigger{
+					{DataKey: "tls/cipher"},
+				},
+			},
+			category: CategoryTLS,
+			expected: true,
+		},
+		{
+			name: "TLS by SSL keyword",
+			plugin: &YAMLPlugin{
+				Triggers: []Trigger{
+					{DataKey: "ssl/version"},
+				},
+			},
+			category: CategoryTLS,
+			expected: true,
+		},
+		{
+			name: "IoT by MQTT",
+			plugin: &YAMLPlugin{
+				Triggers: []Trigger{
+					{DataKey: "mqtt/topic"},
+				},
+			},
+			category: CategoryIoT,
+			expected: true,
+		},
+		{
+			name: "IoT by CoAP",
+			plugin: &YAMLPlugin{
+				Triggers: []Trigger{
+					{DataKey: "coap/endpoint"},
+				},
+			},
+			category: CategoryIoT,
+			expected: true,
+		},
+		{
+			name: "Network by FTP",
+			plugin: &YAMLPlugin{
+				Triggers: []Trigger{
+					{DataKey: "ftp/banner"},
+				},
+			},
+			category: CategoryNetwork,
+			expected: true,
+		},
+		{
+			name: "Network by Telnet",
+			plugin: &YAMLPlugin{
+				Triggers: []Trigger{
+					{DataKey: "telnet/banner"},
+				},
+			},
+			category: CategoryNetwork,
+			expected: true,
+		},
+		{
+			name: "Network by SMTP",
+			plugin: &YAMLPlugin{
+				Triggers: []Trigger{
+					{DataKey: "smtp/server"},
+				},
+			},
+			category: CategoryNetwork,
+			expected: true,
+		},
+		{
+			name: "Network by DNS",
+			plugin: &YAMLPlugin{
+				Triggers: []Trigger{
+					{DataKey: "dns/version"},
+				},
+			},
+			category: CategoryNetwork,
+			expected: true,
+		},
+		{
+			name: "Database by postgres keyword",
+			plugin: &YAMLPlugin{
+				Triggers: []Trigger{
+					{DataKey: "postgres/version"},
+				},
+			},
+			category: CategoryDatabase,
+			expected: true,
+		},
+		{
+			name: "Database by mongodb keyword",
+			plugin: &YAMLPlugin{
+				Triggers: []Trigger{
+					{DataKey: "mongodb/version"},
+				},
+			},
+			category: CategoryDatabase,
+			expected: true,
+		},
+		{
+			name: "Database by redis keyword",
+			plugin: &YAMLPlugin{
+				Triggers: []Trigger{
+					{DataKey: "redis/info"},
+				},
+			},
+			category: CategoryDatabase,
+			expected: true,
+		},
+		{
+			name: "Database by db keyword",
+			plugin: &YAMLPlugin{
+				Triggers: []Trigger{
+					{DataKey: "db/connection"},
+				},
+			},
+			category: CategoryDatabase,
+			expected: true,
+		},
+		{
+			name: "Web by web keyword",
+			plugin: &YAMLPlugin{
+				Triggers: []Trigger{
+					{DataKey: "web/framework"},
+				},
+			},
+			category: CategoryWeb,
+			expected: true,
+		},
+		{
 			name: "No match",
 			plugin: &YAMLPlugin{
 				Triggers: []Trigger{

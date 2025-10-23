@@ -606,3 +606,168 @@ func TestVerifyChecksum(t *testing.T) {
 		})
 	}
 }
+
+func TestDownloader_Update_NoUpdatesAvailable(t *testing.T) {
+	cacheDir := t.TempDir()
+	cache, err := NewCacheManager(cacheDir)
+	require.NoError(t, err)
+
+	// Add plugin to cache
+	plugin := &YAMLPlugin{
+		Name:    "test-plugin",
+		Version: "1.0.0",
+		Type:    EvaluationType,
+		Author:  "test",
+		Metadata: PluginMetadata{
+			Severity: MediumSeverity,
+			Tags:     []string{"test"},
+		},
+		Output: OutputBlock{Message: "Test"},
+	}
+	_, err = cache.Add(plugin, "sha256:test", "https://example.com")
+	require.NoError(t, err)
+
+	// Manifest returns same version
+	manifest := PluginManifest{
+		Version: "1.0",
+		Plugins: []PluginManifestEntry{
+			{
+				Name:    "test-plugin",
+				Version: "1.0.0", // Same version
+			},
+		},
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_ = yaml.NewEncoder(w).Encode(manifest)
+	}))
+	defer server.Close()
+
+	source := PluginSource{
+		Name:    "test",
+		URL:     server.URL,
+		Enabled: true,
+	}
+
+	downloader := NewDownloader(cache, WithSources([]PluginSource{source}))
+	ctx := context.Background()
+
+	updated, err := downloader.Update(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 0, updated) // No updates
+}
+
+func TestDownloader_Update_ManifestFetchError(t *testing.T) {
+	cacheDir := t.TempDir()
+	cache, err := NewCacheManager(cacheDir)
+	require.NoError(t, err)
+
+	// Add plugin to cache
+	plugin := &YAMLPlugin{
+		Name:    "test-plugin",
+		Version: "1.0.0",
+		Type:    EvaluationType,
+		Author:  "test",
+		Metadata: PluginMetadata{
+			Severity: MediumSeverity,
+			Tags:     []string{"test"},
+		},
+		Output: OutputBlock{Message: "Test"},
+	}
+	_, err = cache.Add(plugin, "sha256:test", "https://example.com")
+	require.NoError(t, err)
+
+	// Server returns error
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	source := PluginSource{
+		Name:    "test",
+		URL:     server.URL,
+		Enabled: true,
+	}
+
+	downloader := NewDownloader(cache, WithSources([]PluginSource{source}))
+	ctx := context.Background()
+
+	updated, err := downloader.Update(ctx)
+	require.NoError(t, err) // Continues despite error
+	require.Equal(t, 0, updated)
+}
+
+func TestDownloader_Download_InvalidYAML(t *testing.T) {
+	invalidYAML := []byte("invalid: yaml: content: [")
+	hash := sha256.Sum256(invalidYAML)
+	correctChecksum := "sha256:" + hex.EncodeToString(hash[:])
+
+	// Plugin server returns invalid YAML
+	pluginServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(invalidYAML)
+	}))
+	defer pluginServer.Close()
+
+	manifest := PluginManifest{
+		Version: "1.0",
+		Plugins: []PluginManifestEntry{
+			{
+				Name:     "test-plugin",
+				Version:  "1.0.0",
+				URL:      pluginServer.URL,
+				Checksum: correctChecksum, // Correct checksum for invalid YAML
+			},
+		},
+	}
+
+	manifestServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_ = yaml.NewEncoder(w).Encode(manifest)
+	}))
+	defer manifestServer.Close()
+
+	cacheDir := t.TempDir()
+	cache, err := NewCacheManager(cacheDir)
+	require.NoError(t, err)
+
+	source := PluginSource{
+		Name:    "test",
+		URL:     manifestServer.URL,
+		Enabled: true,
+	}
+
+	downloader := NewDownloader(cache, WithSources([]PluginSource{source}))
+	ctx := context.Background()
+
+	entry, err := downloader.Download(ctx, "test-plugin", "1.0.0")
+	require.Error(t, err)
+	require.Nil(t, entry)
+	require.Contains(t, err.Error(), "failed to parse plugin")
+}
+
+func TestDownloader_FetchManifest_InvalidYAML(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("invalid yaml [[["))
+	}))
+	defer server.Close()
+
+	cacheDir := t.TempDir()
+	cache, err := NewCacheManager(cacheDir)
+	require.NoError(t, err)
+
+	downloader := NewDownloader(cache)
+	source := PluginSource{
+		Name:    "test",
+		URL:     server.URL,
+		Enabled: true,
+	}
+
+	ctx := context.Background()
+	manifest, err := downloader.FetchManifest(ctx, source)
+	require.Error(t, err)
+	require.Nil(t, manifest)
+	require.Contains(t, err.Error(), "failed to decode manifest")
+}
