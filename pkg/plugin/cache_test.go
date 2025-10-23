@@ -475,10 +475,10 @@ func TestCacheManager_Remove_NonExistentPlugin(t *testing.T) {
 	cm, err := NewCacheManager(cacheDir)
 	require.NoError(t, err)
 
-	// Try to remove plugin that doesn't exist in registry
+	// Try to remove plugin that doesn't exist in cache directory
 	err = cm.Remove("nonexistent-plugin", "1.0.0")
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "failed to unregister plugin")
+	require.Contains(t, err.Error(), "not found in cache")
 }
 
 func TestCacheManager_Size_ReadDirError(t *testing.T) {
@@ -514,4 +514,98 @@ func TestCacheManager_Prune_ReadDirError(t *testing.T) {
 	removed, err := cm.Prune(24 * time.Hour)
 	require.Error(t, err)
 	require.Equal(t, 0, removed)
+}
+
+func TestCacheManager_ListEntries_AllPresent(t *testing.T) {
+	cacheDir := t.TempDir()
+	cm, err := NewCacheManager(cacheDir)
+	require.NoError(t, err)
+
+	plugins := []*YAMLPlugin{
+		{
+			Name:    "entry-plugin-1",
+			Version: "1.0.0",
+			Type:    EvaluationType,
+			Author:  "test",
+			Metadata: PluginMetadata{
+				Severity: HighSeverity,
+				Tags:     []string{"test"},
+			},
+			Output: OutputBlock{Message: "Test1"},
+		},
+		{
+			Name:    "entry-plugin-2",
+			Version: "2.0.0",
+			Type:    EvaluationType,
+			Author:  "test",
+			Metadata: PluginMetadata{
+				Severity: HighSeverity,
+				Tags:     []string{"test"},
+			},
+			Output: OutputBlock{Message: "Test2"},
+		},
+	}
+
+	for _, p := range plugins {
+		_, err := cm.Add(p, "sha256:abc", "https://example.com")
+		require.NoError(t, err)
+	}
+
+	entries := cm.ListEntries()
+	require.Len(t, entries, 2)
+
+	// Verify entries correspond to added plugins
+	names := map[string]bool{}
+	for _, e := range entries {
+		require.NotEmpty(t, e.Path)
+		require.False(t, e.CachedAt.IsZero())
+		names[e.Name] = true
+	}
+	require.True(t, names["entry-plugin-1"])
+	require.True(t, names["entry-plugin-2"])
+}
+
+func TestCacheManager_ListEntries_SkipsMissingFile(t *testing.T) {
+	cacheDir := t.TempDir()
+	cm, err := NewCacheManager(cacheDir)
+	require.NoError(t, err)
+
+	// Add two plugins
+	present := &YAMLPlugin{
+		Name:    "present-plugin",
+		Version: "1.0.0",
+		Type:    EvaluationType,
+		Author:  "test",
+		Metadata: PluginMetadata{
+			Severity: HighSeverity,
+			Tags:     []string{"test"},
+		},
+		Output: OutputBlock{Message: "Present"},
+	}
+	missing := &YAMLPlugin{
+		Name:    "missing-plugin",
+		Version: "1.0.0",
+		Type:    EvaluationType,
+		Author:  "test",
+		Metadata: PluginMetadata{
+			Severity: HighSeverity,
+			Tags:     []string{"test"},
+		},
+		Output: OutputBlock{Message: "Missing"},
+	}
+
+	_, err = cm.Add(present, "sha256:one", "https://example.com")
+	require.NoError(t, err)
+	_, err = cm.Add(missing, "sha256:two", "https://example.com")
+	require.NoError(t, err)
+
+	// Remove the plugin.yaml for the "missing-plugin" to simulate a broken cache entry
+	missingPath := filepath.Join(cacheDir, "missing-plugin", "1.0.0", "plugin.yaml")
+	err = os.Remove(missingPath)
+	require.NoError(t, err)
+
+	entries := cm.ListEntries()
+	// Only the present-plugin should be returned
+	require.Len(t, entries, 1)
+	require.Equal(t, "present-plugin", entries[0].Name)
 }
