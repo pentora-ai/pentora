@@ -669,3 +669,287 @@ func TestMatcherEngine_CustomOperator(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, got)
 }
+
+// Additional tests for better coverage
+
+func TestUtilityFunctions_ToString(t *testing.T) {
+	tests := []struct {
+		name  string
+		input any
+		want  string
+	}{
+		{
+			name:  "string",
+			input: "hello",
+			want:  "hello",
+		},
+		{
+			name:  "int",
+			input: 42,
+			want:  "42",
+		},
+		{
+			name:  "int64",
+			input: int64(123456789),
+			want:  "123456789",
+		},
+		{
+			name:  "float64",
+			input: 3.14,
+			want:  "3.14",
+		},
+		{
+			name:  "bool true",
+			input: true,
+			want:  "true",
+		},
+		{
+			name:  "bool false",
+			input: false,
+			want:  "false",
+		},
+		{
+			name:  "nil",
+			input: nil,
+			want:  "",
+		},
+		{
+			name:  "other type (struct)",
+			input: struct{ Name string }{Name: "test"},
+			want:  "{test}",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := toString(tt.input)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestUtilityFunctions_ToFloat64(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   any
+		want    float64
+		wantErr bool
+	}{
+		{
+			name:  "float64",
+			input: 3.14,
+			want:  3.14,
+		},
+		{
+			name:  "float32",
+			input: float32(2.5),
+			want:  2.5,
+		},
+		{
+			name:  "int",
+			input: 42,
+			want:  42.0,
+		},
+		{
+			name:  "int64",
+			input: int64(100),
+			want:  100.0,
+		},
+		{
+			name:  "int32",
+			input: int32(50),
+			want:  50.0,
+		},
+		{
+			name:  "string number",
+			input: "123.45",
+			want:  123.45,
+		},
+		{
+			name:    "string non-number",
+			input:   "not a number",
+			wantErr: true,
+		},
+		{
+			name:    "unsupported type",
+			input:   struct{}{},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := toFloat64(tt.input)
+
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestNumericOperators_ErrorCases(t *testing.T) {
+	tests := []struct {
+		name     string
+		operator string
+		actual   any
+		expected any
+	}{
+		{
+			name:     "gt - invalid actual",
+			operator: "gt",
+			actual:   "not a number",
+			expected: 10,
+		},
+		{
+			name:     "gt - invalid expected",
+			operator: "gt",
+			actual:   10,
+			expected: "not a number",
+		},
+		{
+			name:     "gte - invalid actual",
+			operator: "gte",
+			actual:   struct{}{},
+			expected: 10,
+		},
+		{
+			name:     "lt - invalid actual",
+			operator: "lt",
+			actual:   "abc",
+			expected: 10,
+		},
+		{
+			name:     "lte - invalid expected",
+			operator: "lte",
+			actual:   10,
+			expected: "xyz",
+		},
+	}
+
+	m := NewMatcherEngine()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opFunc := m.operators[tt.operator]
+			_, err := opFunc(tt.actual, tt.expected)
+			require.Error(t, err)
+		})
+	}
+}
+
+func TestVersionOperators_ErrorCases(t *testing.T) {
+	tests := []struct {
+		name     string
+		operator string
+		actual   any
+		expected any
+	}{
+		{
+			name:     "version_lt - invalid actual version",
+			operator: "version_lt",
+			actual:   "not.a.version",
+			expected: "1.0.0",
+		},
+		{
+			name:     "version_lt - invalid expected version",
+			operator: "version_lt",
+			actual:   "1.0.0",
+			expected: "invalid",
+		},
+		{
+			name:     "version_gt - invalid actual",
+			operator: "version_gt",
+			actual:   "v999.999.999.999.999",
+			expected: "1.0.0",
+		},
+		{
+			name:     "version_gte - invalid actual",
+			operator: "version_gte",
+			actual:   "bad-version",
+			expected: "1.0.0",
+		},
+		{
+			name:     "version_lte - invalid expected",
+			operator: "version_lte",
+			actual:   "1.0.0",
+			expected: "not-valid",
+		},
+		{
+			name:     "version_between - invalid format",
+			operator: "version_between",
+			actual:   "1.5.0",
+			expected: "not an array",
+		},
+		{
+			name:     "version_between - invalid min",
+			operator: "version_between",
+			actual:   "1.5.0",
+			expected: []any{"bad-version", "2.0.0"},
+		},
+		{
+			name:     "version_between - invalid max",
+			operator: "version_between",
+			actual:   "1.5.0",
+			expected: []any{"1.0.0", "bad-max"},
+		},
+	}
+
+	m := NewMatcherEngine()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opFunc := m.operators[tt.operator]
+			_, err := opFunc(tt.actual, tt.expected)
+			require.Error(t, err)
+		})
+	}
+}
+
+func TestBetweenOperator_ErrorCases(t *testing.T) {
+	m := NewMatcherEngine()
+	opBetween := m.operators["between"]
+
+	tests := []struct {
+		name     string
+		actual   any
+		expected any
+	}{
+		{
+			name:     "invalid format - not array",
+			actual:   5,
+			expected: 10,
+		},
+		{
+			name:     "invalid format - wrong length",
+			actual:   5,
+			expected: []any{1},
+		},
+		{
+			name:     "invalid min value",
+			actual:   5,
+			expected: []any{"not a number", 10},
+		},
+		{
+			name:     "invalid max value",
+			actual:   5,
+			expected: []any{1, "not a number"},
+		},
+		{
+			name:     "invalid actual value",
+			actual:   "not a number",
+			expected: []any{1, 10},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := opBetween(tt.actual, tt.expected)
+			require.Error(t, err)
+		})
+	}
+}
