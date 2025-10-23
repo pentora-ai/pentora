@@ -1,0 +1,37 @@
+name: Open FTP Service
+version: 1.0.0
+type: evaluation
+author: pentora-security
+
+metadata:
+  severity: high
+  tags: [ftp, misconfiguration, cleartext, insecure-protocol]
+  references:
+    - https://www.cisa.gov/news-events/alerts/2000/03/13/anonymous-ftp-servers-internet
+    - https://cwe.mitre.org/data/definitions/319.html
+
+# Trigger when FTP service is detected
+triggers:
+  - port: 21
+    service: ftp
+
+# Detect FTP service (cleartext protocol)
+match:
+  logic: OR
+  rules:
+    - field: ftp.banner
+      operator: exists
+      value: true
+    - field: ftp.anonymous_login
+      operator: equals
+      value: true
+    - field: service.name
+      operator: equals
+      value: "ftp"
+
+output:
+  vulnerability: true
+  severity: high
+  message: "FTP service detected - transmits credentials and data in cleartext"
+  remediation: "Replace FTP with SFTP (SSH File Transfer Protocol) or FTPS (FTP over TLS). If FTP must be used, ensure it's not accessible from the internet and disable anonymous access"
+  reference: "https://cwe.mitre.org/data/definitions/319.html"

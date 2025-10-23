@@ -1,0 +1,38 @@
+name: TLS Self-Signed Certificate
+version: 1.0.0
+type: evaluation
+author: pentora-security
+
+metadata:
+  severity: medium
+  tags: [tls, ssl, certificate, self-signed, pki, trust]
+  references:
+    - https://www.rfc-editor.org/rfc/rfc5280
+    - https://cwe.mitre.org/data/definitions/295.html
+
+# Trigger when TLS certificate is detected
+triggers:
+  - data_key: tls.certificate.issuer
+    condition: exists
+    value: true
+
+# Detect self-signed certificates
+match:
+  logic: OR
+  rules:
+    - field: tls.certificate.self_signed
+      operator: equals
+      value: true
+    - field: tls.certificate.issuer
+      operator: equals
+      value: "{{tls.certificate.subject}}"
+    - field: tls.certificate.verified
+      operator: equals
+      value: false
+
+output:
+  vulnerability: true
+  severity: medium
+  message: "TLS certificate is self-signed or not trusted by a recognized CA"
+  remediation: "Obtain a certificate from a trusted Certificate Authority (CA). Consider using free CAs like Let's Encrypt for production environments"
+  reference: "https://www.rfc-editor.org/rfc/rfc5280"

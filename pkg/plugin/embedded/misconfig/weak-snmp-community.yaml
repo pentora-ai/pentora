@@ -1,0 +1,40 @@
+name: Weak SNMP Community String
+version: 1.0.0
+type: evaluation
+author: pentora-security
+
+metadata:
+  severity: high
+  tags: [snmp, misconfiguration, default-credentials, information-disclosure]
+  references:
+    - https://www.cisa.gov/news-events/alerts/2002/02/12/snmp-vulnerabilities-multiple-vendors
+    - https://nvd.nist.gov/vuln/detail/CVE-2002-0012
+
+# Trigger when SNMP service is detected
+triggers:
+  - port: 161
+    service: snmp
+
+# Detect SNMP with weak community strings
+match:
+  logic: OR
+  rules:
+    - field: snmp.version
+      operator: equals
+      value: "SNMPv1"
+    - field: snmp.version
+      operator: equals
+      value: "SNMPv2c"
+    - field: snmp.community
+      operator: equals
+      value: "public"
+    - field: snmp.community
+      operator: equals
+      value: "private"
+
+output:
+  vulnerability: true
+  severity: high
+  message: "SNMP service detected with weak version (v1/v2c) or default community strings"
+  remediation: "Upgrade to SNMPv3 with authentication and encryption. If v1/v2c must be used, change default community strings (public/private) to strong, unique values. Restrict SNMP access by IP"
+  reference: "https://www.cisa.gov/news-events/alerts/2002/02/12/snmp-vulnerabilities-multiple-vendors"

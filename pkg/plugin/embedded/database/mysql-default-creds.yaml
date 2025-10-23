@@ -1,0 +1,37 @@
+name: MySQL Default Credentials
+version: 1.0.0
+type: evaluation
+author: pentora-security
+
+metadata:
+  severity: critical
+  tags: [mysql, database, authentication, default-credentials, brute-force]
+  references:
+    - https://www.cisa.gov/known-exploited-vulnerabilities-catalog
+    - https://owasp.org/www-project-top-ten/2017/A2_2017-Broken_Authentication
+
+# Trigger when MySQL service is detected
+triggers:
+  - port: 3306
+    service: mysql
+
+# Detect MySQL with potential default credentials
+match:
+  logic: OR
+  rules:
+    - field: mysql.version
+      operator: exists
+      value: true
+    - field: mysql.banner
+      operator: contains
+      value: "MySQL"
+    - field: mysql.banner
+      operator: contains
+      value: "MariaDB"
+
+output:
+  vulnerability: true
+  severity: critical
+  message: "MySQL database detected - test for default credentials (root with no password or weak passwords)"
+  remediation: "Ensure MySQL root user has a strong password. Disable remote root access. Test for common credentials: root/root, root/password, root/mysql, root/admin"
+  reference: "https://owasp.org/www-project-top-ten/2017/A2_2017-Broken_Authentication"

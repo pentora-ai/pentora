@@ -1,0 +1,38 @@
+name: TLS Expired Certificate
+version: 1.0.0
+type: evaluation
+author: pentora-security
+
+metadata:
+  severity: high
+  tags: [tls, ssl, certificate, expiration, pki]
+  references:
+    - https://www.rfc-editor.org/rfc/rfc5280
+    - https://cwe.mitre.org/data/definitions/298.html
+
+# Trigger when TLS certificate is detected
+triggers:
+  - data_key: tls.certificate.not_after
+    condition: exists
+    value: true
+
+# Detect expired certificates
+match:
+  logic: OR
+  rules:
+    - field: tls.certificate.expired
+      operator: equals
+      value: true
+    - field: tls.certificate.not_after
+      operator: lt
+      value: "{{now}}"
+    - field: tls.certificate.days_until_expiry
+      operator: lte
+      value: 0
+
+output:
+  vulnerability: true
+  severity: high
+  message: "TLS certificate has expired"
+  remediation: "Renew the SSL/TLS certificate immediately. Consider using automated certificate management (e.g., Let's Encrypt with auto-renewal)"
+  reference: "https://www.rfc-editor.org/rfc/rfc5280"

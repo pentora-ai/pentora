@@ -1,0 +1,50 @@
+name: SSH Weak Encryption Cipher
+version: 1.0.0
+type: evaluation
+author: pentora-security
+
+metadata:
+  severity: high
+  tags: [ssh, crypto, weak-crypto, cipher, encryption]
+  references:
+    - https://www.ssh.com/academy/ssh/encryption
+    - https://nvd.nist.gov/vuln/detail/CVE-2008-5161
+
+# Trigger when SSH encryption ciphers are detected
+triggers:
+  - data_key: ssh.encryption_algorithms
+    condition: exists
+    value: true
+
+# Detect weak encryption ciphers
+match:
+  logic: OR
+  rules:
+    - field: ssh.encryption_algorithms
+      operator: contains
+      value: "3des-cbc"
+    - field: ssh.encryption_algorithms
+      operator: contains
+      value: "aes128-cbc"
+    - field: ssh.encryption_algorithms
+      operator: contains
+      value: "aes192-cbc"
+    - field: ssh.encryption_algorithms
+      operator: contains
+      value: "aes256-cbc"
+    - field: ssh.encryption_algorithms
+      operator: contains
+      value: "arcfour"
+    - field: ssh.encryption_algorithms
+      operator: contains
+      value: "blowfish-cbc"
+    - field: ssh.encryption_algorithms
+      operator: contains
+      value: "cast128-cbc"
+
+output:
+  vulnerability: true
+  severity: high
+  message: "SSH server supports weak or deprecated encryption ciphers (CBC mode or RC4)"
+  remediation: "Disable CBC mode and RC4 ciphers. Use chacha20-poly1305@openssh.com, aes128-gcm@openssh.com, or aes256-gcm@openssh.com"
+  reference: "https://www.ssh.com/academy/ssh/encryption"
