@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/pentora-ai/pentora/pkg/engine"
+	"github.com/pentora-ai/pentora/pkg/plugin"
 	"github.com/stretchr/testify/require"
 )
 
@@ -54,6 +55,31 @@ func TestPluginEvaluationModule_Init(t *testing.T) {
 
 	meta := module.Metadata()
 	require.Equal(t, "test-instance", meta.ID)
+
+	// Verify embedded plugins were loaded
+	require.NotNil(t, module.plugins, "plugins should be loaded")
+	require.NotNil(t, module.evaluator, "evaluator should be created")
+
+	// Count total plugins
+	totalPlugins := 0
+	for _, categoryPlugins := range module.plugins {
+		totalPlugins += len(categoryPlugins)
+	}
+	require.Equal(t, 18, totalPlugins, "should load exactly 18 embedded plugins")
+
+	// Verify plugins by category
+	require.Contains(t, module.plugins, plugin.CategorySSH)
+	require.Contains(t, module.plugins, plugin.CategoryHTTP)
+	require.Contains(t, module.plugins, plugin.CategoryTLS)
+	require.Contains(t, module.plugins, plugin.CategoryDatabase)
+	require.Contains(t, module.plugins, plugin.CategoryNetwork)
+
+	// Verify counts per category
+	require.Len(t, module.plugins[plugin.CategorySSH], 4, "should have 4 SSH plugins")
+	require.Len(t, module.plugins[plugin.CategoryHTTP], 4, "should have 4 HTTP plugins")
+	require.Len(t, module.plugins[plugin.CategoryTLS], 4, "should have 4 TLS plugins")
+	require.Len(t, module.plugins[plugin.CategoryDatabase], 3, "should have 3 Database plugins")
+	require.Len(t, module.plugins[plugin.CategoryNetwork], 3, "should have 3 Network plugins")
 }
 
 func TestPluginEvaluationModule_Execute_Skeleton(t *testing.T) {

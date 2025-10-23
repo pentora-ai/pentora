@@ -3,8 +3,10 @@ package evaluation
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pentora-ai/pentora/pkg/engine"
+	"github.com/pentora-ai/pentora/pkg/plugin"
 	"github.com/rs/zerolog/log"
 )
 
@@ -33,7 +35,9 @@ type VulnerabilityResult struct {
 
 // PluginEvaluationModule evaluates scan results against embedded security plugins.
 type PluginEvaluationModule struct {
-	meta engine.ModuleMetadata
+	meta      engine.ModuleMetadata
+	plugins   map[plugin.Category][]*plugin.YAMLPlugin
+	evaluator *plugin.Evaluator
 }
 
 // NewPluginEvaluationModule creates a new plugin evaluation module instance.
@@ -101,11 +105,39 @@ func (m *PluginEvaluationModule) Metadata() engine.ModuleMetadata {
 	return m.meta
 }
 
-// Init initializes the plugin evaluation module.
+// Init initializes the plugin evaluation module and loads embedded plugins.
 func (m *PluginEvaluationModule) Init(instanceID string, config map[string]interface{}) error {
 	m.meta.ID = instanceID
 	logger := log.With().Str("module", m.meta.Name).Str("instance_id", m.meta.ID).Logger()
-	logger.Debug().Msg("Plugin evaluation module initialized")
+
+	// Load embedded plugins
+	logger.Info().Msg("Loading embedded security check plugins")
+	plugins, err := plugin.LoadEmbeddedPlugins()
+	if err != nil {
+		return fmt.Errorf("failed to load embedded plugins: %w", err)
+	}
+
+	// Store plugins in module state
+	m.plugins = plugins
+
+	// Create evaluator for plugin execution
+	m.evaluator = plugin.NewEvaluator()
+
+	// Log summary
+	totalPlugins := 0
+	for category, categoryPlugins := range m.plugins {
+		count := len(categoryPlugins)
+		totalPlugins += count
+		logger.Info().
+			Str("category", category.String()).
+			Int("count", count).
+			Msg("Loaded embedded plugins for category")
+	}
+
+	logger.Info().
+		Int("total_plugins", totalPlugins).
+		Msg("Plugin evaluation module initialized successfully")
+
 	return nil
 }
 
