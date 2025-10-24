@@ -10,10 +10,11 @@ metadata:
     - https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/09-Testing_for_Weak_Cryptography/01-Testing_for_Weak_Transport_Layer_Security
     - https://nvd.nist.gov/vuln/detail/CVE-2014-3566
 
-# Trigger when HTTPS is detected
+# Trigger when TLS data is available
 triggers:
-  - port: 443
-    service: https
+  - data_key: tls.version
+    condition: exists
+    value: true
 
 # Detect weak SSL/TLS configuration
 match:

@@ -10,10 +10,11 @@ metadata:
     - https://www.cisa.gov/known-exploited-vulnerabilities-catalog
     - https://owasp.org/www-project-top-ten/2017/A2_2017-Broken_Authentication
 
-# Trigger when MySQL service is detected
+# Trigger when MySQL data is available
 triggers:
-  - port: 3306
-    service: mysql
+  - data_key: mysql.banner
+    condition: exists
+    value: true
 
 # Detect MySQL with potential default credentials
 match:

@@ -65,7 +65,7 @@ func TestPluginEvaluationModule_Init(t *testing.T) {
 	for _, categoryPlugins := range module.plugins {
 		totalPlugins += len(categoryPlugins)
 	}
-	require.Equal(t, 18, totalPlugins, "should load exactly 18 embedded plugins")
+	require.Equal(t, 19, totalPlugins, "should load exactly 19 embedded plugins")
 
 	// Verify plugins by category
 	require.Contains(t, module.plugins, plugin.CategorySSH)
@@ -75,7 +75,7 @@ func TestPluginEvaluationModule_Init(t *testing.T) {
 	require.Contains(t, module.plugins, plugin.CategoryNetwork)
 
 	// Verify counts per category
-	require.Len(t, module.plugins[plugin.CategorySSH], 4, "should have 4 SSH plugins")
+	require.Len(t, module.plugins[plugin.CategorySSH], 5, "should have 5 SSH plugins")
 	require.Len(t, module.plugins[plugin.CategoryHTTP], 4, "should have 4 HTTP plugins")
 	require.Len(t, module.plugins[plugin.CategoryTLS], 4, "should have 4 TLS plugins")
 	require.Len(t, module.plugins[plugin.CategoryDatabase], 3, "should have 3 Database plugins")

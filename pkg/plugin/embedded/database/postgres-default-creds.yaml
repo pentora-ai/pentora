@@ -10,10 +10,11 @@ metadata:
     - https://www.postgresql.org/docs/current/auth-password.html
     - https://owasp.org/www-project-top-ten/2017/A2_2017-Broken_Authentication
 
-# Trigger when PostgreSQL service is detected
+# Trigger when PostgreSQL data is available
 triggers:
-  - port: 5432
-    service: postgresql
+  - data_key: postgres.banner
+    condition: exists
+    value: true
 
 # Detect PostgreSQL with potential default credentials
 match:

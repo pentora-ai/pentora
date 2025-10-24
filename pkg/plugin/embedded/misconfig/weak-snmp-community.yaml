@@ -10,10 +10,11 @@ metadata:
     - https://www.cisa.gov/news-events/alerts/2002/02/12/snmp-vulnerabilities-multiple-vendors
     - https://nvd.nist.gov/vuln/detail/CVE-2002-0012
 
-# Trigger when SNMP service is detected
+# Trigger when SNMP data is available
 triggers:
-  - port: 161
-    service: snmp
+  - data_key: snmp.version
+    condition: exists
+    value: true
 
 # Detect SNMP with weak community strings
 match:

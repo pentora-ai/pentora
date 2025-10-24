@@ -10,10 +10,11 @@ metadata:
     - https://www.cisa.gov/uscert/ncas/alerts/TA13-175A
     - https://cwe.mitre.org/data/definitions/319.html
 
-# Trigger when Telnet service is detected
+# Trigger when Telnet data is available
 triggers:
-  - port: 23
-    service: telnet
+  - data_key: telnet.banner
+    condition: exists
+    value: true
 
 # Detect Telnet service (always insecure)
 match:

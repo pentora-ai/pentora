@@ -10,10 +10,11 @@ metadata:
     - https://www.cisa.gov/news-events/alerts/2000/03/13/anonymous-ftp-servers-internet
     - https://cwe.mitre.org/data/definitions/319.html
 
-# Trigger when FTP service is detected
+# Trigger when FTP data is available
 triggers:
-  - port: 21
-    service: ftp
+  - data_key: ftp.banner
+    condition: exists
+    value: true
 
 # Detect FTP service (cleartext protocol)
 match:

@@ -10,10 +10,11 @@ metadata:
     - https://redis.io/docs/management/security/
     - https://nvd.nist.gov/vuln/detail/CVE-2022-0543
 
-# Trigger when Redis service is detected
+# Trigger when Redis data is available
 triggers:
-  - port: 6379
-    service: redis
+  - data_key: redis.banner
+    condition: exists
+    value: true
 
 # Detect Redis without authentication
 match:

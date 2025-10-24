@@ -10,10 +10,11 @@ metadata:
     - https://www.cisa.gov/known-exploited-vulnerabilities-catalog
     - https://owasp.org/www-project-top-ten/2017/A2_2017-Broken_Authentication
 
-# Trigger when SSH service is detected
+# Trigger when SSH banner is available
 triggers:
-  - port: 22
-    service: ssh
+  - data_key: ssh.banner
+    condition: exists
+    value: true
 
 # Detect common patterns that suggest default credentials might work
 match:
