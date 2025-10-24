@@ -8,10 +8,37 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
 )
+
+// normalizePluginName converts a display name to a filesystem-safe slug.
+// This ensures consistent directory names regardless of spaces or special characters.
+//
+// Examples:
+//   - "SSH Weak Cipher" → "ssh-weak-cipher"
+//   - "HTTP/2 Detection" → "http-2-detection"
+//   - "Multiple   Spaces" → "multiple-spaces"
+func normalizePluginName(name string) string {
+	// Convert to lowercase
+	slug := strings.ToLower(name)
+
+	// Replace spaces and slashes with hyphens
+	slug = strings.ReplaceAll(slug, " ", "-")
+	slug = strings.ReplaceAll(slug, "/", "-")
+
+	// Remove multiple consecutive hyphens
+	re := regexp.MustCompile(`-+`)
+	slug = re.ReplaceAllString(slug, "-")
+
+	// Trim hyphens from start and end
+	slug = strings.Trim(slug, "-")
+
+	return slug
+}
 
 // CacheManager manages plugin download cache.
 // Cache location: ~/.pentora/plugins/cache/
@@ -72,7 +99,9 @@ func (c *CacheManager) Add(plugin *YAMLPlugin, checksum string, downloadURL stri
 
 	// Create plugin-specific cache directory
 	// Structure: cache/<plugin-name>/<version>/plugin.yaml
-	pluginDir := filepath.Join(c.cacheDir, plugin.Name, plugin.Version)
+	// Use normalized name for filesystem (e.g., "SSH Weak Cipher" → "ssh-weak-cipher")
+	normalizedName := normalizePluginName(plugin.Name)
+	pluginDir := filepath.Join(c.cacheDir, normalizedName, plugin.Version)
 	if err := os.MkdirAll(pluginDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create plugin cache directory: %w", err)
 	}
@@ -128,7 +157,9 @@ func (c *CacheManager) GetEntry(name, version string) (*CacheEntry, error) {
 		return nil, fmt.Errorf("plugin '%s' found but version mismatch: expected %s, got %s", name, version, plugin.Version)
 	}
 
-	pluginDir := filepath.Join(c.cacheDir, name, version)
+	// Use normalized name for filesystem path lookup
+	normalizedName := normalizePluginName(name)
+	pluginDir := filepath.Join(c.cacheDir, normalizedName, version)
 	cachePath := filepath.Join(pluginDir, "plugin.yaml")
 
 	// Check if cache file exists
@@ -156,7 +187,9 @@ func (c *CacheManager) GetEntry(name, version string) (*CacheEntry, error) {
 // Remove removes a plugin from the cache.
 func (c *CacheManager) Remove(name string, version string) error {
 	// Check if cache directory exists for this version
-	pluginDir := filepath.Join(c.cacheDir, name, version)
+	// Use normalized name for filesystem path
+	normalizedName := normalizePluginName(name)
+	pluginDir := filepath.Join(c.cacheDir, normalizedName, version)
 	if _, err := os.Stat(pluginDir); os.IsNotExist(err) {
 		return fmt.Errorf("plugin '%s' version '%s' not found in cache", name, version)
 	}
@@ -176,7 +209,7 @@ func (c *CacheManager) Remove(name string, version string) error {
 	}
 
 	// Clean up parent directory if empty
-	parentDir := filepath.Join(c.cacheDir, name)
+	parentDir := filepath.Join(c.cacheDir, normalizedName)
 	entries, err := os.ReadDir(parentDir)
 	if err == nil && len(entries) == 0 {
 		_ = os.Remove(parentDir)

@@ -54,18 +54,21 @@ func (r *YAMLRegistry) Register(plugin *YAMLPlugin) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	// Use normalized name as registry key for consistency with filesystem
+	normalizedName := normalizePluginName(plugin.Name)
+
 	// Check for duplicates
-	if _, exists := r.plugins[plugin.Name]; exists {
+	if _, exists := r.plugins[normalizedName]; exists {
 		return fmt.Errorf("plugin '%s' already registered", plugin.Name)
 	}
 
-	// Register plugin
-	r.plugins[plugin.Name] = plugin
-	r.metadata[plugin.Name] = &plugin.Metadata
+	// Register plugin with normalized key
+	r.plugins[normalizedName] = plugin
+	r.metadata[normalizedName] = &plugin.Metadata
 
 	// Index by category (using tags as categories)
 	for _, tag := range plugin.Metadata.Tags {
-		r.categories[tag] = append(r.categories[tag], plugin.Name)
+		r.categories[tag] = append(r.categories[tag], normalizedName)
 	}
 
 	return nil
@@ -76,19 +79,22 @@ func (r *YAMLRegistry) Unregister(name string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	plugin, exists := r.plugins[name]
+	// Normalize name for registry lookup
+	normalizedName := normalizePluginName(name)
+
+	plugin, exists := r.plugins[normalizedName]
 	if !exists {
 		return fmt.Errorf("plugin '%s' not found", name)
 	}
 
 	// Remove from category index
 	for _, tag := range plugin.Metadata.Tags {
-		r.removeFromCategory(tag, name)
+		r.removeFromCategory(tag, normalizedName)
 	}
 
 	// Remove from registry
-	delete(r.plugins, name)
-	delete(r.metadata, name)
+	delete(r.plugins, normalizedName)
+	delete(r.metadata, normalizedName)
 
 	return nil
 }
@@ -98,7 +104,9 @@ func (r *YAMLRegistry) Get(name string) (*YAMLPlugin, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	plugin, exists := r.plugins[name]
+	// Normalize name for registry lookup
+	normalizedName := normalizePluginName(name)
+	plugin, exists := r.plugins[normalizedName]
 	return plugin, exists
 }
 
