@@ -32,6 +32,7 @@ Use these commands to list, inspect, verify, and maintain your plugin cache.`,
 
 	// Add subcommands
 	cmd.AddCommand(newListCommand())
+	cmd.AddCommand(newEmbeddedCommand())
 	cmd.AddCommand(newInfoCommand())
 	cmd.AddCommand(newVerifyCommand())
 	cmd.AddCommand(newCleanCommand())
