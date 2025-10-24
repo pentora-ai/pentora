@@ -328,3 +328,237 @@ func TestPluginTypeValues(t *testing.T) {
 	require.Equal(t, PluginType("output"), OutputType)
 	require.Equal(t, PluginType("integration"), IntegrationType)
 }
+
+func TestPlugin_IsCompatibleWithPentora(t *testing.T) {
+	tests := []struct {
+		name             string
+		minVersion       string
+		pentoraVersion   string
+		expectCompatible bool
+		expectError      bool
+	}{
+		{
+			name:             "no version constraint",
+			minVersion:       "",
+			pentoraVersion:   "0.1.0",
+			expectCompatible: true,
+			expectError:      false,
+		},
+		{
+			name:             "compatible version (greater)",
+			minVersion:       "0.1.0",
+			pentoraVersion:   "0.2.0",
+			expectCompatible: true,
+			expectError:      false,
+		},
+		{
+			name:             "compatible version (equal)",
+			minVersion:       "0.1.0",
+			pentoraVersion:   "0.1.0",
+			expectCompatible: true,
+			expectError:      false,
+		},
+		{
+			name:             "incompatible version (lower)",
+			minVersion:       "0.2.0",
+			pentoraVersion:   "0.1.0",
+			expectCompatible: false,
+			expectError:      true,
+		},
+		{
+			name:             "version with v prefix",
+			minVersion:       "v0.1.0",
+			pentoraVersion:   "v0.2.0",
+			expectCompatible: true,
+			expectError:      false,
+		},
+		{
+			name:             "mixed v prefix (min has v, pentora doesn't)",
+			minVersion:       "v0.1.0",
+			pentoraVersion:   "0.2.0",
+			expectCompatible: true,
+			expectError:      false,
+		},
+		{
+			name:             "mixed v prefix (pentora has v, min doesn't)",
+			minVersion:       "0.1.0",
+			pentoraVersion:   "v0.2.0",
+			expectCompatible: true,
+			expectError:      false,
+		},
+		{
+			name:             "patch version matters",
+			minVersion:       "0.1.5",
+			pentoraVersion:   "0.1.4",
+			expectCompatible: false,
+			expectError:      true,
+		},
+		{
+			name:             "patch version compatible",
+			minVersion:       "0.1.5",
+			pentoraVersion:   "0.1.6",
+			expectCompatible: true,
+			expectError:      false,
+		},
+		{
+			name:             "dev version (treated as vdev)",
+			minVersion:       "0.1.0",
+			pentoraVersion:   "dev",
+			expectCompatible: false, // "vdev" < "v0.1.0" lexicographically
+			expectError:      true,
+		},
+		{
+			name:             "invalid pentora version",
+			minVersion:       "0.1.0",
+			pentoraVersion:   "invalid",
+			expectCompatible: false,
+			expectError:      true,
+		},
+		{
+			name:             "invalid min version",
+			minVersion:       "not-a-version",
+			pentoraVersion:   "0.1.0",
+			expectCompatible: false,
+			expectError:      true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &YAMLPlugin{
+				Name:              "Test Plugin",
+				Version:           "1.0.0",
+				Type:              EvaluationType,
+				Author:            "test",
+				MinPentoraVersion: tt.minVersion,
+				Metadata: PluginMetadata{
+					Severity: HighSeverity,
+					Tags:     []string{"test"},
+				},
+				Output: OutputBlock{
+					Message: "Test",
+				},
+			}
+
+			compatible, err := plugin.IsCompatibleWithPentora(tt.pentoraVersion)
+
+			if tt.expectError {
+				require.Error(t, err)
+				require.False(t, compatible)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.expectCompatible, compatible)
+			}
+		})
+	}
+}
+
+func TestNormalizeVersion(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{"with v prefix", "v0.1.0", "v0.1.0"},
+		{"without v prefix", "0.1.0", "v0.1.0"},
+		{"dev version", "dev", "vdev"},
+		{"empty string", "", ""},
+		{"v prefix with patch", "v1.2.3", "v1.2.3"},
+		{"no prefix with patch", "1.2.3", "v1.2.3"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := normalizeVersion(tt.input)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestIsValidSemver(t *testing.T) {
+	tests := []struct {
+		name     string
+		version  string
+		expected bool
+	}{
+		{"valid semver", "0.1.0", true},
+		{"valid semver with v", "v0.1.0", true},
+		{"valid semver with patch", "1.2.3", true},
+		{"short version (Go allows)", "0.1", true}, // Go's semver allows "v0.1"
+		{"invalid semver (text)", "invalid", false},
+		{"invalid semver (empty)", "", false},
+		{"valid semver with prerelease", "v1.0.0-alpha", true},
+		{"valid semver with build metadata", "v1.0.0+build.123", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isValidSemver(tt.version)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestPlugin_Validate_WithMinPentoraVersion(t *testing.T) {
+	tests := []struct {
+		name        string
+		minVersion  string
+		expectErr   bool
+		errContains string
+	}{
+		{
+			name:       "valid min version",
+			minVersion: "0.1.0",
+			expectErr:  false,
+		},
+		{
+			name:       "valid min version with v prefix",
+			minVersion: "v0.1.0",
+			expectErr:  false,
+		},
+		{
+			name:       "no min version",
+			minVersion: "",
+			expectErr:  false,
+		},
+		{
+			name:        "invalid min version",
+			minVersion:  "not-a-version",
+			expectErr:   true,
+			errContains: "invalid pentora_min_version format",
+		},
+		{
+			name:       "short version (Go allows)",
+			minVersion: "0.1",
+			expectErr:  false, // Go's semver allows "v0.1"
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &YAMLPlugin{
+				Name:              "Test Plugin",
+				Version:           "1.0.0",
+				Type:              EvaluationType,
+				Author:            "test",
+				MinPentoraVersion: tt.minVersion,
+				Metadata: PluginMetadata{
+					Severity: HighSeverity,
+					Tags:     []string{"test"},
+				},
+				Output: OutputBlock{
+					Message: "Test",
+				},
+			}
+
+			err := plugin.Validate()
+
+			if tt.expectErr {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.errContains)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}

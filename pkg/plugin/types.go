@@ -6,7 +6,10 @@ package plugin
 
 import (
 	"fmt"
+	"strings"
 	"time"
+
+	"golang.org/x/mod/semver"
 )
 
 // PluginType defines the category of the plugin.
@@ -42,6 +45,9 @@ type YAMLPlugin struct {
 	Version string     `yaml:"version" json:"version"`
 	Type    PluginType `yaml:"type" json:"type"`
 	Author  string     `yaml:"author" json:"author"`
+
+	// Compatibility (optional)
+	MinPentoraVersion string `yaml:"pentora_min_version,omitempty" json:"pentora_min_version,omitempty"`
 
 	// Metadata
 	Metadata PluginMetadata `yaml:"metadata" json:"metadata"`
@@ -167,7 +173,64 @@ func (p *YAMLPlugin) Validate() error {
 		return fmt.Errorf("output message is required")
 	}
 
+	// Validate pentora_min_version format if present
+	if p.MinPentoraVersion != "" {
+		if !isValidSemver(p.MinPentoraVersion) {
+			return fmt.Errorf("invalid pentora_min_version format: %s (must be semantic version like 0.1.0 or v0.1.0)", p.MinPentoraVersion)
+		}
+	}
+
 	return nil
+}
+
+// IsCompatibleWithPentora checks if the plugin is compatible with the given Pentora version.
+// Returns true if:
+// - No version constraint is specified (MinPentoraVersion is empty)
+// - Current Pentora version >= MinPentoraVersion
+func (p *YAMLPlugin) IsCompatibleWithPentora(pentoraVersion string) (bool, error) {
+	// No version constraint means compatible with all versions
+	if p.MinPentoraVersion == "" {
+		return true, nil
+	}
+
+	// Normalize versions to ensure they have 'v' prefix
+	currentVersion := normalizeVersion(pentoraVersion)
+	requiredVersion := normalizeVersion(p.MinPentoraVersion)
+
+	// Validate version formats
+	if !semver.IsValid(currentVersion) {
+		return false, fmt.Errorf("invalid pentora version: %s", pentoraVersion)
+	}
+
+	if !semver.IsValid(requiredVersion) {
+		return false, fmt.Errorf("invalid plugin min_pentora_version: %s", p.MinPentoraVersion)
+	}
+
+	// Compare versions (semver.Compare returns -1, 0, or 1)
+	// Returns: -1 if current < required, 0 if equal, 1 if current > required
+	if semver.Compare(currentVersion, requiredVersion) < 0 {
+		return false, fmt.Errorf("plugin requires Pentora >= %s (current: %s)", p.MinPentoraVersion, pentoraVersion)
+	}
+
+	return true, nil
+}
+
+// normalizeVersion ensures version string has 'v' prefix for semver compatibility.
+// Examples: "0.1.0" -> "v0.1.0", "v0.1.0" -> "v0.1.0", "dev" -> "vdev"
+func normalizeVersion(v string) string {
+	if v == "" {
+		return ""
+	}
+	if !strings.HasPrefix(v, "v") {
+		return "v" + v
+	}
+	return v
+}
+
+// isValidSemver checks if a version string is valid semantic version.
+func isValidSemver(v string) bool {
+	normalized := normalizeVersion(v)
+	return semver.IsValid(normalized)
 }
 
 // Validate validates the match block structure.
