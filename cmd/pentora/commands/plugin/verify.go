@@ -82,11 +82,11 @@ Exit codes:
 
 			failedCount := 0
 			for _, entry := range entries {
-				pluginFile := filepath.Join(cacheDir, entry.Name, entry.Version, "plugin.yaml")
+				pluginFile := filepath.Join(cacheDir, entry.ID, entry.Version, "plugin.yaml")
 
 				// Check if file exists
 				if _, err := os.Stat(pluginFile); os.IsNotExist(err) {
-					fmt.Printf("✗ %s@%s - File not found: %s\n", entry.Name, entry.Version, pluginFile)
+					fmt.Printf("✗ %s@%s - File not found: %s\n", entry.ID, entry.Version, pluginFile)
 					failedCount++
 					continue
 				}
@@ -94,16 +94,16 @@ Exit codes:
 				// Verify checksum
 				valid, err := verifier.VerifyFile(pluginFile, entry.Checksum)
 				if err != nil {
-					fmt.Printf("✗ %s@%s - Verification error: %v\n", entry.Name, entry.Version, err)
-					log.Debug().Err(err).Str("plugin", entry.Name).Msg("Checksum verification failed")
+					fmt.Printf("✗ %s@%s - Verification error: %v\n", entry.ID, entry.Version, err)
+					log.Debug().Err(err).Str("plugin", entry.ID).Msg("Checksum verification failed")
 					failedCount++
 					continue
 				}
 
 				if valid {
-					fmt.Printf("✓ %s@%s - OK\n", entry.Name, entry.Version)
+					fmt.Printf("✓ %s@%s - OK\n", entry.ID, entry.Version)
 				} else {
-					fmt.Printf("✗ %s@%s - Checksum mismatch\n", entry.Name, entry.Version)
+					fmt.Printf("✗ %s@%s - Checksum mismatch\n", entry.ID, entry.Version)
 					failedCount++
 				}
 			}

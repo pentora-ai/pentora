@@ -42,6 +42,7 @@ const (
 type YAMLPlugin struct {
 	// Required fields
 	Name    string     `yaml:"name" json:"name"`
+	ID      string     `yaml:"id,omitempty" json:"id,omitempty"` // Unique slug identifier (e.g., "ssh-default-credentials")
 	Version string     `yaml:"version" json:"version"`
 	Type    PluginType `yaml:"type" json:"type"`
 	Author  string     `yaml:"author" json:"author"`
@@ -120,6 +121,11 @@ type YAMLMatchResult struct {
 func (p *YAMLPlugin) Validate() error {
 	if p.Name == "" {
 		return fmt.Errorf("plugin name is required")
+	}
+
+	// Auto-generate ID from name if not provided
+	if p.ID == "" {
+		p.ID = GeneratePluginID(p.Name)
 	}
 
 	if p.Version == "" {
@@ -263,4 +269,54 @@ func (m *MatchBlock) Validate() error {
 	}
 
 	return nil
+}
+
+// GeneratePluginID generates a slug-style ID from a plugin name.
+// Examples:
+//   - "SSH Default Credentials" -> "ssh-default-credentials"
+//   - "HTTP Weak SSL/TLS Configuration" -> "http-weak-ssl-tls-configuration"
+//   - "OpenSSH CVE-2024-6387 (regreSSHion)" -> "openssh-cve-2024-6387-regresshion"
+func GeneratePluginID(name string) string {
+	// Convert to lowercase
+	id := strings.ToLower(name)
+
+	// Replace common separators with hyphens
+	replacements := map[string]string{
+		" ":  "-",
+		"/":  "-",
+		"\\": "-",
+		"_":  "-",
+		".":  "-",
+	}
+
+	for old, new := range replacements {
+		id = strings.ReplaceAll(id, old, new)
+	}
+
+	// Remove special characters (keep alphanumeric and hyphens)
+	var cleaned strings.Builder
+	for _, r := range id {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' {
+			cleaned.WriteRune(r)
+		}
+	}
+	id = cleaned.String()
+
+	// Remove multiple consecutive hyphens
+	for strings.Contains(id, "--") {
+		id = strings.ReplaceAll(id, "--", "-")
+	}
+
+	// Trim hyphens from start and end
+	id = strings.Trim(id, "-")
+
+	return id
+}
+
+// GetID returns the plugin ID, generating one from name if not set.
+func (p *YAMLPlugin) GetID() string {
+	if p.ID != "" {
+		return p.ID
+	}
+	return GeneratePluginID(p.Name)
 }

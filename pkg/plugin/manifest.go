@@ -21,7 +21,7 @@ type Manifest struct {
 	// LastUpdated timestamp
 	LastUpdated time.Time `json:"last_updated"`
 
-	// Plugins map (plugin name -> ManifestEntry)
+	// Plugins map (plugin ID -> ManifestEntry)
 	Plugins map[string]*ManifestEntry `json:"plugins"`
 
 	// RegistryURL is the upstream plugin registry URL
@@ -31,6 +31,7 @@ type Manifest struct {
 // ManifestEntry represents a single plugin entry in the manifest.
 type ManifestEntry struct {
 	// Plugin metadata
+	ID      string `json:"id"` // Unique plugin identifier (slug)
 	Name    string `json:"name"`
 	Version string `json:"version"`
 	Type    string `json:"type"`
@@ -144,48 +145,52 @@ func (m *ManifestManager) Add(entry *ManifestEntry) error {
 		return fmt.Errorf("manifest entry cannot be nil")
 	}
 
+	if entry.ID == "" {
+		return fmt.Errorf("plugin ID cannot be empty")
+	}
+
 	if entry.Name == "" {
 		return fmt.Errorf("plugin name cannot be empty")
 	}
 
-	// Add to manifest
-	m.manifest.Plugins[entry.Name] = entry
+	// Add to manifest (use ID as key)
+	m.manifest.Plugins[entry.ID] = entry
 
 	return nil
 }
 
-// Remove removes a plugin entry from the manifest.
-func (m *ManifestManager) Remove(name string) error {
+// Remove removes a plugin entry from the manifest by ID.
+func (m *ManifestManager) Remove(id string) error {
 	if m.manifest == nil {
 		if err := m.Load(); err != nil {
 			return fmt.Errorf("failed to load manifest: %w", err)
 		}
 	}
 
-	if name == "" {
-		return fmt.Errorf("plugin name cannot be empty")
+	if id == "" {
+		return fmt.Errorf("plugin ID cannot be empty")
 	}
 
-	if _, exists := m.manifest.Plugins[name]; !exists {
-		return fmt.Errorf("plugin '%s' not found in manifest", name)
+	if _, exists := m.manifest.Plugins[id]; !exists {
+		return fmt.Errorf("plugin '%s' not found in manifest", id)
 	}
 
-	delete(m.manifest.Plugins, name)
+	delete(m.manifest.Plugins, id)
 
 	return nil
 }
 
-// Get retrieves a plugin entry from the manifest.
-func (m *ManifestManager) Get(name string) (*ManifestEntry, error) {
+// Get retrieves a plugin entry from the manifest by ID.
+func (m *ManifestManager) Get(id string) (*ManifestEntry, error) {
 	if m.manifest == nil {
 		if err := m.Load(); err != nil {
 			return nil, fmt.Errorf("failed to load manifest: %w", err)
 		}
 	}
 
-	entry, exists := m.manifest.Plugins[name]
+	entry, exists := m.manifest.Plugins[id]
 	if !exists {
-		return nil, fmt.Errorf("plugin '%s' not found in manifest", name)
+		return nil, fmt.Errorf("plugin '%s' not found in manifest", id)
 	}
 
 	return entry, nil
@@ -208,26 +213,26 @@ func (m *ManifestManager) List() ([]*ManifestEntry, error) {
 }
 
 // Update updates an existing plugin entry in the manifest.
-func (m *ManifestManager) Update(name string, entry *ManifestEntry) error {
+func (m *ManifestManager) Update(id string, entry *ManifestEntry) error {
 	if m.manifest == nil {
 		if err := m.Load(); err != nil {
 			return fmt.Errorf("failed to load manifest: %w", err)
 		}
 	}
 
-	if name == "" {
-		return fmt.Errorf("plugin name cannot be empty")
+	if id == "" {
+		return fmt.Errorf("plugin ID cannot be empty")
 	}
 
 	if entry == nil {
 		return fmt.Errorf("manifest entry cannot be nil")
 	}
 
-	if _, exists := m.manifest.Plugins[name]; !exists {
-		return fmt.Errorf("plugin '%s' not found in manifest", name)
+	if _, exists := m.manifest.Plugins[id]; !exists {
+		return fmt.Errorf("plugin '%s' not found in manifest", id)
 	}
 
-	m.manifest.Plugins[name] = entry
+	m.manifest.Plugins[id] = entry
 
 	return nil
 }

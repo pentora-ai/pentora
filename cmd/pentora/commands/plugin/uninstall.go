@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/pentora-ai/pentora/pkg/plugin"
 	"github.com/rs/zerolog/log"
@@ -104,11 +105,14 @@ all plugins in a category, or all plugins at once.`,
 				}
 				fmt.Printf("Uninstalling %d plugin(s) from category '%s'...\n", len(toUninstall), category)
 			} else {
-				// Uninstall specific plugin
+				// Uninstall specific plugin by name or ID
 				pluginName := args[0]
+				pluginNameLower := strings.ToLower(pluginName)
 				found := false
 				for _, entry := range entries {
-					if entry.Name == pluginName {
+					// Match by name or generated ID
+					entryID := plugin.GeneratePluginID(entry.Name)
+					if entry.Name == pluginName || entryID == pluginNameLower {
 						toUninstall = append(toUninstall, entry)
 						found = true
 						break
@@ -142,8 +146,8 @@ all plugins in a category, or all plugins at once.`,
 					// File doesn't exist, but still remove from manifest
 				}
 
-				// Remove from manifest
-				if err := manifestMgr.Remove(entry.Name); err != nil {
+				// Remove from manifest (use ID)
+				if err := manifestMgr.Remove(entry.ID); err != nil {
 					fmt.Printf(" ✗ (failed to update manifest: %v)\n", err)
 					log.Warn().
 						Str("plugin", entry.Name).
@@ -155,6 +159,14 @@ all plugins in a category, or all plugins at once.`,
 
 				fmt.Printf(" ✓\n")
 				removedCount++
+			}
+
+			// Save manifest to disk if any plugins were removed
+			if removedCount > 0 {
+				if err := manifestMgr.Save(); err != nil {
+					log.Warn().Err(err).Msg("Failed to save plugin manifest")
+					fmt.Printf("\nWarning: Failed to update plugin registry\n")
+				}
 			}
 
 			// Summary

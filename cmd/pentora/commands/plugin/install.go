@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -60,6 +61,13 @@ You can install entire categories (ssh, http, tls, database, network) or specifi
 			cacheManager, err := plugin.NewCacheManager(cacheDir)
 			if err != nil {
 				return fmt.Errorf("create cache manager: %w", err)
+			}
+
+			// Create manifest manager
+			manifestPath := filepath.Join(filepath.Dir(cacheDir), "registry.json")
+			manifestMgr, err := plugin.NewManifestManager(manifestPath)
+			if err != nil {
+				return fmt.Errorf("create manifest manager: %w", err)
 			}
 
 			// Create downloader with default sources
@@ -135,17 +143,34 @@ You can install entire categories (ssh, http, tls, database, network) or specifi
 				}
 				fmt.Printf("Found %d plugin(s) in category '%s'\n", len(toInstall), target)
 			} else {
-				// Install specific plugin by name
+				// Install specific plugin by name or ID
 				found := false
+				targetLower := strings.ToLower(target)
+
 				for _, p := range allPlugins {
-					if p.Name == target {
+					// Match by name (exact) or ID (generated from name or explicit)
+					pluginID := plugin.GeneratePluginID(p.Name)
+					if p.Name == target || pluginID == targetLower {
 						toInstall = append(toInstall, p)
 						found = true
+						if pluginID == targetLower && p.Name != target {
+							fmt.Printf("Matched plugin ID '%s' to '%s'\n", target, p.Name)
+						}
 						break
 					}
 				}
 				if !found {
-					return fmt.Errorf("plugin '%s' not found in any source", target)
+					// Check if it's an embedded plugin
+					embeddedPlugins, err := plugin.LoadAllEmbeddedPlugins()
+					if err == nil {
+						for _, ep := range embeddedPlugins {
+							epID := ep.GetID()
+							if ep.Name == target || epID == targetLower {
+								return fmt.Errorf("plugin '%s' is already embedded in the binary (use 'pentora plugin embedded' to list all embedded plugins)", ep.Name)
+							}
+						}
+					}
+					return fmt.Errorf("plugin '%s' not found in any source\n\nTip: You can use plugin name or ID (slug).\nUse 'pentora plugin embedded' to see built-in plugins.\nUse 'pentora plugin list' to see available remote plugins.\n\nExamples:\n  pentora plugin install \"SSH Default Credentials\"\n  pentora plugin install ssh-default-credentials", target)
 				}
 				fmt.Printf("Found plugin '%s'\n", target)
 			}
@@ -199,8 +224,44 @@ You can install entire categories (ssh, http, tls, database, network) or specifi
 					continue
 				}
 
+				// Add to manifest
+				pluginID := plugin.GeneratePluginID(p.Name)
+				categoryTags := make([]string, len(p.Categories))
+				for i, cat := range p.Categories {
+					categoryTags[i] = string(cat)
+				}
+
+				manifestEntry := &plugin.ManifestEntry{
+					ID:          pluginID,
+					Name:        p.Name,
+					Version:     p.Version,
+					Type:        "evaluation", // Default type
+					Author:      p.Author,
+					Checksum:    p.Checksum,
+					DownloadURL: p.URL,
+					InstalledAt: time.Now(),
+					Path:        filepath.Join(pluginID, p.Version, "plugin.yaml"),
+					Tags:        categoryTags,
+					Severity:    "medium", // Default severity (will be overridden when plugin is loaded)
+				}
+
+				if err := manifestMgr.Add(manifestEntry); err != nil {
+					log.Warn().
+						Str("plugin", p.Name).
+						Err(err).
+						Msg("Failed to add plugin to manifest (plugin still downloaded)")
+				}
+
 				fmt.Printf(" ✓\n")
 				downloadedCount++
+			}
+
+			// Save manifest to disk if any plugins were installed
+			if downloadedCount > 0 {
+				if err := manifestMgr.Save(); err != nil {
+					log.Warn().Err(err).Msg("Failed to save plugin manifest")
+					fmt.Printf("\nWarning: Failed to update plugin registry (plugins are still installed)\n")
+				}
 			}
 
 			// Summary

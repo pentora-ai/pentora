@@ -107,6 +107,7 @@ func TestManifestManager_Save(t *testing.T) {
 
 	// Add entry
 	entry := &ManifestEntry{
+		ID:      "test-plugin",
 		Name:    "test-plugin",
 		Version: "1.0.0",
 		Type:    "evaluation",
@@ -155,6 +156,7 @@ func TestManifestManager_Add(t *testing.T) {
 	require.NoError(t, err)
 
 	entry := &ManifestEntry{
+		ID:      "test-plugin",
 		Name:    "test-plugin",
 		Version: "1.0.0",
 		Type:    "evaluation",
@@ -190,12 +192,13 @@ func TestManifestManager_Add_EmptyName(t *testing.T) {
 	require.NoError(t, err)
 
 	entry := &ManifestEntry{
+		ID:   "", // Empty ID
 		Name: "", // Empty name
 	}
 
 	err = mm.Add(entry)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "plugin name cannot be empty")
+	require.Contains(t, err.Error(), "plugin ID cannot be empty")
 }
 
 func TestManifestManager_Remove(t *testing.T) {
@@ -207,6 +210,7 @@ func TestManifestManager_Remove(t *testing.T) {
 
 	// Add entry
 	entry := &ManifestEntry{
+		ID:      "test-plugin",
 		Name:    "test-plugin",
 		Version: "1.0.0",
 	}
@@ -250,7 +254,7 @@ func TestManifestManager_Remove_EmptyName(t *testing.T) {
 
 	err = mm.Remove("")
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "plugin name cannot be empty")
+	require.Contains(t, err.Error(), "plugin ID cannot be empty")
 }
 
 func TestManifestManager_Get(t *testing.T) {
@@ -262,6 +266,7 @@ func TestManifestManager_Get(t *testing.T) {
 
 	// Add entry
 	entry := &ManifestEntry{
+		ID:      "test-plugin",
 		Name:    "test-plugin",
 		Version: "1.0.0",
 		Author:  "test",
@@ -301,8 +306,10 @@ func TestManifestManager_List(t *testing.T) {
 
 	// Add multiple entries
 	for i := 1; i <= 3; i++ {
+		pluginName := "plugin-" + string(rune('0'+i))
 		entry := &ManifestEntry{
-			Name:    "plugin-" + string(rune('0'+i)),
+			ID:      pluginName,
+			Name:    pluginName,
 			Version: "1.0.0",
 		}
 		err = mm.Add(entry)
@@ -336,6 +343,7 @@ func TestManifestManager_Update(t *testing.T) {
 
 	// Add entry
 	entry := &ManifestEntry{
+		ID:      "test-plugin",
 		Name:    "test-plugin",
 		Version: "1.0.0",
 	}
@@ -367,6 +375,7 @@ func TestManifestManager_Update_NotFound(t *testing.T) {
 	require.NoError(t, err)
 
 	entry := &ManifestEntry{
+		ID:   "non-existent",
 		Name: "non-existent",
 	}
 
@@ -399,8 +408,10 @@ func TestManifestManager_Clear(t *testing.T) {
 
 	// Add entries
 	for i := 1; i <= 3; i++ {
+		pluginName := "plugin-" + string(rune('0'+i))
 		entry := &ManifestEntry{
-			Name:    "plugin-" + string(rune('0'+i)),
+			ID:      pluginName,
+			Name:    pluginName,
 			Version: "1.0.0",
 		}
 		err = mm.Add(entry)
@@ -431,8 +442,10 @@ func TestManifestManager_Count(t *testing.T) {
 
 	// Add entries
 	for i := 1; i <= 3; i++ {
+		pluginName := "plugin-" + string(rune('0'+i))
 		entry := &ManifestEntry{
-			Name: "plugin-" + string(rune('0'+i)),
+			ID:   pluginName,
+			Name: pluginName,
 		}
 		err = mm.Add(entry)
 		require.NoError(t, err)
@@ -501,6 +514,7 @@ func TestManifestManager_SaveAndLoad_RoundTrip(t *testing.T) {
 	require.NoError(t, err)
 
 	entry := &ManifestEntry{
+		ID:          "test-plugin",
 		Name:        "test-plugin",
 		Version:     "1.0.0",
 		Type:        "evaluation",
@@ -549,6 +563,7 @@ func TestManifestManager_Add_AutoLoad(t *testing.T) {
 
 	// Add without explicit Load() - should auto-load
 	entry := &ManifestEntry{
+		ID:      "test-plugin",
 		Name:    "test-plugin",
 		Version: "1.0.0",
 	}
@@ -574,7 +589,7 @@ func TestManifestManager_MultipleOperationsWithoutLoad(t *testing.T) {
 	require.NotNil(t, mm.manifest)
 
 	// Add
-	entry := &ManifestEntry{Name: "plugin1", Version: "1.0"}
+	entry := &ManifestEntry{ID: "plugin1", Name: "plugin1", Version: "1.0"}
 	err = mm.Add(entry)
 	require.NoError(t, err)
 
@@ -613,10 +628,10 @@ func TestManifestManager_Update_EmptyName(t *testing.T) {
 	err = mm.Load()
 	require.NoError(t, err)
 
-	entry := &ManifestEntry{Name: "test", Version: "1.0"}
+	entry := &ManifestEntry{ID: "test", Name: "test", Version: "1.0"}
 	err = mm.Update("", entry)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "plugin name cannot be empty")
+	require.Contains(t, err.Error(), "plugin ID cannot be empty")
 }
 
 func TestManifestManager_ConcurrentReadOperations(t *testing.T) {
@@ -628,8 +643,10 @@ func TestManifestManager_ConcurrentReadOperations(t *testing.T) {
 
 	// Add test data
 	for i := 1; i <= 10; i++ {
+		pluginName := "plugin-" + string(rune('0'+i))
 		entry := &ManifestEntry{
-			Name:    "plugin-" + string(rune('0'+i)),
+			ID:      pluginName,
+			Name:    pluginName,
 			Version: "1.0.0",
 		}
 		err = mm.Add(entry)
@@ -683,6 +700,7 @@ func TestManifestManager_AddDuplicateOverwrites(t *testing.T) {
 
 	// Add first version
 	entry1 := &ManifestEntry{
+		ID:      "test-plugin",
 		Name:    "test-plugin",
 		Version: "1.0.0",
 	}
@@ -691,6 +709,7 @@ func TestManifestManager_AddDuplicateOverwrites(t *testing.T) {
 
 	// Add same plugin with different version (should overwrite)
 	entry2 := &ManifestEntry{
+		ID:      "test-plugin",
 		Name:    "test-plugin",
 		Version: "2.0.0",
 	}
@@ -734,6 +753,7 @@ func TestManifestManager_SaveUpdatesTimestamp(t *testing.T) {
 func TestManifestEntry_AllFields(t *testing.T) {
 	now := time.Now()
 	entry := &ManifestEntry{
+		ID:           "test-plugin",
 		Name:         "test-plugin",
 		Version:      "1.0.0",
 		Type:         "evaluation",
@@ -784,6 +804,7 @@ func TestManifestManager_RemoveAndReAdd(t *testing.T) {
 
 	// Add entry
 	entry := &ManifestEntry{
+		ID:      "test-plugin",
 		Name:    "test-plugin",
 		Version: "1.0.0",
 	}
@@ -813,6 +834,7 @@ func TestManifestManager_ListPreservesData(t *testing.T) {
 
 	// Add entries with full data
 	entry1 := &ManifestEntry{
+		ID:          "plugin1",
 		Name:        "plugin1",
 		Version:     "1.0.0",
 		Checksum:    "sha256:abc",
@@ -820,6 +842,7 @@ func TestManifestManager_ListPreservesData(t *testing.T) {
 		Tags:        []string{"tag1"},
 	}
 	entry2 := &ManifestEntry{
+		ID:          "plugin2",
 		Name:        "plugin2",
 		Version:     "2.0.0",
 		Checksum:    "sha256:def",
@@ -960,6 +983,7 @@ func TestUpdate_LoadError(t *testing.T) {
 	}
 
 	entry := &ManifestEntry{
+		ID:      "test",
 		Name:    "test",
 		Version: "1.0",
 	}
@@ -1027,6 +1051,7 @@ func TestAdd_LoadError(t *testing.T) {
 	}
 
 	entry := &ManifestEntry{
+		ID:      "test",
 		Name:    "test",
 		Version: "1.0",
 	}
