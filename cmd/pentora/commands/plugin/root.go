@@ -20,6 +20,15 @@ Use these commands to list, inspect, verify, and maintain your plugin cache.`,
 		Example: `  # List all installed plugins
   pentora plugin list
 
+  # Install plugins by category
+  pentora plugin install ssh
+
+  # Install specific plugin
+  pentora plugin install ssh-cve-2024-6387
+
+  # Uninstall plugin
+  pentora plugin uninstall ssh-cve-2024-6387
+
   # Show details for a specific plugin
   pentora plugin info ssh-cve-2024-6387
 
@@ -33,6 +42,8 @@ Use these commands to list, inspect, verify, and maintain your plugin cache.`,
 	// Add subcommands
 	cmd.AddCommand(newListCommand())
 	cmd.AddCommand(newEmbeddedCommand())
+	cmd.AddCommand(newInstallCommand())
+	cmd.AddCommand(newUninstallCommand())
 	cmd.AddCommand(newUpdateCommand())
 	cmd.AddCommand(newInfoCommand())
 	cmd.AddCommand(newVerifyCommand())
