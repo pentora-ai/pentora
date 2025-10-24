@@ -1,0 +1,252 @@
+name: 🔌 Plugin Request
+description: Request a new vulnerability detection plugin
+title: "[Plugin]: "
+labels: ["plugin", "enhancement", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a plugin! This will help expand Pentora's vulnerability detection capabilities.
+
+  - type: input
+    id: plugin-name
+    attributes:
+      label: Plugin Name
+      description: Descriptive name for the plugin
+      placeholder: "SSH CVE-2024-XXXXX Remote Code Execution"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      description: Which category does this plugin belong to?
+      options:
+        - SSH
+        - HTTP/HTTPS
+        - TLS/SSL
+        - Database (MySQL, PostgreSQL, Redis, MongoDB)
+        - Network (FTP, Telnet, SNMP, DNS)
+        - Cloud (AWS, Azure, GCP)
+        - Container (Docker, Kubernetes)
+        - Web Framework (Django, Rails, Laravel)
+        - Application (Apache, Nginx, Tomcat)
+        - Misconfiguration
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: How critical is this vulnerability?
+      options:
+        - 🔴 Critical (RCE, authentication bypass, data loss)
+        - 🟡 High (privilege escalation, sensitive data exposure)
+        - 🟢 Medium (information disclosure, DoS)
+        - ⚪ Low (security misconfiguration, version disclosure)
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Vulnerability Description
+      description: What does this plugin detect?
+      placeholder: |
+        This plugin detects the regreSSHion vulnerability (CVE-2024-6387) in OpenSSH server versions 8.5p1 through 9.7p1.
+
+        The vulnerability allows unauthenticated remote code execution due to a signal handler race condition in sshd.
+    validations:
+      required: true
+
+  - type: textarea
+    id: affected-versions
+    attributes:
+      label: Affected Versions
+      description: Which software versions are vulnerable?
+      placeholder: |
+        - OpenSSH 8.5p1 - 9.7p1 (vulnerable)
+        - OpenSSH 9.8p1+ (patched)
+        - OpenSSH < 4.4p1 (also vulnerable, different issue)
+    validations:
+      required: true
+
+  - type: textarea
+    id: detection-method
+    attributes:
+      label: Detection Method
+      description: How can Pentora detect this vulnerability?
+      placeholder: |
+        1. Parse SSH banner to extract version: `SSH-2.0-OpenSSH_9.3p1`
+        2. Check if version is in vulnerable range (8.5p1 - 9.7p1)
+        3. Optionally verify OS (only affects glibc-based Linux systems)
+        4. Report vulnerability if conditions match
+    validations:
+      required: true
+
+  - type: textarea
+    id: trigger-conditions
+    attributes:
+      label: Trigger Conditions
+      description: When should this plugin run?
+      placeholder: |
+        - Port: 22 (SSH)
+        - Service: ssh
+        - Data required: ssh.version, ssh.banner
+    validations:
+      required: true
+
+  - type: textarea
+    id: match-rules
+    attributes:
+      label: Match Rules
+      description: Logic to determine if vulnerability exists
+      placeholder: |
+        ```yaml
+        match:
+          logic: AND
+          rules:
+            - field: ssh.version
+              operator: version_in_range
+              value: "8.5p1:9.7p1"
+            - field: service.port
+              operator: equals
+              value: 22
+        ```
+
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: CVE IDs, advisories, security bulletins
+      placeholder: |
+        - CVE: CVE-2024-6387
+        - NVD: https://nvd.nist.gov/vuln/detail/CVE-2024-6387
+        - Advisory: https://www.openssh.com/security.html
+        - CVSS: 8.1 (High)
+        - CWE: CWE-362 (Race Condition)
+    validations:
+      required: true
+
+  - type: textarea
+    id: remediation
+    attributes:
+      label: Remediation Steps
+      description: How to fix this vulnerability?
+      placeholder: |
+        1. Upgrade OpenSSH to version 9.8p1 or later
+        2. If upgrade not possible, apply vendor patches
+        3. Restrict SSH access via firewall rules
+        4. Monitor SSH logs for suspicious activity
+        5. Consider using fail2ban or similar tools
+
+  - type: textarea
+    id: false-positives
+    attributes:
+      label: False Positive Scenarios
+      description: When might this plugin incorrectly trigger?
+      placeholder: |
+        - Vendor patches: Some Linux distros backport fixes without version bump
+        - SSH banners modified by administrators
+        - SSH honeypots mimicking vulnerable versions
+
+  - type: dropdown
+    id: requires-auth
+    attributes:
+      label: Requires Authentication?
+      description: Does detecting this need credentials?
+      options:
+        - "No (unauthenticated detection)"
+        - "Yes (requires SSH login)"
+        - "Optional (better with auth)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: safe-to-check
+    attributes:
+      label: Safe to Check?
+      description: Is detection non-intrusive?
+      options:
+        - "Yes (passive detection, no exploitation)"
+        - "Caution (active probing, might trigger alerts)"
+        - "Unsafe (exploitation required, use only in labs)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: example-yaml
+    attributes:
+      label: Example Plugin YAML (Optional)
+      description: Draft of the plugin configuration
+      placeholder: |
+        ```yaml
+        name: OpenSSH CVE-2024-6387 (regreSSHion)
+        version: 1.0.0
+        type: evaluation
+        author: pentora-security
+
+        metadata:
+          severity: critical
+          tags: [ssh, cve, rce, race-condition]
+          references:
+            cve: [CVE-2024-6387]
+            url:
+              - https://nvd.nist.gov/vuln/detail/CVE-2024-6387
+              - https://www.openssh.com/security.html
+
+        triggers:
+          - data_key: ssh.version
+            condition: exists
+            value: true
+
+        match:
+          logic: AND
+          rules:
+            - field: ssh.version
+              operator: version_in_range
+              value: "8.5p1:9.7p1"
+            - field: service.port
+              operator: equals
+              value: 22
+
+        output:
+          vulnerability: true
+          severity: critical
+          message: "OpenSSH regreSSHion vulnerability detected"
+          remediation: "Upgrade to OpenSSH 9.8p1 or later"
+        ```
+      render: yaml
+
+  - type: textarea
+    id: test-targets
+    attributes:
+      label: Test Targets (Optional)
+      description: Known vulnerable systems for testing
+      placeholder: |
+        - vulhub/openssh:9.3p1
+        - Docker: docker run -p 2222:22 vulnerable/openssh:9.3p1
+        - Public ranges: Shodan search for OpenSSH 9.3 (with permission)
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Can you help create this plugin?
+      options:
+        - label: I can write the plugin YAML
+        - label: I can test the plugin
+        - label: I have access to vulnerable systems for testing
+        - label: I need help with implementation
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Any other relevant information
+      placeholder: Similar detection in Nuclei, Nessus, or other scanners
