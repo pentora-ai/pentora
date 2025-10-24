@@ -103,8 +103,8 @@ func TestPluginEvaluationModule_MultipleVulnerabilities(t *testing.T) {
 	// Provide inputs that should match multiple TLS vulnerabilities
 	inputs := map[string]interface{}{
 		"config.targets":    []string{"192.168.1.100"},
-		"tls.version":       "TLSv1.0",                                  // Weak protocol
-		"tls.cipher_suites": []string{"TLS_RSA_WITH_DES_CBC_SHA"},       // Weak cipher
+		"tls.version":       "TLSv1.0",                            // Weak protocol
+		"tls.cipher_suites": []string{"TLS_RSA_WITH_DES_CBC_SHA"}, // Weak cipher
 		"service.port":      443,
 	}
 
@@ -154,7 +154,7 @@ func TestPluginEvaluationModule_NoVulnerabilities(t *testing.T) {
 	// Provide secure TLS configuration
 	inputs := map[string]interface{}{
 		"config.targets":    []string{"192.168.1.200"},
-		"tls.version":       "TLSv1.3", // Secure protocol
+		"tls.version":       "TLSv1.3",                          // Secure protocol
 		"tls.cipher_suites": []string{"TLS_AES_128_GCM_SHA256"}, // Modern cipher
 		"service.port":      443,
 	}
@@ -201,9 +201,9 @@ func TestPluginEvaluationModule_SSHVulnerabilities(t *testing.T) {
 
 	// Provide SSH context with weak algorithms
 	inputs := map[string]interface{}{
-		"config.targets":    []string{"192.168.1.50"},
-		"ssh.version":       "SSH-2.0-OpenSSH_5.3",
-		"ssh.banner":        "SSH-2.0-OpenSSH_5.3",
+		"config.targets": []string{"192.168.1.50"},
+		"ssh.version":    "SSH-2.0-OpenSSH_5.3",
+		"ssh.banner":     "SSH-2.0-OpenSSH_5.3",
 		"ssh.kex_algorithms": []string{
 			"diffie-hellman-group1-sha1", // Weak KEX
 		},
