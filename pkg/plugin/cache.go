@@ -24,6 +24,7 @@ type CacheManager struct {
 }
 
 // NewCacheManager creates a new cache manager.
+// It scans the cache directory and loads existing plugins into the registry.
 func NewCacheManager(cacheDir string) (*CacheManager, error) {
 	if cacheDir == "" {
 		return nil, fmt.Errorf("cache directory cannot be empty")
@@ -34,10 +35,16 @@ func NewCacheManager(cacheDir string) (*CacheManager, error) {
 		return nil, fmt.Errorf("failed to create cache directory: %w", err)
 	}
 
-	return &CacheManager{
+	cm := &CacheManager{
 		cacheDir: cacheDir,
 		registry: NewYAMLRegistry(),
-	}, nil
+	}
+
+	// Load existing plugins from disk into registry
+	// This prevents re-downloading already cached plugins
+	_, _ = cm.LoadFromDisk() // Ignore errors - partial load is acceptable
+
+	return cm, nil
 }
 
 // CacheEntry represents metadata about a cached plugin.

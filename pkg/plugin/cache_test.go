@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestNewCacheManager(t *testing.T) {
@@ -34,6 +35,95 @@ func TestNewCacheManager_EmptyPath(t *testing.T) {
 	require.Error(t, err)
 	require.Nil(t, cm)
 	require.Contains(t, err.Error(), "cache directory cannot be empty")
+}
+
+func TestNewCacheManager_LoadsExistingPlugins(t *testing.T) {
+	// Create cache directory with pre-existing plugins
+	cacheDir := t.TempDir()
+
+	// Create plugin structure manually (simulate previous downloads)
+	plugin1Dir := filepath.Join(cacheDir, "test-plugin-1", "1.0.0")
+	require.NoError(t, os.MkdirAll(plugin1Dir, 0o755))
+
+	plugin1 := &YAMLPlugin{
+		Name:    "test-plugin-1",
+		Version: "1.0.0",
+		Type:    "evaluation",
+		Author:  "test",
+		Metadata: PluginMetadata{
+			Severity: "high",
+			Tags:     []string{"test"},
+		},
+		Triggers: []Trigger{
+			{DataKey: "test.key", Condition: "exists", Value: true},
+		},
+		Match: &MatchBlock{
+			Logic: "OR",
+			Rules: []MatchRule{
+				{Field: "test.field", Operator: "equals", Value: "test"},
+			},
+		},
+		Output: OutputBlock{
+			Vulnerability: true,
+			Message:       "Test",
+			Remediation:   "Fix it",
+		},
+	}
+
+	data, err := yaml.Marshal(plugin1)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(plugin1Dir, "plugin.yaml"), data, 0o644))
+
+	// Create second plugin
+	plugin2Dir := filepath.Join(cacheDir, "test-plugin-2", "2.0.0")
+	require.NoError(t, os.MkdirAll(plugin2Dir, 0o755))
+
+	plugin2 := &YAMLPlugin{
+		Name:    "test-plugin-2",
+		Version: "2.0.0",
+		Type:    "evaluation",
+		Author:  "test",
+		Metadata: PluginMetadata{
+			Severity: "critical",
+			Tags:     []string{"test2"},
+		},
+		Triggers: []Trigger{
+			{DataKey: "test.key2", Condition: "exists", Value: true},
+		},
+		Match: &MatchBlock{
+			Logic: "AND",
+			Rules: []MatchRule{
+				{Field: "test.field2", Operator: "contains", Value: "value"},
+			},
+		},
+		Output: OutputBlock{
+			Vulnerability: true,
+			Message:       "Test2",
+			Remediation:   "Fix it too",
+		},
+	}
+
+	data2, err := yaml.Marshal(plugin2)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(plugin2Dir, "plugin.yaml"), data2, 0o644))
+
+	// Create CacheManager - should load existing plugins
+	cm, err := NewCacheManager(cacheDir)
+	require.NoError(t, err)
+	require.NotNil(t, cm)
+
+	// Verify plugins were loaded into registry
+	loaded1, found1 := cm.Get("test-plugin-1")
+	require.True(t, found1, "test-plugin-1 should be loaded from disk")
+	require.Equal(t, "1.0.0", loaded1.Version)
+
+	loaded2, found2 := cm.Get("test-plugin-2")
+	require.True(t, found2, "test-plugin-2 should be loaded from disk")
+	require.Equal(t, "2.0.0", loaded2.Version)
+
+	// Verify registry size
+	all := cm.List()
+	require.Len(t, all, 2, "should have 2 plugins loaded")
 }
 
 func TestCacheManager_Add(t *testing.T) {
@@ -363,18 +453,13 @@ output:
 	err = os.WriteFile(pluginFile, []byte(pluginYAML), 0o644)
 	require.NoError(t, err)
 
-	// Create cache manager
+	// Create cache manager - automatically loads from disk
 	cm, err := NewCacheManager(cacheDir)
 	require.NoError(t, err)
 
-	// Load from disk
-	count, errors := cm.LoadFromDisk()
-	require.Empty(t, errors)
-	require.Equal(t, 1, count)
-
-	// Verify plugin loaded
+	// Verify plugin was loaded during initialization
 	plugin, exists := cm.Get("test-plugin")
-	require.True(t, exists)
+	require.True(t, exists, "plugin should be loaded automatically")
 	require.Equal(t, "test-plugin", plugin.Name)
 	require.Equal(t, "1.0.0", plugin.Version)
 }
@@ -412,18 +497,18 @@ version: 1.0.0
 	err = os.WriteFile(filepath.Join(invalidDir, "plugin.yaml"), []byte(invalidYAML), 0o644)
 	require.NoError(t, err)
 
-	// Create cache manager
+	// Create cache manager - loads from disk automatically
 	cm, err := NewCacheManager(cacheDir)
 	require.NoError(t, err)
 
-	// Load from disk (partial success)
-	count, errors := cm.LoadFromDisk()
-	require.NotEmpty(t, errors)
-	require.Equal(t, 1, count) // Only valid plugin loaded
+	// Verify valid plugin loaded (invalid one silently ignored)
+	validPlugin, exists := cm.Get("valid-plugin")
+	require.True(t, exists, "valid plugin should be loaded")
+	require.Equal(t, "valid-plugin", validPlugin.Name)
 
-	// Verify valid plugin loaded
-	_, exists := cm.Get("valid-plugin")
-	require.True(t, exists)
+	// Verify invalid plugin not loaded
+	_, exists = cm.Get("invalid-plugin")
+	require.False(t, exists, "invalid plugin should not be loaded")
 }
 
 func TestNewCacheManager_CreateDirError(t *testing.T) {
