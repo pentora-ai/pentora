@@ -481,3 +481,74 @@ type ValidationWarning struct {
 	// NodeID identifies the node where the warning occurred (if applicable).
 	NodeID string
 }
+
+// ToDAGDefinition converts a DAGSchema to a DAGDefinition for orchestrator execution.
+//
+// This method:
+//   - Validates the DAG schema first
+//   - Converts DAGNode → DAGNodeConfig
+//   - Stores explicit dependencies in node config for orchestrator
+//
+// Returns error if validation fails.
+func (d *DAGSchema) ToDAGDefinition() (*DAGDefinition, error) {
+	// Validate schema first
+	validationResult := d.Validate()
+	if !validationResult.IsValid() {
+		return nil, fmt.Errorf("DAG validation failed: %s", validationResult.String())
+	}
+
+	// Convert nodes
+	nodes := make([]DAGNodeConfig, 0, len(d.Nodes))
+	for _, node := range d.Nodes {
+		// Make a copy of the config to avoid modifying the original
+		var config map[string]interface{}
+		if node.Config != nil {
+			config = make(map[string]interface{}, len(node.Config))
+			for k, v := range node.Config {
+				config[k] = v
+			}
+		} else {
+			config = make(map[string]interface{})
+		}
+
+		nodeConfig := DAGNodeConfig{
+			InstanceID: node.ID,
+			ModuleType: node.Module,
+			Config:     config,
+		}
+
+		// Store explicit dependencies in config for orchestrator to use
+		// Convert []string to []interface{} for consistent type handling
+		if len(node.DependsOn) > 0 {
+			depends := make([]interface{}, len(node.DependsOn))
+			for i, dep := range node.DependsOn {
+				depends[i] = dep
+			}
+			nodeConfig.Config["__depends_on"] = depends
+		}
+
+		// Store explicit consumes/produces for validation
+		if len(node.Consumes) > 0 {
+			consumes := make([]interface{}, len(node.Consumes))
+			for i, c := range node.Consumes {
+				consumes[i] = c
+			}
+			nodeConfig.Config["__consumes"] = consumes
+		}
+		if len(node.Produces) > 0 {
+			produces := make([]interface{}, len(node.Produces))
+			for i, p := range node.Produces {
+				produces[i] = p
+			}
+			nodeConfig.Config["__produces"] = produces
+		}
+
+		nodes = append(nodes, nodeConfig)
+	}
+
+	return &DAGDefinition{
+		Name:        d.Name,
+		Description: d.Description,
+		Nodes:       nodes,
+	}, nil
+}

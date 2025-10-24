@@ -218,9 +218,60 @@ func NewOrchestrator(dagDef *DAGDefinition) (*Orchestrator, error) {
 		}
 	}
 
-	// Second pass: Resolve dependencies based on Consumes and Produces metadata.
+	// Second pass: Resolve dependencies based on explicit dependencies and Consumes/Produces metadata.
 	for _, node := range orc.moduleNodes {
 		nodeLogger := orc.logger.With().Str("node_instance_id", node.instanceID).Logger()
+
+		// First, check for explicit dependencies from DAGSchema (stored in config as __depends_on)
+		if explicitDeps, ok := node.config.Config["__depends_on"].([]interface{}); ok {
+			for _, depIDInterface := range explicitDeps {
+				if depID, ok := depIDInterface.(string); ok {
+					if depNode, exists := orc.moduleNodes[depID]; exists {
+						if depNode.instanceID != node.instanceID {
+							// Check if not already added
+							alreadyAdded := false
+							for _, existingDep := range node.dependencies {
+								if existingDep.instanceID == depID {
+									alreadyAdded = true
+									break
+								}
+							}
+							if !alreadyAdded {
+								node.dependencies = append(node.dependencies, depNode)
+								depNode.dependents = append(depNode.dependents, node)
+								nodeLogger.Debug().Str("explicit_dependency", depID).Msg("Resolved explicit DAG dependency")
+							}
+						}
+					} else {
+						nodeLogger.Warn().Str("explicit_dependency", depID).Msg("Explicit dependency not found in DAG nodes")
+					}
+				}
+			}
+		} else if explicitDeps, ok := node.config.Config["__depends_on"].([]string); ok {
+			// Handle case where it's already []string (from some conversions)
+			for _, depID := range explicitDeps {
+				if depNode, exists := orc.moduleNodes[depID]; exists {
+					if depNode.instanceID != node.instanceID {
+						alreadyAdded := false
+						for _, existingDep := range node.dependencies {
+							if existingDep.instanceID == depID {
+								alreadyAdded = true
+								break
+							}
+						}
+						if !alreadyAdded {
+							node.dependencies = append(node.dependencies, depNode)
+							depNode.dependents = append(depNode.dependents, node)
+							nodeLogger.Debug().Str("explicit_dependency", depID).Msg("Resolved explicit DAG dependency")
+						}
+					}
+				} else {
+					nodeLogger.Warn().Str("explicit_dependency", depID).Msg("Explicit dependency not found in DAG nodes")
+				}
+			}
+		}
+
+		// Then, resolve implicit dependencies based on Consumes/Produces metadata
 		// ModuleMetadata.Consumes is now []DataContractEntry
 		for _, consumedContract := range node.module.Metadata().Consumes {
 			consumedKeyString := consumedContract.Key // Get the string DataKey
@@ -231,9 +282,19 @@ func NewOrchestrator(dagDef *DAGDefinition) (*Orchestrator, error) {
 			if producerInstanceID, produced := producesMap[consumedKeyString]; produced {
 				if producerNode, exists := orc.moduleNodes[producerInstanceID]; exists {
 					if producerNode.instanceID != node.instanceID { // Cannot depend on itself for a key
-						node.dependencies = append(node.dependencies, producerNode)
-						producerNode.dependents = append(producerNode.dependents, node)
-						nodeLogger.Debug().Str("consumed_key", consumedKeyString).Str("producer_instance_id", producerInstanceID).Msg("Resolved DAG dependency")
+						// Check if not already added (might be explicit dependency too)
+						alreadyAdded := false
+						for _, existingDep := range node.dependencies {
+							if existingDep.instanceID == producerInstanceID {
+								alreadyAdded = true
+								break
+							}
+						}
+						if !alreadyAdded {
+							node.dependencies = append(node.dependencies, producerNode)
+							producerNode.dependents = append(producerNode.dependents, node)
+						}
+						nodeLogger.Debug().Str("consumed_key", consumedKeyString).Str("producer_instance_id", producerInstanceID).Msg("Resolved implicit DAG dependency")
 						foundProducerInDAG = true
 					}
 				} else {

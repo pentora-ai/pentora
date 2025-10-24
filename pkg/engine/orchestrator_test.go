@@ -4,7 +4,11 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sync"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 type mockModule struct {
@@ -425,4 +429,482 @@ func TestOrchestrator_Run_ExecutesModulesInOrder(t *testing.T) {
 	if !reflect.DeepEqual(results, want) {
 		t.Errorf("Final results mismatch:\ngot:  %v\nwant: %v", results, want)
 	}
+}
+
+// TestOrchestrator_Run_ExplicitDependencies tests explicit dependency resolution from DAGSchema
+func TestOrchestrator_Run_ExplicitDependencies(t *testing.T) {
+	executionOrder := []string{}
+	var orderMutex sync.Mutex
+
+	RegisterModuleFactory("explicit-mod1", func() Module {
+		return &mockModule{
+			meta: ModuleMetadata{
+				Name: "explicit-mod1",
+				Type: ScanModuleType,
+				// No explicit Consumes/Produces - testing pure explicit dependencies
+			},
+			execFunc: func(ctx context.Context, inputs map[string]interface{}, out chan<- ModuleOutput) error {
+				orderMutex.Lock()
+				executionOrder = append(executionOrder, "mod1")
+				orderMutex.Unlock()
+				out <- ModuleOutput{DataKey: "data.1", Data: "value1"}
+				return nil
+			},
+		}
+	})
+
+	RegisterModuleFactory("explicit-mod2", func() Module {
+		return &mockModule{
+			meta: ModuleMetadata{
+				Name: "explicit-mod2",
+				Type: ScanModuleType,
+			},
+			execFunc: func(ctx context.Context, inputs map[string]interface{}, out chan<- ModuleOutput) error {
+				orderMutex.Lock()
+				executionOrder = append(executionOrder, "mod2")
+				orderMutex.Unlock()
+				out <- ModuleOutput{DataKey: "data.2", Data: "value2"}
+				return nil
+			},
+		}
+	})
+
+	RegisterModuleFactory("explicit-mod3", func() Module {
+		return &mockModule{
+			meta: ModuleMetadata{
+				Name: "explicit-mod3",
+				Type: ScanModuleType,
+			},
+			execFunc: func(ctx context.Context, inputs map[string]interface{}, out chan<- ModuleOutput) error {
+				orderMutex.Lock()
+				executionOrder = append(executionOrder, "mod3")
+				orderMutex.Unlock()
+				out <- ModuleOutput{DataKey: "data.3", Data: "value3"}
+				return nil
+			},
+		}
+	})
+
+	defer func() {
+		delete(moduleRegistry, "explicit-mod1")
+		delete(moduleRegistry, "explicit-mod2")
+		delete(moduleRegistry, "explicit-mod3")
+	}()
+
+	// Create DAG with explicit dependencies: mod3 depends on mod1 and mod2
+	dag := &DAGDefinition{
+		Name: "explicit-deps-test",
+		Nodes: []DAGNodeConfig{
+			{InstanceID: "mod1", ModuleType: "explicit-mod1", Config: map[string]interface{}{}},
+			{InstanceID: "mod2", ModuleType: "explicit-mod2", Config: map[string]interface{}{}},
+			{
+				InstanceID: "mod3",
+				ModuleType: "explicit-mod3",
+				Config: map[string]interface{}{
+					"__depends_on": []interface{}{"mod1", "mod2"},
+				},
+			},
+		},
+	}
+
+	orc, err := NewOrchestrator(dag)
+	require.NoError(t, err)
+
+	_, err = orc.Run(context.Background(), nil)
+	require.NoError(t, err)
+
+	// Check execution order: mod3 must run after mod1 and mod2
+	require.Len(t, executionOrder, 3)
+	idx1 := indexOf(executionOrder, "mod1")
+	idx2 := indexOf(executionOrder, "mod2")
+	idx3 := indexOf(executionOrder, "mod3")
+	require.True(t, idx1 < idx3, "mod1 should execute before mod3")
+	require.True(t, idx2 < idx3, "mod2 should execute before mod3")
+}
+
+// TestOrchestrator_Run_LayeredParallelExecution tests parallel execution in layers
+func TestOrchestrator_Run_LayeredParallelExecution(t *testing.T) {
+	// Track which modules run concurrently
+	layer1Start := make(chan string, 2)
+	layer1Done := make(chan string, 2)
+	layer2Start := make(chan string)
+
+	RegisterModuleFactory("parallel-mod1", func() Module {
+		return &mockModule{
+			meta: ModuleMetadata{
+				Name:     "parallel-mod1",
+				Type:     ScanModuleType,
+				Produces: []DataContractEntry{{Key: "layer1.data1"}},
+			},
+			execFunc: func(ctx context.Context, inputs map[string]interface{}, out chan<- ModuleOutput) error {
+				layer1Start <- "mod1"
+				time.Sleep(50 * time.Millisecond) // Simulate work
+				out <- ModuleOutput{DataKey: "layer1.data1", Data: "value1"}
+				layer1Done <- "mod1"
+				return nil
+			},
+		}
+	})
+
+	RegisterModuleFactory("parallel-mod2", func() Module {
+		return &mockModule{
+			meta: ModuleMetadata{
+				Name:     "parallel-mod2",
+				Type:     ScanModuleType,
+				Produces: []DataContractEntry{{Key: "layer1.data2"}},
+			},
+			execFunc: func(ctx context.Context, inputs map[string]interface{}, out chan<- ModuleOutput) error {
+				layer1Start <- "mod2"
+				time.Sleep(50 * time.Millisecond) // Simulate work
+				out <- ModuleOutput{DataKey: "layer1.data2", Data: "value2"}
+				layer1Done <- "mod2"
+				return nil
+			},
+		}
+	})
+
+	RegisterModuleFactory("parallel-mod3", func() Module {
+		return &mockModule{
+			meta: ModuleMetadata{
+				Name:     "parallel-mod3",
+				Type:     EvaluationModuleType,
+				Consumes: []DataContractEntry{{Key: "layer1.data1"}, {Key: "layer1.data2"}},
+			},
+			execFunc: func(ctx context.Context, inputs map[string]interface{}, out chan<- ModuleOutput) error {
+				layer2Start <- "mod3"
+				return nil
+			},
+		}
+	})
+
+	defer func() {
+		delete(moduleRegistry, "parallel-mod1")
+		delete(moduleRegistry, "parallel-mod2")
+		delete(moduleRegistry, "parallel-mod3")
+	}()
+
+	dag := &DAGDefinition{
+		Name: "parallel-layers-test",
+		Nodes: []DAGNodeConfig{
+			{InstanceID: "mod1", ModuleType: "parallel-mod1", Config: map[string]interface{}{}},
+			{InstanceID: "mod2", ModuleType: "parallel-mod2", Config: map[string]interface{}{}},
+			{InstanceID: "mod3", ModuleType: "parallel-mod3", Config: map[string]interface{}{}},
+		},
+	}
+
+	orc, err := NewOrchestrator(dag)
+	require.NoError(t, err)
+
+	go func() {
+		_, _ = orc.Run(context.Background(), nil)
+	}()
+
+	// Verify layer 1 modules start in parallel (both start before either completes)
+	start1 := <-layer1Start
+	start2 := <-layer1Start
+	require.NotEqual(t, start1, start2)
+
+	// Wait for layer 1 to complete
+	<-layer1Done
+	<-layer1Done
+
+	// Verify layer 2 starts only after layer 1 completes
+	select {
+	case mod := <-layer2Start:
+		require.Equal(t, "mod3", mod)
+	case <-time.After(2 * time.Second):
+		t.Fatal("Layer 2 module did not start")
+	}
+}
+
+// TestOrchestrator_Run_FailurePropagation tests that failures propagate to dependents
+func TestOrchestrator_Run_FailurePropagation(t *testing.T) {
+	mod2Executed := false
+
+	RegisterModuleFactory("fail-mod1", func() Module {
+		return &mockModule{
+			meta: ModuleMetadata{
+				Name:     "fail-mod1",
+				Type:     ScanModuleType,
+				Produces: []DataContractEntry{{Key: "fail.data"}},
+			},
+			execFunc: func(ctx context.Context, inputs map[string]interface{}, out chan<- ModuleOutput) error {
+				return fmt.Errorf("intentional failure in mod1")
+			},
+		}
+	})
+
+	RegisterModuleFactory("fail-mod2", func() Module {
+		return &mockModule{
+			meta: ModuleMetadata{
+				Name:     "fail-mod2",
+				Type:     EvaluationModuleType,
+				Consumes: []DataContractEntry{{Key: "fail.data"}},
+			},
+			execFunc: func(ctx context.Context, inputs map[string]interface{}, out chan<- ModuleOutput) error {
+				mod2Executed = true
+				return nil
+			},
+		}
+	})
+
+	defer func() {
+		delete(moduleRegistry, "fail-mod1")
+		delete(moduleRegistry, "fail-mod2")
+	}()
+
+	dag := &DAGDefinition{
+		Name: "failure-propagation-test",
+		Nodes: []DAGNodeConfig{
+			{InstanceID: "mod1", ModuleType: "fail-mod1", Config: map[string]interface{}{}},
+			{InstanceID: "mod2", ModuleType: "fail-mod2", Config: map[string]interface{}{}},
+		},
+	}
+
+	orc, err := NewOrchestrator(dag)
+	require.NoError(t, err)
+
+	_, err = orc.Run(context.Background(), nil)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "intentional failure")
+
+	// mod2 should not execute because mod1 failed
+	require.False(t, mod2Executed, "Dependent module should not execute when dependency fails")
+}
+
+// TestOrchestrator_Run_ContextCancellation tests graceful context cancellation
+func TestOrchestrator_Run_ContextCancellation(t *testing.T) {
+	mod1Started := make(chan struct{})
+	mod1Cancelled := false
+	var mod1Mutex sync.Mutex
+
+	RegisterModuleFactory("cancel-mod1", func() Module {
+		return &mockModule{
+			meta: ModuleMetadata{
+				Name:     "cancel-mod1",
+				Type:     ScanModuleType,
+				Produces: []DataContractEntry{{Key: "cancel.data"}},
+			},
+			execFunc: func(ctx context.Context, inputs map[string]interface{}, out chan<- ModuleOutput) error {
+				close(mod1Started)
+				select {
+				case <-ctx.Done():
+					mod1Mutex.Lock()
+					mod1Cancelled = true
+					mod1Mutex.Unlock()
+					return ctx.Err()
+				case <-time.After(5 * time.Second):
+					return nil
+				}
+			},
+		}
+	})
+
+	defer func() {
+		delete(moduleRegistry, "cancel-mod1")
+	}()
+
+	dag := &DAGDefinition{
+		Name: "context-cancellation-test",
+		Nodes: []DAGNodeConfig{
+			{InstanceID: "mod1", ModuleType: "cancel-mod1", Config: map[string]interface{}{}},
+		},
+	}
+
+	orc, err := NewOrchestrator(dag)
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	errChan := make(chan error, 1)
+
+	go func() {
+		_, err := orc.Run(ctx, nil)
+		errChan <- err
+	}()
+
+	// Wait for module to start
+	<-mod1Started
+
+	// Cancel context
+	cancel()
+
+	// Wait for run to complete
+	err = <-errChan
+	require.Error(t, err)
+
+	// Verify module received cancellation
+	mod1Mutex.Lock()
+	cancelled := mod1Cancelled
+	mod1Mutex.Unlock()
+	require.True(t, cancelled, "Module should receive context cancellation")
+}
+
+// TestOrchestrator_Run_SequentialExecution tests strict sequential execution
+func TestOrchestrator_Run_SequentialExecution(t *testing.T) {
+	executionOrder := []string{}
+	var orderMutex sync.Mutex
+
+	for i := 1; i <= 4; i++ {
+		modNum := i
+		modName := fmt.Sprintf("seq-mod%d", modNum)
+		RegisterModuleFactory(modName, func() Module {
+			return &mockModule{
+				meta: ModuleMetadata{
+					Name:     modName,
+					Type:     ScanModuleType,
+					Produces: []DataContractEntry{{Key: fmt.Sprintf("seq.data%d", modNum)}},
+					Consumes: func() []DataContractEntry {
+						if modNum == 1 {
+							return []DataContractEntry{}
+						}
+						return []DataContractEntry{{Key: fmt.Sprintf("seq.data%d", modNum-1)}}
+					}(),
+				},
+				execFunc: func(ctx context.Context, inputs map[string]interface{}, out chan<- ModuleOutput) error {
+					orderMutex.Lock()
+					executionOrder = append(executionOrder, fmt.Sprintf("mod%d", modNum))
+					orderMutex.Unlock()
+					out <- ModuleOutput{DataKey: fmt.Sprintf("seq.data%d", modNum), Data: fmt.Sprintf("value%d", modNum)}
+					return nil
+				},
+			}
+		})
+	}
+
+	defer func() {
+		for i := 1; i <= 4; i++ {
+			delete(moduleRegistry, fmt.Sprintf("seq-mod%d", i))
+		}
+	}()
+
+	dag := &DAGDefinition{
+		Name: "sequential-execution-test",
+		Nodes: []DAGNodeConfig{
+			{InstanceID: "mod1", ModuleType: "seq-mod1", Config: map[string]interface{}{}},
+			{InstanceID: "mod2", ModuleType: "seq-mod2", Config: map[string]interface{}{}},
+			{InstanceID: "mod3", ModuleType: "seq-mod3", Config: map[string]interface{}{}},
+			{InstanceID: "mod4", ModuleType: "seq-mod4", Config: map[string]interface{}{}},
+		},
+	}
+
+	orc, err := NewOrchestrator(dag)
+	require.NoError(t, err)
+
+	_, err = orc.Run(context.Background(), nil)
+	require.NoError(t, err)
+
+	// Verify strict sequential order
+	require.Equal(t, []string{"mod1", "mod2", "mod3", "mod4"}, executionOrder)
+}
+
+// TestOrchestrator_Run_DiamondPattern tests diamond dependency pattern
+func TestOrchestrator_Run_DiamondPattern(t *testing.T) {
+	executionOrder := []string{}
+	var orderMutex sync.Mutex
+
+	RegisterModuleFactory("diamond-root", func() Module {
+		return &mockModule{
+			meta: ModuleMetadata{
+				Name:     "diamond-root",
+				Type:     ScanModuleType,
+				Produces: []DataContractEntry{{Key: "diamond.root"}},
+			},
+			execFunc: func(ctx context.Context, inputs map[string]interface{}, out chan<- ModuleOutput) error {
+				orderMutex.Lock()
+				executionOrder = append(executionOrder, "root")
+				orderMutex.Unlock()
+				out <- ModuleOutput{DataKey: "diamond.root", Data: "root-value"}
+				return nil
+			},
+		}
+	})
+
+	RegisterModuleFactory("diamond-left", func() Module {
+		return &mockModule{
+			meta: ModuleMetadata{
+				Name:     "diamond-left",
+				Type:     ParseModuleType,
+				Consumes: []DataContractEntry{{Key: "diamond.root"}},
+				Produces: []DataContractEntry{{Key: "diamond.left"}},
+			},
+			execFunc: func(ctx context.Context, inputs map[string]interface{}, out chan<- ModuleOutput) error {
+				orderMutex.Lock()
+				executionOrder = append(executionOrder, "left")
+				orderMutex.Unlock()
+				out <- ModuleOutput{DataKey: "diamond.left", Data: "left-value"}
+				return nil
+			},
+		}
+	})
+
+	RegisterModuleFactory("diamond-right", func() Module {
+		return &mockModule{
+			meta: ModuleMetadata{
+				Name:     "diamond-right",
+				Type:     ParseModuleType,
+				Consumes: []DataContractEntry{{Key: "diamond.root"}},
+				Produces: []DataContractEntry{{Key: "diamond.right"}},
+			},
+			execFunc: func(ctx context.Context, inputs map[string]interface{}, out chan<- ModuleOutput) error {
+				orderMutex.Lock()
+				executionOrder = append(executionOrder, "right")
+				orderMutex.Unlock()
+				out <- ModuleOutput{DataKey: "diamond.right", Data: "right-value"}
+				return nil
+			},
+		}
+	})
+
+	RegisterModuleFactory("diamond-merge", func() Module {
+		return &mockModule{
+			meta: ModuleMetadata{
+				Name:     "diamond-merge",
+				Type:     EvaluationModuleType,
+				Consumes: []DataContractEntry{{Key: "diamond.left"}, {Key: "diamond.right"}},
+				Produces: []DataContractEntry{{Key: "diamond.merged"}},
+			},
+			execFunc: func(ctx context.Context, inputs map[string]interface{}, out chan<- ModuleOutput) error {
+				orderMutex.Lock()
+				executionOrder = append(executionOrder, "merge")
+				orderMutex.Unlock()
+				out <- ModuleOutput{DataKey: "diamond.merged", Data: "merged-value"}
+				return nil
+			},
+		}
+	})
+
+	defer func() {
+		delete(moduleRegistry, "diamond-root")
+		delete(moduleRegistry, "diamond-left")
+		delete(moduleRegistry, "diamond-right")
+		delete(moduleRegistry, "diamond-merge")
+	}()
+
+	dag := &DAGDefinition{
+		Name: "diamond-pattern-test",
+		Nodes: []DAGNodeConfig{
+			{InstanceID: "root", ModuleType: "diamond-root", Config: map[string]interface{}{}},
+			{InstanceID: "left", ModuleType: "diamond-left", Config: map[string]interface{}{}},
+			{InstanceID: "right", ModuleType: "diamond-right", Config: map[string]interface{}{}},
+			{InstanceID: "merge", ModuleType: "diamond-merge", Config: map[string]interface{}{}},
+		},
+	}
+
+	orc, err := NewOrchestrator(dag)
+	require.NoError(t, err)
+
+	_, err = orc.Run(context.Background(), nil)
+	require.NoError(t, err)
+
+	// Verify execution order: root first, then left/right (any order), then merge last
+	require.Len(t, executionOrder, 4)
+	require.Equal(t, "root", executionOrder[0])
+	require.Equal(t, "merge", executionOrder[3])
+
+	// left and right can be in any order (parallel)
+	leftIdx := indexOf(executionOrder, "left")
+	rightIdx := indexOf(executionOrder, "right")
+	require.True(t, leftIdx == 1 || leftIdx == 2)
+	require.True(t, rightIdx == 1 || rightIdx == 2)
+	require.NotEqual(t, leftIdx, rightIdx)
 }

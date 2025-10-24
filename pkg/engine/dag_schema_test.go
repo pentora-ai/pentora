@@ -491,3 +491,196 @@ func indexOf(slice []string, item string) int {
 	}
 	return -1
 }
+
+// TestDAGSchema_ToDAGDefinition tests the conversion from DAGSchema to DAGDefinition
+func TestDAGSchema_ToDAGDefinition(t *testing.T) {
+	tests := []struct {
+		name        string
+		schema      *DAGSchema
+		expectError bool
+		validate    func(t *testing.T, def *DAGDefinition)
+	}{
+		{
+			name: "valid schema converts successfully",
+			schema: &DAGSchema{
+				Name:        "Test DAG",
+				Description: "Test description",
+				Version:     "1.0",
+				Nodes: []DAGNode{
+					{
+						ID:       "node1",
+						Module:   "test.module1",
+						Produces: []string{"data.key1"},
+						Config:   map[string]interface{}{"param": "value1"},
+					},
+					{
+						ID:        "node2",
+						Module:    "test.module2",
+						DependsOn: []string{"node1"},
+						Consumes:  []string{"data.key1"},
+						Produces:  []string{"data.key2"},
+						Config:    map[string]interface{}{"param": "value2"},
+					},
+				},
+			},
+			expectError: false,
+			validate: func(t *testing.T, def *DAGDefinition) {
+				require.Equal(t, "Test DAG", def.Name)
+				require.Equal(t, "Test description", def.Description)
+				require.Len(t, def.Nodes, 2)
+
+				// Check node1
+				require.Equal(t, "node1", def.Nodes[0].InstanceID)
+				require.Equal(t, "test.module1", def.Nodes[0].ModuleType)
+				require.Equal(t, "value1", def.Nodes[0].Config["param"])
+
+				// Check __produces was added
+				produces, ok := def.Nodes[0].Config["__produces"].([]interface{})
+				require.True(t, ok)
+				require.Contains(t, produces, "data.key1")
+
+				// Check node2
+				require.Equal(t, "node2", def.Nodes[1].InstanceID)
+				require.Equal(t, "test.module2", def.Nodes[1].ModuleType)
+				require.Equal(t, "value2", def.Nodes[1].Config["param"])
+
+				// Check __depends_on was added
+				depends, ok := def.Nodes[1].Config["__depends_on"].([]interface{})
+				require.True(t, ok)
+				require.Contains(t, depends, "node1")
+
+				// Check __consumes was added
+				consumes, ok := def.Nodes[1].Config["__consumes"].([]interface{})
+				require.True(t, ok)
+				require.Contains(t, consumes, "data.key1")
+
+				// Check __produces was added
+				produces2, ok := def.Nodes[1].Config["__produces"].([]interface{})
+				require.True(t, ok)
+				require.Contains(t, produces2, "data.key2")
+			},
+		},
+		{
+			name: "schema with validation errors fails",
+			schema: &DAGSchema{
+				Name: "Invalid DAG",
+				Nodes: []DAGNode{
+					{
+						ID:        "node1",
+						Module:    "test.module1",
+						DependsOn: []string{"nonexistent"}, // Invalid dependency
+					},
+				},
+			},
+			expectError: true,
+		},
+		{
+			name: "empty schema fails",
+			schema: &DAGSchema{
+				Name:  "Empty DAG",
+				Nodes: []DAGNode{},
+			},
+			expectError: true,
+		},
+		{
+			name: "schema with cycle fails",
+			schema: &DAGSchema{
+				Name: "Cyclic DAG",
+				Nodes: []DAGNode{
+					{
+						ID:        "node1",
+						Module:    "test.module1",
+						DependsOn: []string{"node2"},
+					},
+					{
+						ID:        "node2",
+						Module:    "test.module2",
+						DependsOn: []string{"node1"}, // Creates cycle
+					},
+				},
+			},
+			expectError: true,
+		},
+		{
+			name: "nil config creates new config for metadata",
+			schema: &DAGSchema{
+				Name: "No Config DAG",
+				Nodes: []DAGNode{
+					{
+						ID:       "node1",
+						Module:   "test.module1",
+						Produces: []string{"data.key1"},
+						// Config intentionally nil
+					},
+				},
+			},
+			expectError: false,
+			validate: func(t *testing.T, def *DAGDefinition) {
+				require.NotNil(t, def.Nodes[0].Config) // Should be created for __produces
+				produces, ok := def.Nodes[0].Config["__produces"].([]interface{})
+				require.True(t, ok)
+				require.Contains(t, produces, "data.key1")
+			},
+		},
+		{
+			name: "multiple dependencies and data keys",
+			schema: &DAGSchema{
+				Name: "Multi-dependency DAG",
+				Nodes: []DAGNode{
+					{
+						ID:       "node1",
+						Module:   "test.module1",
+						Produces: []string{"data.key1", "data.key2"},
+					},
+					{
+						ID:       "node2",
+						Module:   "test.module2",
+						Produces: []string{"data.key3"},
+					},
+					{
+						ID:        "node3",
+						Module:    "test.module3",
+						DependsOn: []string{"node1", "node2"},
+						Consumes:  []string{"data.key1", "data.key2", "data.key3"},
+						Produces:  []string{"data.key4"},
+					},
+				},
+			},
+			expectError: false,
+			validate: func(t *testing.T, def *DAGDefinition) {
+				require.Len(t, def.Nodes, 3)
+
+				// Check node3 has multiple dependencies
+				depends, ok := def.Nodes[2].Config["__depends_on"].([]interface{})
+				require.True(t, ok)
+				require.Len(t, depends, 2)
+				require.Contains(t, depends, "node1")
+				require.Contains(t, depends, "node2")
+
+				// Check node3 has multiple consumes
+				consumes, ok := def.Nodes[2].Config["__consumes"].([]interface{})
+				require.True(t, ok)
+				require.Len(t, consumes, 3)
+				require.Contains(t, consumes, "data.key1")
+				require.Contains(t, consumes, "data.key2")
+				require.Contains(t, consumes, "data.key3")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			def, err := tt.schema.ToDAGDefinition()
+			if tt.expectError {
+				require.Error(t, err)
+				require.Nil(t, def)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, def)
+				if tt.validate != nil {
+					tt.validate(t, def)
+				}
+			}
+		})
+	}
+}
