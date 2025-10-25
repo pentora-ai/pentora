@@ -56,158 +56,34 @@ new or updated plugins to the local cache. By default, it downloads all core plu
 				cacheDir = filepath.Join(homeDir, ".pentora", "plugins", "cache")
 			}
 
-			// Create cache manager
-			cacheManager, err := plugin.NewCacheManager(cacheDir)
+			// Create service
+			svc, err := plugin.NewService(cacheDir)
 			if err != nil {
-				return fmt.Errorf("create cache manager: %w", err)
+				return fmt.Errorf("create plugin service: %w", err)
 			}
 
-			// Create downloader with default sources
-			sources := []plugin.PluginSource{
-				{
-					Name:     "official",
-					URL:      "https://plugins.pentora.ai/manifest.yaml",
-					Enabled:  true,
-					Priority: 1,
-					Mirrors: []string{
-						"https://raw.githubusercontent.com/pentora-ai/pentora-plugins/main/manifest.yaml",
-					},
-				},
+			// Build update options
+			opts := plugin.UpdateOptions{
+				Force:  forceRedownload,
+				DryRun: dryRun,
 			}
 
-			// Filter by source if specified
 			if source != "" {
-				var filteredSources []plugin.PluginSource
-				for _, s := range sources {
-					if s.Name == source {
-						filteredSources = append(filteredSources, s)
-					}
-				}
-				if len(filteredSources) == 0 {
-					return fmt.Errorf("source '%s' not found", source)
-				}
-				sources = filteredSources
+				opts.Source = source
 			}
 
-			downloader := plugin.NewDownloader(cacheManager, plugin.WithSources(sources))
-
-			// Fetch manifest from each source
-			fmt.Println("Fetching plugin manifests...")
-			var allPlugins []plugin.PluginManifestEntry
-			for _, src := range sources {
-				if !src.Enabled {
-					continue
-				}
-
-				fmt.Printf("  Fetching from %s...\n", src.Name)
-				manifest, err := downloader.FetchManifest(ctx, src)
-				if err != nil {
-					log.Warn().
-						Str("source", src.Name).
-						Err(err).
-						Msg("Failed to fetch manifest from source")
-					continue
-				}
-
-				fmt.Printf("  ✓ Found %d plugins from %s\n", len(manifest.Plugins), src.Name)
-				allPlugins = append(allPlugins, manifest.Plugins...)
-			}
-
-			if len(allPlugins) == 0 {
-				fmt.Println("\nNo plugins found in any source.")
-				return nil
-			}
-
-			// Filter by category if specified
 			if category != "" {
-				var filteredPlugins []plugin.PluginManifestEntry
-				targetCategory := plugin.Category(category)
-				for _, p := range allPlugins {
-					for _, cat := range p.Categories {
-						if cat == targetCategory {
-							filteredPlugins = append(filteredPlugins, p)
-							break
-						}
-					}
-				}
-				allPlugins = filteredPlugins
-				if len(allPlugins) == 0 {
-					fmt.Printf("\nNo plugins found in category '%s'\n", category)
-					return nil
-				}
+				opts.Category = plugin.Category(category)
 			}
 
-			// Dry run: just show what would be downloaded
-			if dryRun {
-				fmt.Printf("\n[DRY RUN] Would download %d plugin(s):\n\n", len(allPlugins))
-				w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-				fmt.Fprintln(w, "NAME\tVERSION\tCATEGORY\tSIZE")
-				fmt.Fprintln(w, "----\t-------\t--------\t----")
-				for _, p := range allPlugins {
-					categoryStr := ""
-					if len(p.Categories) > 0 {
-						categoryStr = string(p.Categories[0])
-					}
-					sizeKB := float64(p.Size) / 1024.0
-					if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%.1f KB\n",
-						p.Name, p.Version, categoryStr, sizeKB); err != nil {
-						log.Debug().Err(err).Msg("Failed to write plugin entry")
-					}
-				}
-				if err := w.Flush(); err != nil {
-					log.Warn().Err(err).Msg("Failed to flush output")
-				}
-				return nil
+			// Call service layer
+			result, err := svc.Update(ctx, opts)
+			if err != nil {
+				return err
 			}
 
-			// Download plugins
-			fmt.Printf("\nDownloading %d plugin(s)...\n\n", len(allPlugins))
-			downloadedCount := 0
-			skippedCount := 0
-			failedCount := 0
-
-			for _, p := range allPlugins {
-				// Check if already cached (unless force re-download)
-				if !forceRedownload {
-					if _, err := cacheManager.GetEntry(p.ID, p.Version); err == nil {
-						skippedCount++
-						log.Debug().
-							Str("plugin", p.ID).
-							Str("version", p.Version).
-							Msg("Plugin already cached, skipping")
-						continue
-					}
-				}
-
-				fmt.Printf("  Downloading %s v%s...", p.ID, p.Version)
-
-				_, err := downloader.Download(ctx, p.ID, p.Version)
-				if err != nil {
-					fmt.Printf(" ✗\n")
-					log.Warn().
-						Str("plugin", p.ID).
-						Err(err).
-						Msg("Failed to download plugin")
-					failedCount++
-					continue
-				}
-
-				fmt.Printf(" ✓\n")
-				downloadedCount++
-			}
-
-			// Summary
-			fmt.Printf("\nUpdate Summary:\n")
-			fmt.Printf("  Downloaded: %d\n", downloadedCount)
-			fmt.Printf("  Skipped (already cached): %d\n", skippedCount)
-			if failedCount > 0 {
-				fmt.Printf("  Failed: %d\n", failedCount)
-			}
-			fmt.Printf("  Total plugins in cache: %d\n", downloadedCount+skippedCount)
-
-			if downloadedCount > 0 {
-				fmt.Printf("\nPlugins stored in: %s\n", cacheDir)
-			}
+			// Print results
+			printUpdateResult(result, dryRun)
 
 			return nil
 		},
@@ -220,4 +96,42 @@ new or updated plugins to the local cache. By default, it downloads all core plu
 	cmd.Flags().BoolVar(&forceRedownload, "force", false, "Force re-download even if already cached")
 
 	return cmd
+}
+
+// printUpdateResult formats and prints the update result
+func printUpdateResult(result *plugin.UpdateResult, dryRun bool) {
+	// Dry run: show what would be downloaded
+	if dryRun {
+		fmt.Printf("\n[DRY RUN] Would download %d plugin(s):\n\n", len(result.Plugins))
+		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+		fmt.Fprintln(w, "NAME\tVERSION\tCATEGORY")
+		fmt.Fprintln(w, "----\t-------\t--------")
+		for _, p := range result.Plugins {
+			categoryStr := ""
+			if len(p.Tags) > 0 {
+				categoryStr = p.Tags[0]
+			}
+			if _, err := fmt.Fprintf(w, "%s\t%s\t%s\n",
+				p.Name, p.Version, categoryStr); err != nil {
+				log.Debug().Err(err).Msg("Failed to write plugin entry")
+			}
+		}
+		if err := w.Flush(); err != nil {
+			log.Warn().Err(err).Msg("Failed to flush output")
+		}
+		return
+	}
+
+	// Summary
+	fmt.Printf("\nUpdate Summary:\n")
+	fmt.Printf("  Downloaded: %d\n", result.UpdatedCount)
+	fmt.Printf("  Skipped (already cached): %d\n", result.SkippedCount)
+	if result.FailedCount > 0 {
+		fmt.Printf("  Failed: %d\n", result.FailedCount)
+	}
+	fmt.Printf("  Total plugins in cache: %d\n", result.UpdatedCount+result.SkippedCount)
+
+	if result.UpdatedCount > 0 {
+		fmt.Printf("\n✓ Plugins updated successfully\n")
+	}
 }
