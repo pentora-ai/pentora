@@ -35,6 +35,7 @@ type PluginManifest struct {
 
 // PluginManifestEntry describes a plugin in the manifest.
 type PluginManifestEntry struct {
+	ID          string     `json:"id"` // Unique plugin identifier (slug)
 	Name        string     `yaml:"name"`
 	Version     string     `yaml:"version"`
 	Description string     `yaml:"description"`
@@ -145,9 +146,9 @@ func (d *Downloader) fetchManifestFromURL(ctx context.Context, url string) (*Plu
 }
 
 // Download fetches a plugin from remote sources and adds it to the cache.
-func (d *Downloader) Download(ctx context.Context, name, version string) (*CacheEntry, error) {
+func (d *Downloader) Download(ctx context.Context, id, version string) (*CacheEntry, error) {
 	// Check if already cached
-	if entry, err := d.cache.GetEntry(name, version); err == nil {
+	if entry, err := d.cache.GetEntry(id, version); err == nil {
 		return entry, nil
 	}
 
@@ -166,7 +167,7 @@ func (d *Downloader) Download(ctx context.Context, name, version string) (*Cache
 		}
 
 		for _, plugin := range manifest.Plugins {
-			if plugin.Name == name && (version == "" || plugin.Version == version) {
+			if plugin.ID == id && (version == "" || plugin.Version == version) {
 				manifestEntry = &plugin
 				sourceName = source.Name
 				break
@@ -179,9 +180,8 @@ func (d *Downloader) Download(ctx context.Context, name, version string) (*Cache
 	}
 
 	if manifestEntry == nil {
-		return nil, fmt.Errorf("plugin '%s' version '%s' not found in any source", name, version)
+		return nil, fmt.Errorf("plugin '%s' version '%s' not found in any source", id, version)
 	}
-
 	// Download plugin file
 	pluginData, err := d.downloadFile(ctx, manifestEntry.URL)
 	if err != nil {
@@ -199,9 +199,9 @@ func (d *Downloader) Download(ctx context.Context, name, version string) (*Cache
 		return nil, fmt.Errorf("failed to parse plugin: %w", err)
 	}
 
-	// Add to cache
+	// Add to cache (pass raw data to preserve checksum)
 	sourceURL := fmt.Sprintf("%s (source: %s)", manifestEntry.URL, sourceName)
-	entry, err := d.cache.Add(&yamlPlugin, manifestEntry.Checksum, sourceURL)
+	entry, err := d.cache.Add(&yamlPlugin, manifestEntry.Checksum, sourceURL, pluginData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to cache plugin: %w", err)
 	}

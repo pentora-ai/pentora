@@ -695,62 +695,6 @@ func TestCacheManager_ListEntries_SkipsMissingFile(t *testing.T) {
 	require.Equal(t, "present-plugin", entries[0].Name)
 }
 
-func TestNormalizePluginName(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name:     "spaces to hyphens",
-			input:    "SSH Weak Cipher",
-			expected: "ssh-weak-cipher",
-		},
-		{
-			name:     "slashes to hyphens",
-			input:    "HTTP/2 Detection",
-			expected: "http-2-detection",
-		},
-		{
-			name:     "multiple spaces",
-			input:    "Multiple   Spaces",
-			expected: "multiple-spaces",
-		},
-		{
-			name:     "leading and trailing hyphens",
-			input:    " Leading Trailing ",
-			expected: "leading-trailing",
-		},
-		{
-			name:     "already normalized",
-			input:    "already-normalized",
-			expected: "already-normalized",
-		},
-		{
-			name:     "mixed case",
-			input:    "MixedCase Plugin",
-			expected: "mixedcase-plugin",
-		},
-		{
-			name:     "consecutive hyphens",
-			input:    "Too--Many---Hyphens",
-			expected: "too-many-hyphens",
-		},
-		{
-			name:     "complex example",
-			input:    "MySQL/PostgreSQL Default Credentials",
-			expected: "mysql-postgresql-default-credentials",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := normalizePluginName(tt.input)
-			require.Equal(t, tt.expected, result)
-		})
-	}
-}
-
 func TestCacheManager_NormalizedPaths(t *testing.T) {
 	// Test that cache manager uses normalized names for file paths
 	cacheDir := t.TempDir()
@@ -759,6 +703,7 @@ func TestCacheManager_NormalizedPaths(t *testing.T) {
 
 	// Plugin with spaces in name
 	plugin := &YAMLPlugin{
+		ID:      "ssh-weak-cipher",
 		Name:    "SSH Weak Cipher",
 		Version: "1.0.0",
 		Type:    "evaluation",
@@ -794,21 +739,12 @@ func TestCacheManager_NormalizedPaths(t *testing.T) {
 	require.NoError(t, err, "File should exist at normalized path")
 
 	// Verify we can retrieve using original name
-	retrieved, found := cm.Get("SSH Weak Cipher")
+	retrieved, found := cm.Get("ssh-weak-cipher")
 	require.True(t, found)
 	require.Equal(t, "SSH Weak Cipher", retrieved.Name)
 
-	// Verify we can also retrieve using normalized name
-	retrieved2, found2 := cm.Get("ssh-weak-cipher")
-	require.True(t, found2)
-	require.Equal(t, "SSH Weak Cipher", retrieved2.Name)
-
 	// Verify GetEntry works with both forms
-	entry1, err := cm.GetEntry("SSH Weak Cipher", "1.0.0")
+	entry1, err := cm.GetEntry("ssh-weak-cipher", "1.0.0")
 	require.NoError(t, err)
 	require.Equal(t, normalizedPath, entry1.Path)
-
-	entry2, err := cm.GetEntry("ssh-weak-cipher", "1.0.0")
-	require.NoError(t, err)
-	require.Equal(t, normalizedPath, entry2.Path)
 }

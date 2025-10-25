@@ -8,37 +8,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
-	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
 )
-
-// normalizePluginName converts a display name to a filesystem-safe slug.
-// This ensures consistent directory names regardless of spaces or special characters.
-//
-// Examples:
-//   - "SSH Weak Cipher" → "ssh-weak-cipher"
-//   - "HTTP/2 Detection" → "http-2-detection"
-//   - "Multiple   Spaces" → "multiple-spaces"
-func normalizePluginName(name string) string {
-	// Convert to lowercase
-	slug := strings.ToLower(name)
-
-	// Replace spaces and slashes with hyphens
-	slug = strings.ReplaceAll(slug, " ", "-")
-	slug = strings.ReplaceAll(slug, "/", "-")
-
-	// Remove multiple consecutive hyphens
-	re := regexp.MustCompile(`-+`)
-	slug = re.ReplaceAllString(slug, "-")
-
-	// Trim hyphens from start and end
-	slug = strings.Trim(slug, "-")
-
-	return slug
-}
 
 // CacheManager manages plugin download cache.
 // Cache location: ~/.pentora/plugins/cache/
@@ -76,7 +49,8 @@ func NewCacheManager(cacheDir string) (*CacheManager, error) {
 
 // CacheEntry represents metadata about a cached plugin.
 type CacheEntry struct {
-	Name        string    // Plugin name
+	ID          string    // Plugin ID
+	Name        string    // Plugin name (for display)
 	Version     string    // Plugin version
 	Path        string    // Path to cached YAML file
 	Checksum    string    // SHA-256 checksum
@@ -87,7 +61,9 @@ type CacheEntry struct {
 
 // Add adds a plugin to the cache.
 // Returns the cache entry for the plugin.
-func (c *CacheManager) Add(plugin *YAMLPlugin, checksum string, downloadURL string) (*CacheEntry, error) {
+// If rawData is provided, it will be written as-is to preserve checksums.
+// If rawData is nil, the plugin will be marshaled to YAML.
+func (c *CacheManager) Add(plugin *YAMLPlugin, checksum string, downloadURL string, rawData ...[]byte) (*CacheEntry, error) {
 	if plugin == nil {
 		return nil, fmt.Errorf("cannot cache nil plugin")
 	}
@@ -98,10 +74,8 @@ func (c *CacheManager) Add(plugin *YAMLPlugin, checksum string, downloadURL stri
 	}
 
 	// Create plugin-specific cache directory
-	// Structure: cache/<plugin-name>/<version>/plugin.yaml
-	// Use normalized name for filesystem (e.g., "SSH Weak Cipher" → "ssh-weak-cipher")
-	normalizedName := normalizePluginName(plugin.Name)
-	pluginDir := filepath.Join(c.cacheDir, normalizedName, plugin.Version)
+	// Structure: cache/<plugin-id>/<version>/plugin.yaml
+	pluginDir := filepath.Join(c.cacheDir, plugin.ID, plugin.Version)
 	if err := os.MkdirAll(pluginDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create plugin cache directory: %w", err)
 	}
@@ -109,10 +83,16 @@ func (c *CacheManager) Add(plugin *YAMLPlugin, checksum string, downloadURL stri
 	// Cache file path
 	cachePath := filepath.Join(pluginDir, "plugin.yaml")
 
-	// Write plugin to disk (so GetEntry can find it later)
-	data, err := yaml.Marshal(plugin)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal plugin: %w", err)
+	// Write plugin to disk (use raw data if provided to preserve checksum)
+	var data []byte
+	var err error
+	if len(rawData) > 0 && rawData[0] != nil {
+		data = rawData[0]
+	} else {
+		data, err = yaml.Marshal(plugin)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal plugin: %w", err)
+		}
 	}
 	if err := os.WriteFile(cachePath, data, 0o644); err != nil {
 		return nil, fmt.Errorf("failed to write plugin to cache: %w", err)
@@ -129,6 +109,7 @@ func (c *CacheManager) Add(plugin *YAMLPlugin, checksum string, downloadURL stri
 
 	now := time.Now()
 	entry := &CacheEntry{
+		ID:          plugin.ID,
 		Name:        plugin.Name,
 		Version:     plugin.Version,
 		Path:        cachePath,
@@ -141,30 +122,28 @@ func (c *CacheManager) Add(plugin *YAMLPlugin, checksum string, downloadURL stri
 	return entry, nil
 }
 
-// Get retrieves a cached plugin by name.
-func (c *CacheManager) Get(name string) (*YAMLPlugin, bool) {
-	return c.registry.Get(name)
+// Get retrieves a cached plugin by ID.
+func (c *CacheManager) Get(id string) (*YAMLPlugin, bool) {
+	return c.registry.Get(id)
 }
 
-// GetEntry retrieves a cache entry by name and version.
-func (c *CacheManager) GetEntry(name, version string) (*CacheEntry, error) {
-	plugin, found := c.registry.Get(name)
+// GetEntry retrieves a cache entry by ID and version.
+func (c *CacheManager) GetEntry(id, version string) (*CacheEntry, error) {
+	plugin, found := c.registry.Get(id)
 	if !found {
-		return nil, fmt.Errorf("plugin '%s' not found in cache", name)
+		return nil, fmt.Errorf("plugin '%s' not found in cache", id)
 	}
 
 	if plugin.Version != version {
-		return nil, fmt.Errorf("plugin '%s' found but version mismatch: expected %s, got %s", name, version, plugin.Version)
+		return nil, fmt.Errorf("plugin '%s' found but version mismatch: expected %s, got %s", id, version, plugin.Version)
 	}
 
-	// Use normalized name for filesystem path lookup
-	normalizedName := normalizePluginName(name)
-	pluginDir := filepath.Join(c.cacheDir, normalizedName, version)
+	pluginDir := filepath.Join(c.cacheDir, id, version)
 	cachePath := filepath.Join(pluginDir, "plugin.yaml")
 
 	// Check if cache file exists
 	if _, err := os.Stat(cachePath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("cache file not found for plugin '%s' version '%s'", name, version)
+		return nil, fmt.Errorf("cache file not found for plugin '%s' version '%s'", id, version)
 	}
 
 	// Get file info for timestamps
@@ -174,7 +153,8 @@ func (c *CacheManager) GetEntry(name, version string) (*CacheEntry, error) {
 	}
 
 	entry := &CacheEntry{
-		Name:     name,
+		ID:       id,
+		Name:     plugin.Name,
 		Version:  version,
 		Path:     cachePath,
 		CachedAt: info.ModTime(),
@@ -185,13 +165,11 @@ func (c *CacheManager) GetEntry(name, version string) (*CacheEntry, error) {
 }
 
 // Remove removes a plugin from the cache.
-func (c *CacheManager) Remove(name string, version string) error {
+func (c *CacheManager) Remove(id string, version string) error {
 	// Check if cache directory exists for this version
-	// Use normalized name for filesystem path
-	normalizedName := normalizePluginName(name)
-	pluginDir := filepath.Join(c.cacheDir, normalizedName, version)
+	pluginDir := filepath.Join(c.cacheDir, id, version)
 	if _, err := os.Stat(pluginDir); os.IsNotExist(err) {
-		return fmt.Errorf("plugin '%s' version '%s' not found in cache", name, version)
+		return fmt.Errorf("plugin '%s' version '%s' not found in cache", id, version)
 	}
 
 	// Remove cache directory for this specific version
@@ -200,16 +178,16 @@ func (c *CacheManager) Remove(name string, version string) error {
 	}
 
 	// Check if this is the version currently in the registry
-	currentPlugin, found := c.registry.Get(name)
+	currentPlugin, found := c.registry.Get(id)
 	if found && currentPlugin.Version == version {
 		// Only unregister if we're removing the currently registered version
-		if err := c.registry.Unregister(name); err != nil {
+		if err := c.registry.Unregister(id); err != nil {
 			return fmt.Errorf("failed to unregister plugin: %w", err)
 		}
 	}
 
 	// Clean up parent directory if empty
-	parentDir := filepath.Join(c.cacheDir, normalizedName)
+	parentDir := filepath.Join(c.cacheDir, id)
 	entries, err := os.ReadDir(parentDir)
 	if err == nil && len(entries) == 0 {
 		_ = os.Remove(parentDir)
@@ -229,7 +207,7 @@ func (c *CacheManager) ListEntries() []*CacheEntry {
 	entries := make([]*CacheEntry, 0, len(plugins))
 
 	for _, plugin := range plugins {
-		entry, err := c.GetEntry(plugin.Name, plugin.Version)
+		entry, err := c.GetEntry(plugin.ID, plugin.Version)
 		if err == nil {
 			entries = append(entries, entry)
 		}
