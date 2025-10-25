@@ -146,11 +146,11 @@ type PluginSource struct {
 // PluginManifestEntry describes a plugin in the remote manifest
 type PluginManifestEntry struct {
 	// Plugin metadata
-	ID          string     `json:"id" yaml:"id"`         // Unique plugin identifier (slug)
-	Name        string     `yaml:"name" json:"name"`
-	Version     string     `yaml:"version" json:"version"`
-	Description string     `yaml:"description" json:"description"`
-	Author      string     `yaml:"author" json:"author"`
+	ID          string `json:"id" yaml:"id"` // Unique plugin identifier (slug)
+	Name        string `yaml:"name" json:"name"`
+	Version     string `yaml:"version" json:"version"`
+	Description string `yaml:"description" json:"description"`
+	Author      string `yaml:"author" json:"author"`
 
 	// Categorization
 	Categories []Category `yaml:"categories" json:"categories"`
