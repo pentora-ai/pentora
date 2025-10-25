@@ -45,9 +45,10 @@ func New(ctx context.Context, cfg config.ServerConfig, deps *Deps) (*App, error)
 	// Prepare API dependencies
 	ready := &atomic.Bool{}
 	apiDeps := &api.Deps{
-		Storage:   deps.Storage,
-		Workspace: deps.Workspace,
-		Ready:     ready,
+		Storage:       deps.Storage,
+		Workspace:     deps.Workspace,
+		PluginService: deps.PluginService,
+		Ready:         ready,
 	}
 
 	// Create router with all endpoints mounted

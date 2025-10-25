@@ -4,10 +4,12 @@ package server
 
 import (
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/pentora-ai/pentora/pkg/appctx"
 	"github.com/pentora-ai/pentora/pkg/config"
+	"github.com/pentora-ai/pentora/pkg/plugin"
 	"github.com/pentora-ai/pentora/pkg/server/api"
 	"github.com/pentora-ai/pentora/pkg/server/app"
 	"github.com/pentora-ai/pentora/pkg/storage"
@@ -118,12 +120,21 @@ shutdown to drain in-flight requests and complete running jobs.`,
 			// Remove this when all code paths use storage
 			ws := &stubWorkspace{}
 
+			// Create plugin service for API endpoints
+			// Use storage config's WorkspaceRoot for plugin cache
+			pluginCacheDir := filepath.Join(storageConfig.WorkspaceRoot, "plugins", "cache")
+			pluginService, err := plugin.NewService(pluginCacheDir)
+			if err != nil {
+				return fmt.Errorf("create plugin service: %w", err)
+			}
+
 			// Build dependencies
 			deps := &app.Deps{
-				Storage:   storageBackend,
-				Workspace: ws,
-				Config:    cfgMgr,
-				Logger:    &log.Logger,
+				Storage:       storageBackend,
+				Workspace:     ws,
+				PluginService: pluginService,
+				Config:        cfgMgr,
+				Logger:        &log.Logger,
 			}
 
 			// Create server app
