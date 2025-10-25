@@ -281,20 +281,6 @@ func TestService_Initialization(t *testing.T) {
 	})
 }
 
-// setupTestService is a helper function for tests (will be used in future test cases)
-// nolint:unused // Will be used when Install(), Update(), etc. methods are implemented
-func setupTestService(t *testing.T) *Service {
-	t.Helper()
-
-	cacheDir := t.TempDir()
-	svc, err := NewService(cacheDir)
-	if err != nil {
-		t.Fatalf("failed to create test service: %v", err)
-	}
-
-	return svc
-}
-
 // Test that verifies service can be created and used in realistic scenario
 func TestService_Integration_Basic(t *testing.T) {
 	t.Run("create service and verify it's ready for operations", func(t *testing.T) {
