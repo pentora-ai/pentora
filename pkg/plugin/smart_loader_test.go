@@ -135,6 +135,7 @@ func TestSmartLoader_LoadForContext(t *testing.T) {
 		Version: "1.0",
 		Plugins: []PluginManifestEntry{
 			{
+				ID:         "ssh-test",
 				Name:       "ssh-test",
 				Version:    "1.0.0",
 				Categories: []Category{CategorySSH},
@@ -222,6 +223,7 @@ func TestSmartLoader_LoadAll(t *testing.T) {
 		Version: "1.0",
 		Plugins: []PluginManifestEntry{
 			{
+				ID:         "test-plugin",
 				Name:       "test-plugin",
 				Version:    "1.0.0",
 				Categories: []Category{CategoryMisc},
@@ -285,6 +287,7 @@ func TestSmartLoader_LoadCategory(t *testing.T) {
 		Version: "1.0",
 		Plugins: []PluginManifestEntry{
 			{
+				ID:         "ssh-plugin",
 				Name:       "ssh-plugin",
 				Version:    "1.0.0",
 				Categories: []Category{CategorySSH},

@@ -57,6 +57,7 @@ func TestDownloader_FetchManifest(t *testing.T) {
 		Version: "1.0",
 		Plugins: []PluginManifestEntry{
 			{
+				ID:          "test-plugin",
 				Name:        "test-plugin",
 				Version:     "1.0.0",
 				Description: "Test plugin",
@@ -189,6 +190,7 @@ func TestDownloader_Download(t *testing.T) {
 		Version: "1.0",
 		Plugins: []PluginManifestEntry{
 			{
+				ID:         "test-plugin",
 				Name:       "test-plugin",
 				Version:    "1.0.0",
 				Categories: []Category{CategorySSH},
@@ -223,6 +225,7 @@ func TestDownloader_Download(t *testing.T) {
 	entry, err := downloader.Download(ctx, "test-plugin", "1.0.0")
 	require.NoError(t, err)
 	require.NotNil(t, entry)
+	require.Equal(t, "test-plugin", entry.ID)
 	require.Equal(t, "test-plugin", entry.Name)
 	require.Equal(t, "1.0.0", entry.Version)
 	require.Equal(t, checksum, entry.Checksum)
@@ -321,6 +324,7 @@ func TestDownloader_Download_ChecksumMismatch(t *testing.T) {
 		Version: "1.0",
 		Plugins: []PluginManifestEntry{
 			{
+				ID:       "test-plugin",
 				Name:     "test-plugin",
 				Version:  "1.0.0",
 				URL:      pluginServer.URL,
@@ -402,6 +406,7 @@ func TestDownloader_DownloadByCategory(t *testing.T) {
 		checksum := "sha256:" + hex.EncodeToString(hash[:])
 
 		manifestEntries = append(manifestEntries, PluginManifestEntry{
+			ID:         p.Name,
 			Name:       p.Name,
 			Version:    p.Version,
 			Categories: []Category{CategorySSH},
@@ -516,6 +521,7 @@ func TestDownloader_Update(t *testing.T) {
 		Version: "1.0",
 		Plugins: []PluginManifestEntry{
 			{
+				ID:       "update-test",
 				Name:     "update-test",
 				Version:  "2.0.0",
 				URL:      pluginServer.URL,
@@ -632,6 +638,7 @@ func TestDownloader_Update_NoUpdatesAvailable(t *testing.T) {
 		Version: "1.0",
 		Plugins: []PluginManifestEntry{
 			{
+				ID:      "test-plugin",
 				Name:    "test-plugin",
 				Version: "1.0.0", // Same version
 			},
@@ -714,6 +721,7 @@ func TestDownloader_Download_InvalidYAML(t *testing.T) {
 		Version: "1.0",
 		Plugins: []PluginManifestEntry{
 			{
+				ID:       "test-plugin",
 				Name:     "test-plugin",
 				Version:  "1.0.0",
 				URL:      pluginServer.URL,
@@ -894,6 +902,7 @@ func TestDownloader_Download_DownloadFileError(t *testing.T) {
 		Version: "1.0",
 		Plugins: []PluginManifestEntry{
 			{
+				ID:       "test-plugin",
 				Name:     "test-plugin",
 				Version:  "1.0.0",
 				URL:      "http://invalid-host-does-not-exist-12345.com/plugin.yaml",
@@ -985,6 +994,7 @@ func TestDownloader_DownloadByCategory_PartialDownloadFailure(t *testing.T) {
 		Version: "1.0",
 		Plugins: []PluginManifestEntry{
 			{
+				ID:         "valid-plugin",
 				Name:       "valid-plugin",
 				Version:    "1.0.0",
 				Categories: []Category{CategorySSH},
@@ -992,6 +1002,7 @@ func TestDownloader_DownloadByCategory_PartialDownloadFailure(t *testing.T) {
 				Checksum:   checksum1,
 			},
 			{
+				ID:         "invalid-plugin",
 				Name:       "invalid-plugin",
 				Version:    "1.0.0",
 				Categories: []Category{CategorySSH},
@@ -1055,6 +1066,7 @@ func TestDownloader_Update_DownloadError(t *testing.T) {
 		Version: "1.0",
 		Plugins: []PluginManifestEntry{
 			{
+				ID:       "test-plugin",
 				Name:     "test-plugin",
 				Version:  "2.0.0", // Newer version
 				URL:      "http://invalid-host-12345.com/plugin.yaml",
