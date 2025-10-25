@@ -457,3 +457,162 @@ func pluginInfoFromManifestEntry(entry *PluginManifestEntry) *PluginInfo {
 		InstalledAt: time.Now(),
 	}
 }
+
+// Update updates plugins from remote repositories.
+//
+// Unlike Install which targets specific plugins or categories, Update fetches
+// the latest manifest and downloads all available plugins (or those matching
+// the specified category).
+//
+// Parameters:
+//   - ctx: Context for cancellation
+//   - opts: Update options (source, category, force, dry-run)
+//
+// Returns:
+//   - UpdateResult with counts and updated plugin info
+//   - Error if manifest fetch fails or all downloads fail
+//
+// Behavior:
+//   - Fetches manifests from all sources (or specific source if opts.Source is set)
+//   - Filters by category if opts.Category is set
+//   - Skips already cached plugins unless opts.Force is true
+//   - In dry-run mode (opts.DryRun=true), simulates update without downloading
+//   - Collects errors but doesn't fail fast - returns partial results
+//
+// Example:
+//
+//	result, err := svc.Update(ctx, UpdateOptions{Category: CategorySSH})
+//	fmt.Printf("Updated %d plugins\n", result.UpdatedCount)
+func (s *Service) Update(ctx context.Context, opts UpdateOptions) (*UpdateResult, error) {
+	s.logger.Info().
+		Str("component", "plugin-service").
+		Str("operation", "update").
+		Str("source", opts.Source).
+		Str("category", string(opts.Category)).
+		Bool("force", opts.Force).
+		Bool("dry_run", opts.DryRun).
+		Msg("Starting plugin update")
+
+	result := &UpdateResult{
+		Plugins: []*PluginInfo{},
+		Errors:  []error{},
+	}
+
+	// Fetch manifests from sources
+	allPlugins, err := s.fetchPlugins(ctx, opts.Source)
+	if err != nil {
+		return nil, fmt.Errorf("fetch plugins: %w", err)
+	}
+
+	if len(allPlugins) == 0 {
+		return nil, fmt.Errorf("%w: no plugins found in any source", ErrNoPluginsFound)
+	}
+
+	// Filter by category if specified
+	var toUpdate []PluginManifestEntry
+	if opts.Category != "" && opts.Category.IsValid() {
+		toUpdate = s.filterByCategory(allPlugins, opts.Category)
+	} else {
+		toUpdate = allPlugins
+	}
+
+	if len(toUpdate) == 0 {
+		return nil, fmt.Errorf("%w: no plugins match criteria", ErrNoPluginsFound)
+	}
+
+	s.logger.Debug().
+		Int("total_plugins", len(toUpdate)).
+		Msg("Plugins to update")
+
+	// Update each plugin
+	for _, p := range toUpdate {
+		select {
+		case <-ctx.Done():
+			return result, ctx.Err()
+		default:
+		}
+
+		// Check if already cached (unless force)
+		if !opts.Force {
+			if _, err := s.cache.GetEntry(p.Name, p.Version); err == nil {
+				result.SkippedCount++
+				s.logger.Debug().
+					Str("plugin", p.Name).
+					Str("version", p.Version).
+					Msg("Plugin already cached, skipping")
+				continue
+			}
+		}
+
+		// Dry run mode
+		if opts.DryRun {
+			result.UpdatedCount++
+			result.Plugins = append(result.Plugins, pluginInfoFromManifestEntry(&p))
+			s.logger.Info().
+				Str("plugin", p.Name).
+				Bool("dry_run", true).
+				Msg("Would update plugin (dry run)")
+			continue
+		}
+
+		// Download plugin
+		_, err := s.downloader.Download(ctx, p.ID, p.Version)
+		if err != nil {
+			result.FailedCount++
+			result.Errors = append(result.Errors, fmt.Errorf("update %s: %w", p.Name, err))
+			s.logger.Warn().
+				Str("plugin", p.Name).
+				Err(err).
+				Msg("Failed to update plugin")
+			continue
+		}
+
+		// Add to manifest
+		categoryTags := make([]string, len(p.Categories))
+		for i, cat := range p.Categories {
+			categoryTags[i] = string(cat)
+		}
+
+		manifestEntry := &ManifestEntry{
+			ID:          p.ID,
+			Name:        p.Name,
+			Version:     p.Version,
+			Type:        "evaluation",
+			Author:      p.Author,
+			Checksum:    p.Checksum,
+			DownloadURL: p.URL,
+			InstalledAt: time.Now(),
+			Path:        filepath.Join(p.ID, p.Version, "plugin.yaml"),
+			Tags:        categoryTags,
+			Severity:    "medium",
+		}
+
+		if err := s.manifest.Add(manifestEntry); err != nil {
+			s.logger.Warn().
+				Str("plugin", p.Name).
+				Err(err).
+				Msg("Failed to add to manifest (plugin still downloaded)")
+		}
+
+		if err := s.manifest.Save(); err != nil {
+			s.logger.Warn().Err(err).Msg("Failed to save manifest")
+		}
+
+		result.UpdatedCount++
+		result.Plugins = append(result.Plugins, pluginInfoFromManifestEntry(&p))
+		s.logger.Info().
+			Str("plugin", p.Name).
+			Str("version", p.Version).
+			Msg("Plugin updated successfully")
+	}
+
+	s.logger.Info().
+		Str("component", "plugin-service").
+		Str("operation", "update").
+		Int("updated", result.UpdatedCount).
+		Int("skipped", result.SkippedCount).
+		Int("failed", result.FailedCount).
+		Msg("Plugin update completed")
+
+	return result, nil
+}

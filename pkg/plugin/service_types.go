@@ -61,8 +61,8 @@ type UpdateOptions struct {
 
 // UpdateResult holds results of Update operation
 type UpdateResult struct {
-	// DownloadedCount is the number of plugins successfully downloaded
-	DownloadedCount int
+	// UpdatedCount is the number of plugins successfully updated/downloaded
+	UpdatedCount int
 
 	// SkippedCount is the number of plugins already cached (not forced)
 	SkippedCount int
@@ -70,8 +70,8 @@ type UpdateResult struct {
 	// FailedCount is the number of plugins that failed to download
 	FailedCount int
 
-	// TotalInCache is the total number of plugins in cache after update
-	TotalInCache int
+	// Plugins contains information about updated plugins
+	Plugins []*PluginInfo
 
 	// Errors contains all errors encountered during update
 	Errors []error
