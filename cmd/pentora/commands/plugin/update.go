@@ -169,23 +169,23 @@ new or updated plugins to the local cache. By default, it downloads all core plu
 			for _, p := range allPlugins {
 				// Check if already cached (unless force re-download)
 				if !forceRedownload {
-					if _, err := cacheManager.GetEntry(p.Name, p.Version); err == nil {
+					if _, err := cacheManager.GetEntry(p.ID, p.Version); err == nil {
 						skippedCount++
 						log.Debug().
-							Str("plugin", p.Name).
+							Str("plugin", p.ID).
 							Str("version", p.Version).
 							Msg("Plugin already cached, skipping")
 						continue
 					}
 				}
 
-				fmt.Printf("  Downloading %s v%s...", p.Name, p.Version)
+				fmt.Printf("  Downloading %s v%s...", p.ID, p.Version)
 
-				_, err := downloader.Download(ctx, p.Name, p.Version)
+				_, err := downloader.Download(ctx, p.ID, p.Version)
 				if err != nil {
 					fmt.Printf(" ✗\n")
 					log.Warn().
-						Str("plugin", p.Name).
+						Str("plugin", p.ID).
 						Err(err).
 						Msg("Failed to download plugin")
 					failedCount++

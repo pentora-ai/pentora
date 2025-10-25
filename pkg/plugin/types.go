@@ -41,8 +41,8 @@ const (
 // This is the complete plugin structure that gets loaded from disk.
 type YAMLPlugin struct {
 	// Required fields
-	Name    string     `yaml:"name" json:"name"`
 	ID      string     `yaml:"id,omitempty" json:"id,omitempty"` // Unique slug identifier (e.g., "ssh-default-credentials")
+	Name    string     `yaml:"name" json:"name"`
 	Version string     `yaml:"version" json:"version"`
 	Type    PluginType `yaml:"type" json:"type"`
 	Author  string     `yaml:"author" json:"author"`

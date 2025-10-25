@@ -110,9 +110,8 @@ all plugins in a category, or all plugins at once.`,
 				pluginNameLower := strings.ToLower(pluginName)
 				found := false
 				for _, entry := range entries {
-					// Match by name or generated ID
-					entryID := plugin.GeneratePluginID(entry.Name)
-					if entry.Name == pluginName || entryID == pluginNameLower {
+					// Match by ID
+					if entry.ID == pluginNameLower {
 						toUninstall = append(toUninstall, entry)
 						found = true
 						break

@@ -83,7 +83,7 @@ found in the plugin cache directory.`,
 				fmt.Fprintln(w, "NAME\tVERSION")
 				fmt.Fprintln(w, "----\t-------")
 				for _, entry := range entries {
-					if _, err := fmt.Fprintf(w, "%s\t%s\n", entry.Name, entry.Version); err != nil {
+					if _, err := fmt.Fprintf(w, "%s\t%s\n", entry.ID, entry.Version); err != nil {
 						log.Debug().Err(err).Msg("Failed to write plugin entry")
 					}
 				}

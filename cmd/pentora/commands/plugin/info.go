@@ -59,7 +59,7 @@ installation path, and cache size.`,
 			fmt.Printf("Installed: %s\n", entry.InstalledAt.Format("2006-01-02 15:04:05"))
 
 			// Get cache directory info
-			pluginDir := filepath.Join(cacheDir, entry.Name, entry.Version)
+			pluginDir := filepath.Join(cacheDir, entry.ID, entry.Version)
 			if _, err := os.Stat(pluginDir); err == nil {
 				fmt.Printf("Location: %s\n", pluginDir)
 

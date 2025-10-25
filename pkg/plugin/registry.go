@@ -54,59 +54,51 @@ func (r *YAMLRegistry) Register(plugin *YAMLPlugin) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	// Use normalized name as registry key for consistency with filesystem
-	normalizedName := normalizePluginName(plugin.Name)
-
 	// Check for duplicates
-	if _, exists := r.plugins[normalizedName]; exists {
+	if _, exists := r.plugins[plugin.ID]; exists {
 		return fmt.Errorf("plugin '%s' already registered", plugin.Name)
 	}
 
-	// Register plugin with normalized key
-	r.plugins[normalizedName] = plugin
-	r.metadata[normalizedName] = &plugin.Metadata
+	// Register plugin with id
+	r.plugins[plugin.ID] = plugin
+	r.metadata[plugin.ID] = &plugin.Metadata
 
 	// Index by category (using tags as categories)
 	for _, tag := range plugin.Metadata.Tags {
-		r.categories[tag] = append(r.categories[tag], normalizedName)
+		r.categories[tag] = append(r.categories[tag], plugin.ID)
 	}
 
 	return nil
 }
 
 // Unregister removes a plugin from the registry.
-func (r *YAMLRegistry) Unregister(name string) error {
+func (r *YAMLRegistry) Unregister(id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	// Normalize name for registry lookup
-	normalizedName := normalizePluginName(name)
-
-	plugin, exists := r.plugins[normalizedName]
+	plugin, exists := r.plugins[id]
 	if !exists {
-		return fmt.Errorf("plugin '%s' not found", name)
+		return fmt.Errorf("plugin '%s' not found", id)
 	}
 
 	// Remove from category index
 	for _, tag := range plugin.Metadata.Tags {
-		r.removeFromCategory(tag, normalizedName)
+		r.removeFromCategory(tag, id)
 	}
 
 	// Remove from registry
-	delete(r.plugins, normalizedName)
-	delete(r.metadata, normalizedName)
+	delete(r.plugins, id)
+	delete(r.metadata, id)
 
 	return nil
 }
 
 // Get retrieves a plugin by name.
-func (r *YAMLRegistry) Get(name string) (*YAMLPlugin, bool) {
+func (r *YAMLRegistry) Get(id string) (*YAMLPlugin, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	// Normalize name for registry lookup
-	normalizedName := normalizePluginName(name)
-	plugin, exists := r.plugins[normalizedName]
+	plugin, exists := r.plugins[id]
 	return plugin, exists
 }
 

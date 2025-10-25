@@ -146,16 +146,10 @@ You can install entire categories (ssh, http, tls, database, network) or specifi
 				// Install specific plugin by name or ID
 				found := false
 				targetLower := strings.ToLower(target)
-
 				for _, p := range allPlugins {
-					// Match by name (exact) or ID (generated from name or explicit)
-					pluginID := plugin.GeneratePluginID(p.Name)
-					if p.Name == target || pluginID == targetLower {
+					if p.ID == targetLower {
 						toInstall = append(toInstall, p)
 						found = true
-						if pluginID == targetLower && p.Name != target {
-							fmt.Printf("Matched plugin ID '%s' to '%s'\n", target, p.Name)
-						}
 						break
 					}
 				}
@@ -164,7 +158,7 @@ You can install entire categories (ssh, http, tls, database, network) or specifi
 					embeddedPlugins, err := plugin.LoadAllEmbeddedPlugins()
 					if err == nil {
 						for _, ep := range embeddedPlugins {
-							epID := ep.GetID()
+							epID := ep.ID
 							if ep.Name == target || epID == targetLower {
 								return fmt.Errorf("plugin '%s' is already embedded in the binary (use 'pentora plugin embedded' to list all embedded plugins)", ep.Name)
 							}
@@ -213,7 +207,7 @@ You can install entire categories (ssh, http, tls, database, network) or specifi
 
 				fmt.Printf("  Installing %s v%s...", p.Name, p.Version)
 
-				_, err := downloader.Download(ctx, p.Name, p.Version)
+				_, err := downloader.Download(ctx, p.ID, p.Version)
 				if err != nil {
 					fmt.Printf(" ✗\n")
 					log.Warn().
@@ -225,14 +219,13 @@ You can install entire categories (ssh, http, tls, database, network) or specifi
 				}
 
 				// Add to manifest
-				pluginID := plugin.GeneratePluginID(p.Name)
 				categoryTags := make([]string, len(p.Categories))
 				for i, cat := range p.Categories {
 					categoryTags[i] = string(cat)
 				}
 
 				manifestEntry := &plugin.ManifestEntry{
-					ID:          pluginID,
+					ID:          p.ID,
 					Name:        p.Name,
 					Version:     p.Version,
 					Type:        "evaluation", // Default type
@@ -240,7 +233,7 @@ You can install entire categories (ssh, http, tls, database, network) or specifi
 					Checksum:    p.Checksum,
 					DownloadURL: p.URL,
 					InstalledAt: time.Now(),
-					Path:        filepath.Join(pluginID, p.Version, "plugin.yaml"),
+					Path:        filepath.Join(p.ID, p.Version, "plugin.yaml"),
 					Tags:        categoryTags,
 					Severity:    "medium", // Default severity (will be overridden when plugin is loaded)
 				}
