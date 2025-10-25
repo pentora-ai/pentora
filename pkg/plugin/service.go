@@ -809,3 +809,214 @@ func (s *Service) filterManifestByCategory(entries []*ManifestEntry, category Ca
 
 	return filtered
 }
+
+// List returns information about all installed plugins.
+//
+// This method retrieves all plugins from the manifest and converts them
+// to PluginInfo structs with detailed metadata.
+//
+// Returns:
+//   - []*PluginInfo: List of installed plugins
+//   - error: Any error encountered during operation
+//
+// Example:
+//
+//	plugins, err := svc.List(ctx)
+//	if err != nil {
+//	    return fmt.Errorf("list plugins: %w", err)
+//	}
+//	fmt.Printf("Found %d installed plugins\n", len(plugins))
+func (s *Service) List(ctx context.Context) ([]*PluginInfo, error) {
+	s.logger.Debug().
+		Str("component", "plugin-service").
+		Str("operation", "list").
+		Msg("Listing installed plugins")
+
+	// Get all entries from manifest
+	entries, err := s.manifest.List()
+	if err != nil {
+		s.logger.Error().
+			Err(err).
+			Msg("Failed to list manifest entries")
+		return nil, fmt.Errorf("list manifest: %w", err)
+	}
+
+	// Convert to PluginInfo
+	plugins := make([]*PluginInfo, 0, len(entries))
+	for _, entry := range entries {
+		// Check context cancellation
+		select {
+		case <-ctx.Done():
+			s.logger.Warn().Msg("List operation cancelled")
+			return nil, ctx.Err()
+		default:
+		}
+
+		info := &PluginInfo{
+			ID:           entry.ID,
+			Name:         entry.Name,
+			Version:      entry.Version,
+			Type:         entry.Type,
+			Author:       entry.Author,
+			Severity:     entry.Severity,
+			Tags:         entry.Tags,
+			Checksum:     entry.Checksum,
+			DownloadURL:  entry.DownloadURL,
+			InstalledAt:  entry.InstalledAt,
+			LastVerified: entry.LastVerified,
+			Path:         entry.Path,
+			// CacheDir and CacheSize not calculated for list (performance)
+		}
+		plugins = append(plugins, info)
+	}
+
+	s.logger.Info().
+		Str("component", "plugin-service").
+		Str("operation", "list").
+		Int("count", len(plugins)).
+		Msg("Plugin list completed")
+
+	return plugins, nil
+}
+
+// GetInfo returns detailed information about a specific plugin.
+//
+// This method retrieves plugin metadata from the manifest and calculates
+// additional information like cache directory size.
+//
+// Parameters:
+//   - ctx: Context for cancellation
+//   - pluginID: Plugin identifier (slug)
+//
+// Returns:
+//   - *PluginInfo: Detailed plugin information
+//   - error: ErrPluginNotFound if plugin not installed, or other errors
+//
+// Example:
+//
+//	info, err := svc.GetInfo(ctx, "ssh-weak-cipher")
+//	if plugin.IsNotFound(err) {
+//	    fmt.Println("Plugin not installed")
+//	    return
+//	}
+//	fmt.Printf("Plugin: %s v%s (Size: %d bytes)\n", info.Name, info.Version, info.CacheSize)
+func (s *Service) GetInfo(ctx context.Context, pluginID string) (*PluginInfo, error) {
+	s.logger.Debug().
+		Str("component", "plugin-service").
+		Str("operation", "get-info").
+		Str("plugin_id", pluginID).
+		Msg("Getting plugin info")
+
+	// Get all entries from manifest
+	entries, err := s.manifest.List()
+	if err != nil {
+		s.logger.Error().
+			Err(err).
+			Msg("Failed to list manifest entries")
+		return nil, fmt.Errorf("list manifest: %w", err)
+	}
+
+	// Find the plugin
+	var entry *ManifestEntry
+	for _, e := range entries {
+		if e.ID == pluginID {
+			entry = e
+			break
+		}
+	}
+
+	if entry == nil {
+		s.logger.Warn().
+			Str("plugin_id", pluginID).
+			Msg("Plugin not found in manifest")
+		return nil, ErrPluginNotFound
+	}
+
+	// Check context cancellation
+	select {
+	case <-ctx.Done():
+		s.logger.Warn().Msg("GetInfo operation cancelled")
+		return nil, ctx.Err()
+	default:
+	}
+
+	// Build PluginInfo with basic metadata
+	info := &PluginInfo{
+		ID:           entry.ID,
+		Name:         entry.Name,
+		Version:      entry.Version,
+		Type:         entry.Type,
+		Author:       entry.Author,
+		Severity:     entry.Severity,
+		Tags:         entry.Tags,
+		Checksum:     entry.Checksum,
+		DownloadURL:  entry.DownloadURL,
+		InstalledAt:  entry.InstalledAt,
+		LastVerified: entry.LastVerified,
+		Path:         entry.Path,
+	}
+
+	// Calculate cache directory and size
+	// Cache structure: <cacheDir>/<plugin-id>/<version>/
+	cacheDir := filepath.Join(entry.Path, "..", "..") // Go up from plugin.yaml to cache root
+	cacheDir, err = filepath.Abs(cacheDir)
+	if err != nil {
+		s.logger.Warn().
+			Err(err).
+			Str("path", entry.Path).
+			Msg("Failed to resolve cache directory path")
+		// Continue without cache info
+	} else {
+		info.CacheDir = cacheDir
+
+		// Calculate directory size
+		size, err := calculateDirSize(cacheDir)
+		if err != nil {
+			s.logger.Warn().
+				Err(err).
+				Str("cache_dir", cacheDir).
+				Msg("Failed to calculate cache directory size")
+			// Continue without size info
+		} else {
+			info.CacheSize = size
+		}
+	}
+
+	s.logger.Info().
+		Str("component", "plugin-service").
+		Str("operation", "get-info").
+		Str("plugin_id", pluginID).
+		Str("version", info.Version).
+		Int64("cache_size", info.CacheSize).
+		Msg("Plugin info retrieved successfully")
+
+	return info, nil
+}
+
+// calculateDirSize recursively calculates the total size of a directory in bytes.
+//
+// Parameters:
+//   - path: Directory path to calculate size for
+//
+// Returns:
+//   - int64: Total size in bytes
+//   - error: Any error encountered during traversal
+func calculateDirSize(path string) (int64, error) {
+	var size int64
+
+	err := filepath.Walk(path, func(filePath string, info os.FileInfo, err error) error {
+		if err != nil {
+			// Log but continue on individual file errors
+			return nil
+		}
+		if !info.IsDir() {
+			size += info.Size()
+		}
+		return nil
+	})
+	if err != nil {
+		return 0, fmt.Errorf("walk directory: %w", err)
+	}
+
+	return size, nil
+}

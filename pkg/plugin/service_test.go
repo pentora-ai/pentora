@@ -1763,3 +1763,238 @@ func TestService_Uninstall_ManifestErrors(t *testing.T) {
 		require.Contains(t, result.Errors[0].Error(), "save manifest")
 	})
 }
+
+func TestService_List(t *testing.T) {
+	t.Run("list all plugins", func(t *testing.T) {
+		ctx := context.Background()
+
+		manifest := &mockManifestManager{
+			listFunc: func() ([]*ManifestEntry, error) {
+				return []*ManifestEntry{
+					{
+						ID:       "ssh-weak-cipher",
+						Name:     "SSH Weak Cipher",
+						Version:  "1.0.0",
+						Type:     "evaluation",
+						Author:   "pentora",
+						Severity: "medium",
+						Tags:     []string{"ssh", "crypto"},
+					},
+					{
+						ID:       "http-missing-headers",
+						Name:     "HTTP Missing Security Headers",
+						Version:  "1.0.1",
+						Type:     "evaluation",
+						Author:   "pentora",
+						Severity: "low",
+						Tags:     []string{"http", "web"},
+					},
+				}, nil
+			},
+		}
+
+		svc := newTestService(&mockCacheManager{}, manifest, &mockDownloader{}, []PluginSource{})
+
+		plugins, err := svc.List(ctx)
+
+		require.NoError(t, err)
+		require.Len(t, plugins, 2)
+
+		// Verify first plugin
+		require.Equal(t, "ssh-weak-cipher", plugins[0].ID)
+		require.Equal(t, "SSH Weak Cipher", plugins[0].Name)
+		require.Equal(t, "1.0.0", plugins[0].Version)
+		require.Equal(t, "evaluation", plugins[0].Type)
+		require.Equal(t, "pentora", plugins[0].Author)
+		require.Equal(t, "medium", plugins[0].Severity)
+		require.Equal(t, []string{"ssh", "crypto"}, plugins[0].Tags)
+
+		// Verify second plugin
+		require.Equal(t, "http-missing-headers", plugins[1].ID)
+		require.Equal(t, "HTTP Missing Security Headers", plugins[1].Name)
+		require.Equal(t, "1.0.1", plugins[1].Version)
+	})
+
+	t.Run("list empty manifest", func(t *testing.T) {
+		ctx := context.Background()
+
+		manifest := &mockManifestManager{
+			listFunc: func() ([]*ManifestEntry, error) {
+				return []*ManifestEntry{}, nil
+			},
+		}
+
+		svc := newTestService(&mockCacheManager{}, manifest, &mockDownloader{}, []PluginSource{})
+
+		plugins, err := svc.List(ctx)
+
+		require.NoError(t, err)
+		require.Empty(t, plugins)
+	})
+
+	t.Run("manifest list error", func(t *testing.T) {
+		ctx := context.Background()
+
+		manifest := &mockManifestManager{
+			listFunc: func() ([]*ManifestEntry, error) {
+				return nil, fmt.Errorf("failed to read manifest")
+			},
+		}
+
+		svc := newTestService(&mockCacheManager{}, manifest, &mockDownloader{}, []PluginSource{})
+
+		plugins, err := svc.List(ctx)
+
+		require.Error(t, err)
+		require.Nil(t, plugins)
+		require.Contains(t, err.Error(), "list manifest")
+		require.Contains(t, err.Error(), "failed to read manifest")
+	})
+
+	t.Run("context cancellation", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+
+		callCount := 0
+		manifest := &mockManifestManager{
+			listFunc: func() ([]*ManifestEntry, error) {
+				callCount++
+				cancel() // Cancel immediately after first call
+				return []*ManifestEntry{
+					{ID: "plugin-1", Name: "Plugin 1", Version: "1.0.0"},
+					{ID: "plugin-2", Name: "Plugin 2", Version: "1.0.0"},
+				}, nil
+			},
+		}
+
+		svc := newTestService(&mockCacheManager{}, manifest, &mockDownloader{}, []PluginSource{})
+
+		plugins, err := svc.List(ctx)
+
+		require.Error(t, err)
+		require.Equal(t, context.Canceled, err)
+		require.Nil(t, plugins)
+	})
+}
+
+func TestService_GetInfo(t *testing.T) {
+	t.Run("get existing plugin info", func(t *testing.T) {
+		ctx := context.Background()
+
+		manifest := &mockManifestManager{
+			listFunc: func() ([]*ManifestEntry, error) {
+				return []*ManifestEntry{
+					{
+						ID:       "ssh-weak-cipher",
+						Name:     "SSH Weak Cipher",
+						Version:  "1.0.0",
+						Type:     "evaluation",
+						Author:   "pentora",
+						Severity: "medium",
+						Tags:     []string{"ssh", "crypto"},
+						Path:     "/tmp/plugins/ssh-weak-cipher/1.0.0/plugin.yaml",
+					},
+				}, nil
+			},
+		}
+
+		svc := newTestService(&mockCacheManager{}, manifest, &mockDownloader{}, []PluginSource{})
+
+		info, err := svc.GetInfo(ctx, "ssh-weak-cipher")
+
+		require.NoError(t, err)
+		require.NotNil(t, info)
+		require.Equal(t, "ssh-weak-cipher", info.ID)
+		require.Equal(t, "SSH Weak Cipher", info.Name)
+		require.Equal(t, "1.0.0", info.Version)
+		require.Equal(t, "evaluation", info.Type)
+		require.Equal(t, "pentora", info.Author)
+		require.Equal(t, "medium", info.Severity)
+		require.Equal(t, []string{"ssh", "crypto"}, info.Tags)
+		require.Equal(t, "/tmp/plugins/ssh-weak-cipher/1.0.0/plugin.yaml", info.Path)
+		// CacheDir and CacheSize may be empty if directory doesn't exist
+	})
+
+	t.Run("plugin not found", func(t *testing.T) {
+		ctx := context.Background()
+
+		manifest := &mockManifestManager{
+			listFunc: func() ([]*ManifestEntry, error) {
+				return []*ManifestEntry{
+					{ID: "other-plugin", Name: "Other Plugin", Version: "1.0.0"},
+				}, nil
+			},
+		}
+
+		svc := newTestService(&mockCacheManager{}, manifest, &mockDownloader{}, []PluginSource{})
+
+		info, err := svc.GetInfo(ctx, "nonexistent-plugin")
+
+		require.Error(t, err)
+		require.Equal(t, ErrPluginNotFound, err)
+		require.Nil(t, info)
+	})
+
+	t.Run("manifest list error", func(t *testing.T) {
+		ctx := context.Background()
+
+		manifest := &mockManifestManager{
+			listFunc: func() ([]*ManifestEntry, error) {
+				return nil, fmt.Errorf("failed to read manifest")
+			},
+		}
+
+		svc := newTestService(&mockCacheManager{}, manifest, &mockDownloader{}, []PluginSource{})
+
+		info, err := svc.GetInfo(ctx, "ssh-weak-cipher")
+
+		require.Error(t, err)
+		require.Nil(t, info)
+		require.Contains(t, err.Error(), "list manifest")
+		require.Contains(t, err.Error(), "failed to read manifest")
+	})
+
+	t.Run("context cancellation", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+
+		manifest := &mockManifestManager{
+			listFunc: func() ([]*ManifestEntry, error) {
+				cancel() // Cancel before processing
+				return []*ManifestEntry{
+					{ID: "test-plugin", Name: "Test Plugin", Version: "1.0.0"},
+				}, nil
+			},
+		}
+
+		svc := newTestService(&mockCacheManager{}, manifest, &mockDownloader{}, []PluginSource{})
+
+		info, err := svc.GetInfo(ctx, "test-plugin")
+
+		require.Error(t, err)
+		require.Equal(t, context.Canceled, err)
+		require.Nil(t, info)
+	})
+
+	t.Run("multiple plugins in manifest", func(t *testing.T) {
+		ctx := context.Background()
+
+		manifest := &mockManifestManager{
+			listFunc: func() ([]*ManifestEntry, error) {
+				return []*ManifestEntry{
+					{ID: "plugin-1", Name: "Plugin 1", Version: "1.0.0"},
+					{ID: "plugin-2", Name: "Plugin 2", Version: "1.0.1"},
+					{ID: "plugin-3", Name: "Plugin 3", Version: "2.0.0"},
+				}, nil
+			},
+		}
+
+		svc := newTestService(&mockCacheManager{}, manifest, &mockDownloader{}, []PluginSource{})
+
+		info, err := svc.GetInfo(ctx, "plugin-2")
+
+		require.NoError(t, err)
+		require.NotNil(t, info)
+		require.Equal(t, "plugin-2", info.ID)
+		require.Equal(t, "Plugin 2", info.Name)
+		require.Equal(t, "1.0.1", info.Version)
+	})
+}
