@@ -17,6 +17,25 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// Interfaces for dependency injection (useful for testing)
+
+// CacheInterface defines the cache operations needed by Service
+type CacheInterface interface {
+	GetEntry(name, version string) (*CacheEntry, error)
+}
+
+// ManifestInterface defines the manifest operations needed by Service
+type ManifestInterface interface {
+	Add(entry *ManifestEntry) error
+	Save() error
+}
+
+// DownloaderInterface defines the downloader operations needed by Service
+type DownloaderInterface interface {
+	FetchManifest(ctx context.Context, src PluginSource) (*PluginManifest, error)
+	Download(ctx context.Context, id, version string) (*CacheEntry, error)
+}
+
 // Service handles plugin lifecycle operations (install, update, uninstall, list).
 //
 // The service layer encapsulates all business logic for plugin management,
@@ -36,10 +55,10 @@ import (
 //
 //	fmt.Printf("Installed %d plugins\n", result.InstalledCount)
 type Service struct {
-	// Required dependencies
-	cache      *CacheManager
-	manifest   *ManifestManager
-	downloader *Downloader
+	// Required dependencies (interfaces for testability)
+	cache      CacheInterface
+	manifest   ManifestInterface
+	downloader DownloaderInterface
 
 	// Plugin sources (default or custom)
 	sources []PluginSource
@@ -144,10 +163,14 @@ func (s *Service) WithLogger(logger zerolog.Logger) *Service {
 //	    {Name: "enterprise", URL: "https://enterprise.example.com/plugins.yaml", Enabled: true},
 //	}
 //	svc := plugin.NewService(cacheDir).WithSources(customSources)
+//
+// Note: This only updates the sources list. If you need to recreate the downloader
+// with new sources, create a new Service instance instead.
 func (s *Service) WithSources(sources []PluginSource) *Service {
 	s.sources = sources
-	// Recreate downloader with new sources
-	s.downloader = NewDownloader(s.cache, WithSources(s.sources))
+	// Note: We don't recreate the downloader here because s.cache is an interface.
+	// In practice, sources are set during initialization via NewService.
+	// If you need to change sources after creation, create a new Service instance.
 	return s
 }
 

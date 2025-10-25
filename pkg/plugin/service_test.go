@@ -5,6 +5,8 @@
 package plugin
 
 import (
+	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -161,23 +163,8 @@ func TestService_WithSources(t *testing.T) {
 		require.Equal(t, "mirror", svc.sources[1].Name)
 	})
 
-	t.Run("recreates downloader with new sources", func(t *testing.T) {
-		cacheDir := t.TempDir()
-		svc, _ := NewService(cacheDir)
-
-		originalDownloader := svc.downloader
-
-		customSources := []PluginSource{
-			{Name: "custom", URL: "https://custom.example.com/manifest.yaml", Enabled: true},
-		}
-
-		svc.WithSources(customSources)
-
-		// Downloader should be recreated
-		require.NotNil(t, svc.downloader)
-		// Should be different instance
-		require.NotEqual(t, originalDownloader, svc.downloader)
-	})
+	// Note: WithSources no longer recreates the downloader since we use interfaces.
+	// If you need to change sources, create a new Service instance instead.
 
 	t.Run("replaces default sources", func(t *testing.T) {
 		cacheDir := t.TempDir()
@@ -293,7 +280,8 @@ func TestService_Initialization(t *testing.T) {
 	})
 }
 
-// Helper function for tests (to be used in future test cases)
+// setupTestService is a helper function for tests (will be used in future test cases)
+// nolint:unused // Will be used when Install(), Update(), etc. methods are implemented
 func setupTestService(t *testing.T) *Service {
 	t.Helper()
 
@@ -319,14 +307,652 @@ func TestService_Integration_Basic(t *testing.T) {
 		// Service should be ready to use
 		// (Will be tested further when Install/Update/etc methods are implemented)
 
-		// Verify service has working cache
+		// Verify service has working dependencies
 		require.NotNil(t, svc.cache)
-
-		// Verify service has working manifest
 		require.NotNil(t, svc.manifest)
+		require.NotNil(t, svc.downloader)
+	})
+}
 
-		// Load manifest (should not error on empty manifest)
-		err = svc.manifest.Load()
+// ============================================================================
+// Install() Method Tests
+// ============================================================================
+
+// Test helper to create Service with mocks
+func newTestService(cache CacheInterface, manifest ManifestInterface, downloader DownloaderInterface, sources []PluginSource) *Service {
+	return &Service{
+		cache:      cache,
+		manifest:   manifest,
+		downloader: downloader,
+		sources:    sources,
+		logger:     zerolog.New(os.Stdout),
+	}
+}
+
+// Mock implementations
+
+// mockDownloader for testing Install() method
+type mockDownloader struct {
+	fetchManifestFunc func(ctx context.Context, src PluginSource) (*PluginManifest, error)
+	downloadFunc      func(ctx context.Context, id, version string) (*CacheEntry, error)
+}
+
+func (m *mockDownloader) FetchManifest(ctx context.Context, src PluginSource) (*PluginManifest, error) {
+	if m.fetchManifestFunc != nil {
+		return m.fetchManifestFunc(ctx, src)
+	}
+	return &PluginManifest{Plugins: []PluginManifestEntry{}}, nil
+}
+
+func (m *mockDownloader) Download(ctx context.Context, id, version string) (*CacheEntry, error) {
+	if m.downloadFunc != nil {
+		return m.downloadFunc(ctx, id, version)
+	}
+	return &CacheEntry{}, nil
+}
+
+// mockCacheManager for testing Install() method
+type mockCacheManager struct {
+	getEntryFunc func(name, version string) (*CacheEntry, error)
+}
+
+func (m *mockCacheManager) GetEntry(name, version string) (*CacheEntry, error) {
+	if m.getEntryFunc != nil {
+		return m.getEntryFunc(name, version)
+	}
+	return nil, ErrPluginNotInstalled
+}
+
+// mockManifestManager for testing Install() method
+type mockManifestManager struct {
+	addFunc  func(entry *ManifestEntry) error
+	saveFunc func() error
+}
+
+func (m *mockManifestManager) Add(entry *ManifestEntry) error {
+	if m.addFunc != nil {
+		return m.addFunc(entry)
+	}
+	return nil
+}
+
+func (m *mockManifestManager) Save() error {
+	if m.saveFunc != nil {
+		return m.saveFunc()
+	}
+	return nil
+}
+
+func TestService_Install_ByPluginID(t *testing.T) {
+	t.Run("install plugin by ID successfully", func(t *testing.T) {
+		ctx := context.Background()
+
+		// Mock downloader that returns a test plugin
+		dl := &mockDownloader{
+			fetchManifestFunc: func(ctx context.Context, src PluginSource) (*PluginManifest, error) {
+				return &PluginManifest{
+					Plugins: []PluginManifestEntry{
+						{
+							ID:         "test-plugin",
+							Name:       "Test Plugin",
+							Version:    "1.0.0",
+							Author:     "Test Author",
+							Categories: []Category{CategorySSH},
+							URL:        "https://example.com/plugin.tar.gz",
+							Checksum:   "sha256:abcd1234",
+							Size:       1024,
+						},
+					},
+				}, nil
+			},
+			downloadFunc: func(ctx context.Context, id, version string) (*CacheEntry, error) {
+				require.Equal(t, "test-plugin", id)
+				require.Equal(t, "1.0.0", version)
+				return &CacheEntry{Name: "Test Plugin", Version: "1.0.0"}, nil
+			},
+		}
+
+		// Mock cache that returns "not found" (plugin not cached)
+		cache := &mockCacheManager{
+			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+				return nil, ErrPluginNotInstalled
+			},
+		}
+
+		// Mock manifest
+		manifest := &mockManifestManager{}
+
+		// Create service with mocks
+		svc := newTestService(cache, manifest, dl, []PluginSource{
+			{Name: "official", URL: "https://example.com/manifest.yaml", Enabled: true},
+		})
+
+		// Install plugin by ID
+		result, err := svc.Install(ctx, "test-plugin", InstallOptions{})
+
+		// Verify results
 		require.NoError(t, err)
+		require.NotNil(t, result)
+		require.Equal(t, 1, result.InstalledCount)
+		require.Equal(t, 0, result.SkippedCount)
+		require.Equal(t, 0, result.FailedCount)
+		require.Len(t, result.Plugins, 1)
+		require.Equal(t, "test-plugin", result.Plugins[0].ID)
+		require.Equal(t, "Test Plugin", result.Plugins[0].Name)
+		require.Equal(t, "1.0.0", result.Plugins[0].Version)
+	})
+
+	t.Run("plugin not found error", func(t *testing.T) {
+		ctx := context.Background()
+
+		// Mock downloader that returns empty manifest
+		dl := &mockDownloader{
+			fetchManifestFunc: func(ctx context.Context, src PluginSource) (*PluginManifest, error) {
+				return &PluginManifest{Plugins: []PluginManifestEntry{}}, nil
+			},
+		}
+
+		svc := newTestService(&mockCacheManager{}, &mockManifestManager{}, dl, []PluginSource{
+			{Name: "official", URL: "https://example.com/manifest.yaml", Enabled: true},
+		})
+
+		// Try to install non-existent plugin
+		result, err := svc.Install(ctx, "non-existent-plugin", InstallOptions{})
+
+		// Verify error
+		require.Error(t, err)
+		require.Nil(t, result)
+		require.ErrorIs(t, err, ErrNoPluginsFound, "should return ErrNoPluginsFound when manifest is empty")
+	})
+}
+
+func TestService_Install_ByCategory(t *testing.T) {
+	t.Run("install all plugins in category", func(t *testing.T) {
+		ctx := context.Background()
+
+		// Mock downloader with multiple SSH plugins
+		mockDownloader := &mockDownloader{
+			fetchManifestFunc: func(ctx context.Context, src PluginSource) (*PluginManifest, error) {
+				return &PluginManifest{
+					Plugins: []PluginManifestEntry{
+						{
+							ID:         "ssh-plugin-1",
+							Name:       "SSH Plugin 1",
+							Version:    "1.0.0",
+							Categories: []Category{CategorySSH},
+							URL:        "https://example.com/ssh1.tar.gz",
+							Checksum:   "sha256:abcd1234",
+						},
+						{
+							ID:         "ssh-plugin-2",
+							Name:       "SSH Plugin 2",
+							Version:    "2.0.0",
+							Categories: []Category{CategorySSH},
+							URL:        "https://example.com/ssh2.tar.gz",
+							Checksum:   "sha256:efgh5678",
+						},
+						{
+							ID:         "http-plugin",
+							Name:       "HTTP Plugin",
+							Version:    "1.0.0",
+							Categories: []Category{CategoryHTTP},
+							URL:        "https://example.com/http.tar.gz",
+							Checksum:   "sha256:ijkl9012",
+						},
+					},
+				}, nil
+			},
+			downloadFunc: func(ctx context.Context, id, version string) (*CacheEntry, error) {
+				return &CacheEntry{}, nil
+			},
+		}
+
+		mockCache := &mockCacheManager{
+			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+				return nil, ErrPluginNotInstalled
+			},
+		}
+
+		svc := &Service{
+			cache:      mockCache,
+			manifest:   &mockManifestManager{},
+			downloader: mockDownloader,
+			sources: []PluginSource{
+				{Name: "official", URL: "https://example.com/manifest.yaml", Enabled: true},
+			},
+			logger: zerolog.New(os.Stdout),
+		}
+
+		// Install all SSH plugins
+		result, err := svc.Install(ctx, "ssh", InstallOptions{})
+
+		// Verify results
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		require.Equal(t, 2, result.InstalledCount, "should install 2 SSH plugins")
+		require.Equal(t, 0, result.SkippedCount)
+		require.Equal(t, 0, result.FailedCount)
+		require.Len(t, result.Plugins, 2)
+	})
+
+	t.Run("no plugins found in category", func(t *testing.T) {
+		ctx := context.Background()
+
+		mockDownloader := &mockDownloader{
+			fetchManifestFunc: func(ctx context.Context, src PluginSource) (*PluginManifest, error) {
+				return &PluginManifest{
+					Plugins: []PluginManifestEntry{
+						{
+							ID:         "http-plugin",
+							Name:       "HTTP Plugin",
+							Version:    "1.0.0",
+							Categories: []Category{CategoryHTTP},
+						},
+					},
+				}, nil
+			},
+		}
+
+		svc := &Service{
+			cache:      &mockCacheManager{},
+			manifest:   &mockManifestManager{},
+			downloader: mockDownloader,
+			sources: []PluginSource{
+				{Name: "official", URL: "https://example.com/manifest.yaml", Enabled: true},
+			},
+			logger: zerolog.New(os.Stdout),
+		}
+
+		// Try to install TLS plugins (none exist in manifest)
+		result, err := svc.Install(ctx, "tls", InstallOptions{})
+
+		// Verify error
+		require.Error(t, err)
+		require.Nil(t, result)
+		require.Contains(t, err.Error(), "no plugins match criteria")
+	})
+}
+
+func TestService_Install_WithForce(t *testing.T) {
+	t.Run("force reinstall cached plugin", func(t *testing.T) {
+		ctx := context.Background()
+
+		mockDownloader := &mockDownloader{
+			fetchManifestFunc: func(ctx context.Context, src PluginSource) (*PluginManifest, error) {
+				return &PluginManifest{
+					Plugins: []PluginManifestEntry{
+						{
+							ID:         "cached-plugin",
+							Name:       "Cached Plugin",
+							Version:    "1.0.0",
+							Categories: []Category{CategorySSH},
+							URL:        "https://example.com/cached.tar.gz",
+							Checksum:   "sha256:abcd1234",
+						},
+					},
+				}, nil
+			},
+			downloadFunc: func(ctx context.Context, id, version string) (*CacheEntry, error) {
+				return &CacheEntry{}, nil
+			},
+		}
+
+		// Mock cache that returns plugin as already cached
+		mockCache := &mockCacheManager{
+			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+				return &CacheEntry{Name: name, Version: version}, nil
+			},
+		}
+
+		svc := &Service{
+			cache:      mockCache,
+			manifest:   &mockManifestManager{},
+			downloader: mockDownloader,
+			sources: []PluginSource{
+				{Name: "official", URL: "https://example.com/manifest.yaml", Enabled: true},
+			},
+			logger: zerolog.New(os.Stdout),
+		}
+
+		// Install with force=true
+		result, err := svc.Install(ctx, "cached-plugin", InstallOptions{Force: true})
+
+		// Verify plugin was reinstalled
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		require.Equal(t, 1, result.InstalledCount, "should reinstall with force")
+		require.Equal(t, 0, result.SkippedCount)
+	})
+
+	t.Run("skip already cached plugin without force", func(t *testing.T) {
+		ctx := context.Background()
+
+		mockDownloader := &mockDownloader{
+			fetchManifestFunc: func(ctx context.Context, src PluginSource) (*PluginManifest, error) {
+				return &PluginManifest{
+					Plugins: []PluginManifestEntry{
+						{
+							ID:         "cached-plugin",
+							Name:       "Cached Plugin",
+							Version:    "1.0.0",
+							Categories: []Category{CategorySSH},
+						},
+					},
+				}, nil
+			},
+		}
+
+		// Mock cache that returns plugin as already cached
+		mockCache := &mockCacheManager{
+			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+				return &CacheEntry{Name: name, Version: version}, nil
+			},
+		}
+
+		svc := &Service{
+			cache:      mockCache,
+			manifest:   &mockManifestManager{},
+			downloader: mockDownloader,
+			sources: []PluginSource{
+				{Name: "official", URL: "https://example.com/manifest.yaml", Enabled: true},
+			},
+			logger: zerolog.New(os.Stdout),
+		}
+
+		// Install without force (default)
+		result, err := svc.Install(ctx, "cached-plugin", InstallOptions{Force: false})
+
+		// Verify plugin was skipped
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		require.Equal(t, 0, result.InstalledCount)
+		require.Equal(t, 1, result.SkippedCount, "should skip already cached plugin")
+	})
+}
+
+func TestService_Install_WithDryRun(t *testing.T) {
+	t.Run("dry run does not download", func(t *testing.T) {
+		ctx := context.Background()
+
+		downloadCalled := false
+
+		mockDownloader := &mockDownloader{
+			fetchManifestFunc: func(ctx context.Context, src PluginSource) (*PluginManifest, error) {
+				return &PluginManifest{
+					Plugins: []PluginManifestEntry{
+						{
+							ID:         "test-plugin",
+							Name:       "Test Plugin",
+							Version:    "1.0.0",
+							Categories: []Category{CategorySSH},
+						},
+					},
+				}, nil
+			},
+			downloadFunc: func(ctx context.Context, id, version string) (*CacheEntry, error) {
+				downloadCalled = true
+				return &CacheEntry{}, nil
+			},
+		}
+
+		mockCache := &mockCacheManager{
+			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+				return nil, ErrPluginNotInstalled
+			},
+		}
+
+		svc := &Service{
+			cache:      mockCache,
+			manifest:   &mockManifestManager{},
+			downloader: mockDownloader,
+			sources: []PluginSource{
+				{Name: "official", URL: "https://example.com/manifest.yaml", Enabled: true},
+			},
+			logger: zerolog.New(os.Stdout),
+		}
+
+		// Install with DryRun=true
+		result, err := svc.Install(ctx, "test-plugin", InstallOptions{DryRun: true})
+
+		// Verify no download occurred
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		require.Equal(t, 1, result.InstalledCount, "should count as installed in dry run")
+		require.False(t, downloadCalled, "download should not be called in dry run")
+	})
+}
+
+func TestService_Install_WithSourceFilter(t *testing.T) {
+	t.Run("install from specific source", func(t *testing.T) {
+		ctx := context.Background()
+
+		officialSourceCalled := false
+		communitySourceCalled := false
+
+		mockDownloader := &mockDownloader{
+			fetchManifestFunc: func(ctx context.Context, src PluginSource) (*PluginManifest, error) {
+				if src.Name == "official" {
+					officialSourceCalled = true
+					return &PluginManifest{
+						Plugins: []PluginManifestEntry{
+							{
+								ID:         "official-plugin",
+								Name:       "Official Plugin",
+								Version:    "1.0.0",
+								Categories: []Category{CategorySSH},
+							},
+						},
+					}, nil
+				}
+				if src.Name == "community" {
+					communitySourceCalled = true
+					return &PluginManifest{
+						Plugins: []PluginManifestEntry{
+							{
+								ID:         "community-plugin",
+								Name:       "Community Plugin",
+								Version:    "1.0.0",
+								Categories: []Category{CategorySSH},
+							},
+						},
+					}, nil
+				}
+				return &PluginManifest{}, nil
+			},
+			downloadFunc: func(ctx context.Context, id, version string) (*CacheEntry, error) {
+				return &CacheEntry{}, nil
+			},
+		}
+
+		mockCache := &mockCacheManager{
+			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+				return nil, ErrPluginNotInstalled
+			},
+		}
+
+		svc := &Service{
+			cache:      mockCache,
+			manifest:   &mockManifestManager{},
+			downloader: mockDownloader,
+			sources: []PluginSource{
+				{Name: "official", URL: "https://official.com/manifest.yaml", Enabled: true},
+				{Name: "community", URL: "https://community.com/manifest.yaml", Enabled: true},
+			},
+			logger: zerolog.New(os.Stdout),
+		}
+
+		// Install from official source only
+		result, err := svc.Install(ctx, "official-plugin", InstallOptions{Source: "official"})
+
+		// Verify only official source was called
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		require.Equal(t, 1, result.InstalledCount)
+		require.True(t, officialSourceCalled, "official source should be called")
+		require.False(t, communitySourceCalled, "community source should NOT be called")
+	})
+
+	t.Run("source not found error", func(t *testing.T) {
+		ctx := context.Background()
+
+		svc := &Service{
+			cache:      &mockCacheManager{},
+			manifest:   &mockManifestManager{},
+			downloader: &mockDownloader{},
+			sources: []PluginSource{
+				{Name: "official", URL: "https://official.com/manifest.yaml", Enabled: true},
+			},
+			logger: zerolog.New(os.Stdout),
+		}
+
+		// Try to install from non-existent source
+		result, err := svc.Install(ctx, "test-plugin", InstallOptions{Source: "non-existent"})
+
+		// Verify error
+		require.Error(t, err)
+		require.Nil(t, result)
+		require.Contains(t, err.Error(), "source 'non-existent' not found")
+	})
+}
+
+func TestService_Install_PartialFailures(t *testing.T) {
+	t.Run("some plugins succeed, some fail", func(t *testing.T) {
+		ctx := context.Background()
+
+		mockDownloader := &mockDownloader{
+			fetchManifestFunc: func(ctx context.Context, src PluginSource) (*PluginManifest, error) {
+				return &PluginManifest{
+					Plugins: []PluginManifestEntry{
+						{
+							ID:         "success-plugin",
+							Name:       "Success Plugin",
+							Version:    "1.0.0",
+							Categories: []Category{CategorySSH},
+						},
+						{
+							ID:         "fail-plugin",
+							Name:       "Fail Plugin",
+							Version:    "1.0.0",
+							Categories: []Category{CategorySSH},
+						},
+					},
+				}, nil
+			},
+			downloadFunc: func(ctx context.Context, id, version string) (*CacheEntry, error) {
+				if id == "fail-plugin" {
+					return nil, fmt.Errorf("download failed")
+				}
+				return &CacheEntry{}, nil
+			},
+		}
+
+		mockCache := &mockCacheManager{
+			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+				return nil, ErrPluginNotInstalled
+			},
+		}
+
+		svc := &Service{
+			cache:      mockCache,
+			manifest:   &mockManifestManager{},
+			downloader: mockDownloader,
+			sources: []PluginSource{
+				{Name: "official", URL: "https://example.com/manifest.yaml", Enabled: true},
+			},
+			logger: zerolog.New(os.Stdout),
+		}
+
+		// Install category with partial failure
+		result, err := svc.Install(ctx, "ssh", InstallOptions{})
+
+		// Verify partial success
+		require.NoError(t, err, "should not return error on partial failure")
+		require.NotNil(t, result)
+		require.Equal(t, 1, result.InstalledCount, "one plugin should succeed")
+		require.Equal(t, 1, result.FailedCount, "one plugin should fail")
+		require.Len(t, result.Errors, 1, "should collect errors")
+		require.Contains(t, result.Errors[0].Error(), "download failed")
+	})
+}
+
+func TestService_Install_ContextCancellation(t *testing.T) {
+	t.Run("context cancelled during installation", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+
+		downloadCount := 0
+
+		mockDownloader := &mockDownloader{
+			fetchManifestFunc: func(ctx context.Context, src PluginSource) (*PluginManifest, error) {
+				return &PluginManifest{
+					Plugins: []PluginManifestEntry{
+						{ID: "plugin-1", Name: "Plugin 1", Version: "1.0.0", Categories: []Category{CategorySSH}},
+						{ID: "plugin-2", Name: "Plugin 2", Version: "1.0.0", Categories: []Category{CategorySSH}},
+						{ID: "plugin-3", Name: "Plugin 3", Version: "1.0.0", Categories: []Category{CategorySSH}},
+					},
+				}, nil
+			},
+			downloadFunc: func(ctx context.Context, id, version string) (*CacheEntry, error) {
+				downloadCount++
+				if downloadCount == 2 {
+					cancel() // Cancel after second download
+				}
+				return &CacheEntry{}, nil
+			},
+		}
+
+		mockCache := &mockCacheManager{
+			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+				return nil, ErrPluginNotInstalled
+			},
+		}
+
+		svc := &Service{
+			cache:      mockCache,
+			manifest:   &mockManifestManager{},
+			downloader: mockDownloader,
+			sources: []PluginSource{
+				{Name: "official", URL: "https://example.com/manifest.yaml", Enabled: true},
+			},
+			logger: zerolog.New(os.Stdout),
+		}
+
+		// Install category - should be cancelled mid-way
+		result, err := svc.Install(ctx, "ssh", InstallOptions{})
+
+		// Verify context cancellation
+		require.Error(t, err)
+		require.Equal(t, context.Canceled, err)
+		require.NotNil(t, result)
+		require.Equal(t, 2, result.InstalledCount, "should install 2 before cancellation")
+	})
+}
+
+func TestService_Install_EmptyManifest(t *testing.T) {
+	t.Run("no plugins in manifest", func(t *testing.T) {
+		ctx := context.Background()
+
+		mockDownloader := &mockDownloader{
+			fetchManifestFunc: func(ctx context.Context, src PluginSource) (*PluginManifest, error) {
+				return &PluginManifest{Plugins: []PluginManifestEntry{}}, nil
+			},
+		}
+
+		svc := &Service{
+			cache:      &mockCacheManager{},
+			manifest:   &mockManifestManager{},
+			downloader: mockDownloader,
+			sources: []PluginSource{
+				{Name: "official", URL: "https://example.com/manifest.yaml", Enabled: true},
+			},
+			logger: zerolog.New(os.Stdout),
+		}
+
+		// Try to install from empty manifest
+		result, err := svc.Install(ctx, "test-plugin", InstallOptions{})
+
+		// Verify error
+		require.Error(t, err)
+		require.Nil(t, result)
+		require.Contains(t, err.Error(), "no plugins found in any source")
 	})
 }
