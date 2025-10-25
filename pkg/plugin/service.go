@@ -28,6 +28,8 @@ type CacheInterface interface {
 type ManifestInterface interface {
 	Add(entry *ManifestEntry) error
 	Save() error
+	List() ([]*ManifestEntry, error)
+	Remove(id string) error
 }
 
 // DownloaderInterface defines the downloader operations needed by Service
@@ -615,4 +617,195 @@ func (s *Service) Update(ctx context.Context, opts UpdateOptions) (*UpdateResult
 		Msg("Plugin update completed")
 
 	return result, nil
+}
+
+// Uninstall removes plugins from the cache and manifest.
+//
+// Supports three modes:
+//   - Uninstall specific plugin by ID
+//   - Uninstall all plugins in a category (opts.Category)
+//   - Uninstall all plugins (opts.All)
+//
+// Parameters:
+//   - ctx: Context for cancellation
+//   - target: Plugin ID to uninstall (ignored if opts.All or opts.Category is set)
+//   - opts: Uninstall options (All, Category)
+//
+// Returns:
+//   - UninstallResult with counts and remaining plugins
+//   - Error if validation fails or all uninstalls fail
+//
+// Behavior:
+//   - Validates that only one mode is specified (target XOR category XOR all)
+//   - Lists installed plugins from manifest
+//   - Filters by target/category/all
+//   - Removes plugin files from cache directory
+//   - Removes entries from manifest
+//   - Saves manifest to disk
+//   - Collects errors but doesn't fail fast
+//
+// Example:
+//
+//	// Uninstall specific plugin
+//	result, err := svc.Uninstall(ctx, "ssh-plugin", UninstallOptions{})
+//
+//	// Uninstall all SSH plugins
+//	result, err := svc.Uninstall(ctx, "", UninstallOptions{Category: CategorySSH})
+//
+//	// Uninstall all plugins
+//	result, err := svc.Uninstall(ctx, "", UninstallOptions{All: true})
+func (s *Service) Uninstall(ctx context.Context, target string, opts UninstallOptions) (*UninstallResult, error) {
+	s.logger.Info().
+		Str("component", "plugin-service").
+		Str("operation", "uninstall").
+		Str("target", target).
+		Bool("all", opts.All).
+		Str("category", string(opts.Category)).
+		Msg("Starting plugin uninstall")
+
+	result := &UninstallResult{
+		Errors: []error{},
+	}
+
+	// Validate input - only one mode allowed
+	hasTarget := target != ""
+	hasCategory := opts.Category != "" && opts.Category.IsValid()
+	hasAll := opts.All
+
+	modesCount := 0
+	if hasTarget {
+		modesCount++
+	}
+	if hasCategory {
+		modesCount++
+	}
+	if hasAll {
+		modesCount++
+	}
+
+	if modesCount == 0 {
+		return nil, fmt.Errorf("%w: must specify plugin ID, category, or --all", ErrInvalidInput)
+	}
+
+	if modesCount > 1 {
+		return nil, fmt.Errorf("%w: cannot specify multiple uninstall modes", ErrInvalidInput)
+	}
+
+	// Get installed plugins from manifest
+	entries, err := s.manifest.List()
+	if err != nil {
+		return nil, fmt.Errorf("list installed plugins: %w", err)
+	}
+
+	if len(entries) == 0 {
+		s.logger.Info().Msg("No plugins installed")
+		return result, nil
+	}
+
+	// Determine which plugins to uninstall
+	var toUninstall []*ManifestEntry
+
+	if hasAll {
+		toUninstall = entries
+		s.logger.Info().Int("count", len(entries)).Msg("Uninstalling all plugins")
+	} else if hasCategory {
+		toUninstall = s.filterManifestByCategory(entries, opts.Category)
+		if len(toUninstall) == 0 {
+			return nil, fmt.Errorf("%w: no plugins found in category '%s'", ErrNoPluginsFound, opts.Category)
+		}
+		s.logger.Info().
+			Str("category", string(opts.Category)).
+			Int("count", len(toUninstall)).
+			Msg("Uninstalling plugins by category")
+	} else {
+		// Uninstall specific plugin by ID
+		targetLower := strings.ToLower(target)
+		found := false
+		for _, entry := range entries {
+			if entry.ID == targetLower {
+				toUninstall = append(toUninstall, entry)
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, fmt.Errorf("%w: plugin '%s' not found (not installed)", ErrPluginNotFound, target)
+		}
+		s.logger.Info().Str("plugin", target).Msg("Uninstalling specific plugin")
+	}
+
+	// Uninstall each plugin
+	for _, entry := range toUninstall {
+		select {
+		case <-ctx.Done():
+			result.RemainingCount = len(entries) - result.RemovedCount
+			return result, ctx.Err()
+		default:
+		}
+
+		if err := s.uninstallOne(entry); err != nil {
+			result.FailedCount++
+			result.Errors = append(result.Errors, fmt.Errorf("uninstall %s: %w", entry.Name, err))
+			s.logger.Warn().
+				Str("plugin", entry.Name).
+				Err(err).
+				Msg("Failed to uninstall plugin")
+			continue
+		}
+
+		result.RemovedCount++
+		s.logger.Info().
+			Str("plugin", entry.Name).
+			Str("version", entry.Version).
+			Msg("Plugin uninstalled successfully")
+	}
+
+	// Save manifest to disk if any plugins were removed
+	if result.RemovedCount > 0 {
+		if err := s.manifest.Save(); err != nil {
+			s.logger.Warn().Err(err).Msg("Failed to save manifest after uninstall")
+			result.Errors = append(result.Errors, fmt.Errorf("save manifest: %w", err))
+		}
+	}
+
+	result.RemainingCount = len(entries) - result.RemovedCount
+
+	s.logger.Info().
+		Str("component", "plugin-service").
+		Str("operation", "uninstall").
+		Int("removed", result.RemovedCount).
+		Int("failed", result.FailedCount).
+		Int("remaining", result.RemainingCount).
+		Msg("Plugin uninstall completed")
+
+	return result, nil
+}
+
+// uninstallOne removes a single plugin from cache and manifest
+func (s *Service) uninstallOne(entry *ManifestEntry) error {
+	// Remove plugin file from cache
+	// Note: We can't access cache.cacheDir directly, so we'll use manifest.Remove
+	// which handles both file removal and manifest update
+	if err := s.manifest.Remove(entry.ID); err != nil {
+		return fmt.Errorf("remove from manifest: %w", err)
+	}
+
+	return nil
+}
+
+// filterManifestByCategory filters manifest entries by category
+func (s *Service) filterManifestByCategory(entries []*ManifestEntry, category Category) []*ManifestEntry {
+	var filtered []*ManifestEntry
+	categoryStr := string(category)
+
+	for _, entry := range entries {
+		for _, tag := range entry.Tags {
+			if tag == categoryStr {
+				filtered = append(filtered, entry)
+				break
+			}
+		}
+	}
+
+	return filtered
 }

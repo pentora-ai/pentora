@@ -33,6 +33,9 @@ var (
 
 	// ErrChecksumMismatch is returned when downloaded plugin checksum doesn't match
 	ErrChecksumMismatch = errors.New("checksum mismatch")
+
+	// ErrInvalidInput is returned when input validation fails
+	ErrInvalidInput = errors.New("invalid input")
 )
 
 // IsNotFound checks if error is a "not found" error

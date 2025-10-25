@@ -365,8 +365,10 @@ func (m *mockCacheManager) GetEntry(name, version string) (*CacheEntry, error) {
 
 // mockManifestManager for testing Install() method
 type mockManifestManager struct {
-	addFunc  func(entry *ManifestEntry) error
-	saveFunc func() error
+	addFunc    func(entry *ManifestEntry) error
+	saveFunc   func() error
+	listFunc   func() ([]*ManifestEntry, error)
+	removeFunc func(id string) error
 }
 
 func (m *mockManifestManager) Add(entry *ManifestEntry) error {
@@ -379,6 +381,20 @@ func (m *mockManifestManager) Add(entry *ManifestEntry) error {
 func (m *mockManifestManager) Save() error {
 	if m.saveFunc != nil {
 		return m.saveFunc()
+	}
+	return nil
+}
+
+func (m *mockManifestManager) List() ([]*ManifestEntry, error) {
+	if m.listFunc != nil {
+		return m.listFunc()
+	}
+	return []*ManifestEntry{}, nil
+}
+
+func (m *mockManifestManager) Remove(id string) error {
+	if m.removeFunc != nil {
+		return m.removeFunc(id)
 	}
 	return nil
 }
