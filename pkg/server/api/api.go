@@ -16,6 +16,11 @@ type Deps struct {
 	// Kept for backward compatibility during migration
 	Workspace WorkspaceInterface
 
+	// PluginService provides plugin management operations
+	// Actual type: *plugin.Service (must implement v1.PluginService interface)
+	// Type asserted in router to v1.PluginService
+	PluginService any
+
 	// Ready flag for readiness check
 	Ready *atomic.Bool
 }
