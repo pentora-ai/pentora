@@ -17,33 +17,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// PluginSource represents a remote plugin repository.
-type PluginSource struct {
-	Name     string   `yaml:"name"`
-	URL      string   `yaml:"url"`
-	Enabled  bool     `yaml:"enabled"`
-	Priority int      `yaml:"priority"` // Lower number = higher priority
-	Mirrors  []string `yaml:"mirrors,omitempty"`
-}
+// Note: PluginSource and PluginManifestEntry are now defined in service_types.go
+// They are part of the service layer API.
 
 // PluginManifest describes available plugins in a repository.
 type PluginManifest struct {
 	Version string                    `yaml:"version"`
 	Plugins []PluginManifestEntry     `yaml:"plugins"`
 	Index   map[string][]PluginDigest `yaml:"index"` // category -> plugins
-}
-
-// PluginManifestEntry describes a plugin in the manifest.
-type PluginManifestEntry struct {
-	ID          string     `json:"id"` // Unique plugin identifier (slug)
-	Name        string     `yaml:"name"`
-	Version     string     `yaml:"version"`
-	Description string     `yaml:"description"`
-	Author      string     `yaml:"author"`
-	Categories  []Category `yaml:"categories"`
-	URL         string     `yaml:"url"`
-	Checksum    string     `yaml:"checksum"` // sha256:hex
-	Size        int64      `yaml:"size"`
 }
 
 // PluginDigest is a compact reference to a plugin.
