@@ -1998,3 +1998,206 @@ func TestService_GetInfo(t *testing.T) {
 		require.Equal(t, "1.0.1", info.Version)
 	})
 }
+
+// Benchmark tests for performance monitoring
+
+func BenchmarkService_List(b *testing.B) {
+	ctx := context.Background()
+
+	// Create manifest with 100 plugins
+	entries := make([]*ManifestEntry, 100)
+	for i := 0; i < 100; i++ {
+		entries[i] = &ManifestEntry{
+			ID:      fmt.Sprintf("plugin-%d", i),
+			Name:    fmt.Sprintf("Plugin %d", i),
+			Version: "1.0.0",
+			Type:    "evaluation",
+			Author:  "pentora",
+		}
+	}
+
+	manifest := &mockManifestManager{
+		listFunc: func() ([]*ManifestEntry, error) {
+			return entries, nil
+		},
+	}
+
+	svc := newTestService(&mockCacheManager{}, manifest, &mockDownloader{}, []PluginSource{})
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = svc.List(ctx)
+	}
+}
+
+func BenchmarkService_GetInfo(b *testing.B) {
+	ctx := context.Background()
+
+	// Create manifest with 100 plugins
+	entries := make([]*ManifestEntry, 100)
+	for i := 0; i < 100; i++ {
+		entries[i] = &ManifestEntry{
+			ID:      fmt.Sprintf("plugin-%d", i),
+			Name:    fmt.Sprintf("Plugin %d", i),
+			Version: "1.0.0",
+			Type:    "evaluation",
+			Author:  "pentora",
+			Path:    fmt.Sprintf("/tmp/plugins/plugin-%d/1.0.0/plugin.yaml", i),
+		}
+	}
+
+	manifest := &mockManifestManager{
+		listFunc: func() ([]*ManifestEntry, error) {
+			return entries, nil
+		},
+	}
+
+	svc := newTestService(&mockCacheManager{}, manifest, &mockDownloader{}, []PluginSource{})
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = svc.GetInfo(ctx, "plugin-50")
+	}
+}
+
+func BenchmarkService_Install(b *testing.B) {
+	ctx := context.Background()
+
+	manifest := &mockManifestManager{
+		addFunc: func(entry *ManifestEntry) error {
+			return nil
+		},
+		saveFunc: func() error {
+			return nil
+		},
+	}
+
+	cache := &mockCacheManager{
+		getEntryFunc: func(name, version string) (*CacheEntry, error) {
+			return nil, ErrPluginNotFound
+		},
+	}
+
+	downloader := &mockDownloader{
+		fetchManifestFunc: func(ctx context.Context, src PluginSource) (*PluginManifest, error) {
+			return &PluginManifest{
+				Plugins: []PluginManifestEntry{
+					{
+						ID:       "test-plugin",
+						Name:     "Test Plugin",
+						Version:  "1.0.0",
+						URL:      "https://example.com/plugin.yaml",
+						Checksum: "sha256:abc123",
+					},
+				},
+			}, nil
+		},
+		downloadFunc: func(ctx context.Context, id, version string) (*CacheEntry, error) {
+			return &CacheEntry{
+				Name:    id,
+				Version: version,
+				Path:    "/tmp/plugin.yaml",
+			}, nil
+		},
+	}
+
+	sources := []PluginSource{
+		{Name: "official", URL: "https://example.com/manifest.yaml", Enabled: true},
+	}
+
+	svc := newTestService(cache, manifest, downloader, sources)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = svc.Install(ctx, "test-plugin", InstallOptions{})
+	}
+}
+
+func BenchmarkService_Update(b *testing.B) {
+	ctx := context.Background()
+
+	manifest := &mockManifestManager{
+		addFunc: func(entry *ManifestEntry) error {
+			return nil
+		},
+		saveFunc: func() error {
+			return nil
+		},
+	}
+
+	cache := &mockCacheManager{
+		getEntryFunc: func(name, version string) (*CacheEntry, error) {
+			return nil, ErrPluginNotFound
+		},
+	}
+
+	downloader := &mockDownloader{
+		fetchManifestFunc: func(ctx context.Context, src PluginSource) (*PluginManifest, error) {
+			return &PluginManifest{
+				Plugins: []PluginManifestEntry{
+					{
+						ID:       "plugin-1",
+						Name:     "Plugin 1",
+						Version:  "1.0.0",
+						URL:      "https://example.com/plugin1.yaml",
+						Checksum: "sha256:abc123",
+					},
+					{
+						ID:       "plugin-2",
+						Name:     "Plugin 2",
+						Version:  "1.0.0",
+						URL:      "https://example.com/plugin2.yaml",
+						Checksum: "sha256:def456",
+					},
+				},
+			}, nil
+		},
+		downloadFunc: func(ctx context.Context, id, version string) (*CacheEntry, error) {
+			return &CacheEntry{
+				Name:    id,
+				Version: version,
+				Path:    "/tmp/plugin.yaml",
+			}, nil
+		},
+	}
+
+	sources := []PluginSource{
+		{Name: "official", URL: "https://example.com/manifest.yaml", Enabled: true},
+	}
+
+	svc := newTestService(cache, manifest, downloader, sources)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = svc.Update(ctx, UpdateOptions{})
+	}
+}
+
+func BenchmarkService_Uninstall(b *testing.B) {
+	ctx := context.Background()
+
+	removeCount := 0
+	manifest := &mockManifestManager{
+		listFunc: func() ([]*ManifestEntry, error) {
+			return []*ManifestEntry{
+				{ID: "plugin-1", Name: "Plugin 1", Version: "1.0.0"},
+				{ID: "plugin-2", Name: "Plugin 2", Version: "1.0.0"},
+				{ID: "plugin-3", Name: "Plugin 3", Version: "1.0.0"},
+			}, nil
+		},
+		removeFunc: func(id string) error {
+			removeCount++
+			return nil
+		},
+		saveFunc: func() error {
+			return nil
+		},
+	}
+
+	svc := newTestService(&mockCacheManager{}, manifest, &mockDownloader{}, []PluginSource{})
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = svc.Uninstall(ctx, "", UninstallOptions{All: true})
+	}
+}
