@@ -343,6 +343,7 @@ type mockCacheManager struct {
 	getEntryFunc func(name, version string) (*CacheEntry, error)
 	sizeFunc     func() (int64, error)
 	pruneFunc    func(olderThan time.Duration) (int, error)
+	removeFunc   func(id string, version string) error
 }
 
 func (m *mockCacheManager) GetEntry(name, version string) (*CacheEntry, error) {
@@ -364,6 +365,13 @@ func (m *mockCacheManager) Prune(olderThan time.Duration) (int, error) {
 		return m.pruneFunc(olderThan)
 	}
 	return 0, nil
+}
+
+func (m *mockCacheManager) Remove(id string, version string) error {
+	if m.removeFunc != nil {
+		return m.removeFunc(id, version)
+	}
+	return nil
 }
 
 // mockManifestManager for testing Install() method

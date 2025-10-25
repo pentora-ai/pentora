@@ -24,6 +24,7 @@ type CacheInterface interface {
 	GetEntry(name, version string) (*CacheEntry, error)
 	Size() (int64, error)
 	Prune(olderThan time.Duration) (int, error)
+	Remove(id string, version string) error
 }
 
 // ManifestInterface defines the manifest operations needed by Service
@@ -786,9 +787,17 @@ func (s *Service) Uninstall(ctx context.Context, target string, opts UninstallOp
 
 // uninstallOne removes a single plugin from cache and manifest
 func (s *Service) uninstallOne(entry *ManifestEntry) error {
-	// Remove plugin file from cache
-	// Note: We can't access cache.cacheDir directly, so we'll use manifest.Remove
-	// which handles both file removal and manifest update
+	// Remove plugin files from cache directory
+	if err := s.cache.Remove(entry.ID, entry.Version); err != nil {
+		s.logger.Warn().
+			Err(err).
+			Str("plugin_id", entry.ID).
+			Str("version", entry.Version).
+			Msg("Failed to remove plugin from cache (will still remove from manifest)")
+		// Continue even if cache removal fails - we still want to update manifest
+	}
+
+	// Remove from manifest (registry)
 	if err := s.manifest.Remove(entry.ID); err != nil {
 		return fmt.Errorf("remove from manifest: %w", err)
 	}
