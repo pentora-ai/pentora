@@ -1420,3 +1420,346 @@ func TestService_Update_ContextCancellation(t *testing.T) {
 		require.Equal(t, 2, result.UpdatedCount, "should update 2 before cancellation")
 	})
 }
+
+// ============================================================================
+// Uninstall() Method Tests
+// ============================================================================
+
+func TestService_Uninstall_ByPluginID(t *testing.T) {
+	t.Run("uninstall specific plugin successfully", func(t *testing.T) {
+		ctx := context.Background()
+
+		removedID := ""
+
+		manifest := &mockManifestManager{
+			listFunc: func() ([]*ManifestEntry, error) {
+				return []*ManifestEntry{
+					{
+						ID:      "test-plugin",
+						Name:    "Test Plugin",
+						Version: "1.0.0",
+						Tags:    []string{"ssh"},
+					},
+					{
+						ID:      "other-plugin",
+						Name:    "Other Plugin",
+						Version: "2.0.0",
+						Tags:    []string{"http"},
+					},
+				}, nil
+			},
+			removeFunc: func(id string) error {
+				removedID = id
+				return nil
+			},
+		}
+
+		svc := newTestService(&mockCacheManager{}, manifest, &mockDownloader{}, []PluginSource{})
+
+		result, err := svc.Uninstall(ctx, "test-plugin", UninstallOptions{})
+
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		require.Equal(t, 1, result.RemovedCount)
+		require.Equal(t, 0, result.FailedCount)
+		require.Equal(t, 1, result.RemainingCount)
+		require.Equal(t, "test-plugin", removedID)
+	})
+
+	t.Run("plugin not found error", func(t *testing.T) {
+		ctx := context.Background()
+
+		manifest := &mockManifestManager{
+			listFunc: func() ([]*ManifestEntry, error) {
+				return []*ManifestEntry{
+					{ID: "existing-plugin", Name: "Existing", Version: "1.0.0"},
+				}, nil
+			},
+		}
+
+		svc := newTestService(&mockCacheManager{}, manifest, &mockDownloader{}, []PluginSource{})
+
+		result, err := svc.Uninstall(ctx, "non-existent-plugin", UninstallOptions{})
+
+		require.Error(t, err)
+		require.Nil(t, result)
+		require.ErrorIs(t, err, ErrPluginNotFound)
+		require.Contains(t, err.Error(), "not found (not installed)")
+	})
+}
+
+func TestService_Uninstall_ByCategory(t *testing.T) {
+	t.Run("uninstall all plugins in category", func(t *testing.T) {
+		ctx := context.Background()
+
+		removedIDs := []string{}
+
+		manifest := &mockManifestManager{
+			listFunc: func() ([]*ManifestEntry, error) {
+				return []*ManifestEntry{
+					{ID: "ssh-plugin-1", Name: "SSH Plugin 1", Version: "1.0.0", Tags: []string{"ssh"}},
+					{ID: "ssh-plugin-2", Name: "SSH Plugin 2", Version: "2.0.0", Tags: []string{"ssh"}},
+					{ID: "http-plugin", Name: "HTTP Plugin", Version: "1.0.0", Tags: []string{"http"}},
+				}, nil
+			},
+			removeFunc: func(id string) error {
+				removedIDs = append(removedIDs, id)
+				return nil
+			},
+		}
+
+		svc := newTestService(&mockCacheManager{}, manifest, &mockDownloader{}, []PluginSource{})
+
+		result, err := svc.Uninstall(ctx, "", UninstallOptions{Category: CategorySSH})
+
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		require.Equal(t, 2, result.RemovedCount, "should remove 2 SSH plugins")
+		require.Equal(t, 0, result.FailedCount)
+		require.Equal(t, 1, result.RemainingCount)
+		require.Contains(t, removedIDs, "ssh-plugin-1")
+		require.Contains(t, removedIDs, "ssh-plugin-2")
+	})
+
+	t.Run("no plugins in category", func(t *testing.T) {
+		ctx := context.Background()
+
+		manifest := &mockManifestManager{
+			listFunc: func() ([]*ManifestEntry, error) {
+				return []*ManifestEntry{
+					{ID: "http-plugin", Name: "HTTP Plugin", Version: "1.0.0", Tags: []string{"http"}},
+				}, nil
+			},
+		}
+
+		svc := newTestService(&mockCacheManager{}, manifest, &mockDownloader{}, []PluginSource{})
+
+		result, err := svc.Uninstall(ctx, "", UninstallOptions{Category: CategoryTLS})
+
+		require.Error(t, err)
+		require.Nil(t, result)
+		require.ErrorIs(t, err, ErrNoPluginsFound)
+		require.Contains(t, err.Error(), "no plugins found in category 'tls'")
+	})
+}
+
+func TestService_Uninstall_All(t *testing.T) {
+	t.Run("uninstall all plugins successfully", func(t *testing.T) {
+		ctx := context.Background()
+
+		removedIDs := []string{}
+
+		manifest := &mockManifestManager{
+			listFunc: func() ([]*ManifestEntry, error) {
+				return []*ManifestEntry{
+					{ID: "plugin-1", Name: "Plugin 1", Version: "1.0.0", Tags: []string{"ssh"}},
+					{ID: "plugin-2", Name: "Plugin 2", Version: "2.0.0", Tags: []string{"http"}},
+					{ID: "plugin-3", Name: "Plugin 3", Version: "3.0.0", Tags: []string{"tls"}},
+				}, nil
+			},
+			removeFunc: func(id string) error {
+				removedIDs = append(removedIDs, id)
+				return nil
+			},
+		}
+
+		svc := newTestService(&mockCacheManager{}, manifest, &mockDownloader{}, []PluginSource{})
+
+		result, err := svc.Uninstall(ctx, "", UninstallOptions{All: true})
+
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		require.Equal(t, 3, result.RemovedCount, "should remove all 3 plugins")
+		require.Equal(t, 0, result.FailedCount)
+		require.Equal(t, 0, result.RemainingCount)
+		require.Len(t, removedIDs, 3)
+	})
+
+	t.Run("empty manifest returns success", func(t *testing.T) {
+		ctx := context.Background()
+
+		manifest := &mockManifestManager{
+			listFunc: func() ([]*ManifestEntry, error) {
+				return []*ManifestEntry{}, nil
+			},
+		}
+
+		svc := newTestService(&mockCacheManager{}, manifest, &mockDownloader{}, []PluginSource{})
+
+		result, err := svc.Uninstall(ctx, "", UninstallOptions{All: true})
+
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		require.Equal(t, 0, result.RemovedCount)
+		require.Equal(t, 0, result.FailedCount)
+		require.Equal(t, 0, result.RemainingCount)
+	})
+}
+
+func TestService_Uninstall_ValidationErrors(t *testing.T) {
+	t.Run("no mode specified error", func(t *testing.T) {
+		ctx := context.Background()
+
+		svc := newTestService(&mockCacheManager{}, &mockManifestManager{}, &mockDownloader{}, []PluginSource{})
+
+		result, err := svc.Uninstall(ctx, "", UninstallOptions{})
+
+		require.Error(t, err)
+		require.Nil(t, result)
+		require.ErrorIs(t, err, ErrInvalidInput)
+		require.Contains(t, err.Error(), "must specify plugin ID, category, or --all")
+	})
+
+	t.Run("multiple modes specified - target and category", func(t *testing.T) {
+		ctx := context.Background()
+
+		svc := newTestService(&mockCacheManager{}, &mockManifestManager{}, &mockDownloader{}, []PluginSource{})
+
+		result, err := svc.Uninstall(ctx, "plugin-id", UninstallOptions{Category: CategorySSH})
+
+		require.Error(t, err)
+		require.Nil(t, result)
+		require.ErrorIs(t, err, ErrInvalidInput)
+		require.Contains(t, err.Error(), "cannot specify multiple uninstall modes")
+	})
+
+	t.Run("multiple modes specified - target and all", func(t *testing.T) {
+		ctx := context.Background()
+
+		svc := newTestService(&mockCacheManager{}, &mockManifestManager{}, &mockDownloader{}, []PluginSource{})
+
+		result, err := svc.Uninstall(ctx, "plugin-id", UninstallOptions{All: true})
+
+		require.Error(t, err)
+		require.Nil(t, result)
+		require.ErrorIs(t, err, ErrInvalidInput)
+	})
+
+	t.Run("multiple modes specified - category and all", func(t *testing.T) {
+		ctx := context.Background()
+
+		svc := newTestService(&mockCacheManager{}, &mockManifestManager{}, &mockDownloader{}, []PluginSource{})
+
+		result, err := svc.Uninstall(ctx, "", UninstallOptions{Category: CategorySSH, All: true})
+
+		require.Error(t, err)
+		require.Nil(t, result)
+		require.ErrorIs(t, err, ErrInvalidInput)
+	})
+}
+
+func TestService_Uninstall_PartialFailures(t *testing.T) {
+	t.Run("some plugins succeed, some fail", func(t *testing.T) {
+		ctx := context.Background()
+
+		manifest := &mockManifestManager{
+			listFunc: func() ([]*ManifestEntry, error) {
+				return []*ManifestEntry{
+					{ID: "success-plugin", Name: "Success Plugin", Version: "1.0.0", Tags: []string{"ssh"}},
+					{ID: "fail-plugin", Name: "Fail Plugin", Version: "2.0.0", Tags: []string{"ssh"}},
+				}, nil
+			},
+			removeFunc: func(id string) error {
+				if id == "fail-plugin" {
+					return fmt.Errorf("removal failed")
+				}
+				return nil
+			},
+		}
+
+		svc := newTestService(&mockCacheManager{}, manifest, &mockDownloader{}, []PluginSource{})
+
+		result, err := svc.Uninstall(ctx, "", UninstallOptions{Category: CategorySSH})
+
+		require.NoError(t, err, "should not error on partial failure")
+		require.NotNil(t, result)
+		require.Equal(t, 1, result.RemovedCount)
+		require.Equal(t, 1, result.FailedCount)
+		require.Len(t, result.Errors, 1)
+		require.Contains(t, result.Errors[0].Error(), "removal failed")
+	})
+}
+
+func TestService_Uninstall_ContextCancellation(t *testing.T) {
+	t.Run("context cancelled during uninstall", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+
+		removeCount := 0
+
+		manifest := &mockManifestManager{
+			listFunc: func() ([]*ManifestEntry, error) {
+				return []*ManifestEntry{
+					{ID: "plugin-1", Name: "Plugin 1", Version: "1.0.0", Tags: []string{"ssh"}},
+					{ID: "plugin-2", Name: "Plugin 2", Version: "1.0.0", Tags: []string{"ssh"}},
+					{ID: "plugin-3", Name: "Plugin 3", Version: "1.0.0", Tags: []string{"ssh"}},
+				}, nil
+			},
+			removeFunc: func(id string) error {
+				removeCount++
+				if removeCount == 2 {
+					cancel() // Cancel after second removal
+				}
+				return nil
+			},
+		}
+
+		svc := newTestService(&mockCacheManager{}, manifest, &mockDownloader{}, []PluginSource{})
+
+		result, err := svc.Uninstall(ctx, "", UninstallOptions{All: true})
+
+		require.Error(t, err)
+		require.Equal(t, context.Canceled, err)
+		require.NotNil(t, result)
+		require.Equal(t, 2, result.RemovedCount, "should remove 2 before cancellation")
+		require.Equal(t, 1, result.RemainingCount, "one plugin should remain")
+	})
+}
+
+func TestService_Uninstall_ManifestErrors(t *testing.T) {
+	t.Run("manifest list error", func(t *testing.T) {
+		ctx := context.Background()
+
+		manifest := &mockManifestManager{
+			listFunc: func() ([]*ManifestEntry, error) {
+				return nil, fmt.Errorf("failed to read manifest")
+			},
+		}
+
+		svc := newTestService(&mockCacheManager{}, manifest, &mockDownloader{}, []PluginSource{})
+
+		result, err := svc.Uninstall(ctx, "", UninstallOptions{All: true})
+
+		require.Error(t, err)
+		require.Nil(t, result)
+		require.Contains(t, err.Error(), "list installed plugins")
+		require.Contains(t, err.Error(), "failed to read manifest")
+	})
+
+	t.Run("manifest save error after successful removal", func(t *testing.T) {
+		ctx := context.Background()
+
+		manifest := &mockManifestManager{
+			listFunc: func() ([]*ManifestEntry, error) {
+				return []*ManifestEntry{
+					{ID: "test-plugin", Name: "Test Plugin", Version: "1.0.0"},
+				}, nil
+			},
+			removeFunc: func(id string) error {
+				return nil
+			},
+			saveFunc: func() error {
+				return fmt.Errorf("failed to save manifest")
+			},
+		}
+
+		svc := newTestService(&mockCacheManager{}, manifest, &mockDownloader{}, []PluginSource{})
+
+		result, err := svc.Uninstall(ctx, "test-plugin", UninstallOptions{})
+
+		require.NoError(t, err, "should not fail even if save fails")
+		require.NotNil(t, result)
+		require.Equal(t, 1, result.RemovedCount)
+		require.Len(t, result.Errors, 1, "should collect save error")
+		require.Contains(t, result.Errors[0].Error(), "save manifest")
+	})
+}
