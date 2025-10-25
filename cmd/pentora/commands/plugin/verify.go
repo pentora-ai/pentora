@@ -2,10 +2,10 @@ package plugin
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/pentora-ai/pentora/pkg/plugin"
+	"github.com/pentora-ai/pentora/pkg/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -36,11 +36,11 @@ Exit codes:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Use default cache dir if not specified
 			if cacheDir == "" {
-				homeDir, err := os.UserHomeDir()
+				storageConfig, err := storage.DefaultConfig()
 				if err != nil {
-					return fmt.Errorf("get home directory: %w", err)
+					return fmt.Errorf("get storage config: %w", err)
 				}
-				cacheDir = filepath.Join(homeDir, ".pentora", "plugins", "cache")
+				cacheDir = filepath.Join(storageConfig.WorkspaceRoot, "plugins", "cache")
 			}
 
 			// Create service
@@ -72,7 +72,7 @@ Exit codes:
 		},
 	}
 
-	cmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Plugin cache directory (default: ~/.pentora/plugins/cache)")
+	cmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Plugin cache directory (default: platform-specific, see storage config)")
 	cmd.Flags().StringVar(&pluginName, "plugin", "", "Verify specific plugin by name")
 
 	return cmd

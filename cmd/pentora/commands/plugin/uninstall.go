@@ -3,10 +3,10 @@ package plugin
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/pentora-ai/pentora/pkg/plugin"
+	"github.com/pentora-ai/pentora/pkg/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -42,11 +42,11 @@ all plugins in a category, or all plugins at once.`,
 
 			// Use default cache dir if not specified
 			if cacheDir == "" {
-				homeDir, err := os.UserHomeDir()
+				storageConfig, err := storage.DefaultConfig()
 				if err != nil {
-					return fmt.Errorf("get home directory: %w", err)
+					return fmt.Errorf("get storage config: %w", err)
 				}
-				cacheDir = filepath.Join(homeDir, ".pentora", "plugins", "cache")
+				cacheDir = filepath.Join(storageConfig.WorkspaceRoot, "plugins", "cache")
 			}
 
 			// Create service
@@ -83,7 +83,7 @@ all plugins in a category, or all plugins at once.`,
 		},
 	}
 
-	cmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Plugin cache directory (default: ~/.pentora/plugins/cache)")
+	cmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Plugin cache directory (default: platform-specific, see storage config)")
 	cmd.Flags().BoolVar(&all, "all", false, "Uninstall all plugins")
 	cmd.Flags().StringVar(&category, "category", "", "Uninstall all plugins from category (ssh, http, tls, database, network)")
 

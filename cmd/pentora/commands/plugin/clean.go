@@ -2,11 +2,11 @@ package plugin
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/pentora-ai/pentora/pkg/plugin"
+	"github.com/pentora-ai/pentora/pkg/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -35,11 +35,11 @@ Use --dry-run to preview what would be deleted without actually deleting.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Use default cache dir if not specified
 			if cacheDir == "" {
-				homeDir, err := os.UserHomeDir()
+				storageConfig, err := storage.DefaultConfig()
 				if err != nil {
-					return fmt.Errorf("get home directory: %w", err)
+					return fmt.Errorf("get storage config: %w", err)
 				}
-				cacheDir = filepath.Join(homeDir, ".pentora", "plugins", "cache")
+				cacheDir = filepath.Join(storageConfig.WorkspaceRoot, "plugins", "cache")
 			}
 
 			// Parse duration
@@ -80,7 +80,7 @@ Use --dry-run to preview what would be deleted without actually deleting.`,
 		},
 	}
 
-	cmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Plugin cache directory (default: ~/.pentora/plugins/cache)")
+	cmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Plugin cache directory (default: platform-specific, see storage config)")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Preview what would be deleted without actually deleting")
 	cmd.Flags().StringVar(&olderThan, "older-than", "720h", "Remove cache entries older than this duration (e.g., 720h for 30 days)")
 

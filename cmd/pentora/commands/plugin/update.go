@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/pentora-ai/pentora/pkg/plugin"
+	"github.com/pentora-ai/pentora/pkg/storage"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -49,11 +50,11 @@ new or updated plugins to the local cache. By default, it downloads all core plu
 
 			// Use default cache dir if not specified
 			if cacheDir == "" {
-				homeDir, err := os.UserHomeDir()
+				storageConfig, err := storage.DefaultConfig()
 				if err != nil {
-					return fmt.Errorf("get home directory: %w", err)
+					return fmt.Errorf("get storage config: %w", err)
 				}
-				cacheDir = filepath.Join(homeDir, ".pentora", "plugins", "cache")
+				cacheDir = filepath.Join(storageConfig.WorkspaceRoot, "plugins", "cache")
 			}
 
 			// Create service
@@ -89,7 +90,7 @@ new or updated plugins to the local cache. By default, it downloads all core plu
 		},
 	}
 
-	cmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Plugin cache directory (default: ~/.pentora/plugins/cache)")
+	cmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Plugin cache directory (default: platform-specific, see storage config)")
 	cmd.Flags().StringVar(&source, "source", "", "Download from specific source (e.g., 'official')")
 	cmd.Flags().StringVar(&category, "category", "", "Download only plugins from category (ssh, http, tls, database, network)")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be downloaded without downloading")

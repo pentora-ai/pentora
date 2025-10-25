@@ -3,10 +3,10 @@ package plugin
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/pentora-ai/pentora/pkg/plugin"
+	"github.com/pentora-ai/pentora/pkg/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -32,11 +32,11 @@ installation path, and cache size.`,
 
 			// Use default cache dir if not specified
 			if cacheDir == "" {
-				homeDir, err := os.UserHomeDir()
+				storageConfig, err := storage.DefaultConfig()
 				if err != nil {
-					return fmt.Errorf("get home directory: %w", err)
+					return fmt.Errorf("get storage config: %w", err)
 				}
-				cacheDir = filepath.Join(homeDir, ".pentora", "plugins", "cache")
+				cacheDir = filepath.Join(storageConfig.WorkspaceRoot, "plugins", "cache")
 			}
 
 			// Create service
@@ -61,7 +61,7 @@ installation path, and cache size.`,
 		},
 	}
 
-	cmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Plugin cache directory (default: ~/.pentora/plugins/cache)")
+	cmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Plugin cache directory (default: platform-specific, see storage config)")
 
 	return cmd
 }
