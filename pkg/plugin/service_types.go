@@ -125,6 +125,67 @@ type PluginInfo struct {
 	CacheSize int64 // Size in bytes
 }
 
+// CleanOptions holds parameters for Clean operation
+type CleanOptions struct {
+	// OlderThan specifies the minimum age for cache entries to be removed
+	OlderThan time.Duration
+
+	// DryRun simulates cleaning without actually deleting files
+	DryRun bool
+}
+
+// CleanResult holds results of Clean operation
+type CleanResult struct {
+	// RemovedCount is the number of cache entries removed
+	RemovedCount int
+
+	// SizeBefore is the cache size before cleaning (in bytes)
+	SizeBefore int64
+
+	// SizeAfter is the cache size after cleaning (in bytes)
+	SizeAfter int64
+
+	// Freed is the amount of disk space freed (in bytes)
+	Freed int64
+}
+
+// VerifyOptions holds parameters for Verify operation
+type VerifyOptions struct {
+	// PluginID specifies a single plugin to verify (empty = verify all)
+	PluginID string
+}
+
+// VerifyResult holds results of Verify operation
+type VerifyResult struct {
+	// TotalCount is the total number of plugins verified
+	TotalCount int
+
+	// SuccessCount is the number of plugins that passed verification
+	SuccessCount int
+
+	// FailedCount is the number of plugins that failed verification
+	FailedCount int
+
+	// Results contains individual verification results
+	Results []PluginVerifyResult
+}
+
+// PluginVerifyResult holds verification result for a single plugin
+type PluginVerifyResult struct {
+	// Plugin information
+	ID      string
+	Version string
+
+	// Verification status
+	Valid bool
+
+	// Error if verification failed
+	Error error
+
+	// ErrorType categorizes the failure (missing, checksum, other)
+	ErrorType string
+}
+
 // PluginSource represents a remote plugin repository
 type PluginSource struct {
 	// Name of the source (e.g., "official", "community")

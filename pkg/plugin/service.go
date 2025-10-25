@@ -22,6 +22,8 @@ import (
 // CacheInterface defines the cache operations needed by Service
 type CacheInterface interface {
 	GetEntry(name, version string) (*CacheEntry, error)
+	Size() (int64, error)
+	Prune(olderThan time.Duration) (int, error)
 }
 
 // ManifestInterface defines the manifest operations needed by Service
@@ -30,6 +32,7 @@ type ManifestInterface interface {
 	Save() error
 	List() ([]*ManifestEntry, error)
 	Remove(id string) error
+	Get(id string) (*ManifestEntry, error)
 }
 
 // DownloaderInterface defines the downloader operations needed by Service
@@ -1019,4 +1022,192 @@ func calculateDirSize(path string) (int64, error) {
 	}
 
 	return size, nil
+}
+
+// Clean removes old plugin cache entries based on age.
+//
+// Example:
+//
+//	result, err := svc.Clean(ctx, CleanOptions{
+//	    OlderThan: 720 * time.Hour, // 30 days
+//	    DryRun: true,
+//	})
+//	if err != nil {
+//	    return err
+//	}
+//	fmt.Printf("Would free %d bytes\n", result.Freed)
+func (s *Service) Clean(ctx context.Context, opts CleanOptions) (*CleanResult, error) {
+	// Check context cancellation
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	s.logger.Info().
+		Str("component", "plugin-service").
+		Str("operation", "clean").
+		Dur("older_than", opts.OlderThan).
+		Bool("dry_run", opts.DryRun).
+		Msg("Cleaning plugin cache")
+
+	// Calculate size before cleaning
+	sizeBefore, err := s.cache.Size()
+	if err != nil {
+		s.logger.Debug().Err(err).Msg("Failed to calculate cache size before cleaning")
+		sizeBefore = 0
+	}
+
+	// Dry run: return early without actually pruning
+	if opts.DryRun {
+		result := &CleanResult{
+			RemovedCount: 0,
+			SizeBefore:   sizeBefore,
+			SizeAfter:    sizeBefore,
+			Freed:        0,
+		}
+		s.logger.Info().
+			Int("removed", 0).
+			Int64("freed", 0).
+			Msg("Cache cleaning completed")
+		return result, nil
+	}
+
+	// Run prune operation
+	removed, err := s.cache.Prune(opts.OlderThan)
+	if err != nil {
+		return nil, fmt.Errorf("prune cache: %w", err)
+	}
+
+	// Calculate size after cleaning
+	sizeAfter, err := s.cache.Size()
+	if err != nil {
+		s.logger.Debug().Err(err).Msg("Failed to calculate cache size after cleaning")
+		sizeAfter = 0
+	}
+
+	freed := sizeBefore - sizeAfter
+
+	result := &CleanResult{
+		RemovedCount: removed,
+		SizeBefore:   sizeBefore,
+		SizeAfter:    sizeAfter,
+		Freed:        freed,
+	}
+
+	s.logger.Info().
+		Int("removed", removed).
+		Int64("freed", freed).
+		Msg("Cache cleaning completed")
+
+	return result, nil
+}
+
+// Verify checks the integrity of installed plugins by verifying their checksums.
+//
+// Example:
+//
+//	result, err := svc.Verify(ctx, VerifyOptions{
+//	    PluginID: "ssh-cve-2024-6387", // Or empty for all plugins
+//	})
+//	if err != nil {
+//	    return err
+//	}
+//	fmt.Printf("Verified %d plugins, %d failed\n", result.TotalCount, result.FailedCount)
+func (s *Service) Verify(ctx context.Context, opts VerifyOptions) (*VerifyResult, error) {
+	// Check context cancellation
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	s.logger.Info().
+		Str("component", "plugin-service").
+		Str("operation", "verify").
+		Str("plugin_id", opts.PluginID).
+		Msg("Verifying plugin checksums")
+
+	// Get plugins to verify
+	var entries []*ManifestEntry
+	if opts.PluginID != "" {
+		// Verify specific plugin
+		entry, err := s.manifest.Get(opts.PluginID)
+		if err != nil {
+			return nil, ErrPluginNotFound
+		}
+		entries = []*ManifestEntry{entry}
+	} else {
+		// Verify all plugins
+		allEntries, err := s.manifest.List()
+		if err != nil {
+			return nil, fmt.Errorf("list plugins: %w", err)
+		}
+		entries = allEntries
+	}
+
+	// Create verifier
+	verifier := NewVerifier()
+
+	// Verify each plugin
+	results := make([]PluginVerifyResult, 0, len(entries))
+	successCount := 0
+
+	for _, entry := range entries {
+		// Check context cancellation
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
+		result := PluginVerifyResult{
+			ID:      entry.ID,
+			Version: entry.Version,
+		}
+
+		// Get plugin file path
+		pluginFile, err := s.cache.GetEntry(entry.ID, entry.Version)
+		if err != nil {
+			result.Valid = false
+			result.Error = fmt.Errorf("file not found")
+			result.ErrorType = "missing"
+			results = append(results, result)
+			continue
+		}
+
+		// Verify checksum
+		valid, err := verifier.VerifyFile(pluginFile.Path, entry.Checksum)
+		if err != nil {
+			result.Valid = false
+			result.Error = err
+			result.ErrorType = "error"
+			results = append(results, result)
+			continue
+		}
+
+		if !valid {
+			result.Valid = false
+			result.Error = fmt.Errorf("checksum mismatch")
+			result.ErrorType = "checksum"
+			results = append(results, result)
+			continue
+		}
+
+		// Verification successful
+		result.Valid = true
+		successCount++
+		results = append(results, result)
+	}
+
+	verifyResult := &VerifyResult{
+		TotalCount:   len(entries),
+		SuccessCount: successCount,
+		FailedCount:  len(entries) - successCount,
+		Results:      results,
+	}
+
+	s.logger.Info().
+		Int("total", verifyResult.TotalCount).
+		Int("success", verifyResult.SuccessCount).
+		Int("failed", verifyResult.FailedCount).
+		Msg("Plugin verification completed")
+
+	return verifyResult, nil
 }

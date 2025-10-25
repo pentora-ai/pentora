@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/pentora-ai/pentora/pkg/plugin"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -49,19 +48,19 @@ Use --dry-run to preview what would be deleted without actually deleting.`,
 				return fmt.Errorf("invalid duration '%s': %w (use format like '720h' for 30 days)", olderThan, err)
 			}
 
-			// Create cache manager
-			cacheManager, err := plugin.NewCacheManager(cacheDir)
+			// Create service
+			svc, err := plugin.NewService(cacheDir)
 			if err != nil {
-				return fmt.Errorf("create cache manager: %w", err)
+				return fmt.Errorf("create plugin service: %w", err)
 			}
 
-			// Calculate size before cleaning
-			sizeBefore, err := cacheManager.Size()
-			if err != nil {
-				log.Debug().Err(err).Msg("Failed to calculate cache size before cleaning")
+			// Build clean options
+			opts := plugin.CleanOptions{
+				OlderThan: duration,
+				DryRun:    dryRun,
 			}
 
-			// Run prune operation
+			// Call service layer
 			fmt.Printf("Cleaning plugin cache: %s\n", cacheDir)
 			fmt.Printf("Removing entries older than: %s\n", duration)
 			if dryRun {
@@ -69,37 +68,13 @@ Use --dry-run to preview what would be deleted without actually deleting.`,
 			}
 			fmt.Println()
 
-			removed, err := cacheManager.Prune(duration)
+			result, err := svc.Clean(cmd.Context(), opts)
 			if err != nil {
-				return fmt.Errorf("clean cache: %w", err)
+				return err
 			}
 
-			if removed == 0 {
-				fmt.Println("No old plugin cache entries found to remove.")
-				return nil
-			}
-
-			// Calculate size after cleaning
-			sizeAfter, err := cacheManager.Size()
-			if err != nil {
-				log.Debug().Err(err).Msg("Failed to calculate cache size after cleaning")
-			}
-
-			freed := sizeBefore - sizeAfter
-
-			fmt.Println()
-			if dryRun {
-				fmt.Printf("Would remove %d cache entries.\n", removed)
-				if freed > 0 {
-					fmt.Printf("Would free approximately %s of disk space.\n", formatBytes(freed))
-				}
-				fmt.Println("\nRun without --dry-run to actually delete these files.")
-			} else {
-				fmt.Printf("Removed %d cache entries.\n", removed)
-				if freed > 0 {
-					fmt.Printf("Freed %s of disk space.\n", formatBytes(freed))
-				}
-			}
+			// Print results
+			printCleanResult(result, dryRun)
 
 			return nil
 		},
@@ -110,4 +85,26 @@ Use --dry-run to preview what would be deleted without actually deleting.`,
 	cmd.Flags().StringVar(&olderThan, "older-than", "720h", "Remove cache entries older than this duration (e.g., 720h for 30 days)")
 
 	return cmd
+}
+
+// printCleanResult formats and prints the clean result
+func printCleanResult(result *plugin.CleanResult, dryRun bool) {
+	if result.RemovedCount == 0 {
+		fmt.Println("No old plugin cache entries found to remove.")
+		return
+	}
+
+	fmt.Println()
+	if dryRun {
+		fmt.Printf("Would remove %d cache entries.\n", result.RemovedCount)
+		if result.Freed > 0 {
+			fmt.Printf("Would free approximately %s of disk space.\n", formatBytes(result.Freed))
+		}
+		fmt.Println("\nRun without --dry-run to actually delete these files.")
+	} else {
+		fmt.Printf("Removed %d cache entries.\n", result.RemovedCount)
+		if result.Freed > 0 {
+			fmt.Printf("Freed %s of disk space.\n", formatBytes(result.Freed))
+		}
+	}
 }

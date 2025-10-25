@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/pentora-ai/pentora/pkg/storage"
 	"github.com/rs/zerolog"
@@ -354,6 +355,8 @@ func (m *mockDownloader) Download(ctx context.Context, id, version string) (*Cac
 // mockCacheManager for testing Install() method
 type mockCacheManager struct {
 	getEntryFunc func(name, version string) (*CacheEntry, error)
+	sizeFunc     func() (int64, error)
+	pruneFunc    func(olderThan time.Duration) (int, error)
 }
 
 func (m *mockCacheManager) GetEntry(name, version string) (*CacheEntry, error) {
@@ -363,12 +366,27 @@ func (m *mockCacheManager) GetEntry(name, version string) (*CacheEntry, error) {
 	return nil, ErrPluginNotInstalled
 }
 
+func (m *mockCacheManager) Size() (int64, error) {
+	if m.sizeFunc != nil {
+		return m.sizeFunc()
+	}
+	return 0, nil
+}
+
+func (m *mockCacheManager) Prune(olderThan time.Duration) (int, error) {
+	if m.pruneFunc != nil {
+		return m.pruneFunc(olderThan)
+	}
+	return 0, nil
+}
+
 // mockManifestManager for testing Install() method
 type mockManifestManager struct {
 	addFunc    func(entry *ManifestEntry) error
 	saveFunc   func() error
 	listFunc   func() ([]*ManifestEntry, error)
 	removeFunc func(id string) error
+	getFunc    func(id string) (*ManifestEntry, error)
 }
 
 func (m *mockManifestManager) Add(entry *ManifestEntry) error {
@@ -397,6 +415,13 @@ func (m *mockManifestManager) Remove(id string) error {
 		return m.removeFunc(id)
 	}
 	return nil
+}
+
+func (m *mockManifestManager) Get(id string) (*ManifestEntry, error) {
+	if m.getFunc != nil {
+		return m.getFunc(id)
+	}
+	return nil, ErrPluginNotFound
 }
 
 func TestService_Install_ByPluginID(t *testing.T) {
@@ -2200,4 +2225,198 @@ func BenchmarkService_Uninstall(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, _ = svc.Uninstall(ctx, "", UninstallOptions{All: true})
 	}
+}
+
+func TestService_Clean(t *testing.T) {
+	t.Run("clean old cache entries successfully", func(t *testing.T) {
+		ctx := context.Background()
+
+		callCount := 0
+		cache := &mockCacheManager{
+			sizeFunc: func() (int64, error) {
+				// First call: before cleaning (1 MB)
+				// Second call: after cleaning (500 KB)
+				callCount++
+				if callCount == 1 {
+					return 1024 * 1024, nil
+				}
+				return 512 * 1024, nil
+			},
+			pruneFunc: func(olderThan time.Duration) (int, error) {
+				require.Equal(t, 720*time.Hour, olderThan)
+				return 5, nil
+			},
+		}
+
+		svc := newTestService(cache, &mockManifestManager{}, &mockDownloader{}, []PluginSource{})
+
+		opts := CleanOptions{
+			OlderThan: 720 * time.Hour,
+			DryRun:    false,
+		}
+
+		result, err := svc.Clean(ctx, opts)
+
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		require.Equal(t, 5, result.RemovedCount)
+		require.Equal(t, int64(1024*1024), result.SizeBefore)
+		require.Equal(t, int64(512*1024), result.SizeAfter)
+		require.Equal(t, int64(512*1024), result.Freed)
+	})
+
+	t.Run("dry run does not remove entries", func(t *testing.T) {
+		ctx := context.Background()
+
+		cache := &mockCacheManager{
+			sizeFunc: func() (int64, error) {
+				return 1024 * 1024, nil
+			},
+			pruneFunc: func(olderThan time.Duration) (int, error) {
+				t.Fatal("Prune should not be called in dry-run mode")
+				return 0, nil
+			},
+		}
+
+		svc := newTestService(cache, &mockManifestManager{}, &mockDownloader{}, []PluginSource{})
+
+		opts := CleanOptions{
+			OlderThan: 24 * time.Hour,
+			DryRun:    true,
+		}
+
+		result, err := svc.Clean(ctx, opts)
+
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		require.Equal(t, 0, result.RemovedCount)
+	})
+
+	t.Run("context cancellation", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel() // Cancel immediately
+
+		svc := newTestService(&mockCacheManager{}, &mockManifestManager{}, &mockDownloader{}, []PluginSource{})
+
+		opts := CleanOptions{
+			OlderThan: 24 * time.Hour,
+		}
+
+		_, err := svc.Clean(ctx, opts)
+
+		require.Error(t, err)
+		require.Equal(t, context.Canceled, err)
+	})
+}
+
+func TestService_Verify(t *testing.T) {
+	t.Run("verify all plugins successfully", func(t *testing.T) {
+		ctx := context.Background()
+
+		manifest := &mockManifestManager{
+			listFunc: func() ([]*ManifestEntry, error) {
+				return []*ManifestEntry{
+					{ID: "plugin-1", Name: "Plugin 1", Version: "1.0.0", Checksum: "sha256:abc123"},
+					{ID: "plugin-2", Name: "Plugin 2", Version: "2.0.0", Checksum: "sha256:def456"},
+				}, nil
+			},
+		}
+
+		cache := &mockCacheManager{
+			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+				return &CacheEntry{
+					ID:      name,
+					Version: version,
+					Path:    "/fake/path/plugin.yaml",
+				}, nil
+			},
+		}
+
+		svc := newTestService(cache, manifest, &mockDownloader{}, []PluginSource{})
+
+		opts := VerifyOptions{}
+
+		result, err := svc.Verify(ctx, opts)
+
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		require.Equal(t, 2, result.TotalCount)
+		// Note: Actual checksum verification will fail in tests without real files
+		// This test verifies the flow works correctly
+	})
+
+	t.Run("verify specific plugin", func(t *testing.T) {
+		ctx := context.Background()
+
+		manifest := &mockManifestManager{
+			getFunc: func(id string) (*ManifestEntry, error) {
+				if id == "plugin-1" {
+					return &ManifestEntry{
+						ID:       "plugin-1",
+						Name:     "Plugin 1",
+						Version:  "1.0.0",
+						Checksum: "sha256:abc123",
+					}, nil
+				}
+				return nil, ErrPluginNotFound
+			},
+		}
+
+		cache := &mockCacheManager{
+			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+				return &CacheEntry{
+					ID:      name,
+					Version: version,
+					Path:    "/fake/path/plugin.yaml",
+				}, nil
+			},
+		}
+
+		svc := newTestService(cache, manifest, &mockDownloader{}, []PluginSource{})
+
+		opts := VerifyOptions{
+			PluginID: "plugin-1",
+		}
+
+		result, err := svc.Verify(ctx, opts)
+
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		require.Equal(t, 1, result.TotalCount)
+	})
+
+	t.Run("plugin not found", func(t *testing.T) {
+		ctx := context.Background()
+
+		manifest := &mockManifestManager{
+			getFunc: func(id string) (*ManifestEntry, error) {
+				return nil, ErrPluginNotFound
+			},
+		}
+
+		svc := newTestService(&mockCacheManager{}, manifest, &mockDownloader{}, []PluginSource{})
+
+		opts := VerifyOptions{
+			PluginID: "non-existent",
+		}
+
+		_, err := svc.Verify(ctx, opts)
+
+		require.Error(t, err)
+		require.Equal(t, ErrPluginNotFound, err)
+	})
+
+	t.Run("context cancellation", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel() // Cancel immediately
+
+		svc := newTestService(&mockCacheManager{}, &mockManifestManager{}, &mockDownloader{}, []PluginSource{})
+
+		opts := VerifyOptions{}
+
+		_, err := svc.Verify(ctx, opts)
+
+		require.Error(t, err)
+		require.Equal(t, context.Canceled, err)
+	})
 }

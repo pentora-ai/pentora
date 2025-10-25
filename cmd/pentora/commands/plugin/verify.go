@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	"github.com/pentora-ai/pentora/pkg/plugin"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -44,78 +43,32 @@ Exit codes:
 				cacheDir = filepath.Join(homeDir, ".pentora", "plugins", "cache")
 			}
 
-			// Create manifest manager
-			manifestPath := filepath.Join(filepath.Dir(cacheDir), "registry.json")
-			manifestMgr, err := plugin.NewManifestManager(manifestPath)
+			// Create service
+			svc, err := plugin.NewService(cacheDir)
 			if err != nil {
-				return fmt.Errorf("create manifest manager: %w", err)
+				return fmt.Errorf("create plugin service: %w", err)
 			}
 
-			// Get plugins to verify
-			var entries []*plugin.ManifestEntry
-			if pluginName != "" {
-				// Verify specific plugin
-				entry, err := manifestMgr.Get(pluginName)
-				if err != nil {
-					return fmt.Errorf("plugin '%s' not found", pluginName)
-				}
-				entries = []*plugin.ManifestEntry{entry}
-			} else {
-				// Verify all plugins
-				allEntries, err := manifestMgr.List()
-				if err != nil {
-					return fmt.Errorf("list plugins: %w", err)
-				}
-				entries = allEntries
-
-				if len(entries) == 0 {
-					fmt.Println("No plugins installed to verify.")
-					return nil
-				}
+			// Build verify options
+			opts := plugin.VerifyOptions{
+				PluginID: pluginName,
 			}
 
-			// Create verifier
-			verifier := plugin.NewVerifier()
-
-			// Verify each plugin
-			fmt.Printf("Verifying %d plugin(s)...\n\n", len(entries))
-
-			failedCount := 0
-			for _, entry := range entries {
-				pluginFile := filepath.Join(cacheDir, entry.ID, entry.Version, "plugin.yaml")
-
-				// Check if file exists
-				if _, err := os.Stat(pluginFile); os.IsNotExist(err) {
-					fmt.Printf("✗ %s@%s - File not found: %s\n", entry.ID, entry.Version, pluginFile)
-					failedCount++
-					continue
-				}
-
-				// Verify checksum
-				valid, err := verifier.VerifyFile(pluginFile, entry.Checksum)
-				if err != nil {
-					fmt.Printf("✗ %s@%s - Verification error: %v\n", entry.ID, entry.Version, err)
-					log.Debug().Err(err).Str("plugin", entry.ID).Msg("Checksum verification failed")
-					failedCount++
-					continue
-				}
-
-				if valid {
-					fmt.Printf("✓ %s@%s - OK\n", entry.ID, entry.Version)
-				} else {
-					fmt.Printf("✗ %s@%s - Checksum mismatch\n", entry.ID, entry.Version)
-					failedCount++
-				}
+			// Call service layer
+			result, err := svc.Verify(cmd.Context(), opts)
+			if err != nil {
+				return err
 			}
 
-			fmt.Println()
-			if failedCount == 0 {
-				fmt.Printf("All %d plugin(s) verified successfully.\n", len(entries))
-				return nil
+			// Print results
+			printVerifyResult(result)
+
+			// Return error if any plugins failed
+			if result.FailedCount > 0 {
+				return fmt.Errorf("verification failed for %d plugin(s)", result.FailedCount)
 			}
 
-			fmt.Printf("%d plugin(s) failed verification.\n", failedCount)
-			return fmt.Errorf("verification failed for %d plugin(s)", failedCount)
+			return nil
 		},
 	}
 
@@ -123,4 +76,40 @@ Exit codes:
 	cmd.Flags().StringVar(&pluginName, "plugin", "", "Verify specific plugin by name")
 
 	return cmd
+}
+
+// printVerifyResult formats and prints the verify result
+func printVerifyResult(result *plugin.VerifyResult) {
+	if result.TotalCount == 0 {
+		fmt.Println("No plugins installed to verify.")
+		return
+	}
+
+	fmt.Printf("Verifying %d plugin(s)...\n\n", result.TotalCount)
+
+	// Print individual results
+	for _, r := range result.Results {
+		if r.Valid {
+			fmt.Printf("✓ %s@%s - OK\n", r.ID, r.Version)
+		} else {
+			switch r.ErrorType {
+			case "missing":
+				fmt.Printf("✗ %s@%s - File not found\n", r.ID, r.Version)
+			case "checksum":
+				fmt.Printf("✗ %s@%s - Checksum mismatch\n", r.ID, r.Version)
+			case "error":
+				fmt.Printf("✗ %s@%s - Verification error: %v\n", r.ID, r.Version, r.Error)
+			default:
+				fmt.Printf("✗ %s@%s - Failed\n", r.ID, r.Version)
+			}
+		}
+	}
+
+	// Print summary
+	fmt.Println()
+	if result.FailedCount == 0 {
+		fmt.Printf("All %d plugin(s) verified successfully.\n", result.TotalCount)
+	} else {
+		fmt.Printf("%d plugin(s) failed verification.\n", result.FailedCount)
+	}
 }
