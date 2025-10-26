@@ -407,7 +407,7 @@ func startTestServer(t *testing.T, ctx context.Context, port int, pluginService 
 	ws := &mockWorkspace{}
 
 	// Build dependencies
-	logger := zerolog.New(os.Stderr).Level(zerolog.ErrorLevel) // Suppress logs in tests
+	logger := zerolog.Nop()
 	deps := &app.Deps{
 		Storage:       storageBackend,
 		Workspace:     ws,
@@ -464,6 +464,18 @@ func waitForServer(t *testing.T, readyzURL string, timeout time.Duration) {
 	t.Fatal("Server did not become ready within timeout")
 }
 
+// Shared HTTP client with connection pooling for all test requests.
+// Reusing the same client improves performance and prevents connection exhaustion
+// in CI environments where multiple sequential requests are made.
+var testHTTPClient = &http.Client{
+	Timeout: 20 * time.Second, // Increased to 20s for slow CI environments
+	Transport: &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 10,
+		IdleConnTimeout:     30 * time.Second,
+	},
+}
+
 // makeRequest makes an HTTP request and returns the response.
 func makeRequest(t *testing.T, method, url string, body *bytes.Reader) *http.Response {
 	t.Helper()
@@ -482,9 +494,8 @@ func makeRequest(t *testing.T, method, url string, body *bytes.Reader) *http.Res
 		req.Header.Set("Content-Type", "application/json")
 	}
 
-	// Increased timeout for plugin update operations (can take >5s for 19 plugins)
-	client := &http.Client{Timeout: 15 * time.Second}
-	resp, err := client.Do(req)
+	// Use shared client with connection pooling
+	resp, err := testHTTPClient.Do(req)
 	require.NoError(t, err)
 
 	return resp
