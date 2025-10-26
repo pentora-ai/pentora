@@ -35,11 +35,10 @@ func TestNew(t *testing.T) {
 		WriteTimeout: 30 * time.Second,
 	}
 
-	logger := zerolog.Nop()
 	deps := &Deps{
 		Workspace: &mockWorkspace{},
 		Config:    nil, // Not needed for this test
-		Logger:    &logger,
+		Logger:    zerolog.Nop(),
 	}
 
 	app, err := New(context.Background(), cfg, deps)
@@ -61,11 +60,10 @@ func TestNew_DisabledComponents(t *testing.T) {
 		WriteTimeout: 30 * time.Second,
 	}
 
-	logger := zerolog.Nop()
 	deps := &Deps{
 		Workspace: &mockWorkspace{},
 		Config:    nil, // Not needed for this test
-		Logger:    &logger,
+		Logger:    zerolog.Nop(),
 	}
 
 	app, err := New(context.Background(), cfg, deps)
@@ -87,11 +85,10 @@ func TestApp_Lifecycle(t *testing.T) {
 		WriteTimeout: 30 * time.Second,
 	}
 
-	logger := zerolog.Nop()
 	deps := &Deps{
 		Workspace: &mockWorkspace{},
 		Config:    nil, // Not needed for this test
-		Logger:    &logger,
+		Logger:    zerolog.Nop(),
 	}
 
 	app, err := New(context.Background(), cfg, deps)
@@ -147,11 +144,10 @@ func TestApp_LifecycleWithoutJobs(t *testing.T) {
 		WriteTimeout: 30 * time.Second,
 	}
 
-	logger := zerolog.Nop()
 	deps := &Deps{
 		Workspace: &mockWorkspace{},
 		Config:    nil, // Not needed for this test
-		Logger:    &logger,
+		Logger:    zerolog.Nop(),
 	}
 
 	app, err := New(context.Background(), cfg, deps)

@@ -26,6 +26,6 @@ type Deps struct {
 	// Config manager for runtime configuration
 	Config *config.Manager
 
-	// Logger for structured logging
-	Logger *zerolog.Logger
+	// Logger for structured logging (injected by caller)
+	Logger zerolog.Logger
 }

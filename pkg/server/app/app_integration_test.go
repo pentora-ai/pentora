@@ -112,11 +112,10 @@ func TestServerFullLifecycle(t *testing.T) {
 	}
 
 	// Prepare dependencies
-	logger := zerolog.Nop()
 	deps := &app.Deps{
 		Workspace: newMockWorkspace(),
 		Config:    nil, // Not needed for this test
-		Logger:    &logger,
+		Logger:    zerolog.Nop(),
 	}
 
 	// Create server app
@@ -304,10 +303,9 @@ func TestServerWithoutUI(t *testing.T) {
 		},
 	}
 
-	logger := zerolog.Nop()
 	deps := &app.Deps{
 		Workspace: newMockWorkspace(),
-		Logger:    &logger,
+		Logger:    zerolog.Nop(),
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -359,10 +357,9 @@ func TestServerWithoutAPI(t *testing.T) {
 		},
 	}
 
-	logger := zerolog.Nop()
 	deps := &app.Deps{
 		Workspace: newMockWorkspace(),
-		Logger:    &logger,
+		Logger:    zerolog.Nop(),
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

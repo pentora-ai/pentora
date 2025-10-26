@@ -11,7 +11,6 @@ import (
 	"github.com/pentora-ai/pentora/pkg/server/api"
 	"github.com/pentora-ai/pentora/pkg/server/httpx"
 	"github.com/pentora-ai/pentora/pkg/server/jobs"
-	"github.com/rs/zerolog/log"
 )
 
 // App orchestrates the server runtime components:
@@ -28,15 +27,11 @@ type App struct {
 
 // New creates and configures a new server application.
 func New(ctx context.Context, cfg config.ServerConfig, deps *Deps) (*App, error) {
-	log.Info().
-		Str("component", "app").
-		Msg("Initializing server application")
+	deps.Logger.Info().Msg("Initializing server application")
 
 	// Initialize storage backend if provided
 	if deps.Storage != nil {
-		log.Info().
-			Str("component", "app").
-			Msg("Initializing storage backend")
+		deps.Logger.Info().Msg("Initializing storage backend")
 		if err := deps.Storage.Initialize(ctx); err != nil {
 			return nil, fmt.Errorf("failed to initialize storage: %w", err)
 		}
@@ -55,20 +50,14 @@ func New(ctx context.Context, cfg config.ServerConfig, deps *Deps) (*App, error)
 	router := httpx.NewRouter(cfg, apiDeps)
 
 	if cfg.APIEnabled {
-		log.Info().
-			Str("component", "app").
-			Msg("API endpoints enabled")
+		deps.Logger.Info().Msg("API endpoints enabled")
 	} else {
-		log.Warn().
-			Str("component", "app").
-			Msg("API endpoints disabled")
+		deps.Logger.Warn().Msg("API endpoints disabled")
 	}
 
 	// UI handler is already mounted in router.NewRouter()
 	if !cfg.UIEnabled {
-		log.Warn().
-			Str("component", "app").
-			Msg("UI serving disabled")
+		deps.Logger.Warn().Msg("UI serving disabled")
 	}
 
 	// Create HTTP server with middleware
@@ -96,8 +85,7 @@ func New(ctx context.Context, cfg config.ServerConfig, deps *Deps) (*App, error)
 
 // Run starts the server and blocks until shutdown.
 func (a *App) Run(ctx context.Context) error {
-	log.Info().
-		Str("component", "app").
+	a.Deps.Logger.Info().
 		Str("addr", a.HTTP.Addr).
 		Bool("api", a.Config.APIEnabled).
 		Bool("ui", a.Config.UIEnabled).
@@ -121,21 +109,14 @@ func (a *App) Run(ctx context.Context) error {
 
 	// Mark as ready
 	a.Ready.Store(true)
-	log.Info().
-		Str("component", "app").
-		Msg("Server is ready and accepting connections")
+	a.Deps.Logger.Info().Msg("Server is ready and accepting connections")
 
 	// Wait for shutdown signal or server error
 	select {
 	case <-ctx.Done():
-		log.Info().
-			Str("component", "app").
-			Msg("Shutdown signal received")
+		a.Deps.Logger.Info().Msg("Shutdown signal received")
 	case err := <-serverErr:
-		log.Error().
-			Str("component", "app").
-			Err(err).
-			Msg("Server error")
+		a.Deps.Logger.Error().Err(err).Msg("Server error")
 		return err
 	}
 
@@ -145,9 +126,7 @@ func (a *App) Run(ctx context.Context) error {
 
 // shutdown performs graceful shutdown of all components.
 func (a *App) shutdown() error {
-	log.Info().
-		Str("component", "app").
-		Msg("Initiating graceful shutdown")
+	a.Deps.Logger.Info().Msg("Initiating graceful shutdown")
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -156,56 +135,33 @@ func (a *App) shutdown() error {
 	a.Ready.Store(false)
 
 	// Shutdown HTTP server
-	log.Info().
-		Str("component", "app").
-		Msg("Shutting down HTTP server...")
+	a.Deps.Logger.Info().Msg("Shutting down HTTP server...")
 	if err := a.HTTP.Shutdown(shutdownCtx); err != nil {
-		log.Error().
-			Str("component", "app").
-			Err(err).
-			Msg("HTTP server shutdown failed")
+		a.Deps.Logger.Error().Err(err).Msg("HTTP server shutdown failed")
 		return err
 	}
-	log.Info().
-		Str("component", "app").
-		Msg("HTTP server stopped")
+	a.Deps.Logger.Info().Msg("HTTP server stopped")
 
 	// Stop background jobs
 	if a.Config.JobsEnabled && a.Jobs != nil {
-		log.Info().
-			Str("component", "app").
-			Msg("Stopping background jobs...")
+		a.Deps.Logger.Info().Msg("Stopping background jobs...")
 		if err := a.Jobs.Stop(shutdownCtx); err != nil {
-			log.Error().
-				Str("component", "app").
-				Err(err).
-				Msg("Jobs shutdown failed")
+			a.Deps.Logger.Error().Err(err).Msg("Jobs shutdown failed")
 			return err
 		}
-		log.Info().
-			Str("component", "app").
-			Msg("Background jobs stopped")
+		a.Deps.Logger.Info().Msg("Background jobs stopped")
 	}
 
 	// Close storage backend
 	if a.Deps.Storage != nil {
-		log.Info().
-			Str("component", "app").
-			Msg("Closing storage backend...")
+		a.Deps.Logger.Info().Msg("Closing storage backend...")
 		if err := a.Deps.Storage.Close(); err != nil {
-			log.Error().
-				Str("component", "app").
-				Err(err).
-				Msg("Storage close failed")
+			a.Deps.Logger.Error().Err(err).Msg("Storage close failed")
 			return err
 		}
-		log.Info().
-			Str("component", "app").
-			Msg("Storage backend closed")
+		a.Deps.Logger.Info().Msg("Storage backend closed")
 	}
 
-	log.Info().
-		Str("component", "app").
-		Msg("Server shutdown complete")
+	a.Deps.Logger.Info().Msg("Server shutdown complete")
 	return nil
 }

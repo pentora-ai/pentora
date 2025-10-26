@@ -9,11 +9,12 @@ import (
 
 	"github.com/pentora-ai/pentora/pkg/appctx"
 	"github.com/pentora-ai/pentora/pkg/config"
+	"github.com/pentora-ai/pentora/pkg/logging"
 	"github.com/pentora-ai/pentora/pkg/plugin"
 	"github.com/pentora-ai/pentora/pkg/server/api"
 	"github.com/pentora-ai/pentora/pkg/server/app"
 	"github.com/pentora-ai/pentora/pkg/storage"
-	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 )
 
@@ -128,13 +129,16 @@ shutdown to drain in-flight requests and complete running jobs.`,
 				return fmt.Errorf("create plugin service: %w", err)
 			}
 
+			// Create logger for server
+			logger := logging.NewLogger("server", zerolog.InfoLevel)
+
 			// Build dependencies
 			deps := &app.Deps{
 				Storage:       storageBackend,
 				Workspace:     ws,
 				PluginService: pluginService,
 				Config:        cfgMgr,
-				Logger:        &log.Logger,
+				Logger:        logger,
 			}
 
 			// Create server app

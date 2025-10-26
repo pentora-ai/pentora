@@ -2,121 +2,79 @@ package logging
 
 import (
 	"bytes"
-	stdLog "log"
 	"testing"
 
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestSetAndGetLogWriter(t *testing.T) {
-	var buf bytes.Buffer
-	SetLogWriter(&buf)
-	assert.Equal(t, &buf, getLogWriter())
+func TestNewLogger(t *testing.T) {
+	logger := NewLogger("test-component", zerolog.InfoLevel)
+
+	// Logger should be configured with component field
+	require.NotNil(t, logger)
 }
 
-func TestConfigureGlobalLogging(t *testing.T) {
+func TestNewLoggerWithWriter(t *testing.T) {
 	var buf bytes.Buffer
-	SetLogWriter(&buf)
-	err := ConfigureGlobalLogging(zerolog.DebugLevel)
-	assert.NoError(t, err)
-	log.Debug().Msg("test debug message")
+	logger := NewLoggerWithWriter("test", zerolog.DebugLevel, &buf)
+
+	logger.Debug().Msg("test debug message")
 	assert.Contains(t, buf.String(), "test debug message")
+	assert.Contains(t, buf.String(), `"component":"test"`)
+	assert.Contains(t, buf.String(), `"level":"debug"`)
 }
 
-func TestStdLogWriterIntegration(t *testing.T) {
+func TestNewLoggerLevel(t *testing.T) {
 	var buf bytes.Buffer
-	logger := zerolog.New(&buf).Level(zerolog.DebugLevel)
-	writer := &stdLogWriter{logger: logger}
+	logger := NewLoggerWithWriter("test", zerolog.InfoLevel, &buf)
 
-	// Simulate stdlog output
-	stdLogMsg := "2025/05/23 14:40:15 version.go:35: Pentora version: dev\n"
-	n, err := writer.Write([]byte(stdLogMsg))
-	assert.Equal(t, len(stdLogMsg), n)
-	assert.NoError(t, err)
-	assert.Contains(t, buf.String(), "Pentora version: dev")
-	assert.Contains(t, buf.String(), "version.go:35")
+	// Debug should not appear (below info level)
+	logger.Debug().Msg("debug message")
+	assert.NotContains(t, buf.String(), "debug message")
+
+	// Info should appear
+	logger.Info().Msg("info message")
+	assert.Contains(t, buf.String(), "info message")
+
+	// Warn should appear
+	logger.Warn().Msg("warn message")
+	assert.Contains(t, buf.String(), "warn message")
 }
 
-func TestStdLogWriterFallback(t *testing.T) {
+func TestConfigureGlobal(t *testing.T) {
+	// This test verifies ConfigureGlobal sets up global logger
+	// Note: This modifies global state, so it's isolated
+	ConfigureGlobal(zerolog.DebugLevel)
+
+	// Global level should be set
+	assert.Equal(t, zerolog.DebugLevel, zerolog.GlobalLevel())
+}
+
+func TestNewLoggerComponentField(t *testing.T) {
 	var buf bytes.Buffer
-	logger := zerolog.New(&buf).Level(zerolog.DebugLevel)
-	writer := &stdLogWriter{logger: logger}
+	logger := NewLoggerWithWriter("my-component", zerolog.InfoLevel, &buf)
 
-	// Malformed stdlog output
-	msg := "not a stdlog format\n"
-	n, err := writer.Write([]byte(msg))
-	assert.Equal(t, len(msg), n)
-	assert.NoError(t, err)
-	assert.Contains(t, buf.String(), "not a stdlog format")
+	logger.Info().Msg("test message")
+	output := buf.String()
+
+	assert.Contains(t, output, `"component":"my-component"`)
+	assert.Contains(t, output, "test message")
 }
 
-func TestLevelOverrideHook(t *testing.T) {
-	var buf bytes.Buffer
-	logger := zerolog.New(&buf).Level(zerolog.InfoLevel)
-	hook := NewLevelOverrideHook(zerolog.InfoLevel, zerolog.WarnLevel)
-	logger = logger.Hook(hook)
-
-	logger.WithLevel(zerolog.NoLevel).Msg("no level event")
-	logger.Info().Msg("info event")
-	logger.Debug().Msg("debug event") // should not appear
-
-	out := buf.String()
-	assert.Contains(t, out, "no level event")
-	assert.Contains(t, out, "info event")
-	assert.NotContains(t, out, "debug event")
-}
-
-func TestWithLevelOverride(t *testing.T) {
-	var buf bytes.Buffer
-	logger := zerolog.New(&buf).Level(zerolog.InfoLevel)
-	logger = WithLevelOverride(logger, zerolog.WarnLevel)
-	logger.WithLevel(zerolog.NoLevel).Msg("should be warn level")
-	assert.Contains(t, buf.String(), "should be warn level")
-}
-
-func TestLazyMessage(t *testing.T) {
-	msgFunc := LazyMessage("foo", 123, "bar")
-	assert.Equal(t, "foo123bar", msgFunc())
-}
-
-func TestConfigureGlobalLoggingStdLogRedirect(t *testing.T) {
-	var buf bytes.Buffer
-	SetLogWriter(&buf)
-	_ = ConfigureGlobalLogging(zerolog.DebugLevel)
-
-	stdLog.Print("2025/05/23 14:40:15 version.go:35: redirected stdlog message")
-	assert.Contains(t, buf.String(), "redirected stdlog message")
-}
-
-func TestSetLogWriterConcurrency(t *testing.T) {
-	// This is a basic concurrency test for SetLogWriter/getLogWriter
+func TestNewLoggerMultipleInstances(t *testing.T) {
 	var buf1, buf2 bytes.Buffer
-	SetLogWriter(&buf1)
-	assert.Equal(t, &buf1, getLogWriter())
-	SetLogWriter(&buf2)
-	assert.Equal(t, &buf2, getLogWriter())
-}
 
-func TestStdLogWriterWriteHandlesTrailingNewline(t *testing.T) {
-	var buf bytes.Buffer
-	logger := zerolog.New(&buf).Level(zerolog.DebugLevel)
-	writer := &stdLogWriter{logger: logger}
+	logger1 := NewLoggerWithWriter("component-1", zerolog.InfoLevel, &buf1)
+	logger2 := NewLoggerWithWriter("component-2", zerolog.WarnLevel, &buf2)
 
-	msg := "2025/05/23 14:40:15 version.go:35: message with newline\n"
-	_, err := writer.Write([]byte(msg))
-	assert.NoError(t, err)
-	assert.Contains(t, buf.String(), "message with newline")
-}
+	logger1.Info().Msg("from logger 1")
+	logger2.Warn().Msg("from logger 2")
 
-func TestStdLogWriterWriteHandlesNoTrailingNewline(t *testing.T) {
-	var buf bytes.Buffer
-	logger := zerolog.New(&buf).Level(zerolog.DebugLevel)
-	writer := &stdLogWriter{logger: logger}
+	assert.Contains(t, buf1.String(), `"component":"component-1"`)
+	assert.Contains(t, buf1.String(), "from logger 1")
 
-	msg := "2025/05/23 14:40:15 version.go:35: message without newline"
-	_, err := writer.Write([]byte(msg))
-	assert.NoError(t, err)
-	assert.Contains(t, buf.String(), "message without newline")
+	assert.Contains(t, buf2.String(), `"component":"component-2"`)
+	assert.Contains(t, buf2.String(), "from logger 2")
 }
