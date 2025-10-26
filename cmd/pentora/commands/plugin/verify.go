@@ -4,16 +4,14 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
 	"github.com/pentora-ai/pentora/pkg/plugin"
 	"github.com/pentora-ai/pentora/pkg/storage"
 	"github.com/spf13/cobra"
 )
 
 func newVerifyCommand() *cobra.Command {
-	var (
-		cacheDir   string
-		pluginName string
-	)
+	var cacheDir string
 
 	cmd := &cobra.Command{
 		Use:   "verify",
@@ -49,9 +47,10 @@ Exit codes:
 				return fmt.Errorf("create plugin service: %w", err)
 			}
 
-			// Build verify options
-			opts := plugin.VerifyOptions{
-				PluginID: pluginName,
+			// Bind flags to options (centralized binding)
+			opts, err := bind.BindVerifyOptions(cmd)
+			if err != nil {
+				return err
 			}
 
 			// Call service layer
@@ -73,7 +72,7 @@ Exit codes:
 	}
 
 	cmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Plugin cache directory (default: platform-specific, see storage config)")
-	cmd.Flags().StringVar(&pluginName, "plugin", "", "Verify specific plugin by name")
+	cmd.Flags().String("plugin", "", "Verify specific plugin by name")
 
 	return cmd
 }

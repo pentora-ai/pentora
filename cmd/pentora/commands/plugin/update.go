@@ -8,6 +8,7 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
 	"github.com/pentora-ai/pentora/pkg/plugin"
 	"github.com/pentora-ai/pentora/pkg/storage"
 	"github.com/rs/zerolog/log"
@@ -15,13 +16,7 @@ import (
 )
 
 func newUpdateCommand() *cobra.Command {
-	var (
-		cacheDir        string
-		source          string
-		category        string
-		dryRun          bool
-		forceRedownload bool
-	)
+	var cacheDir string
 
 	cmd := &cobra.Command{
 		Use:   "update",
@@ -63,18 +58,10 @@ new or updated plugins to the local cache. By default, it downloads all core plu
 				return fmt.Errorf("create plugin service: %w", err)
 			}
 
-			// Build update options
-			opts := plugin.UpdateOptions{
-				Force:  forceRedownload,
-				DryRun: dryRun,
-			}
-
-			if source != "" {
-				opts.Source = source
-			}
-
-			if category != "" {
-				opts.Category = plugin.Category(category)
+			// Bind flags to options (centralized binding)
+			opts, err := bind.BindUpdateOptions(cmd)
+			if err != nil {
+				return err
 			}
 
 			// Call service layer
@@ -84,17 +71,17 @@ new or updated plugins to the local cache. By default, it downloads all core plu
 			}
 
 			// Print results
-			printUpdateResult(result, dryRun)
+			printUpdateResult(result, opts.DryRun)
 
 			return nil
 		},
 	}
 
 	cmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Plugin cache directory (default: platform-specific, see storage config)")
-	cmd.Flags().StringVar(&source, "source", "", "Download from specific source (e.g., 'official')")
-	cmd.Flags().StringVar(&category, "category", "", "Download only plugins from category (ssh, http, tls, database, network)")
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be downloaded without downloading")
-	cmd.Flags().BoolVar(&forceRedownload, "force", false, "Force re-download even if already cached")
+	cmd.Flags().String("source", "", "Download from specific source (e.g., 'official')")
+	cmd.Flags().String("category", "", "Download only plugins from category (ssh, http, tls, database, network)")
+	cmd.Flags().Bool("dry-run", false, "Show what would be downloaded without downloading")
+	cmd.Flags().Bool("force", false, "Force re-download even if already cached")
 
 	return cmd
 }

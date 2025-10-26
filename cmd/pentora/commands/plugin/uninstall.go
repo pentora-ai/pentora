@@ -5,17 +5,14 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
 	"github.com/pentora-ai/pentora/pkg/plugin"
 	"github.com/pentora-ai/pentora/pkg/storage"
 	"github.com/spf13/cobra"
 )
 
 func newUninstallCommand() *cobra.Command {
-	var (
-		cacheDir string
-		all      bool
-		category string
-	)
+	var cacheDir string
 
 	cmd := &cobra.Command{
 		Use:     "uninstall <plugin-name>",
@@ -55,13 +52,10 @@ all plugins in a category, or all plugins at once.`,
 				return fmt.Errorf("create plugin service: %w", err)
 			}
 
-			// Build uninstall options
-			opts := plugin.UninstallOptions{
-				All: all,
-			}
-
-			if category != "" {
-				opts.Category = plugin.Category(category)
+			// Bind flags to options (centralized binding)
+			opts, err := bind.BindUninstallOptions(cmd)
+			if err != nil {
+				return err
 			}
 
 			// Determine target plugin name (if specific plugin)
@@ -84,8 +78,8 @@ all plugins in a category, or all plugins at once.`,
 	}
 
 	cmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Plugin cache directory (default: platform-specific, see storage config)")
-	cmd.Flags().BoolVar(&all, "all", false, "Uninstall all plugins")
-	cmd.Flags().StringVar(&category, "category", "", "Uninstall all plugins from category (ssh, http, tls, database, network)")
+	cmd.Flags().Bool("all", false, "Uninstall all plugins")
+	cmd.Flags().String("category", "", "Uninstall all plugins from category (ssh, http, tls, database, network)")
 
 	return cmd
 }

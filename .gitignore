@@ -5,7 +5,6 @@ go.work*
 *.out
 
 
-internal
 /dist
 .gocache
 public.pem

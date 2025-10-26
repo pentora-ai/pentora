@@ -8,6 +8,7 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
 	"github.com/pentora-ai/pentora/pkg/plugin"
 	"github.com/pentora-ai/pentora/pkg/storage"
 	"github.com/rs/zerolog/log"
@@ -15,11 +16,7 @@ import (
 )
 
 func newInstallCommand() *cobra.Command {
-	var (
-		cacheDir string
-		source   string
-		force    bool
-	)
+	var cacheDir string
 
 	cmd := &cobra.Command{
 		Use:   "install <category|plugin-name>",
@@ -63,13 +60,10 @@ You can install entire categories (ssh, http, tls, database, network) or specifi
 				return fmt.Errorf("create plugin service: %w", err)
 			}
 
-			// Build install options
-			opts := plugin.InstallOptions{
-				Force: force,
-			}
-
-			if source != "" {
-				opts.Source = source
+			// Bind flags to options (centralized binding)
+			opts, err := bind.BindInstallOptions(cmd)
+			if err != nil {
+				return err
 			}
 
 			// Call service layer
@@ -86,8 +80,8 @@ You can install entire categories (ssh, http, tls, database, network) or specifi
 	}
 
 	cmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Plugin cache directory (default: platform-specific, see storage config)")
-	cmd.Flags().StringVar(&source, "source", "", "Install from specific source (e.g., 'official')")
-	cmd.Flags().BoolVar(&force, "force", false, "Force re-install even if already cached")
+	cmd.Flags().String("source", "", "Install from specific source (e.g., 'official')")
+	cmd.Flags().Bool("force", false, "Force re-install even if already cached")
 
 	return cmd
 }

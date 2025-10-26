@@ -3,19 +3,15 @@ package plugin
 import (
 	"fmt"
 	"path/filepath"
-	"time"
 
+	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
 	"github.com/pentora-ai/pentora/pkg/plugin"
 	"github.com/pentora-ai/pentora/pkg/storage"
 	"github.com/spf13/cobra"
 )
 
 func newCleanCommand() *cobra.Command {
-	var (
-		cacheDir  string
-		dryRun    bool
-		olderThan string
-	)
+	var cacheDir string
 
 	cmd := &cobra.Command{
 		Use:   "clean",
@@ -42,28 +38,22 @@ Use --dry-run to preview what would be deleted without actually deleting.`,
 				cacheDir = filepath.Join(storageConfig.WorkspaceRoot, "plugins", "cache")
 			}
 
-			// Parse duration
-			duration, err := time.ParseDuration(olderThan)
-			if err != nil {
-				return fmt.Errorf("invalid duration '%s': %w (use format like '720h' for 30 days)", olderThan, err)
-			}
-
 			// Create service
 			svc, err := plugin.NewService(cacheDir)
 			if err != nil {
 				return fmt.Errorf("create plugin service: %w", err)
 			}
 
-			// Build clean options
-			opts := plugin.CleanOptions{
-				OlderThan: duration,
-				DryRun:    dryRun,
+			// Bind flags to options (centralized binding)
+			opts, err := bind.BindCleanOptions(cmd)
+			if err != nil {
+				return err
 			}
 
 			// Call service layer
 			fmt.Printf("Cleaning plugin cache: %s\n", cacheDir)
-			fmt.Printf("Removing entries older than: %s\n", duration)
-			if dryRun {
+			fmt.Printf("Removing entries older than: %s\n", opts.OlderThan)
+			if opts.DryRun {
 				fmt.Println("(Dry run - no files will be deleted)")
 			}
 			fmt.Println()
@@ -74,15 +64,15 @@ Use --dry-run to preview what would be deleted without actually deleting.`,
 			}
 
 			// Print results
-			printCleanResult(result, dryRun)
+			printCleanResult(result, opts.DryRun)
 
 			return nil
 		},
 	}
 
 	cmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Plugin cache directory (default: platform-specific, see storage config)")
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Preview what would be deleted without actually deleting")
-	cmd.Flags().StringVar(&olderThan, "older-than", "720h", "Remove cache entries older than this duration (e.g., 720h for 30 days)")
+	cmd.Flags().Bool("dry-run", false, "Preview what would be deleted without actually deleting")
+	cmd.Flags().String("older-than", "720h", "Remove cache entries older than this duration (e.g., 720h for 30 days)")
 
 	return cmd
 }
