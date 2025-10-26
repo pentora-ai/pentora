@@ -900,8 +900,9 @@ func TestService_Install_PartialFailures(t *testing.T) {
 		// Install category with partial failure
 		result, err := svc.Install(ctx, "ssh", InstallOptions{})
 
-		// Verify partial success
-		require.NoError(t, err, "should not return error on partial failure")
+		// Verify partial failure is returned
+		require.Error(t, err, "should return ErrPartialFailure on partial failure")
+		require.ErrorIs(t, err, ErrPartialFailure)
 		require.NotNil(t, result)
 		require.Equal(t, 1, result.InstalledCount, "one plugin should succeed")
 		require.Equal(t, 1, result.FailedCount, "one plugin should fail")
@@ -1387,7 +1388,8 @@ func TestService_Update_PartialFailures(t *testing.T) {
 
 		result, err := svc.Update(ctx, UpdateOptions{})
 
-		require.NoError(t, err, "should not error on partial failure")
+		require.Error(t, err, "should return ErrPartialFailure on partial failure")
+		require.ErrorIs(t, err, ErrPartialFailure)
 		require.NotNil(t, result)
 		require.Equal(t, 1, result.UpdatedCount)
 		require.Equal(t, 1, result.FailedCount)
@@ -1690,7 +1692,8 @@ func TestService_Uninstall_PartialFailures(t *testing.T) {
 
 		result, err := svc.Uninstall(ctx, "", UninstallOptions{Category: CategorySSH})
 
-		require.NoError(t, err, "should not error on partial failure")
+		require.Error(t, err, "should return ErrPartialFailure on partial failure")
+		require.ErrorIs(t, err, ErrPartialFailure)
 		require.NotNil(t, result)
 		require.Equal(t, 1, result.RemovedCount)
 		require.Equal(t, 1, result.FailedCount)
@@ -2412,5 +2415,315 @@ func TestService_Verify(t *testing.T) {
 
 		require.Error(t, err)
 		require.Equal(t, context.Canceled, err)
+	})
+}
+
+// TestPartialFailureSemantics verifies that service methods return ErrPartialFailure
+// when bulk operations have both successes and failures.
+func TestPartialFailureSemantics(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("Install returns ErrPartialFailure when installing category with multiple plugins and some fail", func(t *testing.T) {
+		// This test simulates installing a category containing multiple plugins where some downloads fail
+
+		downloader := &mockDownloader{
+			fetchManifestFunc: func(ctx context.Context, src PluginSource) (*PluginManifest, error) {
+				return &PluginManifest{
+					Version: "1.0.0",
+					Plugins: []PluginManifestEntry{
+						{
+							ID:          "ssh-plugin-1",
+							Name:        "SSH Plugin 1",
+							Version:     "1.0.0",
+							Author:      "test",
+							Categories:  []Category{CategorySSH},
+							URL:         "https://example.com/ssh1.tar.gz",
+							Checksum:    "sha256:abc123",
+							Size:        1024,
+							Description: "Test SSH plugin 1",
+						},
+						{
+							ID:          "ssh-plugin-2",
+							Name:        "SSH Plugin 2",
+							Version:     "1.0.0",
+							Author:      "test",
+							Categories:  []Category{CategorySSH},
+							URL:         "https://example.com/ssh2.tar.gz",
+							Checksum:    "sha256:def456",
+							Size:        1024,
+							Description: "Test SSH plugin 2",
+						},
+					},
+				}, nil
+			},
+			downloadFunc: func(ctx context.Context, id, version string) (*CacheEntry, error) {
+				// Simulate download failure for ssh-plugin-2
+				if id == "ssh-plugin-2" {
+					return nil, fmt.Errorf("download failed for ssh-plugin-2")
+				}
+				return &CacheEntry{ID: id, Name: id, Version: version}, nil
+			},
+		}
+
+		cacheManager := &mockCacheManager{
+			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+				return nil, ErrPluginNotInstalled
+			},
+		}
+
+		manifestManager := &mockManifestManager{}
+
+		svc := newTestService(cacheManager, manifestManager, downloader, []PluginSource{
+			{Name: "official", URL: "https://example.com/manifest.yaml", Enabled: true},
+		})
+
+		// Install all SSH category plugins (should install 1, fail 1)
+		result, err := svc.Install(ctx, "ssh", InstallOptions{})
+
+		// Should return ErrPartialFailure
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrPartialFailure)
+
+		// Result should show partial success
+		require.NotNil(t, result)
+		require.Equal(t, 1, result.InstalledCount)
+		require.Equal(t, 1, result.FailedCount)
+		require.Len(t, result.Errors, 1)
+	})
+
+	t.Run("Install returns nil error when all plugins succeed", func(t *testing.T) {
+		downloader := &mockDownloader{
+			fetchManifestFunc: func(ctx context.Context, src PluginSource) (*PluginManifest, error) {
+				return &PluginManifest{
+					Version: "1.0.0",
+					Plugins: []PluginManifestEntry{
+						{
+							ID:         "test-plugin",
+							Name:       "Test Plugin",
+							Version:    "1.0.0",
+							Author:     "test",
+							Categories: []Category{CategorySSH},
+							URL:        "https://example.com/plugin.tar.gz",
+							Checksum:   "sha256:abc123",
+							Size:       1024,
+						},
+					},
+				}, nil
+			},
+			downloadFunc: func(ctx context.Context, id, version string) (*CacheEntry, error) {
+				return &CacheEntry{ID: id, Name: id, Version: version}, nil
+			},
+		}
+
+		cacheManager := &mockCacheManager{
+			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+				return nil, ErrPluginNotInstalled
+			},
+		}
+
+		manifestManager := &mockManifestManager{}
+
+		svc := newTestService(cacheManager, manifestManager, downloader, []PluginSource{
+			{Name: "official", URL: "https://example.com/manifest.yaml", Enabled: true},
+		})
+
+		result, err := svc.Install(ctx, "ssh", InstallOptions{})
+
+		// Should return nil error when all succeed
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		require.Equal(t, 1, result.InstalledCount)
+		require.Equal(t, 0, result.FailedCount)
+		require.Empty(t, result.Errors)
+	})
+
+	t.Run("Update returns ErrPartialFailure when some plugins fail to download", func(t *testing.T) {
+		downloader := &mockDownloader{
+			fetchManifestFunc: func(ctx context.Context, src PluginSource) (*PluginManifest, error) {
+				return &PluginManifest{
+					Version: "1.0.0",
+					Plugins: []PluginManifestEntry{
+						{
+							ID:         "ssh-plugin-1",
+							Name:       "SSH Plugin 1",
+							Version:    "2.0.0",
+							Author:     "test",
+							Categories: []Category{CategorySSH},
+							URL:        "https://example.com/ssh1.tar.gz",
+							Checksum:   "sha256:abc123",
+							Size:       1024,
+						},
+						{
+							ID:         "ssh-plugin-2",
+							Name:       "SSH Plugin 2",
+							Version:    "2.0.0",
+							Author:     "test",
+							Categories: []Category{CategorySSH},
+							URL:        "https://example.com/ssh2.tar.gz",
+							Checksum:   "sha256:def456",
+							Size:       1024,
+						},
+					},
+				}, nil
+			},
+			downloadFunc: func(ctx context.Context, id, version string) (*CacheEntry, error) {
+				// Simulate download failure for ssh-plugin-2
+				if id == "ssh-plugin-2" {
+					return nil, fmt.Errorf("download failed for ssh-plugin-2")
+				}
+				return &CacheEntry{ID: id, Name: id, Version: version}, nil
+			},
+		}
+
+		cacheManager := &mockCacheManager{
+			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+				// Return not found so Update attempts to download
+				return nil, ErrPluginNotInstalled
+			},
+		}
+
+		manifestManager := &mockManifestManager{
+			listFunc: func() ([]*ManifestEntry, error) {
+				return []*ManifestEntry{
+					{ID: "ssh-plugin-1", Name: "SSH Plugin 1", Version: "1.0.0", InstalledAt: time.Now().Add(-24 * time.Hour)},
+					{ID: "ssh-plugin-2", Name: "SSH Plugin 2", Version: "1.0.0", InstalledAt: time.Now().Add(-24 * time.Hour)},
+				}, nil
+			},
+		}
+
+		svc := newTestService(cacheManager, manifestManager, downloader, []PluginSource{
+			{Name: "official", URL: "https://example.com/manifest.yaml", Enabled: true},
+		})
+
+		result, err := svc.Update(ctx, UpdateOptions{Category: CategorySSH})
+
+		// Should return ErrPartialFailure
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrPartialFailure)
+
+		// Result should show partial success
+		require.NotNil(t, result)
+		require.Equal(t, 1, result.UpdatedCount)
+		require.Equal(t, 1, result.FailedCount)
+		require.Len(t, result.Errors, 1)
+	})
+
+	t.Run("Update returns nil error when all plugins succeed", func(t *testing.T) {
+		downloader := &mockDownloader{
+			fetchManifestFunc: func(ctx context.Context, src PluginSource) (*PluginManifest, error) {
+				return &PluginManifest{
+					Version: "1.0.0",
+					Plugins: []PluginManifestEntry{
+						{
+							ID:         "test-plugin",
+							Name:       "Test Plugin",
+							Version:    "2.0.0",
+							Author:     "test",
+							Categories: []Category{CategorySSH},
+							URL:        "https://example.com/plugin.tar.gz",
+							Checksum:   "sha256:abc123",
+							Size:       1024,
+						},
+					},
+				}, nil
+			},
+			downloadFunc: func(ctx context.Context, id, version string) (*CacheEntry, error) {
+				return &CacheEntry{ID: id, Name: id, Version: version}, nil
+			},
+		}
+
+		cacheManager := &mockCacheManager{
+			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+				// Return not found so Update attempts to download
+				return nil, ErrPluginNotInstalled
+			},
+		}
+
+		manifestManager := &mockManifestManager{
+			listFunc: func() ([]*ManifestEntry, error) {
+				return []*ManifestEntry{
+					{ID: "test-plugin", Name: "Test Plugin", Version: "1.0.0", InstalledAt: time.Now().Add(-24 * time.Hour)},
+				}, nil
+			},
+		}
+
+		svc := newTestService(cacheManager, manifestManager, downloader, []PluginSource{
+			{Name: "official", URL: "https://example.com/manifest.yaml", Enabled: true},
+		})
+
+		result, err := svc.Update(ctx, UpdateOptions{Category: CategorySSH})
+
+		// Should return nil error when all succeed
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		require.Equal(t, 1, result.UpdatedCount)
+		require.Equal(t, 0, result.FailedCount)
+		require.Empty(t, result.Errors)
+	})
+
+	t.Run("Uninstall returns ErrPartialFailure when removing category with multiple plugins and some fail", func(t *testing.T) {
+		cacheManager := &mockCacheManager{
+			removeFunc: func(id, version string) error {
+				return nil // Cache removal always succeeds
+			},
+		}
+
+		manifestManager := &mockManifestManager{
+			listFunc: func() ([]*ManifestEntry, error) {
+				return []*ManifestEntry{
+					{ID: "ssh-plugin-1", Name: "SSH Plugin 1", Version: "1.0.0", Tags: []string{"ssh"}},
+					{ID: "ssh-plugin-2", Name: "SSH Plugin 2", Version: "1.0.0", Tags: []string{"ssh"}},
+				}, nil
+			},
+			removeFunc: func(id string) error {
+				// Simulate manifest removal failure for ssh-plugin-2
+				if id == "ssh-plugin-2" {
+					return fmt.Errorf("failed to remove ssh-plugin-2 from manifest")
+				}
+				return nil
+			},
+		}
+
+		svc := newTestService(cacheManager, manifestManager, &mockDownloader{}, []PluginSource{})
+
+		// Uninstall all SSH category plugins (should remove 1, fail 1)
+		result, err := svc.Uninstall(ctx, "", UninstallOptions{Category: CategorySSH})
+
+		// Should return ErrPartialFailure
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrPartialFailure)
+
+		// Result should show partial success
+		require.NotNil(t, result)
+		require.Equal(t, 1, result.RemovedCount)
+		require.Equal(t, 1, result.FailedCount)
+		require.Len(t, result.Errors, 1)
+	})
+
+	t.Run("Uninstall returns nil error when all plugins succeed", func(t *testing.T) {
+		cacheManager := &mockCacheManager{
+			removeFunc: func(id, version string) error {
+				return nil
+			},
+		}
+
+		manifestManager := &mockManifestManager{
+			listFunc: func() ([]*ManifestEntry, error) {
+				return []*ManifestEntry{
+					{ID: "test-plugin", Name: "Test Plugin", Version: "1.0.0"},
+				}, nil
+			},
+		}
+
+		svc := newTestService(cacheManager, manifestManager, &mockDownloader{}, []PluginSource{})
+
+		result, err := svc.Uninstall(ctx, "test-plugin", UninstallOptions{})
+
+		// Should return nil error when all succeed
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		require.Equal(t, 1, result.RemovedCount)
+		require.Equal(t, 0, result.FailedCount)
+		require.Empty(t, result.Errors)
 	})
 }

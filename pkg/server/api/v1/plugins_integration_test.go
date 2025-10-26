@@ -24,6 +24,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func init() {
+	// Disable all logging for integration tests to reduce noise
+	zerolog.SetGlobalLevel(zerolog.Disabled)
+}
+
 // TestPluginAPIFullLifecycle tests the complete plugin management workflow via API.
 //
 // This integration test:
@@ -42,9 +47,11 @@ func TestPluginAPIFullLifecycle(t *testing.T) {
 
 	pluginCacheDir := filepath.Join(tmpDir, "plugins", "cache")
 
-	// Create plugin service
+	// Create plugin service with Nop logger to suppress logs in tests
 	pluginService, err := plugin.NewService(pluginCacheDir)
 	require.NoError(t, err)
+	nopLogger := zerolog.Nop()
+	pluginService = pluginService.WithLogger(nopLogger)
 
 	// Start server
 	port := 18080
@@ -190,9 +197,11 @@ func TestPluginAPICategoryInstall(t *testing.T) {
 
 	pluginCacheDir := filepath.Join(tmpDir, "plugins", "cache")
 
-	// Create plugin service
+	// Create plugin service with Nop logger to suppress logs in tests
 	pluginService, err := plugin.NewService(pluginCacheDir)
 	require.NoError(t, err)
+	nopLogger := zerolog.Nop()
+	pluginService = pluginService.WithLogger(nopLogger)
 
 	// Start server
 	port := 18081
@@ -243,9 +252,11 @@ func TestPluginAPIErrorCases(t *testing.T) {
 
 	pluginCacheDir := filepath.Join(tmpDir, "plugins", "cache")
 
-	// Create plugin service
+	// Create plugin service with Nop logger to suppress logs in tests
 	pluginService, err := plugin.NewService(pluginCacheDir)
 	require.NoError(t, err)
+	nopLogger := zerolog.Nop()
+	pluginService = pluginService.WithLogger(nopLogger)
 
 	// Start server
 	port := 18082
@@ -309,9 +320,11 @@ func TestPluginAPIUpdateOperations(t *testing.T) {
 
 	pluginCacheDir := filepath.Join(tmpDir, "plugins", "cache")
 
-	// Create plugin service
+	// Create plugin service with Nop logger to suppress logs in tests
 	pluginService, err := plugin.NewService(pluginCacheDir)
 	require.NoError(t, err)
+	nopLogger := zerolog.Nop()
+	pluginService = pluginService.WithLogger(nopLogger)
 
 	// Start server
 	port := 18083

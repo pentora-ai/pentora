@@ -19,6 +19,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func init() {
+	// Disable all logging for integration tests to reduce noise
+	zerolog.SetGlobalLevel(zerolog.Disabled)
+}
+
 // mockWorkspace implements api.WorkspaceInterface for integration testing
 type mockWorkspace struct {
 	scans map[string]*api.ScanDetail
