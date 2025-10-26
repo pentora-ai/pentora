@@ -3,7 +3,6 @@ package engine
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/pentora-ai/pentora/pkg/config"
 	"github.com/pentora-ai/pentora/pkg/event"
@@ -39,9 +38,8 @@ type DefaultAppManagerFactory struct{}
 func (f *DefaultAppManagerFactory) Create(flags *pflag.FlagSet, configFile string) (*AppManager, error) {
 	logLevel := f.GetRuntimeLogLevel(flags)
 
-	if err := logging.ConfigureGlobalLogging(logLevel); err != nil {
-		return nil, fmt.Errorf("failed to configure global logging: %w", err)
-	}
+	// Configure global logging for CLI
+	logging.ConfigureGlobal(logLevel)
 
 	ConfigManager := config.NewManager()
 	if err := ConfigManager.Load(flags, configFile); err != nil {

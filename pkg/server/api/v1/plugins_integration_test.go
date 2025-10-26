@@ -420,13 +420,12 @@ func startTestServer(t *testing.T, ctx context.Context, port int, pluginService 
 	ws := &mockWorkspace{}
 
 	// Build dependencies
-	logger := zerolog.Nop()
 	deps := &app.Deps{
 		Storage:       storageBackend,
 		Workspace:     ws,
 		PluginService: pluginService,
 		Config:        cfgMgr,
-		Logger:        &logger,
+		Logger:        zerolog.Nop(),
 	}
 
 	// Create server app
