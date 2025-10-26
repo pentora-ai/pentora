@@ -2727,3 +2727,119 @@ func TestPartialFailureSemantics(t *testing.T) {
 		require.Empty(t, result.Errors)
 	})
 }
+
+// TestServiceInputValidation tests that service methods validate inputs.
+// This verifies defense-in-depth: service layer validates regardless of CLI/API validation.
+func TestServiceInputValidation(t *testing.T) {
+	ctx := context.Background()
+	tmpDir, err := os.MkdirTemp("", "pentora-plugin-test-*")
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_ = os.RemoveAll(tmpDir)
+	})
+
+	svc, err := NewService(tmpDir)
+	require.NoError(t, err)
+
+	t.Run("Install validates target", func(t *testing.T) {
+		// Empty target
+		_, err := svc.Install(ctx, "", InstallOptions{})
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrInvalidOption)
+		require.Contains(t, err.Error(), "target cannot be empty")
+
+		// Whitespace-only target
+		_, err = svc.Install(ctx, "   ", InstallOptions{})
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrInvalidOption)
+		require.Contains(t, err.Error(), "whitespace")
+
+		// Invalid plugin ID format
+		_, err = svc.Install(ctx, "Invalid-Plugin", InstallOptions{})
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrInvalidOption)
+		require.Contains(t, err.Error(), "invalid plugin ID format")
+	})
+
+	t.Run("Install validates category option", func(t *testing.T) {
+		// Invalid category
+		_, err := svc.Install(ctx, "ssh", InstallOptions{Category: "invalid"})
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrInvalidOption)
+		require.Contains(t, err.Error(), "invalid category")
+	})
+
+	t.Run("Install validates source option", func(t *testing.T) {
+		// Whitespace-only source
+		_, err := svc.Install(ctx, "ssh", InstallOptions{Source: "   "})
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrInvalidOption)
+		require.Contains(t, err.Error(), "source cannot be whitespace")
+
+		// Invalid source format
+		_, err = svc.Install(ctx, "ssh", InstallOptions{Source: "invalid@source"})
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrInvalidOption)
+		require.Contains(t, err.Error(), "invalid source name")
+	})
+
+	t.Run("Update validates category option", func(t *testing.T) {
+		// Invalid category
+		_, err := svc.Update(ctx, UpdateOptions{Category: "invalid"})
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrInvalidOption)
+		require.Contains(t, err.Error(), "invalid category")
+	})
+
+	t.Run("Update validates source option", func(t *testing.T) {
+		// Whitespace-only source
+		_, err := svc.Update(ctx, UpdateOptions{Source: "   "})
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrInvalidOption)
+		require.Contains(t, err.Error(), "source cannot be whitespace")
+	})
+
+	t.Run("Uninstall validates target when provided", func(t *testing.T) {
+		// Empty target is OK (can use category or all flag)
+		// But if provided, must be valid
+
+		// Invalid plugin ID format
+		_, err := svc.Uninstall(ctx, "Invalid-Plugin", UninstallOptions{})
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrInvalidOption)
+		require.Contains(t, err.Error(), "invalid plugin ID format")
+
+		// Whitespace-only
+		_, err = svc.Uninstall(ctx, "   ", UninstallOptions{})
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrInvalidOption)
+	})
+
+	t.Run("Uninstall validates category option", func(t *testing.T) {
+		// Invalid category
+		_, err := svc.Uninstall(ctx, "", UninstallOptions{Category: "invalid"})
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrInvalidOption)
+		require.Contains(t, err.Error(), "invalid category")
+	})
+
+	t.Run("GetInfo validates plugin ID", func(t *testing.T) {
+		// Empty plugin ID
+		_, err := svc.GetInfo(ctx, "")
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrInvalidOption)
+		require.Contains(t, err.Error(), "plugin ID cannot be empty")
+
+		// Whitespace-only
+		_, err = svc.GetInfo(ctx, "   ")
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrInvalidOption)
+		require.Contains(t, err.Error(), "whitespace")
+
+		// Invalid format
+		_, err = svc.GetInfo(ctx, "Invalid-Plugin")
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrInvalidOption)
+		require.Contains(t, err.Error(), "invalid plugin ID format")
+	})
+}

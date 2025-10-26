@@ -218,6 +218,17 @@ func defaultSources() []PluginSource {
 //	}
 //	fmt.Printf("Installed %d plugins\n", result.InstalledCount)
 func (s *Service) Install(ctx context.Context, target string, opts InstallOptions) (*InstallResult, error) {
+	// Validate inputs (defense-in-depth)
+	if err := validateTarget(target); err != nil {
+		return nil, err
+	}
+	if err := validateCategory(opts.Category); err != nil {
+		return nil, err
+	}
+	if err := validateSource(opts.Source); err != nil {
+		return nil, err
+	}
+
 	s.logger.Info().
 		Str("component", "plugin-service").
 		Str("operation", "install").
@@ -495,6 +506,14 @@ func pluginInfoFromManifestEntry(entry *PluginManifestEntry) *PluginInfo {
 //	result, err := svc.Update(ctx, UpdateOptions{Category: CategorySSH})
 //	fmt.Printf("Updated %d plugins\n", result.UpdatedCount)
 func (s *Service) Update(ctx context.Context, opts UpdateOptions) (*UpdateResult, error) {
+	// Validate inputs (defense-in-depth)
+	if err := validateCategory(opts.Category); err != nil {
+		return nil, err
+	}
+	if err := validateSource(opts.Source); err != nil {
+		return nil, err
+	}
+
 	s.logger.Info().
 		Str("component", "plugin-service").
 		Str("operation", "update").
@@ -669,6 +688,17 @@ func (s *Service) Update(ctx context.Context, opts UpdateOptions) (*UpdateResult
 //	// Uninstall all plugins
 //	result, err := svc.Uninstall(ctx, "", UninstallOptions{All: true})
 func (s *Service) Uninstall(ctx context.Context, target string, opts UninstallOptions) (*UninstallResult, error) {
+	// Validate inputs (defense-in-depth)
+	// Target is optional when using category or all flags
+	if target != "" {
+		if err := validateTarget(target); err != nil {
+			return nil, err
+		}
+	}
+	if err := validateCategory(opts.Category); err != nil {
+		return nil, err
+	}
+
 	s.logger.Info().
 		Str("component", "plugin-service").
 		Str("operation", "uninstall").
@@ -927,6 +957,11 @@ func (s *Service) List(ctx context.Context) ([]*PluginInfo, error) {
 //	}
 //	fmt.Printf("Plugin: %s v%s (Size: %d bytes)\n", info.Name, info.Version, info.CacheSize)
 func (s *Service) GetInfo(ctx context.Context, pluginID string) (*PluginInfo, error) {
+	// Validate inputs (defense-in-depth)
+	if err := validatePluginID(pluginID); err != nil {
+		return nil, err
+	}
+
 	s.logger.Debug().
 		Str("component", "plugin-service").
 		Str("operation", "get-info").
