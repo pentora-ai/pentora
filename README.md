@@ -1,8 +1,6 @@
 # Pentora
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/pentora-ai/pentora)](https://goreportcard.com/report/github.com/pentora-ai/pentora)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://opensource.org/license/apache-2-0)
-[![Build](https://img.shields.io/github/actions/workflow/status/pentora-ai/pentora/test.yml?branch=main)](https://github.com/pentora-ai/pentora/actions)
 
 > ⚠️ **Active Development Notice**: Pentora is currently under active development and has not been released yet. APIs, CLI commands, and core features are subject to change. This project is not production-ready.
 
@@ -21,7 +19,7 @@
 
 - **Modular service detection** with extensible protocol parsers (SSH, HTTP, FTP, DNS, and more)
 - **Fingerprint-based asset profiling** for accurate service version identification
-- **YAML plugin system** with 18 embedded security checks and support for custom plugins
+- **YAML plugin system** with 19 embedded security checks and support for custom plugins
 - **Plugin-based vulnerability matching** with CVE/CWE correlation and severity ratings
 - **Workspace management** for organizing and querying scan results
 - **Hook system** for custom automation and event-driven workflows
@@ -50,11 +48,15 @@
 git clone https://github.com/pentora-ai/pentora.git
 cd pentora
 
-# Build the binary
-go build -o pentora ./cmd/pentora
+# Build the binary (outputs to dist/)
+make binary
+
+# Or build manually to dist/
+mkdir -p dist
+go build -o dist/pentora ./cmd
 
 # Verify installation
-./pentora version
+./dist/pentora version
 ```
 
 ### Basic Usage
@@ -86,7 +88,7 @@ pentora workspace export <scan-id> --format json -o results.json
 
 ```bash
 # Start the Pentora server
-pentora server start --host 0.0.0.0 --port 8080
+pentora server start --addr 0.0.0.0 --port 8080
 
 # Submit a scan via API
 curl -X POST http://localhost:8080/api/v1/scans \
@@ -120,7 +122,7 @@ pentora dag validate dag.yaml --json
 
 ### YAML Plugin System
 
-**18 essential security check plugins** are embedded in the binary and ready to use immediately. Create custom vulnerability checks without writing Go code using YAML plugins:
+**19 essential security check plugins** are embedded in the binary and ready to use immediately. Create custom vulnerability checks without writing Go code using YAML plugins:
 
 ```bash
 # Load and evaluate YAML plugins
@@ -177,8 +179,8 @@ output:
 
 **Match Logic**: `AND`, `OR`, `NOT` for combining rules
 
-**Embedded Plugins** (18 total, ~50 KB):
-- **SSH** (4): weak-key-exchange, weak-mac, weak-cipher, default-creds
+**Embedded Plugins** (19 total, ~50 KB):
+- **SSH** (5): weak-key-exchange, weak-mac, weak-cipher, default-creds, regreSSHion (CVE-2024-6387)
 - **HTTP** (4): missing-security-headers, server-version-disclosure, default-pages, weak-ssl
 - **TLS** (4): weak-cipher, expired-cert, self-signed-cert, weak-protocol
 - **Database** (3): mysql-default-creds, postgres-default-creds, redis-no-auth
