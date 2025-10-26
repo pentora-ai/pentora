@@ -304,6 +304,11 @@ func (s *Service) Install(ctx context.Context, target string, opts InstallOption
 		Int("failed", result.FailedCount).
 		Msg("Plugin installation completed")
 
+	// Return partial failure if any plugins failed
+	if result.FailedCount > 0 {
+		return result, ErrPartialFailure
+	}
+
 	return result, nil
 }
 
@@ -620,6 +625,11 @@ func (s *Service) Update(ctx context.Context, opts UpdateOptions) (*UpdateResult
 		Int("failed", result.FailedCount).
 		Msg("Plugin update completed")
 
+	// Return partial failure if any plugins failed
+	if result.FailedCount > 0 {
+		return result, ErrPartialFailure
+	}
+
 	return result, nil
 }
 
@@ -782,6 +792,10 @@ func (s *Service) Uninstall(ctx context.Context, target string, opts UninstallOp
 		Int("remaining", result.RemainingCount).
 		Msg("Plugin uninstall completed")
 
+	// Return partial failure if any plugins failed
+	if result.FailedCount > 0 {
+		return result, ErrPartialFailure
+	}
 	return result, nil
 }
 
