@@ -143,13 +143,13 @@ func InstallPluginHandler(pluginService PluginService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req InstallPluginRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			api.WriteJSONError(w, http.StatusBadRequest, "Bad Request", "invalid request body: "+err.Error())
+			api.WriteJSONError(w, http.StatusBadRequest, "Bad Request", "INVALID_REQUEST_BODY", "invalid request body: "+err.Error())
 			return
 		}
 
 		// Validate request
 		if req.Target == "" {
-			api.WriteJSONError(w, http.StatusBadRequest, "Bad Request", "target is required")
+			api.WriteJSONError(w, http.StatusBadRequest, "Bad Request", "TARGET_REQUIRED", "target is required")
 			return
 		}
 
@@ -272,17 +272,13 @@ func GetPluginHandler(pluginService PluginService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
 		if id == "" {
-			api.WriteJSONError(w, http.StatusBadRequest, "Bad Request", "plugin id is required")
+			api.WriteJSONError(w, http.StatusBadRequest, "Bad Request", "PLUGIN_ID_REQUIRED", "plugin id is required")
 			return
 		}
 
 		info, err := pluginService.GetInfo(r.Context(), id)
 		if err != nil {
-			// Check if it's a not found error
-			if err == plugin.ErrPluginNotFound {
-				api.WriteJSONError(w, http.StatusNotFound, "Not Found", "plugin not found: "+id)
-				return
-			}
+			// Use WriteError which will automatically map plugin errors to correct HTTP status
 			api.WriteError(w, r, err)
 			return
 		}
@@ -321,7 +317,7 @@ func UninstallPluginHandler(pluginService PluginService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
 		if id == "" {
-			api.WriteJSONError(w, http.StatusBadRequest, "Bad Request", "plugin id is required")
+			api.WriteJSONError(w, http.StatusBadRequest, "Bad Request", "PLUGIN_ID_REQUIRED", "plugin id is required")
 			return
 		}
 
@@ -332,11 +328,7 @@ func UninstallPluginHandler(pluginService PluginService) http.HandlerFunc {
 
 		result, err := pluginService.Uninstall(r.Context(), id, opts)
 		if err != nil {
-			// Check if it's a not found error
-			if err == plugin.ErrPluginNotFound {
-				api.WriteJSONError(w, http.StatusNotFound, "Not Found", "plugin not found: "+id)
-				return
-			}
+			// Use WriteError which will automatically map plugin errors to correct HTTP status
 			api.WriteError(w, r, err)
 			return
 		}

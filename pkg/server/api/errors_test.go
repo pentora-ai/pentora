@@ -3,10 +3,12 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/pentora-ai/pentora/pkg/plugin"
 	"github.com/pentora-ai/pentora/pkg/storage"
 	"github.com/stretchr/testify/require"
 )
@@ -29,6 +31,7 @@ func TestWriteError_NotFound(t *testing.T) {
 	err := json.NewDecoder(w.Body).Decode(&response)
 	require.NoError(t, err)
 	require.Equal(t, "Not Found", response.Error)
+	require.Equal(t, "RESOURCE_NOT_FOUND", response.Code)
 	require.Contains(t, response.Message, "scan-123")
 }
 
@@ -47,13 +50,109 @@ func TestWriteError_InternalServerError(t *testing.T) {
 	err := json.NewDecoder(w.Body).Decode(&response)
 	require.NoError(t, err)
 	require.Equal(t, "Internal Server Error", response.Error)
+	require.Equal(t, "INTERNAL_ERROR", response.Code)
 	require.Equal(t, "database connection failed", response.Message)
+}
+
+func TestWriteError_PluginNotFound(t *testing.T) {
+	pluginErr := plugin.ErrPluginNotFound
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/plugins/ssh-weak-cipher", nil)
+	w := httptest.NewRecorder()
+
+	WriteError(w, req, pluginErr)
+
+	require.Equal(t, http.StatusNotFound, w.Code)
+	require.Equal(t, "application/json", w.Header().Get("Content-Type"))
+
+	var response ErrorResponse
+	err := json.NewDecoder(w.Body).Decode(&response)
+	require.NoError(t, err)
+	require.Equal(t, "Not Found", response.Error)
+	require.Equal(t, "PLUGIN_NOT_FOUND", response.Code)
+	require.Equal(t, "plugin not found", response.Message)
+}
+
+func TestWriteError_PluginInvalidInput(t *testing.T) {
+	pluginErr := fmt.Errorf("invalid category 'invalid': %w", plugin.ErrInvalidCategory)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/plugins/install", nil)
+	w := httptest.NewRecorder()
+
+	WriteError(w, req, pluginErr)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	require.Equal(t, "application/json", w.Header().Get("Content-Type"))
+
+	var response ErrorResponse
+	err := json.NewDecoder(w.Body).Decode(&response)
+	require.NoError(t, err)
+	require.Equal(t, "Bad Request", response.Error)
+	require.Equal(t, "INVALID_CATEGORY", response.Code)
+	require.Contains(t, response.Message, "invalid category")
+}
+
+func TestWriteError_PluginUnavailable(t *testing.T) {
+	pluginErr := fmt.Errorf("remote repository unreachable: %w", plugin.ErrSourceNotAvailable)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/plugins/update", nil)
+	w := httptest.NewRecorder()
+
+	WriteError(w, req, pluginErr)
+
+	require.Equal(t, http.StatusServiceUnavailable, w.Code)
+	require.Equal(t, "application/json", w.Header().Get("Content-Type"))
+
+	var response ErrorResponse
+	err := json.NewDecoder(w.Body).Decode(&response)
+	require.NoError(t, err)
+	require.Equal(t, "Service Unavailable", response.Error)
+	require.Equal(t, "SOURCE_NOT_AVAILABLE", response.Code)
+	require.Contains(t, response.Message, "remote repository")
+}
+
+func TestWriteError_PluginConflict(t *testing.T) {
+	pluginErr := fmt.Errorf("plugin already installed with version 1.0.0: %w", plugin.ErrPluginAlreadyInstalled)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/plugins/install", nil)
+	w := httptest.NewRecorder()
+
+	WriteError(w, req, pluginErr)
+
+	require.Equal(t, http.StatusConflict, w.Code)
+	require.Equal(t, "application/json", w.Header().Get("Content-Type"))
+
+	var response ErrorResponse
+	err := json.NewDecoder(w.Body).Decode(&response)
+	require.NoError(t, err)
+	require.Equal(t, "Conflict", response.Error)
+	require.Equal(t, "PLUGIN_ALREADY_INSTALLED", response.Code)
+	require.Contains(t, response.Message, "already installed")
+}
+
+func TestWriteError_PluginPartialFailure(t *testing.T) {
+	pluginErr := fmt.Errorf("some plugins failed to update: %w", plugin.ErrPartialFailure)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/plugins/update", nil)
+	w := httptest.NewRecorder()
+
+	WriteError(w, req, pluginErr)
+
+	require.Equal(t, http.StatusOK, w.Code) // Partial failure returns 200
+	require.Equal(t, "application/json", w.Header().Get("Content-Type"))
+
+	var response ErrorResponse
+	err := json.NewDecoder(w.Body).Decode(&response)
+	require.NoError(t, err)
+	require.Equal(t, "OK", response.Error)
+	require.Equal(t, "PARTIAL_FAILURE", response.Code)
+	require.Contains(t, response.Message, "failed to update")
 }
 
 func TestWriteJSONError(t *testing.T) {
 	w := httptest.NewRecorder()
 
-	WriteJSONError(w, http.StatusBadRequest, "Invalid Input", "Target parameter is required")
+	WriteJSONError(w, http.StatusBadRequest, "Invalid Input", "INVALID_TARGET", "Target parameter is required")
 
 	require.Equal(t, http.StatusBadRequest, w.Code)
 	require.Equal(t, "application/json", w.Header().Get("Content-Type"))
@@ -62,6 +161,7 @@ func TestWriteJSONError(t *testing.T) {
 	err := json.NewDecoder(w.Body).Decode(&response)
 	require.NoError(t, err)
 	require.Equal(t, "Invalid Input", response.Error)
+	require.Equal(t, "INVALID_TARGET", response.Code)
 	require.Equal(t, "Target parameter is required", response.Message)
 }
 
@@ -131,7 +231,7 @@ func TestWriteJSONError_EncodingError(t *testing.T) {
 	}
 
 	// This should handle the encoding error gracefully
-	WriteJSONError(w, http.StatusBadRequest, "Test Error", "Test message")
+	WriteJSONError(w, http.StatusBadRequest, "Test Error", "TEST_ERROR", "Test message")
 
 	// Should set status code before attempting to write body
 	require.Equal(t, http.StatusBadRequest, w.statusCode)
