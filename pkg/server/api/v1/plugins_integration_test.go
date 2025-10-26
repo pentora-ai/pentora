@@ -482,7 +482,8 @@ func makeRequest(t *testing.T, method, url string, body *bytes.Reader) *http.Res
 		req.Header.Set("Content-Type", "application/json")
 	}
 
-	client := &http.Client{Timeout: 5 * time.Second}
+	// Increased timeout for plugin update operations (can take >5s for 19 plugins)
+	client := &http.Client{Timeout: 15 * time.Second}
 	resp, err := client.Do(req)
 	require.NoError(t, err)
 
