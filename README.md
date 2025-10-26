@@ -239,14 +239,45 @@ Modules are self-contained units that perform specific scan phases:
 - **Fingerprint Module**: Service version identification
 - **Vulnerability Module**: CVE matching and risk assessment
 
-### Workspace
+### Storage Backend
 
-All scan results are stored in a local workspace with:
+All scan results are stored using the `pkg/storage` abstraction layer:
 
-- SQLite database for structured data
-- File-based artifact storage
-- Full-text search capabilities
-- Historical scan tracking
+- **LocalBackend (OSS)**: File-based JSONL storage with thread-safe operations
+- OS-specific defaults: `~/Library/Application Support/Pentora` (macOS), `~/.local/share/pentora` (Linux)
+- Features: filtering, pagination, partial updates, typed errors
+- Retention policies: automatic cleanup based on age and count limits
+
+### Testing Strategy
+
+Pentora uses a comprehensive testing approach:
+
+#### Unit Tests
+- Run with `make test` or `go test ./...`
+- Table-driven tests with testify/require
+- Mock interfaces for isolation
+- Target: >80% coverage for core packages
+
+#### Integration Tests
+- Build tag: `//go:build integration`
+- Run with `make test-integration` or `go test -tags=integration ./...`
+- Black-box testing with real HTTP servers and network requests
+- Examples:
+  - `pkg/server/app/app_integration_test.go` - Server lifecycle testing
+  - `pkg/server/api/v1/plugins_integration_test.go` - Plugin API endpoint testing
+- Run all tests: `make test-all`
+
+#### Testing Policy
+**Before Every Commit (MANDATORY)**:
+- ✅ `make test` - Unit tests only (fast, <2min)
+- ✅ `make validate` - Linting, formatting, spell check, shell script validation
+
+**Before Opening PR (RECOMMENDED)**:
+- ⚡ `make test-all` - Runs both unit AND integration tests
+
+**CI/CD Behavior**:
+- Unit tests run on every commit (fast feedback)
+- Integration tests run on PR events (comprehensive validation)
 
 ## 🔌 Extending Pentora
 

@@ -1,11 +1,12 @@
 package plugin
 
 import (
+	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/pentora-ai/pentora/pkg/plugin"
+	"github.com/pentora-ai/pentora/pkg/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -27,73 +28,58 @@ installation path, and cache size.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			pluginName := args[0]
+			ctx := context.Background()
 
 			// Use default cache dir if not specified
 			if cacheDir == "" {
-				homeDir, err := os.UserHomeDir()
+				storageConfig, err := storage.DefaultConfig()
 				if err != nil {
-					return fmt.Errorf("get home directory: %w", err)
+					return fmt.Errorf("get storage config: %w", err)
 				}
-				cacheDir = filepath.Join(homeDir, ".pentora", "plugins", "cache")
+				cacheDir = filepath.Join(storageConfig.WorkspaceRoot, "plugins", "cache")
 			}
 
-			// Create manifest manager to find plugin
-			manifestPath := filepath.Join(filepath.Dir(cacheDir), "registry.json")
-			manifestMgr, err := plugin.NewManifestManager(manifestPath)
+			// Create service
+			svc, err := plugin.NewService(cacheDir)
 			if err != nil {
-				return fmt.Errorf("create manifest manager: %w", err)
+				return fmt.Errorf("create plugin service: %w", err)
 			}
 
-			// Get plugin from manifest
-			entry, err := manifestMgr.Get(pluginName)
+			// Call service layer
+			info, err := svc.GetInfo(ctx, pluginName)
 			if err != nil {
-				// Simple string check for "not found" error
-				return fmt.Errorf("plugin '%s' not found\n\nUse 'pentora plugin list' to see installed plugins", pluginName)
-			}
-
-			// Display plugin info
-			fmt.Printf("Plugin: %s\n", entry.Name)
-			fmt.Printf("Version: %s\n", entry.Version)
-			fmt.Printf("Checksum: %s\n", entry.Checksum)
-			fmt.Printf("Download URL: %s\n", entry.DownloadURL)
-			fmt.Printf("Installed: %s\n", entry.InstalledAt.Format("2006-01-02 15:04:05"))
-
-			// Get cache directory info
-			pluginDir := filepath.Join(cacheDir, entry.ID, entry.Version)
-			if _, err := os.Stat(pluginDir); err == nil {
-				fmt.Printf("Location: %s\n", pluginDir)
-
-				// Calculate directory size
-				var totalSize int64
-				err := filepath.Walk(pluginDir, func(path string, info os.FileInfo, err error) error {
-					if err != nil {
-						return err
-					}
-					if !info.IsDir() {
-						totalSize += info.Size()
-					}
-					return nil
-				})
-				if err == nil {
-					fmt.Printf("Size: %s\n", formatBytes(totalSize))
+				if err == plugin.ErrPluginNotFound {
+					return fmt.Errorf("plugin '%s' not found\n\nUse 'pentora plugin list' to see installed plugins", pluginName)
 				}
-			} else {
-				fmt.Printf("Location: %s (not found)\n", pluginDir)
+				return fmt.Errorf("get plugin info: %w", err)
 			}
 
-			// Show registry URL if available
-			registryURL, err := manifestMgr.GetRegistryURL()
-			if err == nil && registryURL != "" {
-				fmt.Printf("\nRegistry: %s\n", registryURL)
-			}
+			// Print results
+			printPluginInfo(info)
 
 			return nil
 		},
 	}
 
-	cmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Plugin cache directory (default: ~/.pentora/plugins/cache)")
+	cmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Plugin cache directory (default: platform-specific, see storage config)")
 
 	return cmd
+}
+
+// printPluginInfo formats and prints the plugin information
+func printPluginInfo(info *plugin.PluginInfo) {
+	fmt.Printf("Plugin: %s\n", info.Name)
+	fmt.Printf("Version: %s\n", info.Version)
+	fmt.Printf("Checksum: %s\n", info.Checksum)
+	fmt.Printf("Download URL: %s\n", info.DownloadURL)
+	fmt.Printf("Installed: %s\n", info.InstalledAt.Format("2006-01-02 15:04:05"))
+
+	if info.CacheDir != "" {
+		fmt.Printf("Location: %s\n", info.CacheDir)
+		if info.CacheSize > 0 {
+			fmt.Printf("Size: %s\n", formatBytes(info.CacheSize))
+		}
+	}
 }
 
 // formatBytes formats bytes as human-readable string

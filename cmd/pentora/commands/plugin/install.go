@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"text/tabwriter"
 	"time"
 
 	"github.com/pentora-ai/pentora/pkg/plugin"
+	"github.com/pentora-ai/pentora/pkg/storage"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -50,234 +50,83 @@ You can install entire categories (ssh, http, tls, database, network) or specifi
 
 			// Use default cache dir if not specified
 			if cacheDir == "" {
-				homeDir, err := os.UserHomeDir()
+				storageConfig, err := storage.DefaultConfig()
 				if err != nil {
-					return fmt.Errorf("get home directory: %w", err)
+					return fmt.Errorf("get storage config: %w", err)
 				}
-				cacheDir = filepath.Join(homeDir, ".pentora", "plugins", "cache")
+				cacheDir = filepath.Join(storageConfig.WorkspaceRoot, "plugins", "cache")
 			}
 
-			// Create cache manager
-			cacheManager, err := plugin.NewCacheManager(cacheDir)
+			// Create service
+			svc, err := plugin.NewService(cacheDir)
 			if err != nil {
-				return fmt.Errorf("create cache manager: %w", err)
+				return fmt.Errorf("create plugin service: %w", err)
 			}
 
-			// Create manifest manager
-			manifestPath := filepath.Join(filepath.Dir(cacheDir), "registry.json")
-			manifestMgr, err := plugin.NewManifestManager(manifestPath)
-			if err != nil {
-				return fmt.Errorf("create manifest manager: %w", err)
+			// Build install options
+			opts := plugin.InstallOptions{
+				Force: force,
 			}
 
-			// Create downloader with default sources
-			sources := []plugin.PluginSource{
-				{
-					Name:     "official",
-					URL:      "https://plugins.pentora.ai/manifest.yaml",
-					Enabled:  true,
-					Priority: 1,
-					Mirrors: []string{
-						"https://raw.githubusercontent.com/pentora-ai/pentora-plugins/main/manifest.yaml",
-					},
-				},
-			}
-
-			// Filter by source if specified
 			if source != "" {
-				var filteredSources []plugin.PluginSource
-				for _, s := range sources {
-					if s.Name == source {
-						filteredSources = append(filteredSources, s)
-					}
-				}
-				if len(filteredSources) == 0 {
-					return fmt.Errorf("source '%s' not found", source)
-				}
-				sources = filteredSources
+				opts.Source = source
 			}
 
-			downloader := plugin.NewDownloader(cacheManager, plugin.WithSources(sources))
-
-			// Fetch manifest from each source
-			fmt.Printf("Fetching plugin manifests from %s...\n", sources[0].Name)
-			var allPlugins []plugin.PluginManifestEntry
-			for _, src := range sources {
-				if !src.Enabled {
-					continue
-				}
-
-				manifest, err := downloader.FetchManifest(ctx, src)
-				if err != nil {
-					log.Warn().
-						Str("source", src.Name).
-						Err(err).
-						Msg("Failed to fetch manifest from source")
-					continue
-				}
-
-				allPlugins = append(allPlugins, manifest.Plugins...)
+			// Call service layer
+			result, err := svc.Install(ctx, target, opts)
+			if err != nil {
+				return err
 			}
 
-			if len(allPlugins) == 0 {
-				return fmt.Errorf("no plugins found in any source")
-			}
-
-			// Check if target is a category or plugin name
-			isCategory := plugin.Category(target).IsValid()
-			var toInstall []plugin.PluginManifestEntry
-
-			if isCategory {
-				// Install entire category
-				targetCategory := plugin.Category(target)
-				for _, p := range allPlugins {
-					for _, cat := range p.Categories {
-						if cat == targetCategory {
-							toInstall = append(toInstall, p)
-							break
-						}
-					}
-				}
-				if len(toInstall) == 0 {
-					return fmt.Errorf("no plugins found in category '%s'", target)
-				}
-				fmt.Printf("Found %d plugin(s) in category '%s'\n", len(toInstall), target)
-			} else {
-				// Install specific plugin by name or ID
-				found := false
-				targetLower := strings.ToLower(target)
-				for _, p := range allPlugins {
-					if p.ID == targetLower {
-						toInstall = append(toInstall, p)
-						found = true
-						break
-					}
-				}
-				if !found {
-					// Check if it's an embedded plugin
-					embeddedPlugins, err := plugin.LoadAllEmbeddedPlugins()
-					if err == nil {
-						for _, ep := range embeddedPlugins {
-							epID := ep.ID
-							if ep.Name == target || epID == targetLower {
-								return fmt.Errorf("plugin '%s' is already embedded in the binary (use 'pentora plugin embedded' to list all embedded plugins)", ep.Name)
-							}
-						}
-					}
-					return fmt.Errorf("plugin '%s' not found in any source\n\nTip: You can use plugin name or ID (slug).\nUse 'pentora plugin embedded' to see built-in plugins.\nUse 'pentora plugin list' to see available remote plugins.\n\nExamples:\n  pentora plugin install \"SSH Default Credentials\"\n  pentora plugin install ssh-default-credentials", target)
-				}
-				fmt.Printf("Found plugin '%s'\n", target)
-			}
-
-			// Show plugins to install
-			fmt.Println("\nPlugins to install:")
-			w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-			fmt.Fprintln(w, "NAME\tVERSION\tCATEGORY\tSIZE")
-			fmt.Fprintln(w, "----\t-------\t--------\t----")
-			for _, p := range toInstall {
-				categoryStr := ""
-				if len(p.Categories) > 0 {
-					categoryStr = string(p.Categories[0])
-				}
-				sizeKB := float64(p.Size) / 1024.0
-				if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%.1f KB\n",
-					p.Name, p.Version, categoryStr, sizeKB); err != nil {
-					log.Debug().Err(err).Msg("Failed to write plugin entry")
-				}
-			}
-			if err := w.Flush(); err != nil {
-				log.Warn().Err(err).Msg("Failed to flush output")
-			}
-
-			// Download plugins
-			fmt.Printf("\nInstalling %d plugin(s)...\n\n", len(toInstall))
-			downloadedCount := 0
-			skippedCount := 0
-			failedCount := 0
-
-			for _, p := range toInstall {
-				// Check if already cached (unless force re-install)
-				if !force {
-					if _, err := cacheManager.GetEntry(p.Name, p.Version); err == nil {
-						skippedCount++
-						fmt.Printf("  %s v%s already installed (use --force to reinstall)\n", p.Name, p.Version)
-						continue
-					}
-				}
-
-				fmt.Printf("  Installing %s v%s...", p.Name, p.Version)
-
-				_, err := downloader.Download(ctx, p.ID, p.Version)
-				if err != nil {
-					fmt.Printf(" ✗\n")
-					log.Warn().
-						Str("plugin", p.Name).
-						Err(err).
-						Msg("Failed to install plugin")
-					failedCount++
-					continue
-				}
-
-				// Add to manifest
-				categoryTags := make([]string, len(p.Categories))
-				for i, cat := range p.Categories {
-					categoryTags[i] = string(cat)
-				}
-
-				manifestEntry := &plugin.ManifestEntry{
-					ID:          p.ID,
-					Name:        p.Name,
-					Version:     p.Version,
-					Type:        "evaluation", // Default type
-					Author:      p.Author,
-					Checksum:    p.Checksum,
-					DownloadURL: p.URL,
-					InstalledAt: time.Now(),
-					Path:        filepath.Join(p.ID, p.Version, "plugin.yaml"),
-					Tags:        categoryTags,
-					Severity:    "medium", // Default severity (will be overridden when plugin is loaded)
-				}
-
-				if err := manifestMgr.Add(manifestEntry); err != nil {
-					log.Warn().
-						Str("plugin", p.Name).
-						Err(err).
-						Msg("Failed to add plugin to manifest (plugin still downloaded)")
-				}
-
-				fmt.Printf(" ✓\n")
-				downloadedCount++
-			}
-
-			// Save manifest to disk if any plugins were installed
-			if downloadedCount > 0 {
-				if err := manifestMgr.Save(); err != nil {
-					log.Warn().Err(err).Msg("Failed to save plugin manifest")
-					fmt.Printf("\nWarning: Failed to update plugin registry (plugins are still installed)\n")
-				}
-			}
-
-			// Summary
-			fmt.Printf("\nInstallation Summary:\n")
-			fmt.Printf("  Installed: %d\n", downloadedCount)
-			if skippedCount > 0 {
-				fmt.Printf("  Already installed: %d\n", skippedCount)
-			}
-			if failedCount > 0 {
-				fmt.Printf("  Failed: %d\n", failedCount)
-			}
-
-			if downloadedCount > 0 {
-				fmt.Printf("\n✓ Plugins installed successfully in: %s\n", cacheDir)
-			}
+			// Print results
+			printInstallResult(result)
 
 			return nil
 		},
 	}
 
-	cmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Plugin cache directory (default: ~/.pentora/plugins/cache)")
+	cmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Plugin cache directory (default: platform-specific, see storage config)")
 	cmd.Flags().StringVar(&source, "source", "", "Install from specific source (e.g., 'official')")
 	cmd.Flags().BoolVar(&force, "force", false, "Force re-install even if already cached")
 
 	return cmd
+}
+
+// printInstallResult formats and prints the install result
+func printInstallResult(result *plugin.InstallResult) {
+	// Show plugins that were processed
+	if len(result.Plugins) > 0 {
+		fmt.Println("\nProcessed plugins:")
+		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+		fmt.Fprintln(w, "NAME\tVERSION\tCATEGORY")
+		fmt.Fprintln(w, "----\t-------\t--------")
+		for _, p := range result.Plugins {
+			categoryStr := ""
+			if len(p.Tags) > 0 {
+				categoryStr = p.Tags[0]
+			}
+			if _, err := fmt.Fprintf(w, "%s\t%s\t%s\n",
+				p.Name, p.Version, categoryStr); err != nil {
+				log.Debug().Err(err).Msg("Failed to write plugin entry")
+			}
+		}
+		if err := w.Flush(); err != nil {
+			log.Warn().Err(err).Msg("Failed to flush output")
+		}
+		fmt.Println()
+	}
+
+	// Summary
+	fmt.Printf("Installation Summary:\n")
+	fmt.Printf("  Installed: %d\n", result.InstalledCount)
+	if result.SkippedCount > 0 {
+		fmt.Printf("  Already installed: %d\n", result.SkippedCount)
+	}
+	if result.FailedCount > 0 {
+		fmt.Printf("  Failed: %d\n", result.FailedCount)
+	}
+
+	if result.InstalledCount > 0 {
+		fmt.Printf("\n✓ Plugins installed successfully\n")
+	}
 }

@@ -754,7 +754,7 @@ func TestManifestEntry_AllFields(t *testing.T) {
 	now := time.Now()
 	entry := &ManifestEntry{
 		ID:           "test-plugin",
-		Name:         "test-plugin",
+		Name:         "Test Plugin",
 		Version:      "1.0.0",
 		Type:         "evaluation",
 		Author:       "test-author",
@@ -768,7 +768,8 @@ func TestManifestEntry_AllFields(t *testing.T) {
 	}
 
 	// Verify all fields are set correctly
-	require.Equal(t, "test-plugin", entry.Name)
+	require.Equal(t, "test-plugin", entry.ID)
+	require.Equal(t, "Test Plugin", entry.Name)
 	require.Equal(t, "1.0.0", entry.Version)
 	require.Equal(t, "evaluation", entry.Type)
 	require.Equal(t, "test-author", entry.Author)
@@ -782,9 +783,10 @@ func TestManifestEntry_AllFields(t *testing.T) {
 }
 
 func TestManifest_EmptyPluginsMap(t *testing.T) {
+	updatedAt := time.Now()
 	manifest := &Manifest{
 		Version:     "1.0",
-		LastUpdated: time.Now(),
+		LastUpdated: updatedAt,
 		Plugins:     make(map[string]*ManifestEntry),
 		RegistryURL: "https://registry.example.com",
 	}
@@ -792,6 +794,7 @@ func TestManifest_EmptyPluginsMap(t *testing.T) {
 	require.NotNil(t, manifest.Plugins)
 	require.Empty(t, manifest.Plugins)
 	require.Equal(t, "1.0", manifest.Version)
+	require.Equal(t, updatedAt, manifest.LastUpdated)
 	require.Equal(t, "https://registry.example.com", manifest.RegistryURL)
 }
 
