@@ -180,6 +180,38 @@ func (s *Service) WithSources(sources []PluginSource) *Service {
 	return s
 }
 
+// WithRetry configures retry behavior for network operations.
+//
+// This allows customizing retry logic for plugin downloads and manifest fetches.
+//
+// Example:
+//
+//	// Custom retry config
+//	retryConfig := plugin.RetryConfig{
+//	    MaxAttempts: 5,
+//	    InitialWait: 2 * time.Second,
+//	    MaxWait:     60 * time.Second,
+//	    Multiplier:  2.0,
+//	    Jitter:      true,
+//	}
+//	svc := plugin.NewService(cacheDir).WithRetry(retryConfig)
+//
+//	// Disable retries
+//	svc := plugin.NewService(cacheDir).WithRetry(plugin.NoRetry())
+//
+// Note: This recreates the downloader with the new retry config.
+func (s *Service) WithRetry(config RetryConfig) *Service {
+	// Recreate downloader with new retry config
+	cacheManager, ok := s.cache.(*CacheManager)
+	if !ok {
+		// If cache is a mock/test interface, just return (can't recreate downloader)
+		return s
+	}
+
+	s.downloader = NewDownloader(cacheManager, WithSources(s.sources), WithRetryConfig(config))
+	return s
+}
+
 // defaultSources returns the default plugin sources.
 //
 // By default, we use the official Pentora plugin repository with a GitHub mirror.

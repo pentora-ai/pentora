@@ -36,9 +36,10 @@ type PluginDigest struct {
 
 // Downloader handles fetching plugins from remote sources.
 type Downloader struct {
-	sources    []PluginSource
-	httpClient *http.Client
-	cache      *CacheManager
+	sources     []PluginSource
+	httpClient  *http.Client
+	cache       *CacheManager
+	retryConfig RetryConfig
 }
 
 // DownloaderOption configures the Downloader.
@@ -55,6 +56,13 @@ func WithHTTPClient(client *http.Client) DownloaderOption {
 func WithSources(sources []PluginSource) DownloaderOption {
 	return func(d *Downloader) {
 		d.sources = sources
+	}
+}
+
+// WithRetryConfig sets the retry configuration for network operations.
+func WithRetryConfig(config RetryConfig) DownloaderOption {
+	return func(d *Downloader) {
+		d.retryConfig = config
 	}
 }
 
@@ -76,6 +84,7 @@ func NewDownloader(cache *CacheManager, opts ...DownloaderOption) *Downloader {
 				},
 			},
 		},
+		retryConfig: DefaultRetryConfig(),
 	}
 
 	for _, opt := range opts {
@@ -103,27 +112,37 @@ func (d *Downloader) FetchManifest(ctx context.Context, source PluginSource) (*P
 }
 
 func (d *Downloader) fetchManifestFromURL(ctx context.Context, url string) (*PluginManifest, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	var manifest *PluginManifest
+
+	err := WithRetry(ctx, d.retryConfig, func(ctx context.Context) error {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		if err != nil {
+			return fmt.Errorf("failed to create request: %w", err)
+		}
+
+		resp, err := d.httpClient.Do(req)
+		if err != nil {
+			return fmt.Errorf("failed to fetch manifest: %w", err)
+		}
+		defer func() { _ = resp.Body.Close() }()
+
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		}
+
+		var m PluginManifest
+		if err := yaml.NewDecoder(resp.Body).Decode(&m); err != nil {
+			return fmt.Errorf("failed to decode manifest: %w", err)
+		}
+
+		manifest = &m
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, err
 	}
 
-	resp, err := d.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch manifest: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
-
-	var manifest PluginManifest
-	if err := yaml.NewDecoder(resp.Body).Decode(&manifest); err != nil {
-		return nil, fmt.Errorf("failed to decode manifest: %w", err)
-	}
-
-	return &manifest, nil
+	return manifest, nil
 }
 
 // Download fetches a plugin from remote sources and adds it to the cache.
@@ -285,24 +304,34 @@ func (d *Downloader) Update(ctx context.Context) (int, error) {
 }
 
 func (d *Downloader) downloadFile(ctx context.Context, url string) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
+	var data []byte
 
-	resp, err := d.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to download: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
+	err := WithRetry(ctx, d.retryConfig, func(ctx context.Context) error {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		if err != nil {
+			return fmt.Errorf("failed to create request: %w", err)
+		}
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
+		resp, err := d.httpClient.Do(req)
+		if err != nil {
+			return fmt.Errorf("failed to download: %w", err)
+		}
+		defer func() { _ = resp.Body.Close() }()
 
-	data, err := io.ReadAll(resp.Body)
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		}
+
+		d, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("failed to read response: %w", err)
+		}
+
+		data = d
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
+		return nil, err
 	}
 
 	return data, nil
