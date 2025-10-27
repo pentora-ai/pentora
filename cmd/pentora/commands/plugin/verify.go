@@ -96,6 +96,18 @@ Exit codes:
 
 // printVerifyResult formats and prints the verify result using the formatter
 func printVerifyResult(f format.Formatter, result *plugin.VerifyResult) error {
+	// JSON mode: output complete result as JSON
+	if f.IsJSON() {
+		jsonResult := map[string]any{
+			"results":      result.Results,
+			"total_count":  result.TotalCount,
+			"failed_count": result.FailedCount,
+			"success":      result.FailedCount == 0,
+		}
+		return f.PrintJSON(jsonResult)
+	}
+
+	// Table mode: use existing table + summary pattern
 	if result.TotalCount == 0 {
 		return f.PrintSummary("No plugins installed to verify.")
 	}

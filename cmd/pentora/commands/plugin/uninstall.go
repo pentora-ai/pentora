@@ -99,6 +99,18 @@ all plugins in a category, or all plugins at once.`,
 
 // printUninstallResult formats and prints the uninstall result using the formatter
 func printUninstallResult(f format.Formatter, result *plugin.UninstallResult) error {
+	// JSON mode: output complete result as JSON
+	if f.IsJSON() {
+		jsonResult := map[string]any{
+			"removed_count":   result.RemovedCount,
+			"failed_count":    result.FailedCount,
+			"remaining_count": result.RemainingCount,
+			"success":         result.FailedCount == 0,
+		}
+		return f.PrintJSON(jsonResult)
+	}
+
+	// Table mode: use existing summary pattern
 	summary := fmt.Sprintf("Uninstall Summary: Removed: %d", result.RemovedCount)
 	if result.FailedCount > 0 {
 		summary += fmt.Sprintf(", Failed: %d", result.FailedCount)

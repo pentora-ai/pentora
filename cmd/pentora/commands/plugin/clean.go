@@ -98,6 +98,18 @@ Use --dry-run to preview what would be deleted without actually deleting.`,
 
 // printCleanResult formats and prints the clean result using the formatter
 func printCleanResult(f format.Formatter, result *plugin.CleanResult, dryRun bool) error {
+	// JSON mode: output complete result as JSON
+	if f.IsJSON() {
+		jsonResult := map[string]any{
+			"removed_count": result.RemovedCount,
+			"freed_bytes":   result.Freed,
+			"dry_run":       dryRun,
+			"success":       true,
+		}
+		return f.PrintJSON(jsonResult)
+	}
+
+	// Table mode: use existing summary pattern
 	if result.RemovedCount == 0 {
 		return f.PrintSummary("No old plugin cache entries found to remove.")
 	}

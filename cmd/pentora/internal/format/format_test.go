@@ -526,3 +526,30 @@ func TestOutputModeString(t *testing.T) {
 	require.Equal(t, "json", string(ModeJSON))
 	require.Equal(t, "table", string(ModeTable))
 }
+
+func TestIsJSON(t *testing.T) {
+	tests := []struct {
+		name     string
+		mode     OutputMode
+		expected bool
+	}{
+		{
+			name:     "JSON mode",
+			mode:     ModeJSON,
+			expected: true,
+		},
+		{
+			name:     "Table mode",
+			mode:     ModeTable,
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			f := New(&stdout, &stderr, tt.mode, false, false)
+			require.Equal(t, tt.expected, f.IsJSON())
+		})
+	}
+}

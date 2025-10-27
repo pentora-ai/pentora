@@ -98,6 +98,20 @@ new or updated plugins to the local cache. By default, it downloads all core plu
 
 // printUpdateResult formats and prints the update result using the formatter
 func printUpdateResult(f format.Formatter, result *plugin.UpdateResult, dryRun bool) error {
+	// JSON mode: output complete result as JSON
+	if f.IsJSON() {
+		jsonResult := map[string]any{
+			"plugins":       result.Plugins,
+			"updated_count": result.UpdatedCount,
+			"skipped_count": result.SkippedCount,
+			"failed_count":  result.FailedCount,
+			"dry_run":       dryRun,
+			"success":       result.FailedCount == 0,
+		}
+		return f.PrintJSON(jsonResult)
+	}
+
+	// Table mode: use existing table + summary pattern
 	// Build table rows
 	var rows [][]string
 	for _, p := range result.Plugins {
