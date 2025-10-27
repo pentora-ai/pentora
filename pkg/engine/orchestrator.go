@@ -323,7 +323,7 @@ func NewOrchestrator(dagDef *DAGDefinition) (*Orchestrator, error) {
 //
 // Returns:
 //   - map[string]interface{}: A map containing all outputs collected in the global data context after execution.
-//   - error: An error if any module fails or if the context is cancelled; otherwise, nil.
+//   - error: An error if any module fails or if the context is canceled; otherwise, nil.
 //
 // The function ensures that:
 //   - Each node is executed only after all its dependencies have completed successfully.
@@ -545,12 +545,12 @@ func (o *Orchestrator) Run(ctx context.Context, initialInputs map[string]interfa
 
 		if !madeProgressInIteration && len(executionCompleted) < len(o.moduleNodes) {
 			// If no new nodes could be started, but not all are done,
-			// wait for a node to complete or context to be cancelled.
+			// wait for a node to complete or context to be canceled.
 			select {
 			case <-nodeDoneSignal:
 				// A node finished, loop again to check for newly runnable nodes
 			case <-ctx.Done():
-				fmt.Println("[INFO] Orchestrator: Main context cancelled during execution.")
+				fmt.Println("[INFO] Orchestrator: Main context canceled during execution.")
 				setOverallError(ctx.Err()) // Set overall error to context error
 			}
 		}
@@ -559,7 +559,7 @@ func (o *Orchestrator) Run(ctx context.Context, initialInputs map[string]interfa
 			// cancel all running/pending module contexts if possible (requires more complex context management per node)
 			break // Exit main loop
 		}
-		if ctx.Err() != nil { // If main context was cancelled
+		if ctx.Err() != nil { // If main context was canceled
 			o.dataCtx.logger.Err(ctx.Err()).Msg("Orchestrator: Main context error, exiting DAG.")
 			break
 		}

@@ -913,7 +913,7 @@ func TestService_Install_PartialFailures(t *testing.T) {
 }
 
 func TestService_Install_ContextCancellation(t *testing.T) {
-	t.Run("context cancelled during installation", func(t *testing.T) {
+	t.Run("context canceled during installation", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 
 		downloadCount := 0
@@ -953,7 +953,7 @@ func TestService_Install_ContextCancellation(t *testing.T) {
 			logger: zerolog.New(os.Stdout),
 		}
 
-		// Install category - should be cancelled mid-way
+		// Install category - should be canceled mid-way
 		result, err := svc.Install(ctx, "ssh", InstallOptions{})
 
 		// Verify context cancellation
@@ -1400,7 +1400,7 @@ func TestService_Update_PartialFailures(t *testing.T) {
 }
 
 func TestService_Update_ContextCancellation(t *testing.T) {
-	t.Run("context cancelled during update", func(t *testing.T) {
+	t.Run("context canceled during update", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 
 		downloadCount := 0
@@ -1704,7 +1704,7 @@ func TestService_Uninstall_PartialFailures(t *testing.T) {
 }
 
 func TestService_Uninstall_ContextCancellation(t *testing.T) {
-	t.Run("context cancelled during uninstall", func(t *testing.T) {
+	t.Run("context canceled during uninstall", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 
 		removeCount := 0

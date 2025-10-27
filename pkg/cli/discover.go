@@ -132,7 +132,7 @@ Ports can be specified as a comma-separated list or ranges (e.g., "80,443,1000-1
 
 		log.Info().Msg("Starting discovery...")
 		finalDataContext, dagErr := orchestrator.Run(ctx, moduleInputs) // Pass the initial inputs
-		// dagErr will be non-nil if a module returned an error or context was cancelled.
+		// dagErr will be non-nil if a module returned an error or context was canceled.
 
 		// Prepare structured output
 		outputData := DiscoveryOutput{

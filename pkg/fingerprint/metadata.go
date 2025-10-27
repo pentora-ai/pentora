@@ -10,7 +10,7 @@ type Catalog struct {
 	Metadata     map[string]interface{} `yaml:"metadata,omitempty" json:"metadata,omitempty"`
 }
 
-// Metadata describes how to recognise a specific service/product.
+// Metadata describes how to recognize a specific service/product.
 type Metadata struct {
 	ID          string            `yaml:"id" json:"id"`
 	Protocol    string            `yaml:"protocol" json:"protocol"` // ssh, http, rdp, smb ...

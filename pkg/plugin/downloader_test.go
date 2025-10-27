@@ -820,7 +820,7 @@ func TestDownloader_downloadFile_ContextCancelled(t *testing.T) {
 	data, err := downloader.downloadFile(ctx, server.URL)
 	require.Error(t, err)
 	require.Nil(t, data)
-	// WithRetry returns context.Canceled directly for cancelled contexts
+	// WithRetry returns context.Canceled directly for canceled contexts
 	require.ErrorIs(t, err, context.Canceled)
 }
 

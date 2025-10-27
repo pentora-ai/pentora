@@ -204,7 +204,7 @@ func TestICMPPingDiscoveryModule_Execute(t *testing.T) {
 
 	err := mod.Execute(ctx, nil, outputChan)
 	if err != nil {
-		// Depending on how Execute handles errors (e.g., if context is cancelled before completion)
+		// Depending on how Execute handles errors (e.g., if context is canceled before completion)
 		// t.Logf("Execute returned an error (may be expected if context timed out): %v", err)
 		t.Fatalf("Module execution resulted in an error: %v", err)
 	}
@@ -281,7 +281,7 @@ func TestICMPPingDiscoveryModule_Execute_ContextCancelledEarly(t *testing.T) {
 	out := make(chan engine.ModuleOutput, 1)
 	err := mod.Execute(ctx, nil, out)
 	if err == nil {
-		t.Error("expected error due to cancelled context")
+		t.Error("expected error due to canceled context")
 	}
 }
 

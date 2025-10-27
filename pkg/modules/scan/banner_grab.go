@@ -253,7 +253,7 @@ func (m *BannerGrabModule) Execute(ctx context.Context, inputs map[string]interf
 	for _, task := range scanTasks {
 		select {
 		case <-ctx.Done():
-			m.logger.Info().Msg("Context cancelled. Aborting further banner grabbing.")
+			m.logger.Info().Msg("Context canceled. Aborting further banner grabbing.")
 			goto endLoop
 		default:
 		}

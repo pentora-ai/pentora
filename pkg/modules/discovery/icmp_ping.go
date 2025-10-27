@@ -309,7 +309,7 @@ func (m *ICMPPingDiscoveryModule) Execute(ctx context.Context, inputs map[string
 	for _, targetIP := range finalTargetsToScan {
 		select {
 		case <-ctx.Done():
-			logger.Info().Int("live_hosts_found", len(liveHosts)).Msg("Main context cancelled. Aborting further pings.")
+			logger.Info().Int("live_hosts_found", len(liveHosts)).Msg("Main context canceled. Aborting further pings.")
 			return ctx.Err() // Propagate cancellation
 		default:
 		}
@@ -351,7 +351,7 @@ func (m *ICMPPingDiscoveryModule) Execute(ctx context.Context, inputs map[string
 			err = pinger.Run()           // This is a blocking call.
 			stats := pinger.Statistics() // Get stats regardless of error from Run()
 
-			if opCtx.Err() != nil { // Check if our operation context timed out or was cancelled
+			if opCtx.Err() != nil { // Check if our operation context timed out or was canceled
 				logger.Debug().Str("target", ip).Err(opCtx.Err()).Msg("Ping operation context done")
 				return
 			}

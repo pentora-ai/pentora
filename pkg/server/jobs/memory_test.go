@@ -112,7 +112,7 @@ func TestMemoryManager_GracefulShutdown(t *testing.T) {
 		// Give workers time to detect cancellation
 		time.Sleep(50 * time.Millisecond)
 
-		// Stop should complete quickly since context already cancelled
+		// Stop should complete quickly since context already canceled
 		stopCtx, stopCancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 		defer stopCancel()
 
@@ -127,7 +127,7 @@ func TestMemoryManager_GracefulShutdown(t *testing.T) {
 		err := m.Start(ctx)
 		require.NoError(t, err)
 
-		// Create already-cancelled context for immediate timeout
+		// Create already-canceled context for immediate timeout
 		stopCtx, cancel := context.WithCancel(context.Background())
 		cancel() // Cancel immediately
 

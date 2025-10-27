@@ -37,7 +37,7 @@ type ProbeExecutor interface {
 	Execute(ctx context.Context, probe Probe) ([]byte, error)
 }
 
-// Fingerprinter defines the behaviour required for active/passive service identification modules.
+// Fingerprinter defines the behavior required for active/passive service identification modules.
 type Fingerprinter interface {
 	ID() string
 	SupportedProtocols() []string
