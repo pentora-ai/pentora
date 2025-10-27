@@ -47,15 +47,17 @@ linters:
         - '-ST1020'  # Disable comment form checks (Phase 1)
         - '-ST1021'  # Disable comment form checks (Phase 1)
 
-# v2 syntax: migrated from linters.exclusions
-issues:
-  exclude-rules:
-    # Test files - less strict linting
-    - path: (.+)_test\.go
-      linters:
-        - errcheck  # Test errors can be ignored sometimes
-        - revive    # Revive rules too noisy for tests (Phase 1)
+  # Exclusion rules for test files
+  exclusions:
+    rules:
+      # Test files - less strict linting
+      - path: (.+)_test\.go
+        linters:
+          - errcheck  # Test errors can be ignored sometimes
+          - revive    # Revive rules too noisy for tests (Phase 1)
 
+# Issue reporting limits
+issues:
   # Show all issues (no limits)
   max-issues-per-linter: 0
   max-same-issues: 0
