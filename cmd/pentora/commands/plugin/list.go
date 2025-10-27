@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"text/tabwriter"
 
+	"github.com/pentora-ai/pentora/cmd/pentora/internal/format"
 	"github.com/pentora-ai/pentora/pkg/plugin"
 	"github.com/pentora-ai/pentora/pkg/storage"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -33,9 +32,18 @@ found in the plugin cache directory.`,
   pentora plugin list --verbose
 
   # List plugins from custom cache directory
-  pentora plugin list --cache-dir /custom/path`,
+  pentora plugin list --cache-dir /custom/path
+
+  # JSON output
+  pentora plugin list --output json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
+
+			// Create formatter
+			outputMode := format.ParseMode(cmd.Flag("output").Value.String())
+			quiet, _ := cmd.Flags().GetBool("quiet")
+			noColor, _ := cmd.Flags().GetBool("no-color")
+			formatter := format.New(os.Stdout, os.Stderr, outputMode, quiet, !noColor)
 
 			// Use default cache dir if not specified
 			if cacheDir == "" {
@@ -55,59 +63,66 @@ found in the plugin cache directory.`,
 			// Call service layer
 			plugins, err := svc.List(ctx)
 			if err != nil {
-				return fmt.Errorf("list plugins: %w", err)
+				return formatter.PrintError(err)
 			}
 
 			// Print results
-			printListResult(plugins, verbose)
-
-			return nil
+			return printListResult(formatter, plugins, verbose)
 		},
 	}
 
 	cmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Plugin cache directory (default: platform-specific, see storage config)")
 	cmd.Flags().BoolVar(&verbose, "verbose", false, "Show detailed information")
+	cmd.Flags().String("output", "table", "Output format: json, table")
+	cmd.Flags().Bool("quiet", false, "Suppress non-essential output")
+	cmd.Flags().Bool("no-color", false, "Disable colored output")
 
 	return cmd
 }
 
-// printListResult formats and prints the list result
-func printListResult(plugins []*plugin.PluginInfo, verbose bool) {
+// printListResult formats and prints the list result using the formatter
+func printListResult(f format.Formatter, plugins []*plugin.PluginInfo, verbose bool) error {
 	if len(plugins) == 0 {
-		fmt.Println("No plugins installed.")
-		fmt.Println()
-		fmt.Println("To install plugins, use:")
-		fmt.Println("  pentora plugin install <plugin-name>")
-		return
+		if err := f.PrintSummary("No plugins installed."); err != nil {
+			return err
+		}
+		if err := f.PrintSummary(""); err != nil {
+			return err
+		}
+		if err := f.PrintSummary("To install plugins, use:"); err != nil {
+			return err
+		}
+		return f.PrintSummary("  pentora plugin install <plugin-name>")
 	}
 
-	fmt.Printf("Found %d plugin(s):\n\n", len(plugins))
+	// Build table headers and rows
+	var headers []string
+	var rows [][]string
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	if verbose {
-		fmt.Fprintln(w, "NAME\tVERSION\tCHECKSUM\tDOWNLOAD URL")
-		fmt.Fprintln(w, "----\t-------\t--------\t------------")
+		headers = []string{"Name", "Version", "Checksum", "Download URL"}
 		for _, p := range plugins {
-			if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
+			rows = append(rows, []string{
 				p.Name,
 				p.Version,
 				truncateChecksum(p.Checksum),
-				truncateURL(p.DownloadURL)); err != nil {
-				log.Debug().Err(err).Msg("Failed to write plugin entry")
-			}
+				truncateURL(p.DownloadURL),
+			})
 		}
 	} else {
-		fmt.Fprintln(w, "NAME\tVERSION")
-		fmt.Fprintln(w, "----\t-------")
+		headers = []string{"Name", "Version"}
 		for _, p := range plugins {
-			if _, err := fmt.Fprintf(w, "%s\t%s\n", p.ID, p.Version); err != nil {
-				log.Debug().Err(err).Msg("Failed to write plugin entry")
-			}
+			rows = append(rows, []string{p.ID, p.Version})
 		}
 	}
-	if err := w.Flush(); err != nil {
-		log.Warn().Err(err).Msg("Failed to flush output")
+
+	// Print table
+	if err := f.PrintTable(headers, rows); err != nil {
+		return err
 	}
+
+	// Print summary
+	return f.PrintSummary(fmt.Sprintf("Found %d plugin(s)", len(plugins)))
 }
 
 // truncateChecksum truncates checksum for display (shows first 12 chars)
