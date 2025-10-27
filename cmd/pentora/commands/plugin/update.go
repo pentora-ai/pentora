@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"text/tabwriter"
 	"time"
 
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
+	"github.com/pentora-ai/pentora/cmd/pentora/internal/format"
 	"github.com/pentora-ai/pentora/pkg/plugin"
 	"github.com/pentora-ai/pentora/pkg/storage"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -38,10 +37,19 @@ new or updated plugins to the local cache. By default, it downloads all core plu
   pentora plugin update --force
 
   # Update from specific source
-  pentora plugin update --source official`,
+  pentora plugin update --source official
+
+  # JSON output
+  pentora plugin update --output json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 			defer cancel()
+
+			// Create formatter
+			outputMode := format.ParseMode(cmd.Flag("output").Value.String())
+			quiet, _ := cmd.Flags().GetBool("quiet")
+			noColor, _ := cmd.Flags().GetBool("no-color")
+			formatter := format.New(os.Stdout, os.Stderr, outputMode, quiet, !noColor)
 
 			// Use default cache dir if not specified
 			if cacheDir == "" {
@@ -67,13 +75,11 @@ new or updated plugins to the local cache. By default, it downloads all core plu
 			// Call service layer
 			result, err := svc.Update(ctx, opts)
 			if err != nil {
-				return err
+				return formatter.PrintError(err)
 			}
 
 			// Print results
-			printUpdateResult(result, opts.DryRun)
-
-			return nil
+			return printUpdateResult(formatter, result, opts.DryRun)
 		},
 	}
 
@@ -82,44 +88,59 @@ new or updated plugins to the local cache. By default, it downloads all core plu
 	cmd.Flags().String("category", "", "Download only plugins from category (ssh, http, tls, database, network)")
 	cmd.Flags().Bool("dry-run", false, "Show what would be downloaded without downloading")
 	cmd.Flags().Bool("force", false, "Force re-download even if already cached")
+	cmd.Flags().String("output", "table", "Output format: json, table")
+	cmd.Flags().Bool("quiet", false, "Suppress non-essential output")
+	cmd.Flags().Bool("no-color", false, "Disable colored output")
 
 	return cmd
 }
 
-// printUpdateResult formats and prints the update result
-func printUpdateResult(result *plugin.UpdateResult, dryRun bool) {
-	// Dry run: show what would be downloaded
+// printUpdateResult formats and prints the update result using the formatter
+func printUpdateResult(f format.Formatter, result *plugin.UpdateResult, dryRun bool) error {
+	// Build table rows
+	var rows [][]string
+	for _, p := range result.Plugins {
+		categoryStr := ""
+		if len(p.Tags) > 0 {
+			categoryStr = p.Tags[0]
+		}
+		rows = append(rows, []string{p.Name, p.Version, categoryStr})
+	}
+
+	// Dry run mode
 	if dryRun {
-		fmt.Printf("\n[DRY RUN] Would download %d plugin(s):\n\n", len(result.Plugins))
-		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-		fmt.Fprintln(w, "NAME\tVERSION\tCATEGORY")
-		fmt.Fprintln(w, "----\t-------\t--------")
-		for _, p := range result.Plugins {
-			categoryStr := ""
-			if len(p.Tags) > 0 {
-				categoryStr = p.Tags[0]
+		if len(rows) > 0 {
+			if err := f.PrintSummary(fmt.Sprintf("[DRY RUN] Would download %d plugin(s):", len(result.Plugins))); err != nil {
+				return err
 			}
-			if _, err := fmt.Fprintf(w, "%s\t%s\t%s\n",
-				p.Name, p.Version, categoryStr); err != nil {
-				log.Debug().Err(err).Msg("Failed to write plugin entry")
+			if err := f.PrintTable([]string{"Name", "Version", "Category"}, rows); err != nil {
+				return err
 			}
 		}
-		if err := w.Flush(); err != nil {
-			log.Warn().Err(err).Msg("Failed to flush output")
+		return f.PrintSummary("Dry run completed (no changes made)")
+	}
+
+	// Print table if plugins were processed
+	if len(rows) > 0 {
+		if err := f.PrintTable([]string{"Name", "Version", "Category"}, rows); err != nil {
+			return err
 		}
-		return
 	}
 
 	// Summary
-	fmt.Printf("\nUpdate Summary:\n")
-	fmt.Printf("  Downloaded: %d\n", result.UpdatedCount)
-	fmt.Printf("  Skipped (already cached): %d\n", result.SkippedCount)
+	summary := fmt.Sprintf("Update Summary: Downloaded: %d, Skipped: %d", result.UpdatedCount, result.SkippedCount)
 	if result.FailedCount > 0 {
-		fmt.Printf("  Failed: %d\n", result.FailedCount)
+		summary += fmt.Sprintf(", Failed: %d", result.FailedCount)
 	}
-	fmt.Printf("  Total plugins in cache: %d\n", result.UpdatedCount+result.SkippedCount)
+	summary += fmt.Sprintf(", Total in cache: %d", result.UpdatedCount+result.SkippedCount)
+
+	if err := f.PrintSummary(summary); err != nil {
+		return err
+	}
 
 	if result.UpdatedCount > 0 {
-		fmt.Printf("\n✓ Plugins updated successfully\n")
+		return f.PrintSummary("✓ Plugins updated successfully")
 	}
+
+	return nil
 }
