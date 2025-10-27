@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"os"
 	"sort"
-	"text/tabwriter"
 
+	"github.com/pentora-ai/pentora/cmd/pentora/internal/format"
 	"github.com/pentora-ai/pentora/pkg/plugin"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -34,12 +33,21 @@ for common security issues across SSH, HTTP, TLS, Database, and Network protocol
   pentora plugin embedded --category ssh
 
   # List TLS plugins with details
-  pentora plugin embedded --category tls --verbose`,
+  pentora plugin embedded --category tls --verbose
+
+  # JSON output
+  pentora plugin embedded --output json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Create formatter
+			outputMode := format.ParseMode(cmd.Flag("output").Value.String())
+			quiet, _ := cmd.Flags().GetBool("quiet")
+			noColor, _ := cmd.Flags().GetBool("no-color")
+			formatter := format.New(os.Stdout, os.Stderr, outputMode, quiet, !noColor)
+
 			// Load embedded plugins
 			plugins, err := plugin.LoadEmbeddedPlugins()
 			if err != nil {
-				return fmt.Errorf("load embedded plugins: %w", err)
+				return formatter.PrintError(fmt.Errorf("load embedded plugins: %w", err))
 			}
 
 			// Filter by category if specified
@@ -60,15 +68,14 @@ for common security issues across SSH, HTTP, TLS, Database, and Network protocol
 				case "misc":
 					categoryFilter = plugin.CategoryMisc
 				default:
-					return fmt.Errorf("unknown category: %s (valid: ssh, http, tls, database, network, misc)", category)
+					return formatter.PrintError(fmt.Errorf("unknown category: %s (valid: ssh, http, tls, database, network, misc)", category))
 				}
 
 				// Get plugins for the specified category
 				if catPlugins, ok := plugins[categoryFilter]; ok {
 					pluginsToDisplay = catPlugins
 				} else {
-					fmt.Printf("No embedded plugins found for category: %s\n", category)
-					return nil
+					return formatter.PrintSummary(fmt.Sprintf("No embedded plugins found for category: %s", category))
 				}
 			} else {
 				// Flatten all plugins
@@ -78,8 +85,7 @@ for common security issues across SSH, HTTP, TLS, Database, and Network protocol
 			}
 
 			if len(pluginsToDisplay) == 0 {
-				fmt.Println("No embedded plugins found.")
-				return nil
+				return formatter.PrintSummary("No embedded plugins found.")
 			}
 
 			// Sort plugins by name for consistent output
@@ -88,54 +94,48 @@ for common security issues across SSH, HTTP, TLS, Database, and Network protocol
 			})
 
 			// Print header
+			var headerMsg string
 			if category != "" {
-				fmt.Printf("Found %d embedded plugin(s) in category '%s':\n\n", len(pluginsToDisplay), category)
+				headerMsg = fmt.Sprintf("Found %d embedded plugin(s) in category '%s'", len(pluginsToDisplay), category)
 			} else {
-				fmt.Printf("Found %d embedded plugin(s) total:\n\n", len(pluginsToDisplay))
+				headerMsg = fmt.Sprintf("Found %d embedded plugin(s) total", len(pluginsToDisplay))
+			}
+			if err := formatter.PrintSummary(headerMsg); err != nil {
+				return err
+			}
+
+			// Build table
+			var headers []string
+			var rows [][]string
+
+			if verbose {
+				headers = []string{"Name", "Version", "Severity", "Author"}
+				for _, p := range pluginsToDisplay {
+					severity := string(p.Metadata.Severity)
+					if severity == "" {
+						severity = "info"
+					}
+					rows = append(rows, []string{p.Name, p.Version, severity, p.Author})
+				}
+			} else {
+				headers = []string{"Name", "Version", "Severity"}
+				for _, p := range pluginsToDisplay {
+					severity := string(p.Metadata.Severity)
+					if severity == "" {
+						severity = "info"
+					}
+					rows = append(rows, []string{p.Name, p.Version, severity})
+				}
 			}
 
 			// Print table
-			w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-			if verbose {
-				fmt.Fprintln(w, "NAME\tVERSION\tSEVERITY\tAUTHOR")
-				fmt.Fprintln(w, "----\t-------\t--------\t------")
-				for _, p := range pluginsToDisplay {
-					severity := string(p.Metadata.Severity)
-					if severity == "" {
-						severity = "info"
-					}
-					if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
-						p.Name,
-						p.Version,
-						severity,
-						p.Author); err != nil {
-						log.Debug().Err(err).Msg("Failed to write plugin entry")
-					}
-				}
-			} else {
-				fmt.Fprintln(w, "NAME\tVERSION\tSEVERITY")
-				fmt.Fprintln(w, "----\t-------\t--------")
-				for _, p := range pluginsToDisplay {
-					severity := string(p.Metadata.Severity)
-					if severity == "" {
-						severity = "info"
-					}
-					if _, err := fmt.Fprintf(w, "%s\t%s\t%s\n",
-						p.Name,
-						p.Version,
-						severity); err != nil {
-						log.Debug().Err(err).Msg("Failed to write plugin entry")
-					}
-				}
-			}
-			if err := w.Flush(); err != nil {
-				log.Warn().Err(err).Msg("Failed to flush output")
+			if err := formatter.PrintTable(headers, rows); err != nil {
+				return err
 			}
 
-			// Print category summary if showing all plugins
+			// Print category summary if showing all plugins (non-verbose, non-quiet)
 			if category == "" && !verbose {
-				fmt.Println()
-				fmt.Println("Categories:")
+				// Build category count
 				categoryCount := make(map[plugin.Category]int)
 				for cat, catPlugins := range plugins {
 					categoryCount[cat] = len(catPlugins)
@@ -150,13 +150,28 @@ for common security issues across SSH, HTTP, TLS, Database, and Network protocol
 					return categories[i].String() < categories[j].String()
 				})
 
+				// Print category breakdown
+				if err := formatter.PrintSummary(""); err != nil {
+					return err
+				}
+				if err := formatter.PrintSummary("Categories:"); err != nil {
+					return err
+				}
 				for _, cat := range categories {
-					fmt.Printf("  %s: %d plugins\n", cat.String(), categoryCount[cat])
+					if err := formatter.PrintSummary(fmt.Sprintf("  %s: %d plugins", cat.String(), categoryCount[cat])); err != nil {
+						return err
+					}
 				}
 
-				fmt.Println()
-				fmt.Println("Use --category flag to filter by category.")
-				fmt.Println("Use --verbose flag to show detailed information.")
+				if err := formatter.PrintSummary(""); err != nil {
+					return err
+				}
+				if err := formatter.PrintSummary("Use --category flag to filter by category."); err != nil {
+					return err
+				}
+				if err := formatter.PrintSummary("Use --verbose flag to show detailed information."); err != nil {
+					return err
+				}
 			}
 
 			return nil
@@ -165,6 +180,9 @@ for common security issues across SSH, HTTP, TLS, Database, and Network protocol
 
 	cmd.Flags().BoolVar(&verbose, "verbose", false, "Show detailed information")
 	cmd.Flags().StringVar(&category, "category", "", "Filter by category (ssh, http, tls, database, network, misc)")
+	cmd.Flags().String("output", "table", "Output format: json, table")
+	cmd.Flags().Bool("quiet", false, "Suppress non-essential output")
+	cmd.Flags().Bool("no-color", false, "Disable colored output")
 
 	return cmd
 }

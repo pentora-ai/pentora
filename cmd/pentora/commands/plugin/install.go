@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"text/tabwriter"
 	"time"
 
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
+	"github.com/pentora-ai/pentora/cmd/pentora/internal/format"
 	"github.com/pentora-ai/pentora/pkg/plugin"
 	"github.com/pentora-ai/pentora/pkg/storage"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -38,12 +37,21 @@ You can install entire categories (ssh, http, tls, database, network) or specifi
   pentora plugin install ssh --source official
 
   # Force re-install even if already cached
-  pentora plugin install ssh --force`,
+  pentora plugin install ssh --force
+
+  # JSON output
+  pentora plugin install ssh --output json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			target := args[0]
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 			defer cancel()
+
+			// Create formatter
+			outputMode := format.ParseMode(cmd.Flag("output").Value.String())
+			quiet, _ := cmd.Flags().GetBool("quiet")
+			noColor, _ := cmd.Flags().GetBool("no-color")
+			formatter := format.New(os.Stdout, os.Stderr, outputMode, quiet, !noColor)
 
 			// Use default cache dir if not specified
 			if cacheDir == "" {
@@ -69,58 +77,66 @@ You can install entire categories (ssh, http, tls, database, network) or specifi
 			// Call service layer
 			result, err := svc.Install(ctx, target, opts)
 			if err != nil {
-				return err
+				return formatter.PrintError(err)
 			}
 
-			// Print results
-			printInstallResult(result)
-
-			return nil
+			// Print results using formatter
+			return printInstallResult(formatter, result)
 		},
 	}
 
 	cmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Plugin cache directory (default: platform-specific, see storage config)")
 	cmd.Flags().String("source", "", "Install from specific source (e.g., 'official')")
 	cmd.Flags().Bool("force", false, "Force re-install even if already cached")
+	cmd.Flags().String("output", "table", "Output format: json, table")
+	cmd.Flags().Bool("quiet", false, "Suppress non-essential output")
+	cmd.Flags().Bool("no-color", false, "Disable colored output")
 
 	return cmd
 }
 
-// printInstallResult formats and prints the install result
-func printInstallResult(result *plugin.InstallResult) {
-	// Show plugins that were processed
-	if len(result.Plugins) > 0 {
-		fmt.Println("\nProcessed plugins:")
-		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-		fmt.Fprintln(w, "NAME\tVERSION\tCATEGORY")
-		fmt.Fprintln(w, "----\t-------\t--------")
-		for _, p := range result.Plugins {
-			categoryStr := ""
-			if len(p.Tags) > 0 {
-				categoryStr = p.Tags[0]
-			}
-			if _, err := fmt.Fprintf(w, "%s\t%s\t%s\n",
-				p.Name, p.Version, categoryStr); err != nil {
-				log.Debug().Err(err).Msg("Failed to write plugin entry")
-			}
-		}
-		if err := w.Flush(); err != nil {
-			log.Warn().Err(err).Msg("Failed to flush output")
-		}
-		fmt.Println()
+// printInstallResult formats and prints the install result using the formatter
+func printInstallResult(f format.Formatter, result *plugin.InstallResult) error {
+	// JSON mode: output complete result as JSON
+	if f == nil {
+		return fmt.Errorf("formatter is nil")
 	}
 
-	// Summary
-	fmt.Printf("Installation Summary:\n")
-	fmt.Printf("  Installed: %d\n", result.InstalledCount)
+	// Build table rows
+	var rows [][]string
+	for _, p := range result.Plugins {
+		categoryStr := ""
+		if len(p.Tags) > 0 {
+			categoryStr = p.Tags[0]
+		}
+		rows = append(rows, []string{p.Name, p.Version, categoryStr})
+	}
+
+	// Print table if there are plugins
+	if len(rows) > 0 {
+		if err := f.PrintTable([]string{"Name", "Version", "Category"}, rows); err != nil {
+			return err
+		}
+	}
+
+	// Build summary message
+	summary := fmt.Sprintf("Installation Summary: Installed: %d", result.InstalledCount)
 	if result.SkippedCount > 0 {
-		fmt.Printf("  Already installed: %d\n", result.SkippedCount)
+		summary += fmt.Sprintf(", Already installed: %d", result.SkippedCount)
 	}
 	if result.FailedCount > 0 {
-		fmt.Printf("  Failed: %d\n", result.FailedCount)
+		summary += fmt.Sprintf(", Failed: %d", result.FailedCount)
 	}
 
-	if result.InstalledCount > 0 {
-		fmt.Printf("\n✓ Plugins installed successfully\n")
+	// Print summary
+	if err := f.PrintSummary(summary); err != nil {
+		return err
 	}
+
+	// Success message
+	if result.InstalledCount > 0 {
+		return f.PrintSummary("✓ Plugins installed successfully")
+	}
+
+	return nil
 }

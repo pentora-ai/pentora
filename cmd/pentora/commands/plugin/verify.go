@@ -2,9 +2,11 @@ package plugin
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
+	"github.com/pentora-ai/pentora/cmd/pentora/internal/format"
 	"github.com/pentora-ai/pentora/pkg/plugin"
 	"github.com/pentora-ai/pentora/pkg/storage"
 	"github.com/spf13/cobra"
@@ -30,8 +32,17 @@ Exit codes:
   pentora plugin verify --plugin ssh-cve-2024-6387
 
   # Verify plugins in custom cache directory
-  pentora plugin verify --cache-dir /custom/path`,
+  pentora plugin verify --cache-dir /custom/path
+
+  # JSON output
+  pentora plugin verify --output json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Create formatter
+			outputMode := format.ParseMode(cmd.Flag("output").Value.String())
+			quiet, _ := cmd.Flags().GetBool("quiet")
+			noColor, _ := cmd.Flags().GetBool("no-color")
+			formatter := format.New(os.Stdout, os.Stderr, outputMode, quiet, !noColor)
+
 			// Use default cache dir if not specified
 			if cacheDir == "" {
 				storageConfig, err := storage.DefaultConfig()
@@ -56,11 +67,13 @@ Exit codes:
 			// Call service layer
 			result, err := svc.Verify(cmd.Context(), opts)
 			if err != nil {
-				return err
+				return formatter.PrintError(err)
 			}
 
 			// Print results
-			printVerifyResult(result)
+			if err := printVerifyResult(formatter, result); err != nil {
+				return err
+			}
 
 			// Return error if any plugins failed
 			if result.FailedCount > 0 {
@@ -73,42 +86,52 @@ Exit codes:
 
 	cmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Plugin cache directory (default: platform-specific, see storage config)")
 	cmd.Flags().String("plugin", "", "Verify specific plugin by name")
+	cmd.Flags().String("output", "table", "Output format: json, table")
+	cmd.Flags().Bool("quiet", false, "Suppress non-essential output")
+	cmd.Flags().Bool("no-color", false, "Disable colored output")
 
 	return cmd
 }
 
-// printVerifyResult formats and prints the verify result
-func printVerifyResult(result *plugin.VerifyResult) {
+// printVerifyResult formats and prints the verify result using the formatter
+func printVerifyResult(f format.Formatter, result *plugin.VerifyResult) error {
 	if result.TotalCount == 0 {
-		fmt.Println("No plugins installed to verify.")
-		return
+		return f.PrintSummary("No plugins installed to verify.")
 	}
 
-	fmt.Printf("Verifying %d plugin(s)...\n\n", result.TotalCount)
+	// Print header
+	if err := f.PrintSummary(fmt.Sprintf("Verifying %d plugin(s)...", result.TotalCount)); err != nil {
+		return err
+	}
 
-	// Print individual results
+	// Build table rows
+	var rows [][]string
 	for _, r := range result.Results {
-		if r.Valid {
-			fmt.Printf("✓ %s@%s - OK\n", r.ID, r.Version)
-		} else {
+		status := "✓ OK"
+		if !r.Valid {
 			switch r.ErrorType {
 			case "missing":
-				fmt.Printf("✗ %s@%s - File not found\n", r.ID, r.Version)
+				status = "✗ File not found"
 			case "checksum":
-				fmt.Printf("✗ %s@%s - Checksum mismatch\n", r.ID, r.Version)
+				status = "✗ Checksum mismatch"
 			case "error":
-				fmt.Printf("✗ %s@%s - Verification error: %v\n", r.ID, r.Version, r.Error)
+				status = fmt.Sprintf("✗ Error: %v", r.Error)
 			default:
-				fmt.Printf("✗ %s@%s - Failed\n", r.ID, r.Version)
+				status = "✗ Failed"
 			}
 		}
+		rows = append(rows, []string{r.ID, r.Version, status})
+	}
+
+	// Print table
+	if err := f.PrintTable([]string{"Plugin", "Version", "Status"}, rows); err != nil {
+		return err
 	}
 
 	// Print summary
-	fmt.Println()
 	if result.FailedCount == 0 {
-		fmt.Printf("All %d plugin(s) verified successfully.\n", result.TotalCount)
-	} else {
-		fmt.Printf("%d plugin(s) failed verification.\n", result.FailedCount)
+		return f.PrintSummary(fmt.Sprintf("✓ All %d plugin(s) verified successfully", result.TotalCount))
 	}
+
+	return f.PrintSummary(fmt.Sprintf("✗ %d plugin(s) failed verification", result.FailedCount))
 }
