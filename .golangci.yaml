@@ -1,7 +1,12 @@
 # golangci-lint Configuration
-# Phase 4: Forbidden Patterns (forbidigo)
+# Phase 5: Dependency Guard (depguard)
 #
-# Changes from Phase 3:
+# Changes from Phase 4:
+# 1. Added depguard linter to ban deprecated/problematic packages
+# 2. Banned: io/ioutil, github.com/pkg/errors, golang.org/x/net/context
+# 3. Enforces modern stdlib usage
+#
+# Previous changes (Phase 4):
 # 1. Added forbidigo linter to ban dangerous patterns
 # 2. Forbid: print/println, fmt.Print*, panic
 # 3. Enforces structured logging (zerolog)
@@ -48,6 +53,9 @@ linters:
     # Phase 4: Forbidden patterns
     - forbidigo     # Ban dangerous patterns (print, panic)
 
+    # Phase 5: Dependency guard
+    - depguard      # Ban deprecated/problematic packages
+
   settings:
     errcheck:
       # Don't check these functions for error returns
@@ -92,6 +100,20 @@ linters:
 
         - pattern: ^panic$
           msg: Use log.Fatal() or return error instead of panic()
+
+    # Phase 5: Dependency guard
+    depguard:
+      rules:
+        main:
+          deny:
+            - pkg: io/ioutil
+              desc: "Deprecated since Go 1.16, use io and os packages instead"
+
+            - pkg: github.com/pkg/errors
+              desc: "Use standard library errors package (errors.Join, errors.As, errors.Is) instead"
+
+            - pkg: golang.org/x/net/context
+              desc: "Use standard library context package instead"
 
   # Exclusion rules for test files
   exclusions:
