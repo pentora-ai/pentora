@@ -7,6 +7,9 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/rs/zerolog"
+	"github.com/spf13/cobra"
+
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
 	"github.com/pentora-ai/pentora/pkg/appctx"
 	"github.com/pentora-ai/pentora/pkg/config"
@@ -15,8 +18,6 @@ import (
 	"github.com/pentora-ai/pentora/pkg/server/api"
 	"github.com/pentora-ai/pentora/pkg/server/app"
 	"github.com/pentora-ai/pentora/pkg/storage"
-	"github.com/rs/zerolog"
-	"github.com/spf13/cobra"
 )
 
 // stubWorkspace is a temporary workspace implementation.

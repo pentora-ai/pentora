@@ -4,8 +4,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/pentora-ai/pentora/pkg/config"
 	"github.com/rs/zerolog/log"
+
+	"github.com/pentora-ai/pentora/pkg/config"
 )
 
 // Auth returns a middleware that enforces token-based authentication.

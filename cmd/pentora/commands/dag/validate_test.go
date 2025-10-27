@@ -9,8 +9,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
 	"github.com/stretchr/testify/require"
+
+	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
 )
 
 func init() {

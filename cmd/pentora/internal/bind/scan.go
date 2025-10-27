@@ -3,8 +3,9 @@ package bind
 import (
 	"fmt"
 
-	"github.com/pentora-ai/pentora/pkg/scanexec"
 	"github.com/spf13/cobra"
+
+	"github.com/pentora-ai/pentora/pkg/scanexec"
 )
 
 // BindScanOptions extracts and validates scan command flags.

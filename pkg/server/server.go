@@ -8,8 +8,9 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/pentora-ai/pentora/pkg/safe"
 	"github.com/rs/zerolog/log"
+
+	"github.com/pentora-ai/pentora/pkg/safe"
 )
 
 type Server struct {

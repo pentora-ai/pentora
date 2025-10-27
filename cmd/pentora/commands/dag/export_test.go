@@ -10,10 +10,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
-	"github.com/pentora-ai/pentora/pkg/engine"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
+
+	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
+	"github.com/pentora-ai/pentora/pkg/engine"
 )
 
 func TestExportCommand_DefaultYAML(t *testing.T) {

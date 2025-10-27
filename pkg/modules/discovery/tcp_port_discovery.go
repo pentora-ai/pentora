@@ -10,12 +10,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pentora-ai/pentora/pkg/engine" // Engine interfaces
-	"github.com/pentora-ai/pentora/pkg/netutil"
-
 	// Utilities like target and port parsing
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cast"
+
+	"github.com/pentora-ai/pentora/pkg/engine" // Engine interfaces
+	"github.com/pentora-ai/pentora/pkg/netutil"
 )
 
 // TCPPortDiscoveryResult stores the outcome of the TCP port discovery for a single target.

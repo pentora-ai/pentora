@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/pentora-ai/pentora/pkg/scanexec"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
+
+	"github.com/pentora-ai/pentora/pkg/scanexec"
 )
 
 func TestBindScanOptions(t *testing.T) {

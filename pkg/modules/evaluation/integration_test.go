@@ -8,9 +8,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/pentora-ai/pentora/pkg/engine"
 	"github.com/pentora-ai/pentora/pkg/modules/evaluation"
-	"github.com/stretchr/testify/require"
 )
 
 // TestPluginEvaluationModule_Integration tests the evaluation module in a realistic DAG scenario.

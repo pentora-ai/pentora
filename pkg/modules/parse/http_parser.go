@@ -14,10 +14,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/pentora-ai/pentora/pkg/engine"
 	"github.com/pentora-ai/pentora/pkg/modules/scan" // To consume scan.BannerScanResult
-	"github.com/rs/zerolog/log"
-	// "github.com/spf13/cast" // Not strictly needed for this parser's config
 )
 
 const (

@@ -1,14 +1,13 @@
 package fingerprint
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"sync"
-
-	_ "embed"
 
 	"gopkg.in/yaml.v3"
 )

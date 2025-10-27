@@ -33,7 +33,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	// For safe type casting if used elsewhere, though not directly in ParsePortString
 )
 
 // incIP increments an IP address (works for IPv4 and IPv6).

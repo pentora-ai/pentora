@@ -6,9 +6,10 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/pentora-ai/pentora/pkg/config"
 	"github.com/pentora-ai/pentora/pkg/server/api"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNewRouter(t *testing.T) {

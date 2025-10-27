@@ -10,6 +10,11 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
+
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
 	"github.com/pentora-ai/pentora/pkg/appctx"
 	"github.com/pentora-ai/pentora/pkg/engine"
@@ -19,10 +24,6 @@ import (
 	"github.com/pentora-ai/pentora/pkg/scanexec"
 	"github.com/pentora-ai/pentora/pkg/storage"
 	"github.com/pentora-ai/pentora/pkg/stringutil"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
-	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 )
 
 // ScanCmd defines the 'scan' command for comprehensive scanning.

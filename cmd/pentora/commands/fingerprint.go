@@ -4,12 +4,13 @@ import (
 	"errors"
 	"path/filepath"
 
+	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
+
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
 	"github.com/pentora-ai/pentora/pkg/fingerprint"
 	"github.com/pentora-ai/pentora/pkg/fingerprint/catalogsync"
 	"github.com/pentora-ai/pentora/pkg/workspace"
-	"github.com/rs/zerolog/log"
-	"github.com/spf13/cobra"
 )
 
 // NewFingerprintCommand wires CLI helpers for fingerprint catalog management.

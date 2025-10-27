@@ -5,9 +5,10 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/pentora-ai/pentora/pkg/plugin"
 	"github.com/pentora-ai/pentora/pkg/storage"
-	"github.com/rs/zerolog/log"
 )
 
 // ErrorResponse represents a standard JSON error response.

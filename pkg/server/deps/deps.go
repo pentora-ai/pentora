@@ -8,9 +8,10 @@ package deps
 import (
 	"sync/atomic"
 
+	"github.com/rs/zerolog"
+
 	"github.com/pentora-ai/pentora/pkg/engine"
 	"github.com/pentora-ai/pentora/pkg/storage"
-	"github.com/rs/zerolog"
 )
 
 // Deps holds all dependencies required by server components.

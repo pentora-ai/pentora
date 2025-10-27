@@ -10,9 +10,10 @@ import (
 	"os"
 
 	"github.com/fatih/color"
+	"github.com/spf13/cobra"
+
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
 	"github.com/pentora-ai/pentora/pkg/engine"
-	"github.com/spf13/cobra"
 )
 
 func newValidateCommand() *cobra.Command {

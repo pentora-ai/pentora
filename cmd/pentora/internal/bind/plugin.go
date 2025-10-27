@@ -9,8 +9,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pentora-ai/pentora/pkg/plugin"
 	"github.com/spf13/cobra"
+
+	"github.com/pentora-ai/pentora/pkg/plugin"
 )
 
 // BindInstallOptions extracts and validates InstallOptions from command flags.
