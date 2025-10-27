@@ -92,14 +92,20 @@ func (f *formatter) PrintTable(headers []string, rows [][]string) error {
 		for i, h := range headers {
 			headerLine[i] = color.New(color.Bold).Sprint(strings.ToUpper(h))
 		}
-		fmt.Fprintln(w, strings.Join(headerLine, "\t"))
+		if _, err := fmt.Fprintln(w, strings.Join(headerLine, "\t")); err != nil {
+			return err
+		}
 	} else {
-		fmt.Fprintln(w, strings.Join(headers, "\t"))
+		if _, err := fmt.Fprintln(w, strings.Join(headers, "\t")); err != nil {
+			return err
+		}
 	}
 
 	// Print rows
 	for _, row := range rows {
-		fmt.Fprintln(w, strings.Join(row, "\t"))
+		if _, err := fmt.Fprintln(w, strings.Join(row, "\t")); err != nil {
+			return err
+		}
 	}
 
 	return w.Flush()
