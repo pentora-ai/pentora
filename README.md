@@ -1,5 +1,7 @@
 # Pentora
 
+[![Test](https://github.com/pentora-ai/pentora/actions/workflows/test.yaml/badge.svg)](https://github.com/pentora-ai/pentora/actions/workflows/test.yaml)
+![Coverage](https://img.shields.io/codecov/c/github/pentora-ai/pentora)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://opensource.org/license/apache-2-0)
 
 > ⚠️ **Active Development Notice**: Pentora is currently under active development and has not been released yet. APIs, CLI commands, and core features are subject to change. This project is not production-ready.
