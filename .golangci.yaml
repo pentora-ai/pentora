@@ -1,33 +1,68 @@
+# golangci-lint Configuration
+# Phase 1: Foundation (v2 syntax + critical linters)
+#
+# Changes from previous version:
+# 1. Migrated to v2 syntax (linters.exclusions → issues.exclude-rules)
+# 2. Added critical linters: ineffassign, unused, errcheck
+# 3. staticcheck already includes gosimple (no separate linter needed)
+# 4. Enhanced test file exclusions
+
 version: '2'
+
 formatters:
   enable:
     - gofumpt
+
 linters:
   enable:
-    - misspell
-    - revive
-    - staticcheck
-    - govet
-  exclusions:
-    rules:
-      - path: (.+)_test.go
-        linters:
-          - canonicalheader
-          - fatcontext
-          - funlen
-          - goconst
-          - godot
-      - path: (.+)_test.go
-        text: ' always receives '
-        linters:
-          - unparam
+    # Existing linters (kept)
+    - misspell      # Spell checker
+    - revive        # Fast, configurable, extensible Go linter
+    - staticcheck   # Advanced static analysis (includes gosimple)
+    - govet         # Official Go vet tool
+
+    # NEW: Critical additions (Phase 1)
+    - ineffassign   # Detect ineffective assignments
+    - unused        # Find unused constants, variables, functions, types
+    - errcheck      # Check error returns
+
   settings:
     errcheck:
+      # Don't check these functions for error returns
       exclude-functions:
         - fmt.Fprintln
+        - fmt.Fprintf
+
     revive:
+      # Phase 1: Disable noisy unused-parameter rule
       rules:
-        - name: package-comments
-          disabled: true
         - name: unused-parameter
           disabled: true
+
+    staticcheck:
+      checks:
+        - all
+        - '-ST1000'  # Disable package comment requirement (Phase 1)
+        - '-ST1003'  # Disable underscore in names (Phase 1)
+        - '-ST1020'  # Disable comment form checks (Phase 1)
+        - '-ST1021'  # Disable comment form checks (Phase 1)
+
+  # Exclusion rules for test files
+  exclusions:
+    rules:
+      # Test files - less strict linting
+      - path: (.+)_test\.go
+        linters:
+          - errcheck  # Test errors can be ignored sometimes
+          - revive    # Revive rules too noisy for tests (Phase 1)
+
+# Issue reporting limits
+issues:
+  # Show all issues (no limits)
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+# Performance tuning
+run:
+  timeout: 5m
+  go: '1.24'
