@@ -1,7 +1,12 @@
 # golangci-lint Configuration
-# Phase 3: Complexity Limits (gocyclo, funlen, goconst)
+# Phase 4: Forbidden Patterns (forbidigo)
 #
-# Changes from Phase 2:
+# Changes from Phase 3:
+# 1. Added forbidigo linter to ban dangerous patterns
+# 2. Forbid: print/println, fmt.Print*, panic
+# 3. Enforces structured logging (zerolog)
+#
+# Previous changes (Phase 3):
 # 1. Added complexity linters: gocyclo, funlen, goconst
 # 2. Configured thresholds: cyclomatic=15, statements=100, goconst=4
 # 3. Prevents unmaintainable functions and technical debt
@@ -40,6 +45,9 @@ linters:
     - funlen        # Function length (statement count)
     - goconst       # Repeated constants
 
+    # Phase 4: Forbidden patterns
+    - forbidigo     # Ban dangerous patterns (print, panic)
+
   settings:
     errcheck:
       # Don't check these functions for error returns
@@ -73,17 +81,60 @@ linters:
       min-len: 3           # Minimum string length to check
       min-occurrences: 4   # Must repeat 4+ times to suggest constant
 
+    # Phase 4: Forbidden patterns
+    forbidigo:
+      forbid:
+        - pattern: ^print(ln)?$
+          msg: Use structured logging (pkg/logging) instead of print()
+
+        - pattern: ^fmt\.Print(f|ln)?$
+          msg: Use log.Info() instead of fmt.Print()
+
+        - pattern: ^panic$
+          msg: Use log.Fatal() or return error instead of panic()
+
   # Exclusion rules for test files
   exclusions:
     rules:
       # Test files - less strict linting
       - path: (.+)_test\.go
         linters:
-          - errcheck  # Test errors can be ignored sometimes
-          - revive    # Revive rules too noisy for tests (Phase 1)
-          - funlen    # Test functions can be long (Phase 3)
-          - goconst   # Test strings can repeat (Phase 3)
-          - gocyclo   # Test setup can be complex (Phase 3)
+          - errcheck   # Test errors can be ignored sometimes
+          - revive     # Revive rules too noisy for tests (Phase 1)
+          - funlen     # Test functions can be long (Phase 3)
+          - goconst    # Test strings can repeat (Phase 3)
+          - gocyclo    # Test setup can be complex (Phase 3)
+          - forbidigo  # panic() OK in tests for deliberate failures (Phase 4)
+
+      # Phase 4: CLI commands - fmt.Print* OK for user output
+      - path: cmd/pentora/commands/
+        linters:
+          - forbidigo  # CLI needs fmt.Print for user-facing output
+
+      # Phase 4: CLI helper functions - fmt.Print* OK for user output
+      - path: pkg/cli/
+        linters:
+          - forbidigo  # CLI helpers need fmt.Print for user-facing output
+
+      # Phase 4: Server shutdown - panic OK for timeout kill
+      - path: pkg/server/server\.go
+        linters:
+          - forbidigo  # Panic acceptable for forced shutdown after timeout
+
+      # Phase 4: Module implementations - TODO: migrate to structured logging
+      - path: pkg/modules/
+        linters:
+          - forbidigo  # Modules currently use fmt.Printf for debug (refactor later)
+
+      # Phase 4: Core engine - TODO: migrate to structured logging
+      - path: pkg/engine/
+        linters:
+          - forbidigo  # Engine uses fmt.Printf for INFO messages (refactor later)
+
+      # Phase 4: Fingerprint loader - TODO: migrate to structured logging
+      - path: pkg/fingerprint/loader\.go
+        linters:
+          - forbidigo  # Loader uses fmt.Printf for errors (refactor later)
 
       # Phase 3: Legitimate high complexity - Core engine (DAG orchestration)
       - path: pkg/engine/orchestrator\.go
