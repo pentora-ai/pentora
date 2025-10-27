@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
 	"github.com/stretchr/testify/require"
 )
 
@@ -43,16 +44,16 @@ nodes:
 	require.NoError(t, err)
 
 	// Test validate command
-	opts := &validateOptions{
-		file:       dagFile,
-		strict:     false,
-		jsonOutput: false,
+	opts := bind.DAGValidateOptions{
+		// File is passed as separate parameter
+		Strict:     false,
+		JSONOutput: false,
 	}
 
 	// Note: runValidate calls os.Exit() on success/failure
 	// For unit testing, we need to refactor to return exit code instead
 	// For now, we test that it doesn't panic and loads the DAG
-	err = runValidate(opts)
+	err = runValidate(dagFile, opts)
 
 	// If we get here without panic, the DAG was loaded successfully
 	// In real scenario, we'd check exit code but that requires refactoring
@@ -76,15 +77,15 @@ nodes:
 	err := os.WriteFile(dagFile, []byte(invalidDAG), 0o644)
 	require.NoError(t, err)
 
-	opts := &validateOptions{
-		file:       dagFile,
-		strict:     false,
-		jsonOutput: false,
+	opts := bind.DAGValidateOptions{
+		// File is passed as separate parameter
+		Strict:     false,
+		JSONOutput: false,
 	}
 
 	// This should exit with code 1 due to validation errors
 	// In real test, we'd capture exit code
-	err = runValidate(opts)
+	err = runValidate(dagFile, opts)
 
 	// The function will call os.Exit(1) for invalid DAG
 	// So we won't reach here in real scenario
@@ -114,24 +115,23 @@ nodes:
 	err := os.WriteFile(dagFile, []byte(cyclicDAG), 0o644)
 	require.NoError(t, err)
 
-	opts := &validateOptions{
-		file:       dagFile,
-		strict:     false,
-		jsonOutput: false,
+	opts := bind.DAGValidateOptions{
+		// File is passed as separate parameter
+		Strict:     false,
+		JSONOutput: false,
 	}
 
-	err = runValidate(opts)
+	err = runValidate(dagFile, opts)
 	require.NoError(t, err)
 }
 
 func TestValidateCommand_MissingFile(t *testing.T) {
-	opts := &validateOptions{
-		file:       "/nonexistent/dag.yaml",
-		strict:     false,
-		jsonOutput: false,
+	opts := bind.DAGValidateOptions{
+		Strict:     false,
+		JSONOutput: false,
 	}
 
-	err := runValidate(opts)
+	err := runValidate("/nonexistent/dag.yaml", opts)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to load DAG")
 }
@@ -150,13 +150,13 @@ nodes:
 	err := os.WriteFile(dagFile, []byte(invalidYAML), 0o644)
 	require.NoError(t, err)
 
-	opts := &validateOptions{
-		file:       dagFile,
-		strict:     false,
-		jsonOutput: false,
+	opts := bind.DAGValidateOptions{
+		// File is passed as separate parameter
+		Strict:     false,
+		JSONOutput: false,
 	}
 
-	err = runValidate(opts)
+	err = runValidate(dagFile, opts)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to load DAG")
 }
@@ -180,13 +180,13 @@ func TestValidateCommand_JSONFormat(t *testing.T) {
 	err := os.WriteFile(dagFile, []byte(validJSON), 0o644)
 	require.NoError(t, err)
 
-	opts := &validateOptions{
-		file:       dagFile,
-		strict:     false,
-		jsonOutput: false,
+	opts := bind.DAGValidateOptions{
+		// File is passed as separate parameter
+		Strict:     false,
+		JSONOutput: false,
 	}
 
-	err = runValidate(opts)
+	err = runValidate(dagFile, opts)
 	require.NoError(t, err)
 }
 
@@ -212,14 +212,14 @@ nodes:
 	err := os.WriteFile(dagFile, []byte(dagWithWarning), 0o644)
 	require.NoError(t, err)
 
-	opts := &validateOptions{
-		file:       dagFile,
-		strict:     false,
-		jsonOutput: false,
+	opts := bind.DAGValidateOptions{
+		// File is passed as separate parameter
+		Strict:     false,
+		JSONOutput: false,
 	}
 
 	// Should succeed (exit 0) even with warnings when strict=false
-	err = runValidate(opts)
+	err = runValidate(dagFile, opts)
 	require.NoError(t, err)
 }
 
@@ -237,15 +237,15 @@ nodes:
 	err := os.WriteFile(dagFile, []byte(validDAG), 0o644)
 	require.NoError(t, err)
 
-	opts := &validateOptions{
-		file:       dagFile,
-		strict:     false,
-		jsonOutput: true,
+	opts := bind.DAGValidateOptions{
+		// File is passed as separate parameter
+		Strict:     false,
+		JSONOutput: true,
 	}
 
 	// This will output JSON to stdout and exit 0
 	// In real scenario, we'd capture stdout
-	err = runValidate(opts)
+	err = runValidate(dagFile, opts)
 	require.NoError(t, err)
 }
 

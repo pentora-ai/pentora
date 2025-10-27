@@ -4,6 +4,7 @@ import (
 	"errors"
 	"path/filepath"
 
+	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
 	"github.com/pentora-ai/pentora/pkg/fingerprint"
 	"github.com/pentora-ai/pentora/pkg/fingerprint/catalogsync"
 	"github.com/pentora-ai/pentora/pkg/workspace"
@@ -29,24 +30,24 @@ func NewFingerprintCommand() *cobra.Command {
 }
 
 func newFingerprintSyncCommand() *cobra.Command {
-	var (
-		filePath string
-		url      string
-		cacheDir string
-	)
-
 	cmd := &cobra.Command{
 		Use:   "sync",
 		Short: "Sync fingerprint probes from a remote or local source",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			if filePath == "" && url == "" {
+			// Bind flags to options using centralized binder
+			opts, err := bind.BindFingerprintOptions(cmd)
+			if err != nil {
+				return err
+			}
+
+			if opts.FilePath == "" && opts.URL == "" {
 				return errors.New("either --file or --url must be provided")
 			}
-			if filePath != "" && url != "" {
+			if opts.FilePath != "" && opts.URL != "" {
 				return errors.New("only one of --file or --url may be provided at a time")
 			}
 
-			destination := cacheDir
+			destination := opts.CacheDir
 			if destination == "" {
 				if ws, ok := workspace.FromContext(cmd.Context()); ok {
 					destination = filepath.Join(ws, "cache", "fingerprint")
@@ -59,10 +60,10 @@ func newFingerprintSyncCommand() *cobra.Command {
 				CacheDir: destination,
 			}
 
-			if filePath != "" {
-				svc.Source = catalogsync.FileSource{Path: filePath}
+			if opts.FilePath != "" {
+				svc.Source = catalogsync.FileSource{Path: opts.FilePath}
 			} else {
-				svc.Source = catalogsync.HTTPSource{URL: url}
+				svc.Source = catalogsync.HTTPSource{URL: opts.URL}
 			}
 			svc.Store = catalogsync.FileStore{Path: filepath.Join(destination, "probe.catalog.yaml")}
 
@@ -76,9 +77,9 @@ func newFingerprintSyncCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&filePath, "file", "", "Load probe catalog from a local file")
-	cmd.Flags().StringVar(&url, "url", "", "Download probe catalog from a remote URL")
-	cmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Override probe cache destination directory")
+	cmd.Flags().String("file", "", "Load probe catalog from a local file")
+	cmd.Flags().String("url", "", "Download probe catalog from a remote URL")
+	cmd.Flags().String("cache-dir", "", "Override probe cache destination directory")
 
 	return cmd
 }

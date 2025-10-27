@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
 	"github.com/pentora-ai/pentora/pkg/appctx"
 	"github.com/pentora-ai/pentora/pkg/config"
 	"github.com/pentora-ai/pentora/pkg/logging"
@@ -55,15 +56,6 @@ func (s *stubWorkspace) GetScan(id string) (*api.ScanDetail, error) {
 //
 // See NOTES.md#30 for detailed server architecture design.
 func newStartServerCommand() *cobra.Command {
-	var (
-		addr         string
-		port         int
-		noUI         bool
-		noAPI        bool
-		concurrency  int
-		uiAssetsPath string
-	)
-
 	cmd := &cobra.Command{
 		Use:   "start",
 		Short: "Start the Pentora server",
@@ -77,18 +69,24 @@ The server hosts multiple components in a single runtime:
 The server runs until interrupted (Ctrl+C) or killed, performing graceful
 shutdown to drain in-flight requests and complete running jobs.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Bind flags to options using centralized binder
+			opts, err := bind.BindServerOptions(cmd)
+			if err != nil {
+				return fmt.Errorf("invalid server options: %w", err)
+			}
+
 			// Build server config
 			cfg := config.ServerConfig{
-				Addr:         addr,
-				Port:         port,
-				UIEnabled:    !noUI,
-				APIEnabled:   !noAPI,
+				Addr:         opts.Addr,
+				Port:         opts.Port,
+				UIEnabled:    !opts.NoUI,
+				APIEnabled:   !opts.NoAPI,
 				JobsEnabled:  true,
-				Concurrency:  concurrency,
+				Concurrency:  opts.Concurrency,
 				ReadTimeout:  30 * time.Second,
 				WriteTimeout: 30 * time.Second,
 				UI: config.UIConfig{
-					AssetsPath: uiAssetsPath,
+					AssetsPath: opts.UIAssetsPath,
 				},
 				Auth: config.AuthConfig{
 					Mode: "none", // TODO: Add auth flags when auth system is implemented
@@ -153,12 +151,12 @@ shutdown to drain in-flight requests and complete running jobs.`,
 	}
 
 	// Server-specific flags
-	cmd.Flags().StringVar(&addr, "addr", "127.0.0.1", "Server listen address")
-	cmd.Flags().IntVar(&port, "port", 8080, "Server listen port")
-	cmd.Flags().BoolVar(&noUI, "no-ui", false, "Disable UI static serving")
-	cmd.Flags().BoolVar(&noAPI, "no-api", false, "Disable REST API endpoints")
-	cmd.Flags().IntVar(&concurrency, "jobs-concurrency", 4, "Number of concurrent background workers")
-	cmd.Flags().StringVar(&uiAssetsPath, "ui-assets-path", "", "UI assets directory (dev mode: serve from disk)")
+	cmd.Flags().String("addr", "127.0.0.1", "Server listen address")
+	cmd.Flags().Int("port", 8080, "Server listen port")
+	cmd.Flags().Bool("no-ui", false, "Disable UI static serving")
+	cmd.Flags().Bool("no-api", false, "Disable REST API endpoints")
+	cmd.Flags().Int("jobs-concurrency", 4, "Number of concurrent background workers")
+	cmd.Flags().String("ui-assets-path", "", "UI assets directory (dev mode: serve from disk)")
 
 	return cmd
 }

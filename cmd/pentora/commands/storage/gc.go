@@ -3,19 +3,13 @@ package storage
 import (
 	"fmt"
 
+	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
 	"github.com/pentora-ai/pentora/pkg/storage"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
 func newGCCommand() *cobra.Command {
-	var (
-		dryRun     bool
-		orgID      string
-		maxScans   int
-		maxAgeDays int
-	)
-
 	cmd := &cobra.Command{
 		Use:   "gc",
 		Short: "Run garbage collection on stored scans",
@@ -37,6 +31,12 @@ Use --dry-run to preview which scans would be deleted without actually deleting 
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
+			// Bind flags to options using centralized binder
+			opts, err := bind.BindStorageGCOptions(cmd)
+			if err != nil {
+				return err
+			}
+
 			// Create storage backend
 			storageConfig, err := storage.DefaultConfig()
 			if err != nil {
@@ -44,11 +44,11 @@ Use --dry-run to preview which scans would be deleted without actually deleting 
 			}
 
 			// Apply retention policy overrides from flags
-			if maxScans > 0 || maxAgeDays > 0 {
+			if opts.MaxScans > 0 || opts.MaxAgeDays > 0 {
 				// User provided flags - override config
 				storageConfig.Retention = storage.RetentionConfig{
-					MaxScans:   maxScans,
-					MaxAgeDays: maxAgeDays,
+					MaxScans:   opts.MaxScans,
+					MaxAgeDays: opts.MaxAgeDays,
 				}
 			}
 
@@ -83,11 +83,11 @@ Use --dry-run to preview which scans would be deleted without actually deleting 
 			log.Info().
 				Int("max_scans", storageConfig.Retention.MaxScans).
 				Int("max_age_days", storageConfig.Retention.MaxAgeDays).
-				Bool("dry_run", dryRun).
-				Str("org_id", orgID).
+				Bool("dry_run", opts.DryRun).
+				Str("org_id", opts.OrgID).
 				Msg("Starting garbage collection")
 
-			if dryRun {
+			if opts.DryRun {
 				fmt.Println("DRY RUN MODE - No scans will be deleted")
 				fmt.Println()
 			}
@@ -104,8 +104,8 @@ Use --dry-run to preview which scans would be deleted without actually deleting 
 
 			// Run GC
 			result, err := backend.GarbageCollect(ctx, storage.GCOptions{
-				DryRun: dryRun,
-				OrgID:  orgID,
+				DryRun: opts.DryRun,
+				OrgID:  opts.OrgID,
 			})
 			if err != nil {
 				return fmt.Errorf("garbage collection failed: %w", err)
@@ -115,7 +115,7 @@ Use --dry-run to preview which scans would be deleted without actually deleting 
 			if result.ScansDeleted == 0 {
 				fmt.Println("No scans to clean up")
 			} else {
-				if dryRun {
+				if opts.DryRun {
 					fmt.Printf("Would delete %d scan(s):\n", result.ScansDeleted)
 				} else {
 					fmt.Printf("Deleted %d scan(s):\n", result.ScansDeleted)
@@ -133,7 +133,7 @@ Use --dry-run to preview which scans would be deleted without actually deleting 
 				}
 			}
 
-			if dryRun && result.ScansDeleted > 0 {
+			if opts.DryRun && result.ScansDeleted > 0 {
 				fmt.Println()
 				fmt.Println("To actually delete these scans, run without --dry-run:")
 				fmt.Println("  pentora storage gc")
@@ -144,10 +144,10 @@ Use --dry-run to preview which scans would be deleted without actually deleting 
 	}
 
 	// Flags
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Preview scans to be deleted without actually deleting them")
-	cmd.Flags().StringVar(&orgID, "org-id", "", "Organization ID to clean up (default: all orgs)")
-	cmd.Flags().IntVar(&maxScans, "max-scans", 0, "Maximum number of scans to retain (0 = no limit)")
-	cmd.Flags().IntVar(&maxAgeDays, "max-age-days", 0, "Maximum age of scans in days (0 = no limit)")
+	cmd.Flags().Bool("dry-run", false, "Preview scans to be deleted without actually deleting them")
+	cmd.Flags().String("org-id", "", "Organization ID to clean up (default: all orgs)")
+	cmd.Flags().Int("max-scans", 0, "Maximum number of scans to retain (0 = no limit)")
+	cmd.Flags().Int("max-age-days", 0, "Maximum age of scans in days (0 = no limit)")
 
 	return cmd
 }

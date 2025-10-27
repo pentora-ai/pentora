@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
 	"github.com/pentora-ai/pentora/pkg/appctx"
 	"github.com/pentora-ai/pentora/pkg/engine"
 	parsepkg "github.com/pentora-ai/pentora/pkg/modules/parse" // Register parse modules if needed
@@ -24,26 +25,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Flags for the scan command (remains the same)
-var (
-	// scanTargets       []string
-	scanPorts         string
-	scanProfile       string
-	scanLevel         string
-	scanIncludeTags   []string
-	scanExcludeTags   []string
-	scanEnableVuln    bool
-	scanOutputFormat  string
-	scanCustomTimeout string
-	scanConcurrency   int  // This might become a global config or part of ScanIntent for planner
-	scanEnablePing    bool // This now feeds into ScanIntent
-	scanPingCount     int  // This now feeds into ScanIntent
-	scanAllowLoopback bool // This now feeds into ScanIntent
-	scanOnlyDiscover  bool
-	scanSkipDiscover  bool
-	scanInteractive   bool
-)
-
 // ScanCmd defines the 'scan' command for comprehensive scanning.
 var ScanCmd = &cobra.Command{
 	Use:   "scan [targets...]",
@@ -53,17 +34,15 @@ The command automatically plans the execution DAG using available modules.`,
 	GroupID: "scan",
 	Args:    cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		scanTargetsFromCLI := args
-
 		logger := log.With().Str("command", "scan").Logger()
-		logger.Info().Strs("targets", scanTargetsFromCLI).Msg("Initializing scan command")
+		logger.Info().Strs("targets", args).Msg("Initializing scan command")
 
-		if scanOnlyDiscover && scanSkipDiscover {
-			fmt.Fprintln(os.Stderr, "[ERROR] --only-discover and --no-discover cannot be used together")
+		// Bind flags to options using centralized binder
+		params, err := bind.BindScanOptions(cmd, args)
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to bind scan options")
+			fmt.Fprintf(os.Stderr, "[ERROR] Invalid scan options: %v\n", err)
 			return
-		}
-		if scanOnlyDiscover {
-			scanEnableVuln = false
 		}
 
 		svc := scanexec.NewService()
@@ -107,32 +86,13 @@ The command automatically plans the execution DAG using available modules.`,
 			}
 		}
 
-		if scanInteractive {
+		// Enable progress logging if interactive flag is set
+		interactive, _ := cmd.Flags().GetBool("progress")
+		if interactive {
 			svc = svc.WithProgressSink(&progressLogger{logger: logger})
 		}
 
-		params := scanexec.Params{
-			Targets:       scanTargetsFromCLI,
-			Profile:       scanProfile,
-			Level:         scanLevel,
-			IncludeTags:   scanIncludeTags,
-			ExcludeTags:   scanExcludeTags,
-			EnableVuln:    scanEnableVuln,
-			Ports:         scanPorts,
-			CustomTimeout: scanCustomTimeout,
-			EnablePing:    scanEnablePing,
-			PingCount:     scanPingCount,
-			AllowLoopback: scanAllowLoopback,
-			Concurrency:   scanConcurrency,
-			OutputFormat:  scanOutputFormat,
-			RawInputs: map[string]interface{}{
-				"config.scan.requested_profile": scanProfile,
-			},
-			OnlyDiscover: scanOnlyDiscover,
-			SkipDiscover: scanSkipDiscover,
-		}
-
-		if scanOutputFormat == "text" {
+		if params.OutputFormat == "text" {
 			logger.Info().Msg("Starting scan execution with automatically planned DAG...")
 		}
 
@@ -170,7 +130,7 @@ The command automatically plans the execution DAG using available modules.`,
 		}
 
 		// 3. Seçilen formata göre çıktıyı yazdır
-		switch strings.ToLower(scanOutputFormat) {
+		switch strings.ToLower(params.OutputFormat) {
 		case "json":
 			// Eğer hiç profil yoksa ama hata da yoksa boş bir liste yazdır
 			if finalProfiles == nil {
@@ -329,22 +289,22 @@ func (p *progressLogger) OnEvent(ev scanexec.ProgressEvent) {
 
 func init() {
 	// Flags for ScanCmd (ensure these are descriptive for the planner)
-	ScanCmd.Flags().StringVarP(&scanPorts, "ports", "p", "", "Ports/port ranges for TCP scan (e.g., 'top-1000', '22,80,443', '1-65535')")
-	ScanCmd.Flags().StringVar(&scanProfile, "profile", "", "Predefined scan profile (e.g., 'quick_discovery', 'full_vuln_scan')")
-	ScanCmd.Flags().StringVar(&scanLevel, "level", "default", "Scan intensity level (e.g., 'light', 'default', 'comprehensive', 'intrusive')")
-	ScanCmd.Flags().StringSliceVar(&scanIncludeTags, "tags", []string{}, "Only include modules with these tags (comma-separated)")
-	ScanCmd.Flags().StringSliceVar(&scanExcludeTags, "exclude-tags", []string{}, "Exclude modules with these tags (comma-separated)")
-	ScanCmd.Flags().BoolVar(&scanEnableVuln, "vuln", false, "Enable vulnerability assessment modules (shortcut for a common intent)")
-	ScanCmd.Flags().BoolVar(&scanOnlyDiscover, "only-discover", false, "Run only discovery modules (scan and vuln phases are skipped)")
-	ScanCmd.Flags().BoolVar(&scanSkipDiscover, "no-discover", false, "Skip discovery phase and proceed directly to port scanning/vuln")
-	ScanCmd.Flags().BoolVar(&scanInteractive, "progress", false, "Print live progress updates during the scan")
+	ScanCmd.Flags().StringP("ports", "p", "", "Ports/port ranges for TCP scan (e.g., 'top-1000', '22,80,443', '1-65535')")
+	ScanCmd.Flags().String("profile", "", "Predefined scan profile (e.g., 'quick_discovery', 'full_vuln_scan')")
+	ScanCmd.Flags().String("level", "default", "Scan intensity level (e.g., 'light', 'default', 'comprehensive', 'intrusive')")
+	ScanCmd.Flags().StringSlice("tags", []string{}, "Only include modules with these tags (comma-separated)")
+	ScanCmd.Flags().StringSlice("exclude-tags", []string{}, "Exclude modules with these tags (comma-separated)")
+	ScanCmd.Flags().Bool("vuln", false, "Enable vulnerability assessment modules (shortcut for a common intent)")
+	ScanCmd.Flags().Bool("only-discover", false, "Run only discovery modules (scan and vuln phases are skipped)")
+	ScanCmd.Flags().Bool("no-discover", false, "Skip discovery phase and proceed directly to port scanning/vuln")
+	ScanCmd.Flags().Bool("progress", false, "Print live progress updates during the scan")
 	ScanCmd.Flags().String("fingerprint-cache", "", "Path to fingerprint catalog cache directory")
-	ScanCmd.Flags().StringVarP(&scanOutputFormat, "output", "o", "text", "Output format: text, json, yaml")
-	ScanCmd.Flags().StringVar(&scanCustomTimeout, "timeout", "1s", "Default timeout for network operations like ping/port connect")
-	ScanCmd.Flags().IntVar(&scanConcurrency, "concurrency", 50, "Default concurrency for parallel operations")
+	ScanCmd.Flags().StringP("output", "o", "text", "Output format: text, json, yaml")
+	ScanCmd.Flags().String("timeout", "1s", "Default timeout for network operations like ping/port connect")
+	ScanCmd.Flags().Int("concurrency", 50, "Default concurrency for parallel operations")
 
 	// Ping specific flags - planner can use these if ICMP module is selected
-	ScanCmd.Flags().BoolVar(&scanEnablePing, "ping", true, "Enable ICMP host discovery (default: true)")
-	ScanCmd.Flags().IntVar(&scanPingCount, "ping-count", 1, "Number of ICMP pings per host")
-	ScanCmd.Flags().BoolVar(&scanAllowLoopback, "allow-loopback", false, "Allow scanning loopback addresses")
+	ScanCmd.Flags().Bool("ping", true, "Enable ICMP host discovery (default: true)")
+	ScanCmd.Flags().Int("ping-count", 1, "Number of ICMP pings per host")
+	ScanCmd.Flags().Bool("allow-loopback", false, "Allow scanning loopback addresses")
 }

@@ -5,30 +5,25 @@
 package dag
 
 import (
-	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
 	"github.com/pentora-ai/pentora/pkg/engine"
-	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
 func TestExportCommand_DefaultYAML(t *testing.T) {
-	// Create temporary command context
-	cmd := &cobra.Command{}
-	cmd.SetContext(context.Background())
-
-	opts := &exportOptions{
-		output:     "", // stdout
-		format:     "yaml",
-		targets:    "192.168.1.1",
-		ports:      "80,443",
-		vuln:       false,
-		noDiscover: false,
+	opts := bind.DAGExportOptions{
+		Output:     "", // stdout
+		Format:     "yaml",
+		Targets:    "192.168.1.1",
+		Ports:      "80,443",
+		Vuln:       false,
+		NoDiscover: false,
 	}
 
 	// Redirect stdout to capture output
@@ -36,7 +31,7 @@ func TestExportCommand_DefaultYAML(t *testing.T) {
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
-	err := runExport(cmd, opts)
+	err := runExport(opts)
 
 	// Restore stdout
 	_ = w.Close()
@@ -62,19 +57,16 @@ func TestExportCommand_ToFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	outputFile := filepath.Join(tmpDir, "output.yaml")
 
-	cmd := &cobra.Command{}
-	cmd.SetContext(context.Background())
-
-	opts := &exportOptions{
-		output:     outputFile,
-		format:     "yaml",
-		targets:    "10.0.0.1",
-		ports:      "22,80,443",
-		vuln:       false,
-		noDiscover: false,
+	opts := bind.DAGExportOptions{
+		Output:     outputFile,
+		Format:     "yaml",
+		Targets:    "10.0.0.1",
+		Ports:      "22,80,443",
+		Vuln:       false,
+		NoDiscover: false,
 	}
 
-	err := runExport(cmd, opts)
+	err := runExport(opts)
 	require.NoError(t, err)
 
 	// Verify file was created
@@ -95,19 +87,16 @@ func TestExportCommand_JSONFormat(t *testing.T) {
 	tmpDir := t.TempDir()
 	outputFile := filepath.Join(tmpDir, "output.json")
 
-	cmd := &cobra.Command{}
-	cmd.SetContext(context.Background())
-
-	opts := &exportOptions{
-		output:     outputFile,
-		format:     "json",
-		targets:    "192.168.1.1",
-		ports:      "80",
-		vuln:       false,
-		noDiscover: false,
+	opts := bind.DAGExportOptions{
+		Output:     outputFile,
+		Format:     "json",
+		Targets:    "192.168.1.1",
+		Ports:      "80",
+		Vuln:       false,
+		NoDiscover: false,
 	}
 
-	err := runExport(cmd, opts)
+	err := runExport(opts)
 	require.NoError(t, err)
 
 	// Verify file exists
@@ -127,19 +116,16 @@ func TestExportCommand_WithVuln(t *testing.T) {
 	tmpDir := t.TempDir()
 	outputFile := filepath.Join(tmpDir, "vuln.yaml")
 
-	cmd := &cobra.Command{}
-	cmd.SetContext(context.Background())
-
-	opts := &exportOptions{
-		output:     outputFile,
-		format:     "yaml",
-		targets:    "192.168.1.1",
-		ports:      "80",
-		vuln:       true, // Enable vuln
-		noDiscover: false,
+	opts := bind.DAGExportOptions{
+		Output:     outputFile,
+		Format:     "yaml",
+		Targets:    "192.168.1.1",
+		Ports:      "80",
+		Vuln:       true, // Enable vuln
+		NoDiscover: false,
 	}
 
-	err := runExport(cmd, opts)
+	err := runExport(opts)
 	require.NoError(t, err)
 
 	// Read DAG
@@ -167,19 +153,16 @@ func TestExportCommand_NoDiscover(t *testing.T) {
 	tmpDir := t.TempDir()
 	outputFile := filepath.Join(tmpDir, "no-discover.yaml")
 
-	cmd := &cobra.Command{}
-	cmd.SetContext(context.Background())
-
-	opts := &exportOptions{
-		output:     outputFile,
-		format:     "yaml",
-		targets:    "192.168.1.1",
-		ports:      "80",
-		vuln:       false,
-		noDiscover: true, // Skip discovery
+	opts := bind.DAGExportOptions{
+		Output:     outputFile,
+		Format:     "yaml",
+		Targets:    "192.168.1.1",
+		Ports:      "80",
+		Vuln:       false,
+		NoDiscover: true, // Skip discovery
 	}
 
-	err := runExport(cmd, opts)
+	err := runExport(opts)
 	require.NoError(t, err)
 
 	// Read DAG
@@ -197,47 +180,41 @@ func TestExportCommand_NoDiscover(t *testing.T) {
 }
 
 func TestExportCommand_InvalidFormat(t *testing.T) {
-	cmd := &cobra.Command{}
-	cmd.SetContext(context.Background())
-
-	opts := &exportOptions{
-		output:     "",
-		format:     "xml", // Invalid format
-		targets:    "192.168.1.1",
-		ports:      "80",
-		vuln:       false,
-		noDiscover: false,
+	opts := bind.DAGExportOptions{
+		Output:     "",
+		Format:     "xml", // Invalid format
+		Targets:    "192.168.1.1",
+		Ports:      "80",
+		Vuln:       false,
+		NoDiscover: false,
 	}
 
-	err := runExport(cmd, opts)
+	err := runExport(opts)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "unsupported format")
 }
 
 func TestExportCommand_InvalidOutputPath(t *testing.T) {
-	cmd := &cobra.Command{}
-	cmd.SetContext(context.Background())
-
-	opts := &exportOptions{
-		output:     "/nonexistent/directory/output.yaml",
-		format:     "yaml",
-		targets:    "192.168.1.1",
-		ports:      "80",
-		vuln:       false,
-		noDiscover: false,
+	opts := bind.DAGExportOptions{
+		Output:     "/nonexistent/directory/output.yaml",
+		Format:     "yaml",
+		Targets:    "192.168.1.1",
+		Ports:      "80",
+		Vuln:       false,
+		NoDiscover: false,
 	}
 
-	err := runExport(cmd, opts)
+	err := runExport(opts)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to write output file")
 }
 
 func TestCreateExampleDAG_BasicStructure(t *testing.T) {
-	opts := &exportOptions{
-		targets:    "192.168.1.1",
-		ports:      "22,80,443",
-		vuln:       false,
-		noDiscover: false,
+	opts := bind.DAGExportOptions{
+		Targets:    "192.168.1.1",
+		Ports:      "22,80,443",
+		Vuln:       false,
+		NoDiscover: false,
 	}
 
 	dag := createExampleDAG(opts)
@@ -263,11 +240,11 @@ func TestCreateExampleDAG_BasicStructure(t *testing.T) {
 }
 
 func TestCreateExampleDAG_ConfigNode(t *testing.T) {
-	opts := &exportOptions{
-		targets:    "10.0.0.0/24",
-		ports:      "1-1000",
-		vuln:       false,
-		noDiscover: false,
+	opts := bind.DAGExportOptions{
+		Targets:    "10.0.0.0/24",
+		Ports:      "1-1000",
+		Vuln:       false,
+		NoDiscover: false,
 	}
 
 	dag := createExampleDAG(opts)
@@ -292,11 +269,11 @@ func TestCreateExampleDAG_ConfigNode(t *testing.T) {
 }
 
 func TestCreateExampleDAG_DependencyChain(t *testing.T) {
-	opts := &exportOptions{
-		targets:    "192.168.1.1",
-		ports:      "80",
-		vuln:       true,
-		noDiscover: false,
+	opts := bind.DAGExportOptions{
+		Targets:    "192.168.1.1",
+		Ports:      "80",
+		Vuln:       true,
+		NoDiscover: false,
 	}
 
 	dag := createExampleDAG(opts)
@@ -330,11 +307,11 @@ func TestCreateExampleDAG_DependencyChain(t *testing.T) {
 }
 
 func TestCreateExampleDAG_DataFlow(t *testing.T) {
-	opts := &exportOptions{
-		targets:    "192.168.1.1",
-		ports:      "80",
-		vuln:       false,
-		noDiscover: false,
+	opts := bind.DAGExportOptions{
+		Targets:    "192.168.1.1",
+		Ports:      "80",
+		Vuln:       false,
+		NoDiscover: false,
 	}
 
 	dag := createExampleDAG(opts)

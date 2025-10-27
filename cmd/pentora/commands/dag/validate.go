@@ -10,20 +10,12 @@ import (
 	"os"
 
 	"github.com/fatih/color"
+	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
 	"github.com/pentora-ai/pentora/pkg/engine"
 	"github.com/spf13/cobra"
 )
 
-type validateOptions struct {
-	file       string
-	format     string
-	strict     bool
-	jsonOutput bool
-}
-
 func newValidateCommand() *cobra.Command {
-	opts := &validateOptions{}
-
 	cmd := &cobra.Command{
 		Use:   "validate <file>",
 		Short: "Validate a DAG definition file",
@@ -51,21 +43,27 @@ The command returns different exit codes based on validation results:
   pentora dag validate dag.yaml --json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			opts.file = args[0]
-			return runValidate(opts)
+			// Bind flags to options using centralized binder
+			opts, err := bind.BindDAGValidateOptions(cmd)
+			if err != nil {
+				return err
+			}
+
+			file := args[0]
+			return runValidate(file, opts)
 		},
 	}
 
-	cmd.Flags().StringVar(&opts.format, "format", "", "File format hint (yaml|json), auto-detect if not specified")
-	cmd.Flags().BoolVar(&opts.strict, "strict", false, "Treat warnings as errors (exit code 2)")
-	cmd.Flags().BoolVar(&opts.jsonOutput, "json", false, "Output results as JSON")
+	cmd.Flags().String("format", "", "File format hint (yaml|json), auto-detect if not specified")
+	cmd.Flags().Bool("strict", false, "Treat warnings as errors (exit code 2)")
+	cmd.Flags().Bool("json", false, "Output results as JSON")
 
 	return cmd
 }
 
-func runValidate(opts *validateOptions) error {
+func runValidate(file string, opts bind.DAGValidateOptions) error {
 	// Load DAG from file (skip validation during load, we'll validate explicitly)
-	dag, err := engine.LoadDAGFromFile(opts.file, true)
+	dag, err := engine.LoadDAGFromFile(file, true)
 	if err != nil {
 		return fmt.Errorf("failed to load DAG: %w", err)
 	}
@@ -75,10 +73,10 @@ func runValidate(opts *validateOptions) error {
 
 	// Output results
 	var exitCode int
-	if opts.jsonOutput {
+	if opts.JSONOutput {
 		exitCode = outputJSON(result)
 	} else {
-		exitCode = outputPretty(dag, result, opts.strict)
+		exitCode = outputPretty(dag, result, opts.Strict)
 	}
 
 	// Exit with appropriate code (only in real CLI, not in tests)

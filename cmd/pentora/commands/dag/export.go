@@ -9,23 +9,13 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
 	"github.com/pentora-ai/pentora/pkg/engine"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
 
-type exportOptions struct {
-	output     string
-	format     string
-	targets    string
-	ports      string
-	vuln       bool
-	noDiscover bool
-}
-
 func newExportCommand() *cobra.Command {
-	opts := &exportOptions{}
-
 	cmd := &cobra.Command{
 		Use:   "export",
 		Short: "Export programmatic DAG to YAML/JSON",
@@ -49,21 +39,27 @@ and exports it to YAML or JSON format. Useful for:
   # Export as JSON
   pentora dag export --targets 192.168.1.1 --format json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runExport(cmd, opts)
+			// Bind flags to options using centralized binder
+			opts, err := bind.BindDAGExportOptions(cmd)
+			if err != nil {
+				return err
+			}
+
+			return runExport(opts)
 		},
 	}
 
-	cmd.Flags().StringVarP(&opts.output, "output", "o", "", "Output file (default: stdout)")
-	cmd.Flags().StringVar(&opts.format, "format", "yaml", "Output format (yaml|json)")
-	cmd.Flags().StringVar(&opts.targets, "targets", "192.168.1.1", "Target hosts for scan")
-	cmd.Flags().StringVar(&opts.ports, "ports", "22,80,443", "Ports to scan")
-	cmd.Flags().BoolVar(&opts.vuln, "vuln", false, "Include vulnerability evaluation modules")
-	cmd.Flags().BoolVar(&opts.noDiscover, "no-discover", false, "Skip discovery modules")
+	cmd.Flags().StringP("output", "o", "", "Output file (default: stdout)")
+	cmd.Flags().String("format", "yaml", "Output format (yaml|json)")
+	cmd.Flags().String("targets", "192.168.1.1", "Target hosts for scan")
+	cmd.Flags().String("ports", "22,80,443", "Ports to scan")
+	cmd.Flags().Bool("vuln", false, "Include vulnerability evaluation modules")
+	cmd.Flags().Bool("no-discover", false, "Skip discovery modules")
 
 	return cmd
 }
 
-func runExport(cmd *cobra.Command, opts *exportOptions) error {
+func runExport(opts bind.DAGExportOptions) error {
 	// Create a simple example DAG for now
 	// TODO: In future, integrate with actual scan planner to generate real DAG
 	dag := createExampleDAG(opts)
@@ -78,13 +74,13 @@ func runExport(cmd *cobra.Command, opts *exportOptions) error {
 	var data []byte
 	var err error
 
-	switch opts.format {
+	switch opts.Format {
 	case "yaml":
 		data, err = yaml.Marshal(dag)
 	case "json":
 		data, err = json.MarshalIndent(dag, "", "  ")
 	default:
-		return fmt.Errorf("unsupported format: %s (use yaml or json)", opts.format)
+		return fmt.Errorf("unsupported format: %s (use yaml or json)", opts.Format)
 	}
 
 	if err != nil {
@@ -92,13 +88,13 @@ func runExport(cmd *cobra.Command, opts *exportOptions) error {
 	}
 
 	// Write to file or stdout
-	if opts.output == "" {
+	if opts.Output == "" {
 		fmt.Print(string(data))
 	} else {
-		if err := os.WriteFile(opts.output, data, 0o644); err != nil {
+		if err := os.WriteFile(opts.Output, data, 0o644); err != nil {
 			return fmt.Errorf("failed to write output file: %w", err)
 		}
-		fmt.Printf("DAG exported to: %s\n", opts.output)
+		fmt.Printf("DAG exported to: %s\n", opts.Output)
 	}
 
 	return nil
@@ -106,10 +102,10 @@ func runExport(cmd *cobra.Command, opts *exportOptions) error {
 
 // createExampleDAG creates a sample DAG based on scan options
 // TODO: Replace this with actual integration to pkg/scanexec planner
-func createExampleDAG(opts *exportOptions) *engine.DAGSchema {
+func createExampleDAG(opts bind.DAGExportOptions) *engine.DAGSchema {
 	dag := &engine.DAGSchema{
 		Name:        "scan-dag",
-		Description: fmt.Sprintf("Scan DAG for targets: %s", opts.targets),
+		Description: fmt.Sprintf("Scan DAG for targets: %s", opts.Targets),
 		Version:     "1.0",
 		Nodes:       []engine.DAGNode{},
 	}
@@ -123,13 +119,13 @@ func createExampleDAG(opts *exportOptions) *engine.DAGSchema {
 			"config.ports",
 		},
 		Config: map[string]interface{}{
-			"targets": opts.targets,
-			"ports":   opts.ports,
+			"targets": opts.Targets,
+			"ports":   opts.Ports,
 		},
 	})
 
 	// Add discovery node (unless --no-discover)
-	if !opts.noDiscover {
+	if !opts.NoDiscover {
 		dag.Nodes = append(dag.Nodes, engine.DAGNode{
 			ID:     "discovery-tcp",
 			Module: "discovery-tcp",
@@ -160,7 +156,7 @@ func createExampleDAG(opts *exportOptions) *engine.DAGSchema {
 		},
 	}
 
-	if !opts.noDiscover {
+	if !opts.NoDiscover {
 		portScanNode.DependsOn = append(portScanNode.DependsOn, "discovery-tcp")
 		portScanNode.Consumes = append(portScanNode.Consumes, "discovery.live_hosts")
 	} else {
@@ -200,7 +196,7 @@ func createExampleDAG(opts *exportOptions) *engine.DAGSchema {
 	})
 
 	// Add vuln evaluation node (if --vuln)
-	if opts.vuln {
+	if opts.Vuln {
 		dag.Nodes = append(dag.Nodes, engine.DAGNode{
 			ID:     "vuln-eval",
 			Module: "vuln-eval",
@@ -228,7 +224,7 @@ func createExampleDAG(opts *exportOptions) *engine.DAGSchema {
 		},
 	}
 
-	if opts.vuln {
+	if opts.Vuln {
 		reportNode.DependsOn = append(reportNode.DependsOn, "vuln-eval")
 		reportNode.Consumes = append(reportNode.Consumes, "vuln.findings")
 	}
