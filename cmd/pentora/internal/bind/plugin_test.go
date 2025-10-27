@@ -3,9 +3,10 @@ package bind
 import (
 	"testing"
 
-	"github.com/pentora-ai/pentora/pkg/plugin"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
+
+	"github.com/pentora-ai/pentora/pkg/plugin"
 )
 
 func TestBindInstallOptions(t *testing.T) {

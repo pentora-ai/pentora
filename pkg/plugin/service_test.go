@@ -12,9 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pentora-ai/pentora/pkg/storage"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
+
+	"github.com/pentora-ai/pentora/pkg/storage"
 )
 
 func TestNewService(t *testing.T) {

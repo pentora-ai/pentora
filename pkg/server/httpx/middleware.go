@@ -4,8 +4,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/pentora-ai/pentora/pkg/config"
 	"github.com/rs/zerolog/log"
+
+	"github.com/pentora-ai/pentora/pkg/config"
 )
 
 // Chain applies middleware in order: Logger → Auth → Recovery → CORS → handler

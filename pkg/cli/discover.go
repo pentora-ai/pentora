@@ -9,14 +9,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pentora-ai/pentora/pkg/engine"            // Engine interfaces
-	"github.com/pentora-ai/pentora/pkg/modules/discovery" // To access discovery module results if needed directly
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"gopkg.in/yaml.v3"
-
 	// For ParsePortString and ParseAndExpandTargets
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
+
+	"github.com/pentora-ai/pentora/pkg/engine"            // Engine interfaces
+	"github.com/pentora-ai/pentora/pkg/modules/discovery" // To access discovery module results if needed directly
 )
 
 var (

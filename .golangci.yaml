@@ -1,17 +1,21 @@
 # golangci-lint Configuration
-# Phase 1: Foundation (v2 syntax + critical linters)
+# Phase 2: Import Organization (gci formatter)
 #
-# Changes from previous version:
-# 1. Migrated to v2 syntax (linters.exclusions → issues.exclude-rules)
+# Changes from Phase 1:
+# 1. Added gci formatter for consistent import organization
+# 2. Configured 3-section import grouping (stdlib/external/internal)
+#
+# Previous changes (Phase 1):
+# 1. Migrated to v2 syntax (linters.exclusions.rules)
 # 2. Added critical linters: ineffassign, unused, errcheck
-# 3. staticcheck already includes gosimple (no separate linter needed)
+# 3. staticcheck includes gosimple (no separate linter)
 # 4. Enhanced test file exclusions
 
 version: '2'
 
 formatters:
   enable:
-    - gofumpt
+    - gofumpt   # Go formatter (Phase 1)
 
 linters:
   enable:

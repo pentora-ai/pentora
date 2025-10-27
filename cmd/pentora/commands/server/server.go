@@ -1,8 +1,9 @@
 package server
 
 import (
-	"github.com/pentora-ai/pentora/pkg/workspace"
 	"github.com/spf13/cobra"
+
+	"github.com/pentora-ai/pentora/pkg/workspace"
 )
 
 const cliExecutable = "server"

@@ -5,8 +5,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/pentora-ai/pentora/pkg/config"
 	"github.com/stretchr/testify/require"
+
+	"github.com/pentora-ai/pentora/pkg/config"
 )
 
 func TestAuth_ValidToken(t *testing.T) {

@@ -5,8 +5,9 @@ package cli
 import (
 	"fmt"
 
-	v "github.com/pentora-ai/pentora/pkg/version"
 	"github.com/spf13/cobra"
+
+	v "github.com/pentora-ai/pentora/pkg/version"
 )
 
 func NewVersionCommand(cliExecutable string) *cobra.Command {

@@ -1,10 +1,11 @@
 package app
 
 import (
+	"github.com/rs/zerolog"
+
 	"github.com/pentora-ai/pentora/pkg/config"
 	"github.com/pentora-ai/pentora/pkg/server/api"
 	"github.com/pentora-ai/pentora/pkg/storage"
-	"github.com/rs/zerolog"
 )
 
 // Deps holds dependencies for the server application.

@@ -5,9 +5,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/pentora-ai/pentora/pkg/engine"
 	"github.com/pentora-ai/pentora/pkg/plugin"
-	"github.com/rs/zerolog/log"
 )
 
 const (

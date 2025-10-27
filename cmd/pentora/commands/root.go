@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
+
 	dagCmd "github.com/pentora-ai/pentora/cmd/pentora/commands/dag"
 	pluginCmd "github.com/pentora-ai/pentora/cmd/pentora/commands/plugin"
 	serverCmd "github.com/pentora-ai/pentora/cmd/pentora/commands/server"
@@ -13,8 +16,6 @@ import (
 	"github.com/pentora-ai/pentora/pkg/config"
 	"github.com/pentora-ai/pentora/pkg/engine"
 	"github.com/pentora-ai/pentora/pkg/workspace"
-	"github.com/rs/zerolog/log"
-	"github.com/spf13/cobra"
 )
 
 const cliExecutable = "pentora"

@@ -5,9 +5,10 @@ import (
 	"os"
 	"sort"
 
+	"github.com/spf13/cobra"
+
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/format"
 	"github.com/pentora-ai/pentora/pkg/plugin"
-	"github.com/spf13/cobra"
 )
 
 func newEmbeddedCommand() *cobra.Command {

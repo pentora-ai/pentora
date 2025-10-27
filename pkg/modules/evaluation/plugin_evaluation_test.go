@@ -5,9 +5,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/pentora-ai/pentora/pkg/engine"
 	"github.com/pentora-ai/pentora/pkg/plugin"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNewPluginEvaluationModule(t *testing.T) {

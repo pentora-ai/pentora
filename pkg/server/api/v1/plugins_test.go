@@ -9,8 +9,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/pentora-ai/pentora/pkg/plugin"
 	"github.com/stretchr/testify/require"
+
+	"github.com/pentora-ai/pentora/pkg/plugin"
 )
 
 // mockPluginService implements PluginService for testing

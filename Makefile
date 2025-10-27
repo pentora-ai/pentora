@@ -57,7 +57,11 @@ test-all: test-unit test-integration
 .PHONY: fmt
 #? fmt: Format the Code
 fmt:
-	gofmt -s -l -w $(SRCS)	
+	@echo "🔧 Running gci (import organization)..."
+	@gci write --skip-generated -s standard -s default -s "prefix(github.com/pentora-ai/pentora)" $(SRCS)
+	@echo "🔧 Running gofmt (code formatting)..."
+	@gofmt -s -l -w $(SRCS)
+	@echo "✅ Code formatted"	
 
 #? dist: Create the "dist" directory
 dist:

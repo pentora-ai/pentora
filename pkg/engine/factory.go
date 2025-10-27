@@ -4,12 +4,13 @@ package engine
 import (
 	"context"
 
+	"github.com/rs/zerolog"
+	"github.com/spf13/pflag"
+
 	"github.com/pentora-ai/pentora/pkg/config"
 	"github.com/pentora-ai/pentora/pkg/event"
 	"github.com/pentora-ai/pentora/pkg/hook"
 	"github.com/pentora-ai/pentora/pkg/logging"
-	"github.com/rs/zerolog"
-	"github.com/spf13/pflag"
 )
 
 // Factory is responsible for constructing an AppManager instance with all required components.

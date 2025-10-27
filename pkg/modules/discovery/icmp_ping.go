@@ -15,10 +15,11 @@ import (
 	// TODO: Replace with your actual ping library import path
 	//nolint:staticcheck // Ignore staticcheck warning for this import
 	"github.com/go-ping/ping"
-	"github.com/pentora-ai/pentora/pkg/engine" // Assuming your core module interfaces are in pkg/engine
-	"github.com/pentora-ai/pentora/pkg/netutil"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cast"
+
+	"github.com/pentora-ai/pentora/pkg/engine" // Assuming your core module interfaces are in pkg/engine
+	"github.com/pentora-ai/pentora/pkg/netutil"
 )
 
 // ICMPPingDiscoveryResult stores the outcome of the ping discovery.
