@@ -153,7 +153,7 @@ func (m *SSHParserModule) Execute(ctx context.Context, inputs map[string]interfa
 	for i, item := range bannerList {
 		select {
 		case <-ctx.Done():
-			m.logger.Info().Int("processed_ssh_banners", processedCount).Msg("Context cancelled. Aborting further SSH parsing.")
+			m.logger.Info().Int("processed_ssh_banners", processedCount).Msg("Context canceled. Aborting further SSH parsing.")
 			return ctx.Err()
 		default:
 		}

@@ -101,7 +101,7 @@ func TestScanStatus_IsValid(t *testing.T) {
 		{"running", StatusRunning, true},
 		{"completed", StatusCompleted, true},
 		{"failed", StatusFailed, true},
-		{"cancelled", StatusCancelled, true},
+		{"canceled", StatusCancelled, true},
 		{"invalid", ScanStatus("invalid"), false},
 		{"empty", ScanStatus(""), false},
 	}
@@ -126,7 +126,7 @@ func TestScanStatus_IsTerminal(t *testing.T) {
 		{"running - not terminal", StatusRunning, false},
 		{"completed - terminal", StatusCompleted, true},
 		{"failed - terminal", StatusFailed, true},
-		{"cancelled - terminal", StatusCancelled, true},
+		{"canceled - terminal", StatusCancelled, true},
 	}
 
 	for _, tt := range tests {

@@ -152,7 +152,7 @@ func (m *HTTPParserModule) Execute(ctx context.Context, inputs map[string]interf
 	for i, item := range bannerList {
 		select {
 		case <-ctx.Done():
-			logger.Info().Msg("Context cancelled. Aborting further HTTP parsing.")
+			logger.Info().Msg("Context canceled. Aborting further HTTP parsing.")
 			return ctx.Err()
 		default:
 		}

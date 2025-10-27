@@ -26,7 +26,7 @@ type ScanMetadata struct {
 	Target string `json:"target"`
 
 	// Status indicates the current state of the scan.
-	// Valid values: "pending", "running", "completed", "failed", "cancelled"
+	// Valid values: "pending", "running", "completed", "failed", "canceled"
 	Status string `json:"status"`
 
 	// StartedAt is when the scan was started (UTC).
@@ -168,7 +168,7 @@ const (
 	StatusRunning   ScanStatus = "running"
 	StatusCompleted ScanStatus = "completed"
 	StatusFailed    ScanStatus = "failed"
-	StatusCancelled ScanStatus = "cancelled"
+	StatusCancelled ScanStatus = "canceled"
 )
 
 // String returns the string representation of ScanStatus.

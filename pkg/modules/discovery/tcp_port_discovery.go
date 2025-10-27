@@ -260,7 +260,7 @@ func (m *TCPPortDiscoveryModule) Execute(ctx context.Context, inputs map[string]
 				// Check for context cancellation before starting new goroutines
 				select {
 				case <-ctx.Done():
-					fmt.Printf("[INFO] Module '%s' (instance: %s): Context cancelled. Aborting further port scans.\n", m.meta.Name, m.meta.ID)
+					fmt.Printf("[INFO] Module '%s' (instance: %s): Context canceled. Aborting further port scans.\n", m.meta.Name, m.meta.ID)
 					goto endLoops // Break out of both loops
 				default:
 				}
@@ -299,7 +299,7 @@ func (m *TCPPortDiscoveryModule) Execute(ctx context.Context, inputs map[string]
 	}
 
 endLoops:
-	wg.Wait() // Wait for all goroutines to complete or be cancelled
+	wg.Wait() // Wait for all goroutines to complete or be canceled
 	// Send aggregated results per target
 	for target, openPorts := range openPortsByTarget {
 		if len(openPorts) > 0 {

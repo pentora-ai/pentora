@@ -936,7 +936,7 @@ func (s *Service) List(ctx context.Context) ([]*PluginInfo, error) {
 		// Check context cancellation
 		select {
 		case <-ctx.Done():
-			s.logger.Warn().Msg("List operation cancelled")
+			s.logger.Warn().Msg("List operation canceled")
 			return nil, ctx.Err()
 		default:
 		}
@@ -1029,7 +1029,7 @@ func (s *Service) GetInfo(ctx context.Context, pluginID string) (*PluginInfo, er
 	// Check context cancellation
 	select {
 	case <-ctx.Done():
-		s.logger.Warn().Msg("GetInfo operation cancelled")
+		s.logger.Warn().Msg("GetInfo operation canceled")
 		return nil, ctx.Err()
 	default:
 	}

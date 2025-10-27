@@ -229,7 +229,7 @@ func isRetryableError(err error) bool {
 //   - last error if all attempts fail or error is non-retryable
 //
 // The function respects context cancellation and will stop retrying
-// if the context is cancelled.
+// if the context is canceled.
 func WithRetry(ctx context.Context, config RetryConfig, fn RetryFunc) error {
 	if err := config.Validate(); err != nil {
 		return fmt.Errorf("invalid retry config: %w", err)

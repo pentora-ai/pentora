@@ -101,7 +101,7 @@ func (m *MemoryManager) Stop(ctx context.Context) error {
 	}
 }
 
-// worker processes jobs from the queue until the context is cancelled.
+// worker processes jobs from the queue until the context is canceled.
 func (m *MemoryManager) worker(ctx context.Context, id int) {
 	defer m.wg.Done()
 

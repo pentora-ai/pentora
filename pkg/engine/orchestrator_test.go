@@ -734,9 +734,9 @@ func TestOrchestrator_Run_ContextCancellation(t *testing.T) {
 
 	// Verify module received cancellation
 	mod1Mutex.Lock()
-	cancelled := mod1Cancelled
+	canceled := mod1Cancelled
 	mod1Mutex.Unlock()
-	require.True(t, cancelled, "Module should receive context cancellation")
+	require.True(t, canceled, "Module should receive context cancellation")
 }
 
 // TestOrchestrator_Run_SequentialExecution tests strict sequential execution
