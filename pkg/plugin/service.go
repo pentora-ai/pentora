@@ -21,10 +21,10 @@ import (
 
 // CacheInterface defines the cache operations needed by Service
 type CacheInterface interface {
-	GetEntry(name, version string) (*CacheEntry, error)
-	Size() (int64, error)
-	Prune(olderThan time.Duration) (int, error)
-	Remove(id string, version string) error
+	GetEntry(ctx context.Context, name, version string) (*CacheEntry, error)
+	Size(ctx context.Context) (int64, error)
+	Prune(ctx context.Context, olderThan time.Duration) (int, error)
+	Remove(ctx context.Context, id string, version string) error
 }
 
 // ManifestInterface defines the manifest operations needed by Service
@@ -397,7 +397,7 @@ func (s *Service) findPluginByID(plugins []PluginManifestEntry, id string) (Plug
 func (s *Service) installOne(ctx context.Context, p PluginManifestEntry, opts InstallOptions) error {
 	// Check if already cached (unless force reinstall)
 	if !opts.Force {
-		if _, err := s.cache.GetEntry(p.Name, p.Version); err == nil {
+		if _, err := s.cache.GetEntry(ctx, p.Name, p.Version); err == nil {
 			s.logger.Debug().
 				Str("plugin", p.Name).
 				Str("version", p.Version).
@@ -564,7 +564,7 @@ func (s *Service) Update(ctx context.Context, opts UpdateOptions) (*UpdateResult
 
 		// Check if already cached (unless force)
 		if !opts.Force {
-			if _, err := s.cache.GetEntry(p.Name, p.Version); err == nil {
+			if _, err := s.cache.GetEntry(ctx, p.Name, p.Version); err == nil {
 				result.SkippedCount++
 				s.logger.Debug().
 					Str("plugin", p.Name).
@@ -787,7 +787,7 @@ func (s *Service) Uninstall(ctx context.Context, target string, opts UninstallOp
 		default:
 		}
 
-		if err := s.uninstallOne(entry); err != nil {
+		if err := s.uninstallOne(ctx, entry); err != nil {
 			result.FailedCount++
 			result.Errors = append(result.Errors, fmt.Errorf("uninstall %s: %w", entry.Name, err))
 			s.logger.Warn().
@@ -830,9 +830,9 @@ func (s *Service) Uninstall(ctx context.Context, target string, opts UninstallOp
 }
 
 // uninstallOne removes a single plugin from cache and manifest
-func (s *Service) uninstallOne(entry *ManifestEntry) error {
+func (s *Service) uninstallOne(ctx context.Context, entry *ManifestEntry) error {
 	// Remove plugin files from cache directory
-	if err := s.cache.Remove(entry.ID, entry.Version); err != nil {
+	if err := s.cache.Remove(ctx, entry.ID, entry.Version); err != nil {
 		s.logger.Warn().
 			Err(err).
 			Str("plugin_id", entry.ID).
@@ -1108,7 +1108,7 @@ func (s *Service) Clean(ctx context.Context, opts CleanOptions) (*CleanResult, e
 		Msg("Cleaning plugin cache")
 
 	// Calculate size before cleaning
-	sizeBefore, err := s.cache.Size()
+	sizeBefore, err := s.cache.Size(ctx)
 	if err != nil {
 		s.logger.Debug().Err(err).Msg("Failed to calculate cache size before cleaning")
 		sizeBefore = 0
@@ -1130,13 +1130,13 @@ func (s *Service) Clean(ctx context.Context, opts CleanOptions) (*CleanResult, e
 	}
 
 	// Run prune operation
-	removed, err := s.cache.Prune(opts.OlderThan)
+	removed, err := s.cache.Prune(ctx, opts.OlderThan)
 	if err != nil {
 		return nil, fmt.Errorf("prune cache: %w", err)
 	}
 
 	// Calculate size after cleaning
-	sizeAfter, err := s.cache.Size()
+	sizeAfter, err := s.cache.Size(ctx)
 	if err != nil {
 		s.logger.Debug().Err(err).Msg("Failed to calculate cache size after cleaning")
 		sizeAfter = 0
@@ -1221,7 +1221,7 @@ func (s *Service) Verify(ctx context.Context, opts VerifyOptions) (*VerifyResult
 		}
 
 		// Get plugin file path
-		pluginFile, err := s.cache.GetEntry(entry.ID, entry.Version)
+		pluginFile, err := s.cache.GetEntry(ctx, entry.ID, entry.Version)
 		if err != nil {
 			result.Valid = false
 			result.Error = fmt.Errorf("file not found")

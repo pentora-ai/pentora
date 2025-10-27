@@ -5,6 +5,7 @@
 package plugin
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -42,7 +43,8 @@ func NewCacheManager(cacheDir string) (*CacheManager, error) {
 
 	// Load existing plugins from disk into registry
 	// This prevents re-downloading already cached plugins
-	_, _ = cm.LoadFromDisk() // Ignore errors - partial load is acceptable
+	// Use background context for initialization - no cancellation needed during startup
+	_, _ = cm.LoadFromDisk(context.Background()) // Ignore errors - partial load is acceptable
 
 	return cm, nil
 }
@@ -63,7 +65,12 @@ type CacheEntry struct {
 // Returns the cache entry for the plugin.
 // If rawData is provided, it will be written as-is to preserve checksums.
 // If rawData is nil, the plugin will be marshaled to YAML.
-func (c *CacheManager) Add(plugin *YAMLPlugin, checksum string, downloadURL string, rawData ...[]byte) (*CacheEntry, error) {
+func (c *CacheManager) Add(ctx context.Context, plugin *YAMLPlugin, checksum string, downloadURL string, rawData ...[]byte) (*CacheEntry, error) {
+	// Check context cancellation
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	if plugin == nil {
 		return nil, fmt.Errorf("cannot cache nil plugin")
 	}
@@ -128,7 +135,12 @@ func (c *CacheManager) Get(id string) (*YAMLPlugin, bool) {
 }
 
 // GetEntry retrieves a cache entry by ID and version.
-func (c *CacheManager) GetEntry(id, version string) (*CacheEntry, error) {
+func (c *CacheManager) GetEntry(ctx context.Context, id, version string) (*CacheEntry, error) {
+	// Check context cancellation
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	plugin, found := c.registry.Get(id)
 	if !found {
 		return nil, fmt.Errorf("plugin '%s' not found in cache", id)
@@ -165,7 +177,12 @@ func (c *CacheManager) GetEntry(id, version string) (*CacheEntry, error) {
 }
 
 // Remove removes a plugin from the cache.
-func (c *CacheManager) Remove(id string, version string) error {
+func (c *CacheManager) Remove(ctx context.Context, id string, version string) error {
+	// Check context cancellation
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	// Check if cache directory exists for this version
 	pluginDir := filepath.Join(c.cacheDir, id, version)
 	if _, err := os.Stat(pluginDir); os.IsNotExist(err) {
@@ -202,12 +219,16 @@ func (c *CacheManager) List() []*YAMLPlugin {
 }
 
 // ListEntries returns all cache entries.
-func (c *CacheManager) ListEntries() []*CacheEntry {
+func (c *CacheManager) ListEntries(ctx context.Context) []*CacheEntry {
 	plugins := c.registry.List()
 	entries := make([]*CacheEntry, 0, len(plugins))
 
 	for _, plugin := range plugins {
-		entry, err := c.GetEntry(plugin.ID, plugin.Version)
+		// Check context cancellation in loop
+		if err := ctx.Err(); err != nil {
+			return entries // Return partial results on cancellation
+		}
+		entry, err := c.GetEntry(ctx, plugin.ID, plugin.Version)
 		if err == nil {
 			entries = append(entries, entry)
 		}
@@ -217,7 +238,12 @@ func (c *CacheManager) ListEntries() []*CacheEntry {
 }
 
 // Clear removes all cached plugins.
-func (c *CacheManager) Clear() error {
+func (c *CacheManager) Clear(ctx context.Context) error {
+	// Check context cancellation
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	// Remove all plugin directories
 	entries, err := os.ReadDir(c.cacheDir)
 	if err != nil {
@@ -225,6 +251,10 @@ func (c *CacheManager) Clear() error {
 	}
 
 	for _, entry := range entries {
+		// Check context cancellation in loop
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		if entry.IsDir() {
 			pluginDir := filepath.Join(c.cacheDir, entry.Name())
 			if err := os.RemoveAll(pluginDir); err != nil {
@@ -240,10 +270,19 @@ func (c *CacheManager) Clear() error {
 }
 
 // Size returns the total size of the cache in bytes.
-func (c *CacheManager) Size() (int64, error) {
+func (c *CacheManager) Size(ctx context.Context) (int64, error) {
+	// Check context cancellation
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+
 	var totalSize int64
 
 	err := filepath.Walk(c.cacheDir, func(path string, info os.FileInfo, err error) error {
+		// Check context cancellation in walk function
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		if err != nil {
 			return err
 		}
@@ -261,7 +300,12 @@ func (c *CacheManager) Size() (int64, error) {
 
 // Prune removes unused cached plugins older than the specified duration.
 // This is useful for cleaning up stale cache entries.
-func (c *CacheManager) Prune(olderThan time.Duration) (int, error) {
+func (c *CacheManager) Prune(ctx context.Context, olderThan time.Duration) (int, error) {
+	// Check context cancellation
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+
 	cutoffTime := time.Now().Add(-olderThan)
 	removed := 0
 
@@ -271,6 +315,10 @@ func (c *CacheManager) Prune(olderThan time.Duration) (int, error) {
 	}
 
 	for _, entry := range entries {
+		// Check context cancellation in loop
+		if err := ctx.Err(); err != nil {
+			return removed, err
+		}
 		if !entry.IsDir() {
 			continue
 		}
@@ -315,7 +363,12 @@ func (c *CacheManager) Prune(olderThan time.Duration) (int, error) {
 }
 
 // LoadFromDisk loads all cached plugins from disk into the registry.
-func (c *CacheManager) LoadFromDisk() (int, []error) {
+func (c *CacheManager) LoadFromDisk(ctx context.Context) (int, []error) {
+	// Check context cancellation
+	if err := ctx.Err(); err != nil {
+		return 0, []error{err}
+	}
+
 	loader := NewLoader(c.cacheDir)
 	plugins, err := loader.LoadRecursive(c.cacheDir)
 	if err != nil {

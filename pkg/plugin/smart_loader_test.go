@@ -358,7 +358,7 @@ func TestSmartLoader_GetLoadedPlugins(t *testing.T) {
 		},
 		Output: OutputBlock{Message: "Test"},
 	}
-	_, err = cache.Add(plugin, "sha256:test", "https://example.com")
+	_, err = cache.Add(context.Background(), plugin, "sha256:test", "https://example.com")
 	require.NoError(t, err)
 
 	// Now should have one plugin
@@ -405,9 +405,9 @@ func TestSmartLoader_GetLoadedPluginsByCategory(t *testing.T) {
 		Output: OutputBlock{Message: "HTTP"},
 	}
 
-	_, err = cache.Add(sshPlugin, "sha256:ssh", "https://example.com")
+	_, err = cache.Add(context.Background(), sshPlugin, "sha256:ssh", "https://example.com")
 	require.NoError(t, err)
-	_, err = cache.Add(httpPlugin, "sha256:http", "https://example.com")
+	_, err = cache.Add(context.Background(), httpPlugin, "sha256:http", "https://example.com")
 	require.NoError(t, err)
 
 	// Get SSH plugins

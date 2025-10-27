@@ -340,36 +340,36 @@ func (m *mockDownloader) Download(ctx context.Context, id, version string) (*Cac
 
 // mockCacheManager for testing Install() method
 type mockCacheManager struct {
-	getEntryFunc func(name, version string) (*CacheEntry, error)
-	sizeFunc     func() (int64, error)
-	pruneFunc    func(olderThan time.Duration) (int, error)
-	removeFunc   func(id string, version string) error
+	getEntryFunc func(ctx context.Context, name, version string) (*CacheEntry, error)
+	sizeFunc     func(ctx context.Context) (int64, error)
+	pruneFunc    func(ctx context.Context, olderThan time.Duration) (int, error)
+	removeFunc   func(ctx context.Context, id string, version string) error
 }
 
-func (m *mockCacheManager) GetEntry(name, version string) (*CacheEntry, error) {
+func (m *mockCacheManager) GetEntry(ctx context.Context, name, version string) (*CacheEntry, error) {
 	if m.getEntryFunc != nil {
-		return m.getEntryFunc(name, version)
+		return m.getEntryFunc(ctx, name, version)
 	}
 	return nil, ErrPluginNotInstalled
 }
 
-func (m *mockCacheManager) Size() (int64, error) {
+func (m *mockCacheManager) Size(ctx context.Context) (int64, error) {
 	if m.sizeFunc != nil {
-		return m.sizeFunc()
+		return m.sizeFunc(ctx)
 	}
 	return 0, nil
 }
 
-func (m *mockCacheManager) Prune(olderThan time.Duration) (int, error) {
+func (m *mockCacheManager) Prune(ctx context.Context, olderThan time.Duration) (int, error) {
 	if m.pruneFunc != nil {
-		return m.pruneFunc(olderThan)
+		return m.pruneFunc(ctx, olderThan)
 	}
 	return 0, nil
 }
 
-func (m *mockCacheManager) Remove(id string, version string) error {
+func (m *mockCacheManager) Remove(ctx context.Context, id string, version string) error {
 	if m.removeFunc != nil {
-		return m.removeFunc(id, version)
+		return m.removeFunc(ctx, id, version)
 	}
 	return nil
 }
@@ -449,7 +449,7 @@ func TestService_Install_ByPluginID(t *testing.T) {
 
 		// Mock cache that returns "not found" (plugin not cached)
 		cache := &mockCacheManager{
-			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+			getEntryFunc: func(ctx context.Context, name, version string) (*CacheEntry, error) {
 				return nil, ErrPluginNotInstalled
 			},
 		}
@@ -543,7 +543,7 @@ func TestService_Install_ByCategory(t *testing.T) {
 		}
 
 		mockCache := &mockCacheManager{
-			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+			getEntryFunc: func(ctx context.Context, name, version string) (*CacheEntry, error) {
 				return nil, ErrPluginNotInstalled
 			},
 		}
@@ -634,7 +634,7 @@ func TestService_Install_WithForce(t *testing.T) {
 
 		// Mock cache that returns plugin as already cached
 		mockCache := &mockCacheManager{
-			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+			getEntryFunc: func(ctx context.Context, name, version string) (*CacheEntry, error) {
 				return &CacheEntry{Name: name, Version: version}, nil
 			},
 		}
@@ -679,7 +679,7 @@ func TestService_Install_WithForce(t *testing.T) {
 
 		// Mock cache that returns plugin as already cached
 		mockCache := &mockCacheManager{
-			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+			getEntryFunc: func(ctx context.Context, name, version string) (*CacheEntry, error) {
 				return &CacheEntry{Name: name, Version: version}, nil
 			},
 		}
@@ -731,7 +731,7 @@ func TestService_Install_WithDryRun(t *testing.T) {
 		}
 
 		mockCache := &mockCacheManager{
-			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+			getEntryFunc: func(ctx context.Context, name, version string) (*CacheEntry, error) {
 				return nil, ErrPluginNotInstalled
 			},
 		}
@@ -800,7 +800,7 @@ func TestService_Install_WithSourceFilter(t *testing.T) {
 		}
 
 		mockCache := &mockCacheManager{
-			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+			getEntryFunc: func(ctx context.Context, name, version string) (*CacheEntry, error) {
 				return nil, ErrPluginNotInstalled
 			},
 		}
@@ -882,7 +882,7 @@ func TestService_Install_PartialFailures(t *testing.T) {
 		}
 
 		mockCache := &mockCacheManager{
-			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+			getEntryFunc: func(ctx context.Context, name, version string) (*CacheEntry, error) {
 				return nil, ErrPluginNotInstalled
 			},
 		}
@@ -937,7 +937,7 @@ func TestService_Install_ContextCancellation(t *testing.T) {
 		}
 
 		mockCache := &mockCacheManager{
-			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+			getEntryFunc: func(ctx context.Context, name, version string) (*CacheEntry, error) {
 				return nil, ErrPluginNotInstalled
 			},
 		}
@@ -1026,7 +1026,7 @@ func TestService_Update_AllPlugins(t *testing.T) {
 
 		// Mock cache - plugins not cached
 		cache := &mockCacheManager{
-			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+			getEntryFunc: func(ctx context.Context, name, version string) (*CacheEntry, error) {
 				return nil, ErrPluginNotInstalled
 			},
 		}
@@ -1103,7 +1103,7 @@ func TestService_Update_ByCategory(t *testing.T) {
 		}
 
 		cache := &mockCacheManager{
-			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+			getEntryFunc: func(ctx context.Context, name, version string) (*CacheEntry, error) {
 				return nil, ErrPluginNotInstalled
 			},
 		}
@@ -1181,7 +1181,7 @@ func TestService_Update_SkipCached(t *testing.T) {
 
 		// Mock cache - first plugin is cached, second is not
 		cache := &mockCacheManager{
-			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+			getEntryFunc: func(ctx context.Context, name, version string) (*CacheEntry, error) {
 				if name == "Cached Plugin" {
 					return &CacheEntry{Name: name, Version: version}, nil
 				}
@@ -1224,7 +1224,7 @@ func TestService_Update_SkipCached(t *testing.T) {
 
 		// Mock cache - plugin is cached
 		cache := &mockCacheManager{
-			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+			getEntryFunc: func(ctx context.Context, name, version string) (*CacheEntry, error) {
 				return &CacheEntry{Name: name, Version: version}, nil
 			},
 		}
@@ -1269,7 +1269,7 @@ func TestService_Update_DryRun(t *testing.T) {
 		}
 
 		cache := &mockCacheManager{
-			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+			getEntryFunc: func(ctx context.Context, name, version string) (*CacheEntry, error) {
 				return nil, ErrPluginNotInstalled
 			},
 		}
@@ -1321,7 +1321,7 @@ func TestService_Update_SourceFilter(t *testing.T) {
 		}
 
 		cache := &mockCacheManager{
-			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+			getEntryFunc: func(ctx context.Context, name, version string) (*CacheEntry, error) {
 				return nil, ErrPluginNotInstalled
 			},
 		}
@@ -1377,7 +1377,7 @@ func TestService_Update_PartialFailures(t *testing.T) {
 		}
 
 		cache := &mockCacheManager{
-			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+			getEntryFunc: func(ctx context.Context, name, version string) (*CacheEntry, error) {
 				return nil, ErrPluginNotInstalled
 			},
 		}
@@ -1424,7 +1424,7 @@ func TestService_Update_ContextCancellation(t *testing.T) {
 		}
 
 		cache := &mockCacheManager{
-			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+			getEntryFunc: func(ctx context.Context, name, version string) (*CacheEntry, error) {
 				return nil, ErrPluginNotInstalled
 			},
 		}
@@ -2095,7 +2095,7 @@ func BenchmarkService_Install(b *testing.B) {
 	}
 
 	cache := &mockCacheManager{
-		getEntryFunc: func(name, version string) (*CacheEntry, error) {
+		getEntryFunc: func(ctx context.Context, name, version string) (*CacheEntry, error) {
 			return nil, ErrPluginNotFound
 		},
 	}
@@ -2148,7 +2148,7 @@ func BenchmarkService_Update(b *testing.B) {
 	}
 
 	cache := &mockCacheManager{
-		getEntryFunc: func(name, version string) (*CacheEntry, error) {
+		getEntryFunc: func(ctx context.Context, name, version string) (*CacheEntry, error) {
 			return nil, ErrPluginNotFound
 		},
 	}
@@ -2230,7 +2230,7 @@ func TestService_Clean(t *testing.T) {
 
 		callCount := 0
 		cache := &mockCacheManager{
-			sizeFunc: func() (int64, error) {
+			sizeFunc: func(ctx context.Context) (int64, error) {
 				// First call: before cleaning (1 MB)
 				// Second call: after cleaning (500 KB)
 				callCount++
@@ -2239,7 +2239,7 @@ func TestService_Clean(t *testing.T) {
 				}
 				return 512 * 1024, nil
 			},
-			pruneFunc: func(olderThan time.Duration) (int, error) {
+			pruneFunc: func(ctx context.Context, olderThan time.Duration) (int, error) {
 				require.Equal(t, 720*time.Hour, olderThan)
 				return 5, nil
 			},
@@ -2266,10 +2266,10 @@ func TestService_Clean(t *testing.T) {
 		ctx := context.Background()
 
 		cache := &mockCacheManager{
-			sizeFunc: func() (int64, error) {
+			sizeFunc: func(ctx context.Context) (int64, error) {
 				return 1024 * 1024, nil
 			},
-			pruneFunc: func(olderThan time.Duration) (int, error) {
+			pruneFunc: func(ctx context.Context, olderThan time.Duration) (int, error) {
 				t.Fatal("Prune should not be called in dry-run mode")
 				return 0, nil
 			},
@@ -2320,7 +2320,7 @@ func TestService_Verify(t *testing.T) {
 		}
 
 		cache := &mockCacheManager{
-			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+			getEntryFunc: func(ctx context.Context, name, version string) (*CacheEntry, error) {
 				return &CacheEntry{
 					ID:      name,
 					Version: version,
@@ -2360,7 +2360,7 @@ func TestService_Verify(t *testing.T) {
 		}
 
 		cache := &mockCacheManager{
-			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+			getEntryFunc: func(ctx context.Context, name, version string) (*CacheEntry, error) {
 				return &CacheEntry{
 					ID:      name,
 					Version: version,
@@ -2466,7 +2466,7 @@ func TestPartialFailureSemantics(t *testing.T) {
 		}
 
 		cacheManager := &mockCacheManager{
-			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+			getEntryFunc: func(ctx context.Context, name, version string) (*CacheEntry, error) {
 				return nil, ErrPluginNotInstalled
 			},
 		}
@@ -2516,7 +2516,7 @@ func TestPartialFailureSemantics(t *testing.T) {
 		}
 
 		cacheManager := &mockCacheManager{
-			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+			getEntryFunc: func(ctx context.Context, name, version string) (*CacheEntry, error) {
 				return nil, ErrPluginNotInstalled
 			},
 		}
@@ -2576,7 +2576,7 @@ func TestPartialFailureSemantics(t *testing.T) {
 		}
 
 		cacheManager := &mockCacheManager{
-			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+			getEntryFunc: func(ctx context.Context, name, version string) (*CacheEntry, error) {
 				// Return not found so Update attempts to download
 				return nil, ErrPluginNotInstalled
 			},
@@ -2633,7 +2633,7 @@ func TestPartialFailureSemantics(t *testing.T) {
 		}
 
 		cacheManager := &mockCacheManager{
-			getEntryFunc: func(name, version string) (*CacheEntry, error) {
+			getEntryFunc: func(ctx context.Context, name, version string) (*CacheEntry, error) {
 				// Return not found so Update attempts to download
 				return nil, ErrPluginNotInstalled
 			},
@@ -2663,7 +2663,7 @@ func TestPartialFailureSemantics(t *testing.T) {
 
 	t.Run("Uninstall returns ErrPartialFailure when removing category with multiple plugins and some fail", func(t *testing.T) {
 		cacheManager := &mockCacheManager{
-			removeFunc: func(id, version string) error {
+			removeFunc: func(ctx context.Context, id, version string) error {
 				return nil // Cache removal always succeeds
 			},
 		}
@@ -2702,7 +2702,7 @@ func TestPartialFailureSemantics(t *testing.T) {
 
 	t.Run("Uninstall returns nil error when all plugins succeed", func(t *testing.T) {
 		cacheManager := &mockCacheManager{
-			removeFunc: func(id, version string) error {
+			removeFunc: func(ctx context.Context, id, version string) error {
 				return nil
 			},
 		}

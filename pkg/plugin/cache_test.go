@@ -5,6 +5,7 @@
 package plugin
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -143,7 +144,7 @@ func TestCacheManager_Add(t *testing.T) {
 		Output: OutputBlock{Message: "Test"},
 	}
 
-	entry, err := cm.Add(plugin, "sha256:abc123", "https://example.com/plugin.yaml")
+	entry, err := cm.Add(context.Background(), plugin, "sha256:abc123", "https://example.com/plugin.yaml")
 	require.NoError(t, err)
 	require.NotNil(t, entry)
 	require.Equal(t, "test-plugin", entry.Name)
@@ -170,7 +171,7 @@ func TestCacheManager_Add_NilPlugin(t *testing.T) {
 	cm, err := NewCacheManager(cacheDir)
 	require.NoError(t, err)
 
-	entry, err := cm.Add(nil, "sha256:abc", "https://example.com")
+	entry, err := cm.Add(context.Background(), nil, "sha256:abc", "https://example.com")
 	require.Error(t, err)
 	require.Nil(t, entry)
 	require.Contains(t, err.Error(), "cannot cache nil plugin")
@@ -187,7 +188,7 @@ func TestCacheManager_Add_InvalidPlugin(t *testing.T) {
 		// Missing version, type, author, etc.
 	}
 
-	entry, err := cm.Add(plugin, "sha256:abc", "https://example.com")
+	entry, err := cm.Add(context.Background(), plugin, "sha256:abc", "https://example.com")
 	require.Error(t, err)
 	require.Nil(t, entry)
 	require.Contains(t, err.Error(), "validation failed")
@@ -211,12 +212,12 @@ func TestCacheManager_Add_Duplicate(t *testing.T) {
 	}
 
 	// Add first time
-	_, err = cm.Add(plugin, "sha256:abc123", "https://example.com/v1.yaml")
+	_, err = cm.Add(context.Background(), plugin, "sha256:abc123", "https://example.com/v1.yaml")
 	require.NoError(t, err)
 
 	// Add again with different checksum (simulates update)
 	plugin.Version = "1.0.1"
-	entry, err := cm.Add(plugin, "sha256:def456", "https://example.com/v2.yaml")
+	entry, err := cm.Add(context.Background(), plugin, "sha256:def456", "https://example.com/v2.yaml")
 	require.NoError(t, err)
 	require.Equal(t, "sha256:def456", entry.Checksum)
 }
@@ -238,7 +239,7 @@ func TestCacheManager_Get(t *testing.T) {
 		Output: OutputBlock{Message: "Test"},
 	}
 
-	_, err = cm.Add(plugin, "sha256:abc", "https://example.com")
+	_, err = cm.Add(context.Background(), plugin, "sha256:abc", "https://example.com")
 	require.NoError(t, err)
 
 	// Get existing plugin
@@ -268,7 +269,7 @@ func TestCacheManager_Remove(t *testing.T) {
 		Output: OutputBlock{Message: "Test"},
 	}
 
-	_, err = cm.Add(plugin, "sha256:abc", "https://example.com")
+	_, err = cm.Add(context.Background(), plugin, "sha256:abc", "https://example.com")
 	require.NoError(t, err)
 
 	// Verify plugin exists
@@ -276,7 +277,7 @@ func TestCacheManager_Remove(t *testing.T) {
 	require.True(t, exists)
 
 	// Remove plugin
-	err = cm.Remove("test-plugin", "1.0.0")
+	err = cm.Remove(context.Background(), "test-plugin", "1.0.0")
 	require.NoError(t, err)
 
 	// Verify plugin is gone
@@ -294,7 +295,7 @@ func TestCacheManager_Remove_NotFound(t *testing.T) {
 	cm, err := NewCacheManager(cacheDir)
 	require.NoError(t, err)
 
-	err = cm.Remove("non-existent", "1.0.0")
+	err = cm.Remove(context.Background(), "non-existent", "1.0.0")
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "not found")
 }
@@ -317,7 +318,7 @@ func TestCacheManager_List(t *testing.T) {
 			},
 			Output: OutputBlock{Message: "Test"},
 		}
-		_, err = cm.Add(plugin, "sha256:abc", "https://example.com")
+		_, err = cm.Add(context.Background(), plugin, "sha256:abc", "https://example.com")
 		require.NoError(t, err)
 	}
 
@@ -343,14 +344,14 @@ func TestCacheManager_Clear(t *testing.T) {
 		Output: OutputBlock{Message: "Test"},
 	}
 
-	_, err = cm.Add(plugin, "sha256:abc", "https://example.com")
+	_, err = cm.Add(context.Background(), plugin, "sha256:abc", "https://example.com")
 	require.NoError(t, err)
 
 	// Verify plugin exists
 	require.Len(t, cm.List(), 1)
 
 	// Clear cache
-	err = cm.Clear()
+	err = cm.Clear(context.Background())
 	require.NoError(t, err)
 
 	// Verify cache is empty
@@ -368,7 +369,7 @@ func TestCacheManager_Size(t *testing.T) {
 	require.NoError(t, err)
 
 	// Initial size should be 0
-	size, err := cm.Size()
+	size, err := cm.Size(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, int64(0), size)
 
@@ -379,7 +380,7 @@ func TestCacheManager_Size(t *testing.T) {
 	require.NoError(t, err)
 
 	// Size should include test file
-	size, err = cm.Size()
+	size, err = cm.Size(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, int64(len(testData)), size)
 }
@@ -411,11 +412,11 @@ func TestCacheManager_Prune(t *testing.T) {
 		},
 		Output: OutputBlock{Message: "Test"},
 	}
-	_, err = cm.Add(recentPlugin, "sha256:abc", "https://example.com")
+	_, err = cm.Add(context.Background(), recentPlugin, "sha256:abc", "https://example.com")
 	require.NoError(t, err)
 
 	// Prune plugins older than 24 hours
-	removed, err := cm.Prune(24 * time.Hour)
+	removed, err := cm.Prune(context.Background(), 24*time.Hour)
 	require.NoError(t, err)
 	require.Equal(t, 1, removed)
 
@@ -549,7 +550,7 @@ func TestCacheManager_Add_MkdirError(t *testing.T) {
 		Output: OutputBlock{Message: "Test"},
 	}
 
-	entry, err := cm.Add(plugin, "sha256:abc", "https://example.com")
+	entry, err := cm.Add(context.Background(), plugin, "sha256:abc", "https://example.com")
 	require.Error(t, err)
 	require.Nil(t, entry)
 	require.Contains(t, err.Error(), "failed to create plugin cache directory")
@@ -561,7 +562,7 @@ func TestCacheManager_Remove_NonExistentPlugin(t *testing.T) {
 	require.NoError(t, err)
 
 	// Try to remove plugin that doesn't exist in cache directory
-	err = cm.Remove("nonexistent-plugin", "1.0.0")
+	err = cm.Remove(context.Background(), "nonexistent-plugin", "1.0.0")
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "not found in cache")
 }
@@ -573,7 +574,7 @@ func TestCacheManager_Size_ReadDirError(t *testing.T) {
 		registry: NewYAMLRegistry(),
 	}
 
-	size, err := cm.Size()
+	size, err := cm.Size(context.Background())
 	require.Error(t, err)
 	require.Equal(t, int64(0), size)
 }
@@ -585,7 +586,7 @@ func TestCacheManager_Clear_ReadDirError(t *testing.T) {
 		registry: NewYAMLRegistry(),
 	}
 
-	err := cm.Clear()
+	err := cm.Clear(context.Background())
 	require.Error(t, err)
 }
 
@@ -596,7 +597,7 @@ func TestCacheManager_Prune_ReadDirError(t *testing.T) {
 		registry: NewYAMLRegistry(),
 	}
 
-	removed, err := cm.Prune(24 * time.Hour)
+	removed, err := cm.Prune(context.Background(), 24*time.Hour)
 	require.Error(t, err)
 	require.Equal(t, 0, removed)
 }
@@ -632,11 +633,11 @@ func TestCacheManager_ListEntries_AllPresent(t *testing.T) {
 	}
 
 	for _, p := range plugins {
-		_, err := cm.Add(p, "sha256:abc", "https://example.com")
+		_, err := cm.Add(context.Background(), p, "sha256:abc", "https://example.com")
 		require.NoError(t, err)
 	}
 
-	entries := cm.ListEntries()
+	entries := cm.ListEntries(context.Background())
 	require.Len(t, entries, 2)
 
 	// Verify entries correspond to added plugins
@@ -679,9 +680,9 @@ func TestCacheManager_ListEntries_SkipsMissingFile(t *testing.T) {
 		Output: OutputBlock{Message: "Missing"},
 	}
 
-	_, err = cm.Add(present, "sha256:one", "https://example.com")
+	_, err = cm.Add(context.Background(), present, "sha256:one", "https://example.com")
 	require.NoError(t, err)
-	_, err = cm.Add(missing, "sha256:two", "https://example.com")
+	_, err = cm.Add(context.Background(), missing, "sha256:two", "https://example.com")
 	require.NoError(t, err)
 
 	// Remove the plugin.yaml for the "missing-plugin" to simulate a broken cache entry
@@ -689,7 +690,7 @@ func TestCacheManager_ListEntries_SkipsMissingFile(t *testing.T) {
 	err = os.Remove(missingPath)
 	require.NoError(t, err)
 
-	entries := cm.ListEntries()
+	entries := cm.ListEntries(context.Background())
 	// Only the present-plugin should be returned
 	require.Len(t, entries, 1)
 	require.Equal(t, "present-plugin", entries[0].Name)
@@ -729,7 +730,7 @@ func TestCacheManager_NormalizedPaths(t *testing.T) {
 	}
 
 	// Add plugin
-	entry, err := cm.Add(plugin, "sha256:test", "https://example.com")
+	entry, err := cm.Add(context.Background(), plugin, "sha256:test", "https://example.com")
 	require.NoError(t, err)
 	require.NotNil(t, entry)
 
@@ -744,7 +745,7 @@ func TestCacheManager_NormalizedPaths(t *testing.T) {
 	require.Equal(t, "SSH Weak Cipher", retrieved.Name)
 
 	// Verify GetEntry works with both forms
-	entry1, err := cm.GetEntry("ssh-weak-cipher", "1.0.0")
+	entry1, err := cm.GetEntry(context.Background(), "ssh-weak-cipher", "1.0.0")
 	require.NoError(t, err)
 	require.Equal(t, normalizedPath, entry1.Path)
 }

@@ -129,7 +129,7 @@ func (d *Downloader) fetchManifestFromURL(ctx context.Context, url string) (*Plu
 // Download fetches a plugin from remote sources and adds it to the cache.
 func (d *Downloader) Download(ctx context.Context, id, version string) (*CacheEntry, error) {
 	// Check if already cached
-	if entry, err := d.cache.GetEntry(id, version); err == nil {
+	if entry, err := d.cache.GetEntry(ctx, id, version); err == nil {
 		return entry, nil
 	}
 
@@ -182,7 +182,7 @@ func (d *Downloader) Download(ctx context.Context, id, version string) (*CacheEn
 
 	// Add to cache (pass raw data to preserve checksum)
 	sourceURL := fmt.Sprintf("%s (source: %s)", manifestEntry.URL, sourceName)
-	entry, err := d.cache.Add(&yamlPlugin, manifestEntry.Checksum, sourceURL, pluginData)
+	entry, err := d.cache.Add(ctx, &yamlPlugin, manifestEntry.Checksum, sourceURL, pluginData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to cache plugin: %w", err)
 	}
@@ -274,7 +274,7 @@ func (d *Downloader) Update(ctx context.Context) (int, error) {
 		}
 
 		// Remove old version
-		if err := d.cache.Remove(entry.Name, entry.Version); err != nil {
+		if err := d.cache.Remove(ctx, entry.Name, entry.Version); err != nil {
 			return updated, fmt.Errorf("failed to remove old version of %s: %w", entry.Name, err)
 		}
 

@@ -231,7 +231,7 @@ func TestDownloader_Download(t *testing.T) {
 	require.Equal(t, checksum, entry.Checksum)
 
 	// Verify it's in cache
-	cachedEntry, err := cache.GetEntry("test-plugin", "1.0.0")
+	cachedEntry, err := cache.GetEntry(context.Background(), "test-plugin", "1.0.0")
 	require.NoError(t, err)
 	require.Equal(t, entry.Name, cachedEntry.Name)
 }
@@ -254,7 +254,7 @@ func TestDownloader_Download_AlreadyCached(t *testing.T) {
 		Output: OutputBlock{Message: "Test"},
 	}
 
-	_, err = cache.Add(plugin, "sha256:abc123", "https://example.com")
+	_, err = cache.Add(context.Background(), plugin, "sha256:abc123", "https://example.com")
 	require.NoError(t, err)
 
 	downloader := NewDownloader(cache)
@@ -492,7 +492,7 @@ func TestDownloader_Update(t *testing.T) {
 		},
 		Output: OutputBlock{Message: "Old version"},
 	}
-	_, err = cache.Add(oldPlugin, "sha256:old", "https://example.com")
+	_, err = cache.Add(context.Background(), oldPlugin, "sha256:old", "https://example.com")
 	require.NoError(t, err)
 
 	// Create new version
@@ -550,12 +550,12 @@ func TestDownloader_Update(t *testing.T) {
 	require.Equal(t, 1, updated)
 
 	// Verify new version is cached
-	entry, err := cache.GetEntry("update-test", "2.0.0")
+	entry, err := cache.GetEntry(context.Background(), "update-test", "2.0.0")
 	require.NoError(t, err)
 	require.Equal(t, "2.0.0", entry.Version)
 
 	// Verify old version is removed
-	_, err = cache.GetEntry("update-test", "1.0.0")
+	_, err = cache.GetEntry(context.Background(), "update-test", "1.0.0")
 	require.Error(t, err)
 }
 
@@ -630,7 +630,7 @@ func TestDownloader_Update_NoUpdatesAvailable(t *testing.T) {
 		},
 		Output: OutputBlock{Message: "Test"},
 	}
-	_, err = cache.Add(plugin, "sha256:test", "https://example.com")
+	_, err = cache.Add(context.Background(), plugin, "sha256:test", "https://example.com")
 	require.NoError(t, err)
 
 	// Manifest returns same version
@@ -682,7 +682,7 @@ func TestDownloader_Update_ManifestFetchError(t *testing.T) {
 		},
 		Output: OutputBlock{Message: "Test"},
 	}
-	_, err = cache.Add(plugin, "sha256:test", "https://example.com")
+	_, err = cache.Add(context.Background(), plugin, "sha256:test", "https://example.com")
 	require.NoError(t, err)
 
 	// Server returns error
@@ -1058,7 +1058,7 @@ func TestDownloader_Update_DownloadError(t *testing.T) {
 		Output: OutputBlock{Message: "Test"},
 	}
 
-	_, err = cache.Add(plugin, "sha256:abc123", "https://example.com")
+	_, err = cache.Add(context.Background(), plugin, "sha256:abc123", "https://example.com")
 	require.NoError(t, err)
 
 	// Create manifest with newer version but invalid download URL
