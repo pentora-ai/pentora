@@ -7,6 +7,7 @@
 **Pentora** is a modular, high-performance security scanner that rapidly discovers network services, captures banners, and maps findings into vulnerability intelligence. Built with a powerful DAG-based execution engine, Pentora enables security teams to perform comprehensive network assessments with precision and efficiency.
 
 ## ✨ Key Features
+<!-- Multi-agent workflow test: 2025-10-27 -->
 
 ### 🚀 Performance & Scalability
 
