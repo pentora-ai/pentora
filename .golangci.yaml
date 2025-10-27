@@ -1,7 +1,12 @@
 # golangci-lint Configuration
-# Phase 2: Import Organization (gci formatter)
+# Phase 3: Complexity Limits (gocyclo, funlen, goconst)
 #
-# Changes from Phase 1:
+# Changes from Phase 2:
+# 1. Added complexity linters: gocyclo, funlen, goconst
+# 2. Configured thresholds: cyclomatic=15, statements=100, goconst=4
+# 3. Prevents unmaintainable functions and technical debt
+#
+# Previous changes (Phase 2):
 # 1. Added gci formatter for consistent import organization
 # 2. Configured 3-section import grouping (stdlib/external/internal)
 #
@@ -25,10 +30,15 @@ linters:
     - staticcheck   # Advanced static analysis (includes gosimple)
     - govet         # Official Go vet tool
 
-    # NEW: Critical additions (Phase 1)
+    # Phase 1: Critical additions
     - ineffassign   # Detect ineffective assignments
     - unused        # Find unused constants, variables, functions, types
     - errcheck      # Check error returns
+
+    # Phase 3: Complexity limits
+    - gocyclo       # Cyclomatic complexity
+    - funlen        # Function length (statement count)
+    - goconst       # Repeated constants
 
   settings:
     errcheck:
@@ -51,6 +61,18 @@ linters:
         - '-ST1020'  # Disable comment form checks (Phase 1)
         - '-ST1021'  # Disable comment form checks (Phase 1)
 
+    # Phase 3: Complexity limits
+    gocyclo:
+      min-complexity: 15  # Traefik uses 14, we start conservatively at 15
+
+    funlen:
+      lines: -1         # Ignore total line count (comments don't inflate)
+      statements: 100   # Max 100 statements per function (Traefik: 120)
+
+    goconst:
+      min-len: 3           # Minimum string length to check
+      min-occurrences: 4   # Must repeat 4+ times to suggest constant
+
   # Exclusion rules for test files
   exclusions:
     rules:
@@ -59,6 +81,116 @@ linters:
         linters:
           - errcheck  # Test errors can be ignored sometimes
           - revive    # Revive rules too noisy for tests (Phase 1)
+          - funlen    # Test functions can be long (Phase 3)
+          - goconst   # Test strings can repeat (Phase 3)
+          - gocyclo   # Test setup can be complex (Phase 3)
+
+      # Phase 3: Legitimate high complexity - Core engine (DAG orchestration)
+      - path: pkg/engine/orchestrator\.go
+        text: "cyclomatic complexity (33|34) of func"
+        linters:
+          - gocyclo  # DAG execution requires complex control flow
+
+      - path: pkg/engine/planner\.go
+        text: "cyclomatic complexity (22|34) of func"
+        linters:
+          - gocyclo  # DAG planning requires complex decision logic
+
+      # Phase 3: Legitimate high complexity - Network parsing
+      - path: pkg/netutil/netutil\.go
+        text: "cyclomatic complexity (52|19) of func"
+        linters:
+          - gocyclo  # Target/port parsing has many edge cases
+
+      - path: pkg/modules/parse/http_parser\.go
+        text: "cyclomatic complexity 33 of func"
+        linters:
+          - gocyclo  # HTTP header parsing has many branches
+
+      - path: pkg/modules/reporting/asset_profile_builder\.go
+        text: "cyclomatic complexity 71 of func"
+        linters:
+          - gocyclo  # Asset profile aggregation requires extensive logic
+
+      # Phase 3: Legitimate high complexity - Plugin system
+      - path: pkg/plugin/trigger\.go
+        text: "cyclomatic complexity 31 of func"
+        linters:
+          - gocyclo  # Trigger evaluation requires complex matching
+
+      - path: pkg/plugin/smart_loader\.go
+        text: "cyclomatic complexity 28 of func"
+        linters:
+          - gocyclo  # Category matching requires exhaustive checks
+
+      - path: pkg/plugin/service\.go
+        text: "cyclomatic complexity (16|18|24) of func"
+        linters:
+          - gocyclo  # Plugin install/update/uninstall has many validation branches
+
+      - path: pkg/plugin/types\.go
+        text: "cyclomatic complexity 16 of func"
+        linters:
+          - gocyclo  # Plugin validation checks many required fields
+
+      # Phase 3: Moderate complexity - CLI commands (TODO: refactor in future)
+      - path: cmd/pentora/commands/
+        text: "cyclomatic complexity (16|20|26|31) of func"
+        linters:
+          - gocyclo  # CLI flag parsing and output formatting (refactor later)
+
+      # Phase 3: Moderate complexity - Module implementations (TODO: refactor in future)
+      - path: pkg/modules/discovery/icmp_ping\.go
+        text: "cyclomatic complexity (21|27) of func"
+        linters:
+          - gocyclo  # ICMP packet handling has many edge cases
+
+      - path: pkg/modules/discovery/tcp_port_discovery\.go
+        text: "cyclomatic complexity 18 of func"
+        linters:
+          - gocyclo  # TCP connection handling with timeouts
+
+      - path: pkg/modules/parse/ssh_parser\.go
+        text: "cyclomatic complexity 16 of func"
+        linters:
+          - gocyclo  # SSH banner parsing with version extraction
+
+      - path: pkg/modules/scan/banner_grab\.go
+        text: "cyclomatic complexity 19 of func"
+        linters:
+          - gocyclo  # Banner grabbing protocol probes
+
+      - path: pkg/modules/scan/port_utils\.go
+        text: "cyclomatic complexity 19 of func"
+        linters:
+          - gocyclo  # Port range parsing (comma, dash, ranges)
+
+      # Phase 3: Other moderate complexity (TODO: refactor in future)
+      - path: pkg/scanexec/service\.go
+        text: "cyclomatic complexity 21 of func"
+        linters:
+          - gocyclo  # Scan statistics aggregation
+
+      - path: pkg/storage/gc\.go
+        text: "cyclomatic complexity 17 of func"
+        linters:
+          - gocyclo  # Garbage collection with retention policies
+
+      # Phase 3: Function length - legitimate cases
+      - path: pkg/engine/orchestrator\.go
+        text: "Function 'Run' has too many statements"
+        linters:
+          - funlen  # DAG orchestration requires sequential steps
+
+      - path: pkg/modules/parse/http_parser\.go
+        text: "Function 'Execute' (has too many statements|is too long)"
+        linters:
+          - funlen  # HTTP header extraction requires many statements
+
+      - path: pkg/modules/reporting/asset_profile_builder\.go
+        text: "Function 'Execute' (has too many statements|is too long)"
+        linters:
+          - funlen  # Asset profile aggregation from multiple data sources
 
 # Issue reporting limits
 issues:
