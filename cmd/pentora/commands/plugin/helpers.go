@@ -52,52 +52,17 @@ func handlePartialFailure(err error, formatter format.Formatter, printFunc func(
 	return nil
 }
 
-// printErrorList prints a list of plugin errors with suggestions
-// Used by install, update, and uninstall commands
-func printErrorList(f format.Formatter, errors []plugin.PluginError) error {
-	if len(errors) == 0 {
-		return nil
-	}
-
-	if err := f.PrintSummary("\nFailed plugins:"); err != nil {
-		return err
-	}
-
-	// Show first 5, truncate rest
-	maxErrors := 5
-	for i, e := range errors {
-		if i >= maxErrors {
-			remaining := len(errors) - maxErrors
-			if err := f.PrintSummary(fmt.Sprintf("  ... and %d more (use --output json for full list)", remaining)); err != nil {
-				return err
-			}
-			break
-		}
-		if err := f.PrintSummary(fmt.Sprintf("  - %s: %s", e.PluginID, e.Error)); err != nil {
-			return err
-		}
-	}
-
-	// Print suggestions
-	if err := f.PrintSummary("\n💡 Suggestions:"); err != nil {
-		return err
-	}
-
-	// Collect unique suggestions
-	suggestions := make(map[string]bool)
+// convertPluginErrors converts plugin errors to format.ErrorDetail
+func convertPluginErrors(errors []plugin.PluginError) []format.ErrorDetail {
+	errorDetails := make([]format.ErrorDetail, 0, len(errors))
 	for _, e := range errors {
-		if e.Suggestion != "" {
-			suggestions[e.Suggestion] = true
-		}
+		errorDetails = append(errorDetails, format.ErrorDetail{
+			PluginID:  e.PluginID,
+			Error:     e.Error,
+			ErrorCode: e.Code,
+		})
 	}
-
-	for suggestion := range suggestions {
-		if err := f.PrintSummary(fmt.Sprintf("  → %s", suggestion)); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return errorDetails
 }
 
 // buildPluginTable builds table rows for plugin list
