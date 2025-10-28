@@ -4,7 +4,6 @@ go 1.25.0
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
-	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/fatih/color v1.18.0
 	github.com/go-ping/ping v1.2.0
 	github.com/gofrs/flock v0.13.0
