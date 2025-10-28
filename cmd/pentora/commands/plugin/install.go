@@ -2,10 +2,7 @@ package plugin
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -13,7 +10,6 @@ import (
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/format"
 	"github.com/pentora-ai/pentora/pkg/plugin"
-	"github.com/pentora-ai/pentora/pkg/storage"
 )
 
 func newInstallCommand() *cobra.Command {
@@ -45,57 +41,7 @@ You can install entire categories (ssh, http, tls, database, network) or specifi
   pentora plugin install ssh --output json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			target := args[0]
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-			defer cancel()
-
-			// Create formatter
-			outputMode := format.ParseMode(cmd.Flag("output").Value.String())
-			quiet, _ := cmd.Flags().GetBool("quiet")
-			noColor, _ := cmd.Flags().GetBool("no-color")
-			formatter := format.New(os.Stdout, os.Stderr, outputMode, quiet, !noColor)
-
-			// Use default cache dir if not specified
-			if cacheDir == "" {
-				storageConfig, err := storage.DefaultConfig()
-				if err != nil {
-					return fmt.Errorf("get storage config: %w", err)
-				}
-				cacheDir = filepath.Join(storageConfig.WorkspaceRoot, "plugins", "cache")
-			}
-
-			// Create service
-			svc, err := plugin.NewService(cacheDir)
-			if err != nil {
-				return fmt.Errorf("create plugin service: %w", err)
-			}
-
-			// Bind flags to options (centralized binding)
-			opts, err := bind.BindInstallOptions(cmd)
-			if err != nil {
-				return err
-			}
-
-			// Call service layer
-			result, err := svc.Install(ctx, target, opts)
-
-			// Handle partial failure (exit code 8)
-			if err != nil && errors.Is(err, plugin.ErrPartialFailure) {
-				// Print result even on partial failure
-				if printErr := printInstallResult(formatter, result); printErr != nil {
-					return printErr
-				}
-				// Exit with code 8 for partial failure
-				os.Exit(plugin.ExitCode(err))
-			}
-
-			// Handle total failure (exit code 1, 2, 4, 7, etc.)
-			if err != nil {
-				return formatter.PrintError(err)
-			}
-
-			// Print results using formatter
-			return printInstallResult(formatter, result)
+			return executeInstallCommand(cmd, args[0], cacheDir)
 		},
 	}
 
@@ -109,98 +55,65 @@ You can install entire categories (ssh, http, tls, database, network) or specifi
 	return cmd
 }
 
-// printInstallResult formats and prints the install result using the formatter
-// nolint:gocyclo // Complexity justified by comprehensive error handling and formatting
+// executeInstallCommand orchestrates the install command execution
+func executeInstallCommand(cmd *cobra.Command, target, cacheDir string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	// Setup dependencies
+	formatter := getFormatter(cmd)
+	svc, err := getPluginService(cacheDir)
+	if err != nil {
+		return err
+	}
+
+	// Bind flags to options
+	opts, err := bind.BindInstallOptions(cmd)
+	if err != nil {
+		return err
+	}
+
+	// Call service layer
+	result, err := svc.Install(ctx, target, opts)
+
+	// Handle partial failure (exit code 8)
+	if handleErr := handlePartialFailure(err, formatter, func() error {
+		return printInstallResult(formatter, result)
+	}); handleErr != nil {
+		return handleErr
+	}
+
+	// Handle total failure
+	if err != nil {
+		return formatter.PrintError(err)
+	}
+
+	// Print results
+	return printInstallResult(formatter, result)
+}
+
+// printInstallResult formats and prints the install result
 func printInstallResult(f format.Formatter, result *plugin.InstallResult) error {
-	// JSON mode: output complete result as JSON
 	if f.IsJSON() {
-		jsonResult := map[string]any{
-			"plugins":         result.Plugins,
-			"installed_count": result.InstalledCount,
-			"skipped_count":   result.SkippedCount,
-			"failed_count":    result.FailedCount,
-			"success":         result.FailedCount == 0,
-			"partial_failure": result.FailedCount > 0 && result.InstalledCount > 0,
-			"errors":          result.Errors,
-		}
-		return f.PrintJSON(jsonResult)
+		return printInstallJSON(f, result)
 	}
 
-	// Table mode: use existing table + summary pattern
-	if f == nil {
-		return fmt.Errorf("formatter is nil")
-	}
-
-	// Build table rows
-	var rows [][]string
-	for _, p := range result.Plugins {
-		categoryStr := ""
-		if len(p.Tags) > 0 {
-			categoryStr = p.Tags[0]
-		}
-		rows = append(rows, []string{p.Name, p.Version, categoryStr})
-	}
-
-	// Print table if there are plugins
+	// Print table
+	rows := buildPluginTable(result.Plugins)
 	if len(rows) > 0 {
 		if err := f.PrintTable([]string{"Name", "Version", "Category"}, rows); err != nil {
 			return err
 		}
 	}
 
-	// Build summary message
-	summary := fmt.Sprintf("Installation Summary: Installed: %d", result.InstalledCount)
-	if result.SkippedCount > 0 {
-		summary += fmt.Sprintf(", Already installed: %d", result.SkippedCount)
-	}
-	if result.FailedCount > 0 {
-		summary += fmt.Sprintf(", Failed: %d", result.FailedCount)
-	}
-
 	// Print summary
-	if err := f.PrintSummary(summary); err != nil {
+	if err := f.PrintSummary(buildInstallSummary(result)); err != nil {
 		return err
 	}
 
-	// Print errors if any (show first 5, truncate rest)
-	// nolint:dupl // Intentional code reuse across install/update/uninstall commands
-	if len(result.Errors) > 0 {
-		if err := f.PrintSummary("\nFailed plugins:"); err != nil {
-			return err
-		}
-
-		maxErrors := 5
-		for i, e := range result.Errors {
-			if i >= maxErrors {
-				remaining := len(result.Errors) - maxErrors
-				if err := f.PrintSummary(fmt.Sprintf("  ... and %d more (use --output json for full list)", remaining)); err != nil {
-					return err
-				}
-				break
-			}
-			if err := f.PrintSummary(fmt.Sprintf("  - %s: %s", e.PluginID, e.Error)); err != nil {
-				return err
-			}
-		}
-
-		// Print suggestions
-		if err := f.PrintSummary("\n💡 Suggestions:"); err != nil {
-			return err
-		}
-
-		// Collect unique suggestions
-		suggestions := make(map[string]bool)
-		for _, e := range result.Errors {
-			if e.Suggestion != "" {
-				suggestions[e.Suggestion] = true
-			}
-		}
-
-		for suggestion := range suggestions {
-			if err := f.PrintSummary(fmt.Sprintf("  → %s", suggestion)); err != nil {
-				return err
-			}
-		}
+	// Print errors if any
+	if err := printErrorList(f, result.Errors); err != nil {
+		return err
 	}
 
 	// Success message
@@ -209,4 +122,30 @@ func printInstallResult(f format.Formatter, result *plugin.InstallResult) error 
 	}
 
 	return nil
+}
+
+// printInstallJSON outputs install result as JSON
+func printInstallJSON(f format.Formatter, result *plugin.InstallResult) error {
+	jsonResult := map[string]any{
+		"plugins":         result.Plugins,
+		"installed_count": result.InstalledCount,
+		"skipped_count":   result.SkippedCount,
+		"failed_count":    result.FailedCount,
+		"success":         result.FailedCount == 0,
+		"partial_failure": result.FailedCount > 0 && result.InstalledCount > 0,
+		"errors":          result.Errors,
+	}
+	return f.PrintJSON(jsonResult)
+}
+
+// buildInstallSummary builds the summary message for install results
+func buildInstallSummary(result *plugin.InstallResult) string {
+	summary := fmt.Sprintf("Installation Summary: Installed: %d", result.InstalledCount)
+	if result.SkippedCount > 0 {
+		summary += fmt.Sprintf(", Already installed: %d", result.SkippedCount)
+	}
+	if result.FailedCount > 0 {
+		summary += fmt.Sprintf(", Failed: %d", result.FailedCount)
+	}
+	return summary
 }

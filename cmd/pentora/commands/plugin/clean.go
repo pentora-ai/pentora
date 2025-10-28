@@ -2,15 +2,12 @@ package plugin
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/spf13/cobra"
 
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/format"
 	"github.com/pentora-ai/pentora/pkg/plugin"
-	"github.com/pentora-ai/pentora/pkg/storage"
 )
 
 func newCleanCommand() *cobra.Command {
@@ -35,54 +32,7 @@ Use --dry-run to preview what would be deleted without actually deleting.`,
   # JSON output
   pentora plugin clean --output json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Create formatter
-			outputMode := format.ParseMode(cmd.Flag("output").Value.String())
-			quiet, _ := cmd.Flags().GetBool("quiet")
-			noColor, _ := cmd.Flags().GetBool("no-color")
-			formatter := format.New(os.Stdout, os.Stderr, outputMode, quiet, !noColor)
-
-			// Use default cache dir if not specified
-			if cacheDir == "" {
-				storageConfig, err := storage.DefaultConfig()
-				if err != nil {
-					return fmt.Errorf("get storage config: %w", err)
-				}
-				cacheDir = filepath.Join(storageConfig.WorkspaceRoot, "plugins", "cache")
-			}
-
-			// Create service
-			svc, err := plugin.NewService(cacheDir)
-			if err != nil {
-				return fmt.Errorf("create plugin service: %w", err)
-			}
-
-			// Bind flags to options (centralized binding)
-			opts, err := bind.BindCleanOptions(cmd)
-			if err != nil {
-				return err
-			}
-
-			// Print header (non-quiet mode)
-			if err := formatter.PrintSummary(fmt.Sprintf("Cleaning plugin cache: %s", cacheDir)); err != nil {
-				return err
-			}
-			if err := formatter.PrintSummary(fmt.Sprintf("Removing entries older than: %s", opts.OlderThan)); err != nil {
-				return err
-			}
-			if opts.DryRun {
-				if err := formatter.PrintSummary("(Dry run - no files will be deleted)"); err != nil {
-					return err
-				}
-			}
-
-			// Call service layer
-			result, err := svc.Clean(cmd.Context(), opts)
-			if err != nil {
-				return formatter.PrintError(err)
-			}
-
-			// Print results
-			return printCleanResult(formatter, result, opts.DryRun)
+			return executeCleanCommand(cmd, cacheDir)
 		},
 	}
 
@@ -96,27 +46,64 @@ Use --dry-run to preview what would be deleted without actually deleting.`,
 	return cmd
 }
 
-// printCleanResult formats and prints the clean result using the formatter
-func printCleanResult(f format.Formatter, result *plugin.CleanResult, dryRun bool) error {
-	// JSON mode: output complete result as JSON
-	if f.IsJSON() {
-		jsonResult := map[string]any{
-			"removed_count": result.RemovedCount,
-			"freed_bytes":   result.Freed,
-			"dry_run":       dryRun,
-			"success":       true,
-		}
-		return f.PrintJSON(jsonResult)
+// executeCleanCommand orchestrates the clean command execution
+func executeCleanCommand(cmd *cobra.Command, cacheDir string) error {
+	// Setup dependencies
+	formatter := getFormatter(cmd)
+	svc, err := getPluginService(cacheDir)
+	if err != nil {
+		return err
 	}
 
-	// Table mode: use existing summary pattern
+	// Bind flags to options
+	opts, err := bind.BindCleanOptions(cmd)
+	if err != nil {
+		return err
+	}
+
+	// Print header
+	if err := printCleanHeader(formatter, cacheDir, opts); err != nil {
+		return err
+	}
+
+	// Call service layer
+	result, err := svc.Clean(cmd.Context(), opts)
+	if err != nil {
+		return formatter.PrintError(err)
+	}
+
+	// Print results
+	return printCleanResult(formatter, result, opts.DryRun)
+}
+
+// printCleanHeader prints the clean command header
+func printCleanHeader(f format.Formatter, cacheDir string, opts plugin.CleanOptions) error {
+	if err := f.PrintSummary(fmt.Sprintf("Cleaning plugin cache: %s", cacheDir)); err != nil {
+		return err
+	}
+	if err := f.PrintSummary(fmt.Sprintf("Removing entries older than: %s", opts.OlderThan)); err != nil {
+		return err
+	}
+	if opts.DryRun {
+		return f.PrintSummary("(Dry run - no files will be deleted)")
+	}
+	return nil
+}
+
+// printCleanResult formats and prints the clean result
+func printCleanResult(f format.Formatter, result *plugin.CleanResult, dryRun bool) error {
+	if f.IsJSON() {
+		return printCleanJSON(f, result, dryRun)
+	}
+
+	// No old entries found
 	if result.RemovedCount == 0 {
 		return f.PrintSummary("No old plugin cache entries found to remove.")
 	}
 
-	var summary string
+	// Dry run mode
 	if dryRun {
-		summary = fmt.Sprintf("[DRY RUN] Would remove %d cache entries", result.RemovedCount)
+		summary := fmt.Sprintf("[DRY RUN] Would remove %d cache entries", result.RemovedCount)
 		if result.Freed > 0 {
 			summary += fmt.Sprintf(", would free %s", formatBytes(result.Freed))
 		}
@@ -126,9 +113,21 @@ func printCleanResult(f format.Formatter, result *plugin.CleanResult, dryRun boo
 		return f.PrintSummary("Run without --dry-run to actually delete these files.")
 	}
 
-	summary = fmt.Sprintf("Removed %d cache entries", result.RemovedCount)
+	// Actual clean completed
+	summary := fmt.Sprintf("Removed %d cache entries", result.RemovedCount)
 	if result.Freed > 0 {
 		summary += fmt.Sprintf(", freed %s", formatBytes(result.Freed))
 	}
 	return f.PrintSummary(summary)
+}
+
+// printCleanJSON outputs clean result as JSON
+func printCleanJSON(f format.Formatter, result *plugin.CleanResult, dryRun bool) error {
+	jsonResult := map[string]any{
+		"removed_count": result.RemovedCount,
+		"freed_bytes":   result.Freed,
+		"dry_run":       dryRun,
+		"success":       true,
+	}
+	return f.PrintJSON(jsonResult)
 }

@@ -3,14 +3,11 @@ package plugin
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/spf13/cobra"
 
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/format"
 	"github.com/pentora-ai/pentora/pkg/plugin"
-	"github.com/pentora-ai/pentora/pkg/storage"
 )
 
 func newListCommand() *cobra.Command {
@@ -38,37 +35,7 @@ found in the plugin cache directory.`,
   # JSON output
   pentora plugin list --output json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.Background()
-
-			// Create formatter
-			outputMode := format.ParseMode(cmd.Flag("output").Value.String())
-			quiet, _ := cmd.Flags().GetBool("quiet")
-			noColor, _ := cmd.Flags().GetBool("no-color")
-			formatter := format.New(os.Stdout, os.Stderr, outputMode, quiet, !noColor)
-
-			// Use default cache dir if not specified
-			if cacheDir == "" {
-				storageConfig, err := storage.DefaultConfig()
-				if err != nil {
-					return fmt.Errorf("get storage config: %w", err)
-				}
-				cacheDir = filepath.Join(storageConfig.WorkspaceRoot, "plugins", "cache")
-			}
-
-			// Create service
-			svc, err := plugin.NewService(cacheDir)
-			if err != nil {
-				return fmt.Errorf("create plugin service: %w", err)
-			}
-
-			// Call service layer
-			plugins, err := svc.List(ctx)
-			if err != nil {
-				return formatter.PrintError(err)
-			}
-
-			// Print results
-			return printListResult(formatter, plugins, verbose)
+			return executeListCommand(cmd, cacheDir, verbose)
 		},
 	}
 
@@ -81,32 +48,73 @@ found in the plugin cache directory.`,
 	return cmd
 }
 
-// printListResult formats and prints the list result using the formatter
+// executeListCommand orchestrates the list command execution
+func executeListCommand(cmd *cobra.Command, cacheDir string, verbose bool) error {
+	ctx := context.Background()
+
+	// Setup dependencies
+	formatter := getFormatter(cmd)
+	svc, err := getPluginService(cacheDir)
+	if err != nil {
+		return err
+	}
+
+	// Call service layer
+	plugins, err := svc.List(ctx)
+	if err != nil {
+		return formatter.PrintError(err)
+	}
+
+	// Print results
+	return printListResult(formatter, plugins, verbose)
+}
+
+// printListResult formats and prints the list result
 func printListResult(f format.Formatter, plugins []*plugin.PluginInfo, verbose bool) error {
-	// JSON mode: output complete structured result
 	if f.IsJSON() {
-		result := map[string]any{
-			"plugins": plugins,
-			"count":   len(plugins),
-		}
-		return f.PrintJSON(result)
+		return printListJSON(f, plugins)
 	}
 
-	// Table mode: use existing table + summary pattern
+	// Empty list
 	if len(plugins) == 0 {
-		if err := f.PrintSummary("No plugins installed."); err != nil {
-			return err
-		}
-		if err := f.PrintSummary(""); err != nil {
-			return err
-		}
-		if err := f.PrintSummary("To install plugins, use:"); err != nil {
-			return err
-		}
-		return f.PrintSummary("  pentora plugin install <plugin-name>")
+		return printEmptyPluginList(f)
 	}
 
-	// Build table headers and rows
+	// Build and print table
+	headers, rows := buildListTable(plugins, verbose)
+	if err := f.PrintTable(headers, rows); err != nil {
+		return err
+	}
+
+	// Print summary
+	return f.PrintSummary(fmt.Sprintf("Found %d plugin(s)", len(plugins)))
+}
+
+// printListJSON outputs list result as JSON
+func printListJSON(f format.Formatter, plugins []*plugin.PluginInfo) error {
+	result := map[string]any{
+		"plugins": plugins,
+		"count":   len(plugins),
+	}
+	return f.PrintJSON(result)
+}
+
+// printEmptyPluginList prints message when no plugins are installed
+func printEmptyPluginList(f format.Formatter) error {
+	if err := f.PrintSummary("No plugins installed."); err != nil {
+		return err
+	}
+	if err := f.PrintSummary(""); err != nil {
+		return err
+	}
+	if err := f.PrintSummary("To install plugins, use:"); err != nil {
+		return err
+	}
+	return f.PrintSummary("  pentora plugin install <plugin-name>")
+}
+
+// buildListTable builds table headers and rows for plugin list
+func buildListTable(plugins []*plugin.PluginInfo, verbose bool) ([]string, [][]string) {
 	var headers []string
 	var rows [][]string
 
@@ -127,13 +135,7 @@ func printListResult(f format.Formatter, plugins []*plugin.PluginInfo, verbose b
 		}
 	}
 
-	// Print table
-	if err := f.PrintTable(headers, rows); err != nil {
-		return err
-	}
-
-	// Print summary
-	return f.PrintSummary(fmt.Sprintf("Found %d plugin(s)", len(plugins)))
+	return headers, rows
 }
 
 // truncateChecksum truncates checksum for display (shows first 12 chars)
