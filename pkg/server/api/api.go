@@ -21,6 +21,9 @@ type Deps struct {
 	// Type asserted in router to v1.PluginService
 	PluginService any
 
+	// Config holds API-level configuration (timeouts, limits, etc.)
+	Config Config
+
 	// Ready flag for readiness check
 	Ready *atomic.Bool
 }
