@@ -4,10 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/pentora-ai/pentora/pkg/plugin"
 	"github.com/pentora-ai/pentora/pkg/server/api"
 )
+
+// formatSourceList formats a string slice as a comma-separated list.
+// Helper function for generating user-friendly error messages.
+func formatSourceList(items []string) string {
+	return strings.Join(items, ", ")
+}
 
 // PluginService defines the interface for plugin operations.
 // This allows for easy mocking in tests.
@@ -164,15 +171,26 @@ type PluginInfoDTO struct {
 // Returns 400 for invalid requests, 500 for server errors.
 func InstallPluginHandler(pluginService PluginService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Defense-in-depth: Limit request body size (2MB)
+		r.Body = http.MaxBytesReader(w, r.Body, plugin.MaxRequestBodySize)
+
 		var req InstallPluginRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			api.WriteJSONError(w, http.StatusBadRequest, "Bad Request", "INVALID_REQUEST_BODY", "invalid request body: "+err.Error())
 			return
 		}
 
-		// Validate request
+		// Validate request - required fields
 		if req.Target == "" {
 			api.WriteJSONError(w, http.StatusBadRequest, "Bad Request", "TARGET_REQUIRED", "target is required")
+			return
+		}
+
+		// Validate source whitelist (API layer - defense-in-depth)
+		if req.Source != "" && !plugin.IsValidSource(req.Source) {
+			validSources := plugin.ValidSources
+			api.WriteJSONError(w, http.StatusBadRequest, "Bad Request", "INVALID_SOURCE",
+				"invalid source '"+req.Source+"' (valid: "+formatSourceList(validSources)+")")
 			return
 		}
 
@@ -391,9 +409,28 @@ func UninstallPluginHandler(pluginService PluginService) http.HandlerFunc {
 //	}
 func UpdatePluginsHandler(pluginService PluginService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Defense-in-depth: Limit request body size (2MB)
+		r.Body = http.MaxBytesReader(w, r.Body, plugin.MaxRequestBodySize)
+
 		var req UpdatePluginsRequest
 		// Empty body is OK for update (updates all plugins)
 		_ = json.NewDecoder(r.Body).Decode(&req)
+
+		// Validate category whitelist (API layer - defense-in-depth)
+		if req.Category != "" && !plugin.IsValidCategory(req.Category) {
+			validCategories := plugin.GetValidCategories()
+			api.WriteJSONError(w, http.StatusBadRequest, "Bad Request", "INVALID_CATEGORY",
+				"invalid category '"+req.Category+"' (valid: "+formatSourceList(validCategories)+")")
+			return
+		}
+
+		// Validate source whitelist (API layer - defense-in-depth)
+		if req.Source != "" && !plugin.IsValidSource(req.Source) {
+			validSources := plugin.ValidSources
+			api.WriteJSONError(w, http.StatusBadRequest, "Bad Request", "INVALID_SOURCE",
+				"invalid source '"+req.Source+"' (valid: "+formatSourceList(validSources)+")")
+			return
+		}
 
 		// Build update options
 		opts := plugin.UpdateOptions{

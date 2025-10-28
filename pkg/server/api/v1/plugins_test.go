@@ -195,6 +195,28 @@ func TestInstallPluginHandler_ServiceError(t *testing.T) {
 	require.Contains(t, w.Body.String(), "INTERNAL_ERROR")
 }
 
+// TestInstallPluginHandler_InvalidSource tests handler with invalid source
+func TestInstallPluginHandler_InvalidSource(t *testing.T) {
+	mockSvc := &mockPluginService{}
+	handler := InstallPluginHandler(mockSvc)
+
+	reqBody := InstallPluginRequest{
+		Target: "ssh-weak-cipher",
+		Source: "custom", // Invalid source
+	}
+	bodyBytes, _ := json.Marshal(reqBody)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/plugins/install", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	require.Contains(t, w.Body.String(), "INVALID_SOURCE")
+	require.Contains(t, w.Body.String(), "custom")
+}
+
 // TestListPluginsHandler_EmptyList tests handler with no plugins installed
 func TestListPluginsHandler_EmptyList(t *testing.T) {
 	mockSvc := &mockPluginService{
@@ -536,4 +558,46 @@ func TestUpdatePluginsHandler_ServiceError(t *testing.T) {
 
 	require.Equal(t, http.StatusInternalServerError, w.Code)
 	require.Contains(t, w.Body.String(), "INTERNAL_ERROR")
+}
+
+// TestUpdatePluginsHandler_InvalidCategory tests handler with invalid category
+func TestUpdatePluginsHandler_InvalidCategory(t *testing.T) {
+	mockSvc := &mockPluginService{}
+	handler := UpdatePluginsHandler(mockSvc)
+
+	reqBody := UpdatePluginsRequest{
+		Category: "invalid-category", // Invalid category
+	}
+	bodyBytes, _ := json.Marshal(reqBody)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/plugins/update", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	require.Contains(t, w.Body.String(), "INVALID_CATEGORY")
+	require.Contains(t, w.Body.String(), "invalid-category")
+}
+
+// TestUpdatePluginsHandler_InvalidSource tests handler with invalid source
+func TestUpdatePluginsHandler_InvalidSource(t *testing.T) {
+	mockSvc := &mockPluginService{}
+	handler := UpdatePluginsHandler(mockSvc)
+
+	reqBody := UpdatePluginsRequest{
+		Source: "custom", // Invalid source
+	}
+	bodyBytes, _ := json.Marshal(reqBody)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/plugins/update", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	require.Contains(t, w.Body.String(), "INVALID_SOURCE")
+	require.Contains(t, w.Body.String(), "custom")
 }

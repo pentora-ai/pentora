@@ -31,14 +31,23 @@ func TestBindInstallOptions(t *testing.T) {
 		{
 			name: "only source set",
 			flags: map[string]interface{}{
-				"source": "custom",
+				"source": "github",
 				"force":  false,
 			},
 			want: plugin.InstallOptions{
-				Source: "custom",
+				Source: "github",
 				Force:  false,
 			},
 			wantErr: false,
+		},
+		{
+			name: "invalid source",
+			flags: map[string]interface{}{
+				"source": "custom",
+				"force":  false,
+			},
+			want:    plugin.InstallOptions{},
+			wantErr: true,
 		},
 		{
 			name: "only force set",
@@ -153,6 +162,28 @@ func TestBindUpdateOptions(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "invalid category",
+			flags: map[string]interface{}{
+				"category": "invalid",
+				"source":   "",
+				"force":    false,
+				"dry-run":  false,
+			},
+			want:    plugin.UpdateOptions{},
+			wantErr: true,
+		},
+		{
+			name: "invalid source",
+			flags: map[string]interface{}{
+				"category": "",
+				"source":   "custom",
+				"force":    false,
+				"dry-run":  false,
+			},
+			want:    plugin.UpdateOptions{},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -224,6 +255,16 @@ func TestBindUninstallOptions(t *testing.T) {
 			want:    plugin.UninstallOptions{},
 			wantErr: true,
 			errMsg:  "cannot use --all and --category together",
+		},
+		{
+			name: "invalid category",
+			flags: map[string]interface{}{
+				"all":      false,
+				"category": "invalid",
+			},
+			want:    plugin.UninstallOptions{},
+			wantErr: true,
+			errMsg:  "invalid category",
 		},
 	}
 
