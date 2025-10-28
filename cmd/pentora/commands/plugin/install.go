@@ -135,27 +135,68 @@ func printInstallResult(f format.Formatter, result *plugin.InstallResult) error 
 		return printInstallJSON(f, result)
 	}
 
-	// Print table
-	rows := buildPluginTable(result.Plugins)
-	if len(rows) > 0 {
+	// Success case: no failures
+	if result.FailedCount == 0 && result.InstalledCount > 0 {
+		// Single plugin installed
+		if len(result.Plugins) == 1 {
+			p := result.Plugins[0]
+			return f.PrintSuccessSummary("installed", p.ID, p.Version)
+		}
+		// Multiple plugins installed - show table and summary
+		rows := buildPluginTable(result.Plugins)
 		if err := f.PrintTable([]string{"Name", "Version", "Category"}, rows); err != nil {
 			return err
 		}
+		return f.PrintSuccessSummary("installed", fmt.Sprintf("%d plugins", result.InstalledCount), "")
 	}
 
-	// Print summary
-	if err := f.PrintSummary(buildInstallSummary(result)); err != nil {
-		return err
+	// Partial failure case: some succeeded, some failed
+	if result.InstalledCount > 0 && result.FailedCount > 0 {
+		// Show table of successful installs
+		rows := buildPluginTable(result.Plugins)
+		if len(rows) > 0 {
+			if err := f.PrintTable([]string{"Name", "Version", "Category"}, rows); err != nil {
+				return err
+			}
+		}
+
+		// Print partial failure summary
+		errorDetails := convertPluginErrors(result.Errors)
+		summary := format.Summary{
+			Operation:   "install",
+			Success:     result.InstalledCount,
+			Skipped:     result.SkippedCount,
+			Failed:      result.FailedCount,
+			Errors:      errorDetails,
+			TotalErrors: len(result.Errors),
+		}
+		return f.PrintPartialFailureSummary(summary)
 	}
 
-	// Print errors if any
-	if err := printErrorList(f, result.Errors); err != nil {
-		return err
+	// All skipped (already installed)
+	if result.SkippedCount > 0 && result.InstalledCount == 0 && result.FailedCount == 0 {
+		return f.PrintSummary("All plugins already installed (use --force to reinstall)")
 	}
 
-	// Success message
-	if result.InstalledCount > 0 && result.FailedCount == 0 {
-		return f.PrintSummary("\n✓ Plugins installed successfully")
+	// Total failure case: all failed
+	if result.FailedCount > 0 && result.InstalledCount == 0 {
+		// Single error - show detailed failure
+		if len(result.Errors) == 1 {
+			e := result.Errors[0]
+			return f.PrintTotalFailureSummary("install", fmt.Errorf("%s", e.Error), e.Code)
+		}
+
+		// Multiple errors - show as partial failure summary
+		errorDetails := convertPluginErrors(result.Errors)
+		summary := format.Summary{
+			Operation:   "install",
+			Success:     0,
+			Skipped:     result.SkippedCount,
+			Failed:      result.FailedCount,
+			Errors:      errorDetails,
+			TotalErrors: len(result.Errors),
+		}
+		return f.PrintPartialFailureSummary(summary)
 	}
 
 	return nil
@@ -173,16 +214,4 @@ func printInstallJSON(f format.Formatter, result *plugin.InstallResult) error {
 		"errors":          result.Errors,
 	}
 	return f.PrintJSON(jsonResult)
-}
-
-// buildInstallSummary builds the summary message for install results
-func buildInstallSummary(result *plugin.InstallResult) string {
-	summary := fmt.Sprintf("Installation Summary: Installed: %d", result.InstalledCount)
-	if result.SkippedCount > 0 {
-		summary += fmt.Sprintf(", Already installed: %d", result.SkippedCount)
-	}
-	if result.FailedCount > 0 {
-		summary += fmt.Sprintf(", Failed: %d", result.FailedCount)
-	}
-	return summary
 }

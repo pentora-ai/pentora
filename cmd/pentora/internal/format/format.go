@@ -40,6 +40,15 @@ type Formatter interface {
 
 	// IsJSON returns true if the formatter is in JSON mode
 	IsJSON() bool
+
+	// PrintSuccessSummary prints a standardized success message
+	PrintSuccessSummary(operation, pluginID, version string) error
+
+	// PrintPartialFailureSummary prints partial failure with counts, errors, and suggestions
+	PrintPartialFailureSummary(summary Summary) error
+
+	// PrintTotalFailureSummary prints total failure with error and suggestions
+	PrintTotalFailureSummary(operation string, err error, errorCode string) error
 }
 
 // formatter implements the Formatter interface

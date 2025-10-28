@@ -132,22 +132,46 @@ func printUninstallResult(f format.Formatter, result *plugin.UninstallResult) er
 		return printUninstallJSON(f, result)
 	}
 
-	// Print summary
-	if err := f.PrintSummary(buildUninstallSummary(result)); err != nil {
-		return err
-	}
-
-	// Print errors if any
-	if err := printErrorList(f, result.Errors); err != nil {
-		return err
-	}
-
-	// Success message
-	if result.RemovedCount > 0 && result.FailedCount == 0 {
+	// Success case: no failures
+	if result.FailedCount == 0 && result.RemovedCount > 0 {
 		if result.RemainingCount == 0 {
-			return f.PrintSummary("\n✓ All plugins uninstalled. Cache is empty.")
+			return f.PrintSuccessSummary("uninstalled", "All plugins", "")
 		}
-		return f.PrintSummary("\n✓ Plugins uninstalled successfully")
+		// Multiple plugins uninstalled
+		return f.PrintSuccessSummary("uninstalled", fmt.Sprintf("%d plugin(s)", result.RemovedCount), "")
+	}
+
+	// Partial failure case: some succeeded, some failed
+	if result.RemovedCount > 0 && result.FailedCount > 0 {
+		errorDetails := convertPluginErrors(result.Errors)
+		summary := format.Summary{
+			Operation:   "uninstall",
+			Success:     result.RemovedCount,
+			Skipped:     0, // uninstall doesn't have skipped count
+			Failed:      result.FailedCount,
+			Errors:      errorDetails,
+			TotalErrors: len(result.Errors),
+		}
+		return f.PrintPartialFailureSummary(summary)
+	}
+
+	// Total failure case: all failed
+	if result.FailedCount > 0 && result.RemovedCount == 0 {
+		if len(result.Errors) == 1 {
+			e := result.Errors[0]
+			return f.PrintTotalFailureSummary("uninstall", fmt.Errorf("%s", e.Error), e.Code)
+		}
+		// Multiple errors - show as partial failure summary
+		errorDetails := convertPluginErrors(result.Errors)
+		summary := format.Summary{
+			Operation:   "uninstall",
+			Success:     0,
+			Skipped:     0,
+			Failed:      result.FailedCount,
+			Errors:      errorDetails,
+			TotalErrors: len(result.Errors),
+		}
+		return f.PrintPartialFailureSummary(summary)
 	}
 
 	return nil
@@ -164,16 +188,4 @@ func printUninstallJSON(f format.Formatter, result *plugin.UninstallResult) erro
 		"errors":          result.Errors,
 	}
 	return f.PrintJSON(jsonResult)
-}
-
-// buildUninstallSummary builds the summary message for uninstall results
-func buildUninstallSummary(result *plugin.UninstallResult) string {
-	summary := fmt.Sprintf("Uninstall Summary: Removed: %d", result.RemovedCount)
-	if result.FailedCount > 0 {
-		summary += fmt.Sprintf(", Failed: %d", result.FailedCount)
-	}
-	if result.RemainingCount > 0 {
-		summary += fmt.Sprintf(", Remaining: %d", result.RemainingCount)
-	}
-	return summary
 }

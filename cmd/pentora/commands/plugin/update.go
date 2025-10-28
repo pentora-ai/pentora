@@ -139,12 +139,48 @@ func printUpdateResult(f format.Formatter, result *plugin.UpdateResult, dryRun b
 		return printUpdateJSON(f, result, dryRun)
 	}
 
-	// Dry run mode
 	if dryRun {
 		return printUpdateDryRun(f, result)
 	}
 
-	// Print table
+	// Success case
+	if result.FailedCount == 0 && result.UpdatedCount > 0 {
+		return printUpdateSuccess(f, result)
+	}
+
+	// Partial failure
+	if result.UpdatedCount > 0 && result.FailedCount > 0 {
+		return printUpdatePartialFailure(f, result)
+	}
+
+	// All skipped
+	if result.SkippedCount > 0 && result.UpdatedCount == 0 && result.FailedCount == 0 {
+		return f.PrintSummary("All plugins are already up-to-date")
+	}
+
+	// Total failure
+	if result.FailedCount > 0 && result.UpdatedCount == 0 {
+		return printUpdateTotalFailure(f, result)
+	}
+
+	return nil
+}
+
+// printUpdateSuccess prints success result for update operation
+func printUpdateSuccess(f format.Formatter, result *plugin.UpdateResult) error {
+	if len(result.Plugins) == 1 {
+		p := result.Plugins[0]
+		return f.PrintSuccessSummary("updated", p.ID, p.Version)
+	}
+	rows := buildPluginTable(result.Plugins)
+	if err := f.PrintTable([]string{"Name", "Version", "Category"}, rows); err != nil {
+		return err
+	}
+	return f.PrintSuccessSummary("updated", fmt.Sprintf("%d plugins", result.UpdatedCount), "")
+}
+
+// printUpdatePartialFailure prints partial failure result for update operation
+func printUpdatePartialFailure(f format.Formatter, result *plugin.UpdateResult) error {
 	rows := buildPluginTable(result.Plugins)
 	if len(rows) > 0 {
 		if err := f.PrintTable([]string{"Name", "Version", "Category"}, rows); err != nil {
@@ -152,22 +188,34 @@ func printUpdateResult(f format.Formatter, result *plugin.UpdateResult, dryRun b
 		}
 	}
 
-	// Print summary
-	if err := f.PrintSummary(buildUpdateSummary(result)); err != nil {
-		return err
+	errorDetails := convertPluginErrors(result.Errors)
+	summary := format.Summary{
+		Operation:   "update",
+		Success:     result.UpdatedCount,
+		Skipped:     result.SkippedCount,
+		Failed:      result.FailedCount,
+		Errors:      errorDetails,
+		TotalErrors: len(result.Errors),
 	}
+	return f.PrintPartialFailureSummary(summary)
+}
 
-	// Print errors if any
-	if err := printErrorList(f, result.Errors); err != nil {
-		return err
+// printUpdateTotalFailure prints total failure result for update operation
+func printUpdateTotalFailure(f format.Formatter, result *plugin.UpdateResult) error {
+	if len(result.Errors) == 1 {
+		e := result.Errors[0]
+		return f.PrintTotalFailureSummary("update", fmt.Errorf("%s", e.Error), e.Code)
 	}
-
-	// Success message
-	if result.UpdatedCount > 0 && result.FailedCount == 0 {
-		return f.PrintSummary("\n✓ Plugins updated successfully")
+	errorDetails := convertPluginErrors(result.Errors)
+	summary := format.Summary{
+		Operation:   "update",
+		Success:     0,
+		Skipped:     result.SkippedCount,
+		Failed:      result.FailedCount,
+		Errors:      errorDetails,
+		TotalErrors: len(result.Errors),
 	}
-
-	return nil
+	return f.PrintPartialFailureSummary(summary)
 }
 
 // printUpdateJSON outputs update result as JSON
@@ -197,14 +245,4 @@ func printUpdateDryRun(f format.Formatter, result *plugin.UpdateResult) error {
 		}
 	}
 	return f.PrintSummary("Dry run completed (no changes made)")
-}
-
-// buildUpdateSummary builds the summary message for update results
-func buildUpdateSummary(result *plugin.UpdateResult) string {
-	summary := fmt.Sprintf("Update Summary: Downloaded: %d, Skipped: %d", result.UpdatedCount, result.SkippedCount)
-	if result.FailedCount > 0 {
-		summary += fmt.Sprintf(", Failed: %d", result.FailedCount)
-	}
-	summary += fmt.Sprintf(", Total in cache: %d", result.UpdatedCount+result.SkippedCount)
-	return summary
 }
