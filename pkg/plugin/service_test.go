@@ -345,6 +345,9 @@ type mockCacheManager struct {
 	sizeFunc     func(ctx context.Context) (int64, error)
 	pruneFunc    func(ctx context.Context, olderThan time.Duration) (int, error)
 	removeFunc   func(ctx context.Context, id string, version string) error
+	putFunc      func(ctx context.Context, entry CacheEntry) error
+	listFunc     func(ctx context.Context) ([]CacheEntry, error)
+	deleteFunc   func(ctx context.Context, name, version string) error
 }
 
 func (m *mockCacheManager) GetEntry(ctx context.Context, name, version string) (*CacheEntry, error) {
@@ -371,6 +374,27 @@ func (m *mockCacheManager) Prune(ctx context.Context, olderThan time.Duration) (
 func (m *mockCacheManager) Remove(ctx context.Context, id string, version string) error {
 	if m.removeFunc != nil {
 		return m.removeFunc(ctx, id, version)
+	}
+	return nil
+}
+
+func (m *mockCacheManager) Put(ctx context.Context, entry CacheEntry) error {
+	if m.putFunc != nil {
+		return m.putFunc(ctx, entry)
+	}
+	return nil
+}
+
+func (m *mockCacheManager) List(ctx context.Context) ([]CacheEntry, error) {
+	if m.listFunc != nil {
+		return m.listFunc(ctx)
+	}
+	return []CacheEntry{}, nil
+}
+
+func (m *mockCacheManager) Delete(ctx context.Context, name, version string) error {
+	if m.deleteFunc != nil {
+		return m.deleteFunc(ctx, name, version)
 	}
 	return nil
 }
