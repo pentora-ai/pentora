@@ -32,7 +32,7 @@ func getPluginService(cacheDir string) (*plugin.Service, error) {
 		cacheDir = filepath.Join(storageConfig.WorkspaceRoot, "plugins", "cache")
 	}
 
-	svc, err := plugin.NewService(cacheDir)
+	svc, err := plugin.NewService(plugin.WithCacheDir(cacheDir))
 	if err != nil {
 		return nil, fmt.Errorf("create plugin service: %w", err)
 	}

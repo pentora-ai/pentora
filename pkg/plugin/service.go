@@ -86,157 +86,100 @@ type Service struct {
 	logger  zerolog.Logger
 }
 
-// NewService creates a new plugin service with default configuration.
+// NewService creates a new plugin service using functional options pattern.
 //
-// Parameters:
-//   - cacheDir: Directory for plugin cache (e.g., ~/.pentora/plugins/cache)
+// This pattern allows for flexible, extensible configuration without breaking changes.
+// All options are optional - sensible defaults are used when not specified.
 //
-// Returns a fully configured service with sensible defaults:
-//   - CacheManager for managing cached plugins
+// Returns a fully configured service with defaults:
+//   - CacheManager for managing cached plugins (~/.pentora/plugins/cache)
 //   - ManifestManager for tracking installed plugins
 //   - Default plugin sources (official repository)
 //   - Default logger (zerolog)
+//   - Default timeouts (from DefaultConfig())
 //
-// Use With* methods to inject optional dependencies (storage, custom logger, custom sources).
+// Example usage:
 //
-// Example:
+//	// Minimal - uses all defaults
+//	svc, err := plugin.NewService()
 //
-//	svc, err := plugin.NewService("/path/to/cache")
-//	if err != nil {
-//	    return fmt.Errorf("create service: %w", err)
-//	}
-func NewService(cacheDir string) (*Service, error) {
-	if cacheDir == "" {
-		// Use default cache directory if not specified
+//	// Custom cache directory
+//	svc, err := plugin.NewService(
+//	    plugin.WithCacheDir("/custom/cache"),
+//	)
+//
+//	// Full customization
+//	svc, err := plugin.NewService(
+//	    plugin.WithCacheDir("/custom/cache"),
+//	    plugin.WithLogger(customLogger),
+//	    plugin.WithConfig(customConfig),
+//	    plugin.WithStorage(backend),
+//	    plugin.WithPluginSources(customSources),
+//	)
+func NewService(opts ...ServiceOption) (*Service, error) {
+	// Apply options with defaults
+	config := &serviceOptions{
+		cacheDir: "",  // Will use default if empty
+		logger:   nil, // Will use default logger if nil
+		config:   nil, // Will use DefaultConfig() if nil
+		storage:  nil,
+		sources:  nil, // Will use defaultSources() if nil
+	}
+
+	for _, opt := range opts {
+		opt(config)
+	}
+
+	// Apply defaults for unset options
+	if config.cacheDir == "" {
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
 			return nil, fmt.Errorf("get home directory: %w", err)
 		}
-		cacheDir = filepath.Join(homeDir, ".pentora", "plugins", "cache")
+		config.cacheDir = filepath.Join(homeDir, ".pentora", "plugins", "cache")
+	}
+
+	if config.logger == nil {
+		defaultLogger := log.Logger
+		config.logger = &defaultLogger
+	}
+
+	if config.config == nil {
+		defaultCfg := DefaultConfig()
+		config.config = &defaultCfg
+	}
+
+	if config.sources == nil {
+		config.sources = defaultSources()
 	}
 
 	// Create cache manager
-	cache, err := NewCacheManager(cacheDir)
+	cache, err := NewCacheManager(config.cacheDir)
 	if err != nil {
 		return nil, fmt.Errorf("create cache manager: %w", err)
 	}
 
 	// Create manifest manager (registry.json in parent directory of cache)
-	manifestPath := filepath.Join(filepath.Dir(cacheDir), "registry.json")
+	manifestPath := filepath.Join(filepath.Dir(config.cacheDir), "registry.json")
 	manifest, err := NewManifestManager(manifestPath)
 	if err != nil {
 		return nil, fmt.Errorf("create manifest manager: %w", err)
 	}
 
-	// Create service with defaults
+	// Create service with configured options
 	svc := &Service{
 		cache:    cache,
 		manifest: manifest,
-		sources:  defaultSources(),
-		config:   DefaultConfig(),
-		logger:   log.Logger,
+		sources:  config.sources,
+		config:   *config.config,
+		logger:   *config.logger,
+		storage:  config.storage,
 	}
 
-	// Create downloader with default sources
+	// Create downloader with configured sources
 	svc.downloader = NewDownloader(cache, WithSources(svc.sources))
 
 	return svc, nil
-}
-
-// WithStorage injects an optional storage backend for advanced features.
-//
-// The storage backend enables features like:
-//   - Storing plugin metadata in database
-//   - Cross-referencing plugins with scan results
-//   - Multi-tenancy support (Enterprise)
-//
-// Example:
-//
-//	backend, _ := storage.NewBackend(ctx, cfg)
-//	svc := plugin.NewService(cacheDir).WithStorage(backend)
-func (s *Service) WithStorage(backend storage.Backend) *Service {
-	s.storage = backend
-	return s
-}
-
-// WithLogger injects a custom logger.
-//
-// Example:
-//
-//	customLogger := zerolog.New(os.Stdout).With().
-//	    Str("service", "plugin").
-//	    Logger()
-//	svc := plugin.NewService(cacheDir).WithLogger(customLogger)
-func (s *Service) WithLogger(logger zerolog.Logger) *Service {
-	s.logger = logger
-	return s
-}
-
-// WithConfig injects custom service configuration (timeouts, limits).
-//
-// Example:
-//
-//	cfg := plugin.ServiceConfig{
-//	    InstallTimeout: 120 * time.Second,
-//	    UpdateTimeout:  120 * time.Second,
-//	}
-//	svc := plugin.NewService(cacheDir).WithConfig(cfg)
-func (s *Service) WithConfig(config ServiceConfig) *Service {
-	s.config = config
-	return s
-}
-
-// WithSources injects custom plugin sources.
-//
-// This allows using alternative plugin repositories or mirrors.
-//
-// Example:
-//
-//	customSources := []plugin.PluginSource{
-//	    {Name: "enterprise", URL: "https://enterprise.example.com/plugins.yaml", Enabled: true},
-//	}
-//	svc := plugin.NewService(cacheDir).WithSources(customSources)
-//
-// Note: This only updates the sources list. If you need to recreate the downloader
-// with new sources, create a new Service instance instead.
-func (s *Service) WithSources(sources []PluginSource) *Service {
-	s.sources = sources
-	// Note: We don't recreate the downloader here because s.cache is an interface.
-	// In practice, sources are set during initialization via NewService.
-	// If you need to change sources after creation, create a new Service instance.
-	return s
-}
-
-// WithRetry configures retry behavior for network operations.
-//
-// This allows customizing retry logic for plugin downloads and manifest fetches.
-//
-// Example:
-//
-//	// Custom retry config
-//	retryConfig := plugin.RetryConfig{
-//	    MaxAttempts: 5,
-//	    InitialWait: 2 * time.Second,
-//	    MaxWait:     60 * time.Second,
-//	    Multiplier:  2.0,
-//	    Jitter:      true,
-//	}
-//	svc := plugin.NewService(cacheDir).WithRetry(retryConfig)
-//
-//	// Disable retries
-//	svc := plugin.NewService(cacheDir).WithRetry(plugin.NoRetry())
-//
-// Note: This recreates the downloader with the new retry config.
-func (s *Service) WithRetry(config RetryConfig) *Service {
-	// Recreate downloader with new retry config
-	cacheManager, ok := s.cache.(*CacheManager)
-	if !ok {
-		// If cache is a mock/test interface, just return (can't recreate downloader)
-		return s
-	}
-
-	s.downloader = NewDownloader(cacheManager, WithSources(s.sources), WithRetryConfig(config))
-	return s
 }
 
 // defaultSources returns the default plugin sources.

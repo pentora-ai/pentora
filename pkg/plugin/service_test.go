@@ -14,15 +14,13 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
-
-	"github.com/pentora-ai/pentora/pkg/storage"
 )
 
 func TestNewService(t *testing.T) {
 	t.Run("with valid cache directory", func(t *testing.T) {
 		cacheDir := t.TempDir()
 
-		svc, err := NewService(cacheDir)
+		svc, err := NewService(WithCacheDir(cacheDir))
 
 		require.NoError(t, err)
 		require.NotNil(t, svc)
@@ -36,7 +34,7 @@ func TestNewService(t *testing.T) {
 	})
 
 	t.Run("with empty cache directory uses default", func(t *testing.T) {
-		svc, err := NewService("")
+		svc, err := NewService()
 
 		require.NoError(t, err)
 		require.NotNil(t, svc)
@@ -49,7 +47,7 @@ func TestNewService(t *testing.T) {
 		tempDir := t.TempDir()
 		cacheDir := filepath.Join(tempDir, "nonexistent", "cache")
 
-		svc, err := NewService(cacheDir)
+		svc, err := NewService(WithCacheDir(cacheDir))
 
 		require.NoError(t, err)
 		require.NotNil(t, svc)
@@ -63,7 +61,7 @@ func TestNewService(t *testing.T) {
 		tempDir := t.TempDir()
 		cacheDir := filepath.Join(tempDir, "cache")
 
-		svc, err := NewService(cacheDir)
+		svc, err := NewService(WithCacheDir(cacheDir))
 
 		require.NoError(t, err)
 		require.NotNil(t, svc.manifest)
@@ -72,165 +70,6 @@ func TestNewService(t *testing.T) {
 		expectedManifestDir := tempDir
 		_, err = os.Stat(expectedManifestDir)
 		require.NoError(t, err)
-	})
-}
-
-func TestService_WithStorage(t *testing.T) {
-	t.Run("injects storage backend", func(t *testing.T) {
-		cacheDir := t.TempDir()
-		svc, _ := NewService(cacheDir)
-
-		// Mock storage backend (nil for now, will be real in integration tests)
-		var mockStorage storage.Backend = nil
-
-		result := svc.WithStorage(mockStorage)
-
-		// Fluent API: should return self
-		require.Equal(t, svc, result)
-		require.Equal(t, mockStorage, svc.storage)
-	})
-
-	t.Run("fluent API chaining", func(t *testing.T) {
-		cacheDir := t.TempDir()
-		svc, _ := NewService(cacheDir)
-
-		var mockStorage storage.Backend = nil
-
-		// Should allow method chaining
-		result := svc.WithStorage(mockStorage).WithStorage(mockStorage)
-
-		require.NotNil(t, result)
-		require.Equal(t, svc, result)
-	})
-}
-
-func TestService_WithLogger(t *testing.T) {
-	t.Run("injects custom logger", func(t *testing.T) {
-		cacheDir := t.TempDir()
-		svc, _ := NewService(cacheDir)
-
-		customLogger := zerolog.New(os.Stdout).With().
-			Str("service", "plugin-test").
-			Logger()
-
-		result := svc.WithLogger(customLogger)
-
-		// Fluent API: should return self
-		require.Equal(t, svc, result)
-		require.Equal(t, customLogger, svc.logger)
-	})
-
-	t.Run("replaces default logger", func(t *testing.T) {
-		cacheDir := t.TempDir()
-		svc, _ := NewService(cacheDir)
-
-		defaultLogger := svc.logger
-
-		customLogger := zerolog.New(os.Stdout)
-		svc.WithLogger(customLogger)
-
-		// Logger should be different from default
-		require.NotEqual(t, defaultLogger, svc.logger)
-		require.Equal(t, customLogger, svc.logger)
-	})
-}
-
-func TestService_WithSources(t *testing.T) {
-	t.Run("injects custom sources", func(t *testing.T) {
-		cacheDir := t.TempDir()
-		svc, _ := NewService(cacheDir)
-
-		customSources := []PluginSource{
-			{
-				Name:     "custom",
-				URL:      "https://custom.example.com/manifest.yaml",
-				Enabled:  true,
-				Priority: 1,
-			},
-			{
-				Name:     "mirror",
-				URL:      "https://mirror.example.com/manifest.yaml",
-				Enabled:  true,
-				Priority: 2,
-			},
-		}
-
-		result := svc.WithSources(customSources)
-
-		// Fluent API: should return self
-		require.Equal(t, svc, result)
-		require.Equal(t, customSources, svc.sources)
-		require.Len(t, svc.sources, 2)
-		require.Equal(t, "custom", svc.sources[0].Name)
-		require.Equal(t, "mirror", svc.sources[1].Name)
-	})
-
-	// Note: WithSources no longer recreates the downloader since we use interfaces.
-	// If you need to change sources, create a new Service instance instead.
-
-	t.Run("replaces default sources", func(t *testing.T) {
-		cacheDir := t.TempDir()
-		svc, _ := NewService(cacheDir)
-
-		// Initially has default sources
-		require.Len(t, svc.sources, 1)
-		require.Equal(t, "official", svc.sources[0].Name)
-
-		customSources := []PluginSource{
-			{Name: "enterprise", URL: "https://enterprise.example.com/manifest.yaml", Enabled: true},
-		}
-
-		svc.WithSources(customSources)
-
-		// Should replace default sources
-		require.Len(t, svc.sources, 1)
-		require.Equal(t, "enterprise", svc.sources[0].Name)
-	})
-}
-
-func TestService_FluentAPI_Chaining(t *testing.T) {
-	t.Run("method chaining works", func(t *testing.T) {
-		cacheDir := t.TempDir()
-
-		customLogger := zerolog.New(os.Stdout)
-		customSources := []PluginSource{
-			{Name: "custom", URL: "https://custom.example.com/manifest.yaml", Enabled: true},
-		}
-		var mockStorage storage.Backend = nil
-
-		// Chain all With* methods
-		svc, err := NewService(cacheDir)
-		require.NoError(t, err)
-
-		result := svc.
-			WithLogger(customLogger).
-			WithSources(customSources).
-			WithStorage(mockStorage)
-
-		require.NotNil(t, result)
-		require.Equal(t, svc, result)
-		require.Equal(t, customLogger, svc.logger)
-		require.Equal(t, customSources, svc.sources)
-		require.Equal(t, mockStorage, svc.storage)
-	})
-
-	t.Run("chaining order doesn't matter", func(t *testing.T) {
-		cacheDir := t.TempDir()
-
-		customLogger := zerolog.New(os.Stdout)
-		customSources := []PluginSource{
-			{Name: "custom", URL: "https://custom.example.com/manifest.yaml", Enabled: true},
-		}
-
-		// Chain in different order
-		svc, _ := NewService(cacheDir)
-		result := svc.
-			WithSources(customSources).
-			WithLogger(customLogger)
-
-		require.NotNil(t, result)
-		require.Equal(t, customLogger, svc.logger)
-		require.Equal(t, customSources, svc.sources)
 	})
 }
 
@@ -258,7 +97,7 @@ func TestService_Initialization(t *testing.T) {
 	t.Run("all dependencies initialized", func(t *testing.T) {
 		cacheDir := t.TempDir()
 
-		svc, err := NewService(cacheDir)
+		svc, err := NewService(WithCacheDir(cacheDir))
 
 		require.NoError(t, err)
 
@@ -273,7 +112,7 @@ func TestService_Initialization(t *testing.T) {
 	t.Run("optional dependencies default to nil/zero", func(t *testing.T) {
 		cacheDir := t.TempDir()
 
-		svc, err := NewService(cacheDir)
+		svc, err := NewService(WithCacheDir(cacheDir))
 
 		require.NoError(t, err)
 
@@ -288,7 +127,7 @@ func TestService_Integration_Basic(t *testing.T) {
 		cacheDir := t.TempDir()
 
 		// Create service
-		svc, err := NewService(cacheDir)
+		svc, err := NewService(WithCacheDir(cacheDir))
 		require.NoError(t, err)
 		require.NotNil(t, svc)
 
@@ -2771,7 +2610,7 @@ func TestServiceInputValidation(t *testing.T) {
 		_ = os.RemoveAll(tmpDir)
 	})
 
-	svc, err := NewService(tmpDir)
+	svc, err := NewService(WithCacheDir(tmpDir))
 	require.NoError(t, err)
 
 	t.Run("Install validates target", func(t *testing.T) {
@@ -2878,13 +2717,8 @@ func TestServiceInputValidation(t *testing.T) {
 }
 
 // Test timeout behavior for service methods
-
-// Test timeout behavior for service methods
 func TestService_TimeoutBehavior(t *testing.T) {
 	// Create a service with very short timeouts
-	svc, err := NewService(t.TempDir())
-	require.NoError(t, err)
-
 	shortConfig := ServiceConfig{
 		InstallTimeout:   1 * time.Millisecond,
 		UpdateTimeout:    1 * time.Millisecond,
@@ -2894,7 +2728,12 @@ func TestService_TimeoutBehavior(t *testing.T) {
 		CleanTimeout:     1 * time.Millisecond,
 		VerifyTimeout:    1 * time.Millisecond,
 	}
-	svc = svc.WithConfig(shortConfig)
+
+	svc, err := NewService(
+		WithCacheDir(t.TempDir()),
+		WithConfig(shortConfig),
+	)
+	require.NoError(t, err)
 
 	t.Run("Install respects timeout", func(t *testing.T) {
 		ctx := context.Background()
@@ -2919,24 +2758,29 @@ func TestService_TimeoutBehavior(t *testing.T) {
 }
 
 func TestService_WithConfig(t *testing.T) {
-	svc, err := NewService(t.TempDir())
-	require.NoError(t, err)
-
 	customConfig := ServiceConfig{
 		InstallTimeout: 120 * time.Second,
 		UpdateTimeout:  90 * time.Second,
 	}
 
-	svc = svc.WithConfig(customConfig)
+	svc, err := NewService(
+		WithCacheDir(t.TempDir()),
+		WithConfig(customConfig),
+	)
+	require.NoError(t, err)
 
-	// Verify config was applied (via integration test - timeout enforcement)
+	// Verify config was applied
+	require.Equal(t, 120*time.Second, svc.config.InstallTimeout)
+	require.Equal(t, 90*time.Second, svc.config.UpdateTimeout)
+
+	// Verify config is actually used (via integration test - timeout enforcement)
 	ctx := context.Background()
 	_, err = svc.Install(ctx, "nonexistent", InstallOptions{})
 	require.Error(t, err) // Will fail for other reasons, but confirms WithConfig worked
 }
 
 func TestService_ContextWithExistingDeadline(t *testing.T) {
-	svc, err := NewService(t.TempDir())
+	svc, err := NewService(WithCacheDir(t.TempDir()))
 	require.NoError(t, err)
 
 	// Create context with existing deadline
