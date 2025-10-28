@@ -23,6 +23,7 @@ func TestEvaluator_Evaluate(t *testing.T) {
 		{
 			name: "triggered and matched",
 			plugin: &YAMLPlugin{
+				ID:      "test-plugin",
 				Name:    "Test Plugin",
 				Version: "1.0.0",
 				Type:    EvaluationType,
@@ -53,6 +54,7 @@ func TestEvaluator_Evaluate(t *testing.T) {
 		{
 			name: "triggered but not matched",
 			plugin: &YAMLPlugin{
+				ID:      "test-plugin",
 				Name:    "Test Plugin",
 				Version: "1.0.0",
 				Type:    EvaluationType,
@@ -83,6 +85,7 @@ func TestEvaluator_Evaluate(t *testing.T) {
 		{
 			name: "not triggered",
 			plugin: &YAMLPlugin{
+				ID:      "test-plugin",
 				Name:    "Test Plugin",
 				Version: "1.0.0",
 				Type:    EvaluationType,
@@ -113,6 +116,7 @@ func TestEvaluator_Evaluate(t *testing.T) {
 		{
 			name: "no triggers - always match",
 			plugin: &YAMLPlugin{
+				ID:      "test-plugin",
 				Name:    "Test Plugin",
 				Version: "1.0.0",
 				Type:    EvaluationType,
@@ -141,6 +145,7 @@ func TestEvaluator_Evaluate(t *testing.T) {
 		{
 			name: "no match block - always match if triggered",
 			plugin: &YAMLPlugin{
+				ID:      "test-plugin",
 				Name:    "Test Plugin",
 				Version: "1.0.0",
 				Type:    EvaluationType,
@@ -193,6 +198,7 @@ func TestEvaluator_EvaluateAll(t *testing.T) {
 	evaluator := NewEvaluator()
 
 	plugin1 := &YAMLPlugin{
+		ID:      "plugin-1",
 		Name:    "Plugin 1",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -217,6 +223,7 @@ func TestEvaluator_EvaluateAll(t *testing.T) {
 	}
 
 	plugin2 := &YAMLPlugin{
+		ID:      "plugin-2",
 		Name:    "Plugin 2",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -260,6 +267,7 @@ func TestEvaluator_Evaluate_TriggerError(t *testing.T) {
 	evaluator := NewEvaluator()
 
 	plugin := &YAMLPlugin{
+		ID:      "test-plugin",
 		Name:    "Test Plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -289,6 +297,7 @@ func TestEvaluator_Evaluate_MatchError(t *testing.T) {
 	evaluator := NewEvaluator()
 
 	plugin := &YAMLPlugin{
+		ID:      "test-plugin",
 		Name:    "Test Plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -346,6 +355,7 @@ func TestEvaluator_Evaluate_SeverityOverride(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := &YAMLPlugin{
+				ID:      "test-plugin",
 				Name:    "Test Plugin",
 				Version: "1.0.0",
 				Type:    EvaluationType,
@@ -380,6 +390,7 @@ func TestEvaluator_EvaluateAll_WithError(t *testing.T) {
 	evaluator := NewEvaluator()
 
 	plugin1 := &YAMLPlugin{
+		ID:      "valid-plugin",
 		Name:    "Valid Plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -401,6 +412,7 @@ func TestEvaluator_EvaluateAll_WithError(t *testing.T) {
 
 	// Plugin with invalid trigger (will cause error)
 	plugin2 := &YAMLPlugin{
+		ID:      "invalid-plugin",
 		Name:    "Invalid Plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -434,6 +446,7 @@ func TestEvaluator_EvaluateMatched_NoMatches(t *testing.T) {
 	evaluator := NewEvaluator()
 
 	plugin := &YAMLPlugin{
+		ID:      "non-matching-plugin",
 		Name:    "Non-Matching Plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -469,6 +482,7 @@ func TestEvaluator_EvaluateMatched_WithError(t *testing.T) {
 
 	// Plugin with invalid trigger (will cause error)
 	plugin := &YAMLPlugin{
+		ID:      "invalid-plugin",
 		Name:    "Invalid Plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -500,6 +514,7 @@ func TestEvaluator_EvaluateMatched(t *testing.T) {
 	evaluator := NewEvaluator()
 
 	plugin1 := &YAMLPlugin{
+		ID:      "matching-plugin",
 		Name:    "Matching Plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -521,6 +536,7 @@ func TestEvaluator_EvaluateMatched(t *testing.T) {
 	}
 
 	plugin2 := &YAMLPlugin{
+		ID:      "non-matching-plugin",
 		Name:    "Non-Matching Plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,

@@ -22,6 +22,7 @@ func TestYAMLRegistry_Register(t *testing.T) {
 	r := NewYAMLRegistry()
 
 	plugin := &YAMLPlugin{
+		ID:      "test-plugin",
 		Name:    "test-plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -78,6 +79,7 @@ func TestYAMLRegistry_Register_InvalidPlugin(t *testing.T) {
 	r := NewYAMLRegistry()
 
 	plugin := &YAMLPlugin{
+		ID:   "invalid-plugin",
 		Name: "invalid-plugin",
 		// Missing required fields for validation
 	}
@@ -91,6 +93,7 @@ func TestYAMLRegistry_Register_Duplicate(t *testing.T) {
 	r := NewYAMLRegistry()
 
 	plugin := &YAMLPlugin{
+		ID:      "test-plugin",
 		Name:    "test-plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -117,6 +120,7 @@ func TestYAMLRegistry_Unregister(t *testing.T) {
 	r := NewYAMLRegistry()
 
 	plugin := &YAMLPlugin{
+		ID:      "test-plugin",
 		Name:    "test-plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -156,6 +160,7 @@ func TestYAMLRegistry_Get(t *testing.T) {
 	r := NewYAMLRegistry()
 
 	plugin := &YAMLPlugin{
+		ID:      "test-plugin",
 		Name:    "test-plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -187,6 +192,7 @@ func TestYAMLRegistry_List(t *testing.T) {
 	// Register multiple plugins
 	plugins := []*YAMLPlugin{
 		{
+			ID:      "plugin1",
 			Name:    "plugin1",
 			Version: "1.0.0",
 			Type:    EvaluationType,
@@ -197,6 +203,7 @@ func TestYAMLRegistry_List(t *testing.T) {
 			Output: OutputBlock{Message: "Test1"},
 		},
 		{
+			ID:      "plugin2",
 			Name:    "plugin2",
 			Version: "1.0.0",
 			Type:    EvaluationType,
@@ -223,6 +230,7 @@ func TestYAMLRegistry_ListByCategory(t *testing.T) {
 
 	// Register plugins with different categories
 	plugin1 := &YAMLPlugin{
+		ID:      "ssh-plugin",
 		Name:    "ssh-plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -235,6 +243,7 @@ func TestYAMLRegistry_ListByCategory(t *testing.T) {
 	}
 
 	plugin2 := &YAMLPlugin{
+		ID:      "http-plugin",
 		Name:    "http-plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -269,6 +278,7 @@ func TestYAMLRegistry_Categories(t *testing.T) {
 	r := NewYAMLRegistry()
 
 	plugin1 := &YAMLPlugin{
+		ID:      "plugin1",
 		Name:    "plugin1",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -281,6 +291,7 @@ func TestYAMLRegistry_Categories(t *testing.T) {
 	}
 
 	plugin2 := &YAMLPlugin{
+		ID:      "plugin2",
 		Name:    "plugin2",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -308,6 +319,7 @@ func TestYAMLRegistry_Clear(t *testing.T) {
 	r := NewYAMLRegistry()
 
 	plugin := &YAMLPlugin{
+		ID:      "test-plugin",
 		Name:    "test-plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -333,6 +345,7 @@ func TestYAMLRegistry_RegisterBulk(t *testing.T) {
 
 	plugins := []*YAMLPlugin{
 		{
+			ID:      "plugin1",
 			Name:    "plugin1",
 			Version: "1.0.0",
 			Type:    EvaluationType,
@@ -343,6 +356,7 @@ func TestYAMLRegistry_RegisterBulk(t *testing.T) {
 			Output: OutputBlock{Message: "Test1"},
 		},
 		{
+			ID:      "plugin2",
 			Name:    "plugin2",
 			Version: "1.0.0",
 			Type:    EvaluationType,
@@ -353,6 +367,7 @@ func TestYAMLRegistry_RegisterBulk(t *testing.T) {
 			Output: OutputBlock{Message: "Test2"},
 		},
 		{
+			ID:   "invalid-plugin",
 			Name: "invalid-plugin",
 			// Missing required fields
 		},
@@ -374,8 +389,10 @@ func TestYAMLRegistry_ConcurrentAccess(t *testing.T) {
 		go func(idx int) {
 			defer wg.Done()
 
+			pluginID := fmt.Sprintf("plugin-%d", idx)
 			plugin := &YAMLPlugin{
-				Name:    fmt.Sprintf("plugin-%d", idx),
+				ID:      pluginID,
+				Name:    pluginID,
 				Version: "1.0.0",
 				Type:    EvaluationType,
 				Author:  "test",
@@ -398,6 +415,7 @@ func TestYAMLRegistry_Unregister_CleansUpCategories(t *testing.T) {
 	r := NewYAMLRegistry()
 
 	plugin := &YAMLPlugin{
+		ID:      "test-plugin",
 		Name:    "test-plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,

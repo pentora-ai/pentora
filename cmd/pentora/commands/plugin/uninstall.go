@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -78,6 +79,18 @@ all plugins in a category, or all plugins at once.`,
 
 			// Call service layer
 			result, err := svc.Uninstall(ctx, target, opts)
+
+			// Handle partial failure (exit code 8)
+			if err != nil && errors.Is(err, plugin.ErrPartialFailure) {
+				// Print result even on partial failure
+				if printErr := printUninstallResult(formatter, result); printErr != nil {
+					return printErr
+				}
+				// Exit with code 8 for partial failure
+				os.Exit(plugin.ExitCode(err))
+			}
+
+			// Handle total failure (exit code 1, 2, 4, 7, etc.)
 			if err != nil {
 				return formatter.PrintError(err)
 			}
@@ -106,6 +119,8 @@ func printUninstallResult(f format.Formatter, result *plugin.UninstallResult) er
 			"failed_count":    result.FailedCount,
 			"remaining_count": result.RemainingCount,
 			"success":         result.FailedCount == 0,
+			"partial_failure": result.FailedCount > 0 && result.RemovedCount > 0,
+			"errors":          result.Errors,
 		}
 		return f.PrintJSON(jsonResult)
 	}
@@ -123,8 +138,53 @@ func printUninstallResult(f format.Formatter, result *plugin.UninstallResult) er
 		return err
 	}
 
-	if result.RemainingCount == 0 {
-		return f.PrintSummary("✓ All plugins uninstalled. Cache is empty.")
+	// Print errors if any (show first 5, truncate rest)
+	// nolint:dupl // Intentional code reuse across install/update/uninstall commands
+	if len(result.Errors) > 0 {
+		if err := f.PrintSummary("\nFailed plugins:"); err != nil {
+			return err
+		}
+
+		maxErrors := 5
+		for i, e := range result.Errors {
+			if i >= maxErrors {
+				remaining := len(result.Errors) - maxErrors
+				if err := f.PrintSummary(fmt.Sprintf("  ... and %d more (use --output json for full list)", remaining)); err != nil {
+					return err
+				}
+				break
+			}
+			if err := f.PrintSummary(fmt.Sprintf("  - %s: %s", e.PluginID, e.Error)); err != nil {
+				return err
+			}
+		}
+
+		// Print suggestions
+		if err := f.PrintSummary("\n💡 Suggestions:"); err != nil {
+			return err
+		}
+
+		// Collect unique suggestions
+		suggestions := make(map[string]bool)
+		for _, e := range result.Errors {
+			if e.Suggestion != "" {
+				suggestions[e.Suggestion] = true
+			}
+		}
+
+		for suggestion := range suggestions {
+			if err := f.PrintSummary(fmt.Sprintf("  → %s", suggestion)); err != nil {
+				return err
+			}
+		}
+	}
+
+	// Success message
+	if result.RemovedCount > 0 && result.FailedCount == 0 {
+		if result.RemainingCount == 0 {
+			return f.PrintSummary("\n✓ All plugins uninstalled. Cache is empty.")
+		}
+		return f.PrintSummary("\n✓ Plugins uninstalled successfully")
 	}
 
 	return nil

@@ -10,6 +10,33 @@ import "time"
 // These types are used by the service layer to abstract business logic
 // from the CMD and API layers.
 
+// PluginError represents a per-plugin error in bulk operations.
+// Used for partial failure scenarios where some plugins succeed and others fail.
+//
+// Example:
+//
+//	PluginError{
+//	    PluginID:   "ssh-weak-cipher",
+//	    Error:      "checksum mismatch",
+//	    Code:       "CHECKSUM_MISMATCH",
+//	    Suggestion: "retry with --force to re-download",
+//	}
+type PluginError struct {
+	// PluginID is the unique identifier of the plugin (e.g., "ssh-weak-cipher")
+	PluginID string `json:"plugin_id"`
+
+	// Error is the human-readable error message
+	Error string `json:"error"`
+
+	// Code is the machine-readable error code from error taxonomy (ADR-0001)
+	// Examples: PLUGIN_NOT_FOUND, CHECKSUM_MISMATCH, SOURCE_NOT_AVAILABLE
+	Code string `json:"code"`
+
+	// Suggestion is an actionable suggestion for resolving the error
+	// Examples: "retry with --force", "check network connection"
+	Suggestion string `json:"suggestion,omitempty"`
+}
+
 // InstallOptions holds parameters for Install operation
 type InstallOptions struct {
 	// Source specifies which plugin source to use (empty = all sources)
@@ -40,8 +67,9 @@ type InstallResult struct {
 	Plugins []*PluginInfo
 
 	// Errors contains all errors encountered during installation
-	// Collected for partial failure scenarios
-	Errors []error
+	// Each error includes plugin ID, error message, error code, and actionable suggestion
+	// Collected for partial failure scenarios (ADR-0003)
+	Errors []PluginError
 }
 
 // UpdateOptions holds parameters for Update operation
@@ -74,7 +102,9 @@ type UpdateResult struct {
 	Plugins []*PluginInfo
 
 	// Errors contains all errors encountered during update
-	Errors []error
+	// Each error includes plugin ID, error message, error code, and actionable suggestion
+	// Collected for partial failure scenarios (ADR-0003)
+	Errors []PluginError
 }
 
 // UninstallOptions holds parameters for Uninstall operation
@@ -98,7 +128,9 @@ type UninstallResult struct {
 	RemainingCount int
 
 	// Errors contains all errors encountered during uninstall
-	Errors []error
+	// Each error includes plugin ID, error message, error code, and actionable suggestion
+	// Collected for partial failure scenarios (ADR-0003)
+	Errors []PluginError
 }
 
 // PluginInfo holds detailed information about a plugin

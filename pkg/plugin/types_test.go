@@ -20,6 +20,7 @@ func TestPlugin_Validate(t *testing.T) {
 		{
 			name: "valid plugin",
 			plugin: &YAMLPlugin{
+				ID:      "test",
 				Name:    "Test Plugin",
 				Version: "1.0.0",
 				Type:    EvaluationType,
@@ -37,6 +38,7 @@ func TestPlugin_Validate(t *testing.T) {
 		{
 			name: "missing name",
 			plugin: &YAMLPlugin{
+				ID:      "test",
 				Version: "1.0.0",
 				Type:    EvaluationType,
 				Author:  "test",
@@ -53,6 +55,7 @@ func TestPlugin_Validate(t *testing.T) {
 		{
 			name: "missing version",
 			plugin: &YAMLPlugin{
+				ID:     "test",
 				Name:   "Test",
 				Type:   EvaluationType,
 				Author: "test",
@@ -69,6 +72,7 @@ func TestPlugin_Validate(t *testing.T) {
 		{
 			name: "missing type",
 			plugin: &YAMLPlugin{
+				ID:      "test",
 				Name:    "Test",
 				Version: "1.0.0",
 				Author:  "test",
@@ -85,6 +89,7 @@ func TestPlugin_Validate(t *testing.T) {
 		{
 			name: "missing author",
 			plugin: &YAMLPlugin{
+				ID:      "test",
 				Name:    "Test",
 				Version: "1.0.0",
 				Type:    EvaluationType,
@@ -101,6 +106,7 @@ func TestPlugin_Validate(t *testing.T) {
 		{
 			name: "missing severity",
 			plugin: &YAMLPlugin{
+				ID:       "test",
 				Name:     "Test",
 				Version:  "1.0.0",
 				Type:     EvaluationType,
@@ -116,6 +122,7 @@ func TestPlugin_Validate(t *testing.T) {
 		{
 			name: "invalid severity",
 			plugin: &YAMLPlugin{
+				ID:      "test",
 				Name:    "Test",
 				Version: "1.0.0",
 				Type:    EvaluationType,
@@ -133,6 +140,7 @@ func TestPlugin_Validate(t *testing.T) {
 		{
 			name: "missing output message",
 			plugin: &YAMLPlugin{
+				ID:      "test",
 				Name:    "Test",
 				Version: "1.0.0",
 				Type:    EvaluationType,
@@ -148,6 +156,7 @@ func TestPlugin_Validate(t *testing.T) {
 		{
 			name: "trigger missing data_key",
 			plugin: &YAMLPlugin{
+				ID:      "test",
 				Name:    "Test",
 				Version: "1.0.0",
 				Type:    EvaluationType,
@@ -168,6 +177,7 @@ func TestPlugin_Validate(t *testing.T) {
 		{
 			name: "trigger missing condition",
 			plugin: &YAMLPlugin{
+				ID:      "test",
 				Name:    "Test",
 				Version: "1.0.0",
 				Type:    EvaluationType,
@@ -188,6 +198,7 @@ func TestPlugin_Validate(t *testing.T) {
 		{
 			name: "invalid match block",
 			plugin: &YAMLPlugin{
+				ID:      "test",
 				Name:    "Test",
 				Version: "1.0.0",
 				Type:    EvaluationType,
@@ -426,6 +437,7 @@ func TestPlugin_IsCompatibleWithPentora(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := &YAMLPlugin{
+				ID:                "test-plugin",
 				Name:              "Test Plugin",
 				Version:           "1.0.0",
 				Type:              EvaluationType,
@@ -537,6 +549,7 @@ func TestPlugin_Validate_WithMinPentoraVersion(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := &YAMLPlugin{
+				ID:                "test-plugin",
 				Name:              "Test Plugin",
 				Version:           "1.0.0",
 				Type:              EvaluationType,

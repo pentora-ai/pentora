@@ -477,6 +477,7 @@ func TestManifestManager_SetGetRegistryURL(t *testing.T) {
 
 func TestNewManifestEntryFromPlugin(t *testing.T) {
 	plugin := &YAMLPlugin{
+		ID:       "test-plugin",
 		Name:     "test-plugin",
 		Version:  "1.0.0",
 		Type:     EvaluationType,

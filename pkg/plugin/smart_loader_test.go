@@ -103,6 +103,7 @@ func TestSmartLoader_DetermineCategories(t *testing.T) {
 func TestSmartLoader_LoadForContext(t *testing.T) {
 	// Setup test server with manifest
 	sshPlugin := &YAMLPlugin{
+		ID:      "ssh-test",
 		Name:    "ssh-test",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -198,6 +199,7 @@ func TestSmartLoader_LoadForContext_EmptyContext(t *testing.T) {
 func TestSmartLoader_LoadAll(t *testing.T) {
 	// Create test plugin
 	plugin := &YAMLPlugin{
+		ID:      "test-plugin",
 		Name:    "test-plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -262,6 +264,7 @@ func TestSmartLoader_LoadAll(t *testing.T) {
 
 func TestSmartLoader_LoadCategory(t *testing.T) {
 	plugin := &YAMLPlugin{
+		ID:      "ssh-plugin",
 		Name:    "ssh-plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -348,6 +351,7 @@ func TestSmartLoader_GetLoadedPlugins(t *testing.T) {
 
 	// Add a plugin to cache
 	plugin := &YAMLPlugin{
+		ID:      "test",
 		Name:    "test",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -376,6 +380,7 @@ func TestSmartLoader_GetLoadedPluginsByCategory(t *testing.T) {
 
 	// Add plugins with different categories
 	sshPlugin := &YAMLPlugin{
+		ID:      "ssh-plugin",
 		Name:    "ssh-plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -391,6 +396,7 @@ func TestSmartLoader_GetLoadedPluginsByCategory(t *testing.T) {
 	}
 
 	httpPlugin := &YAMLPlugin{
+		ID:      "http-plugin",
 		Name:    "http-plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,

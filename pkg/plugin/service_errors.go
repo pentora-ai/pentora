@@ -182,6 +182,45 @@ func HTTPStatus(err error) int {
 	}
 }
 
+// GetSuggestion returns an actionable suggestion for resolving the given error.
+// Used by CLI and API to provide helpful guidance to users on partial failures.
+//
+// Example:
+//
+//	err := svc.Install(ctx, target, opts)
+//	suggestion := plugin.GetSuggestion(err)
+//	fmt.Printf("Suggestion: %s\n", suggestion)
+func GetSuggestion(err error) string {
+	if err == nil {
+		return ""
+	}
+
+	switch {
+	case errors.Is(err, ErrPluginNotFound):
+		return "list available plugins with: pentora plugin list"
+	case errors.Is(err, ErrPluginNotInstalled):
+		return "install the plugin first with: pentora plugin install <name>"
+	case errors.Is(err, ErrNoPluginsFound):
+		return "check plugin category and try: pentora plugin update"
+	case errors.Is(err, ErrInvalidCategory):
+		return "valid categories: ssh, http, tls, database, network, misc"
+	case errors.Is(err, ErrInvalidPluginID):
+		return "use lowercase letters, numbers, and hyphens only"
+	case errors.Is(err, ErrSourceNotAvailable), errors.Is(err, ErrUnavailable):
+		return "retry with different source: --source github"
+	case errors.Is(err, ErrChecksumMismatch):
+		return "retry with --force to re-download"
+	case errors.Is(err, ErrPluginAlreadyInstalled):
+		return "use --force to reinstall"
+	case errors.Is(err, ErrConflict):
+		return "uninstall existing version and reinstall"
+	case errors.Is(err, ErrPartialFailure):
+		return "use --output json for full error details"
+	default:
+		return "check logs for more details"
+	}
+}
+
 // ErrorCode returns the machine-readable error code string for API responses.
 // These codes are used in JSON error responses to enable programmatic error handling.
 //

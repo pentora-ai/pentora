@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -77,6 +78,18 @@ You can install entire categories (ssh, http, tls, database, network) or specifi
 
 			// Call service layer
 			result, err := svc.Install(ctx, target, opts)
+
+			// Handle partial failure (exit code 8)
+			if err != nil && errors.Is(err, plugin.ErrPartialFailure) {
+				// Print result even on partial failure
+				if printErr := printInstallResult(formatter, result); printErr != nil {
+					return printErr
+				}
+				// Exit with code 8 for partial failure
+				os.Exit(plugin.ExitCode(err))
+			}
+
+			// Handle total failure (exit code 1, 2, 4, 7, etc.)
 			if err != nil {
 				return formatter.PrintError(err)
 			}
@@ -97,6 +110,7 @@ You can install entire categories (ssh, http, tls, database, network) or specifi
 }
 
 // printInstallResult formats and prints the install result using the formatter
+// nolint:gocyclo // Complexity justified by comprehensive error handling and formatting
 func printInstallResult(f format.Formatter, result *plugin.InstallResult) error {
 	// JSON mode: output complete result as JSON
 	if f.IsJSON() {
@@ -106,6 +120,8 @@ func printInstallResult(f format.Formatter, result *plugin.InstallResult) error 
 			"skipped_count":   result.SkippedCount,
 			"failed_count":    result.FailedCount,
 			"success":         result.FailedCount == 0,
+			"partial_failure": result.FailedCount > 0 && result.InstalledCount > 0,
+			"errors":          result.Errors,
 		}
 		return f.PrintJSON(jsonResult)
 	}
@@ -146,9 +162,50 @@ func printInstallResult(f format.Formatter, result *plugin.InstallResult) error 
 		return err
 	}
 
+	// Print errors if any (show first 5, truncate rest)
+	// nolint:dupl // Intentional code reuse across install/update/uninstall commands
+	if len(result.Errors) > 0 {
+		if err := f.PrintSummary("\nFailed plugins:"); err != nil {
+			return err
+		}
+
+		maxErrors := 5
+		for i, e := range result.Errors {
+			if i >= maxErrors {
+				remaining := len(result.Errors) - maxErrors
+				if err := f.PrintSummary(fmt.Sprintf("  ... and %d more (use --output json for full list)", remaining)); err != nil {
+					return err
+				}
+				break
+			}
+			if err := f.PrintSummary(fmt.Sprintf("  - %s: %s", e.PluginID, e.Error)); err != nil {
+				return err
+			}
+		}
+
+		// Print suggestions
+		if err := f.PrintSummary("\n💡 Suggestions:"); err != nil {
+			return err
+		}
+
+		// Collect unique suggestions
+		suggestions := make(map[string]bool)
+		for _, e := range result.Errors {
+			if e.Suggestion != "" {
+				suggestions[e.Suggestion] = true
+			}
+		}
+
+		for suggestion := range suggestions {
+			if err := f.PrintSummary(fmt.Sprintf("  → %s", suggestion)); err != nil {
+				return err
+			}
+		}
+	}
+
 	// Success message
-	if result.InstalledCount > 0 {
-		return f.PrintSummary("✓ Plugins installed successfully")
+	if result.InstalledCount > 0 && result.FailedCount == 0 {
+		return f.PrintSummary("\n✓ Plugins installed successfully")
 	}
 
 	return nil

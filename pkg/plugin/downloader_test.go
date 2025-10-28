@@ -161,6 +161,7 @@ func TestDownloader_FetchManifest_AllFail(t *testing.T) {
 func TestDownloader_Download(t *testing.T) {
 	// Create test plugin
 	plugin := &YAMLPlugin{
+		ID:      "test-plugin",
 		Name:    "test-plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -243,6 +244,7 @@ func TestDownloader_Download_AlreadyCached(t *testing.T) {
 
 	// Add plugin to cache
 	plugin := &YAMLPlugin{
+		ID:      "cached-plugin",
 		Name:    "cached-plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -300,6 +302,7 @@ func TestDownloader_Download_NotFound(t *testing.T) {
 
 func TestDownloader_Download_ChecksumMismatch(t *testing.T) {
 	plugin := &YAMLPlugin{
+		ID:      "test-plugin",
 		Name:    "test-plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -362,6 +365,7 @@ func TestDownloader_DownloadByCategory(t *testing.T) {
 	// Create test plugins
 	plugins := []*YAMLPlugin{
 		{
+			ID:      "ssh-plugin-1",
 			Name:    "ssh-plugin-1",
 			Version: "1.0.0",
 			Type:    EvaluationType,
@@ -373,6 +377,7 @@ func TestDownloader_DownloadByCategory(t *testing.T) {
 			Output: OutputBlock{Message: "SSH vuln 1"},
 		},
 		{
+			ID:      "ssh-plugin-2",
 			Name:    "ssh-plugin-2",
 			Version: "1.0.0",
 			Type:    EvaluationType,
@@ -406,7 +411,7 @@ func TestDownloader_DownloadByCategory(t *testing.T) {
 		checksum := "sha256:" + hex.EncodeToString(hash[:])
 
 		manifestEntries = append(manifestEntries, PluginManifestEntry{
-			ID:         p.Name,
+			ID:         p.ID,
 			Name:       p.Name,
 			Version:    p.Version,
 			Categories: []Category{CategorySSH},
@@ -482,6 +487,7 @@ func TestDownloader_Update(t *testing.T) {
 
 	// Add old version to cache
 	oldPlugin := &YAMLPlugin{
+		ID:      "update-test",
 		Name:    "update-test",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -497,6 +503,7 @@ func TestDownloader_Update(t *testing.T) {
 
 	// Create new version
 	newPlugin := &YAMLPlugin{
+		ID:      "update-test",
 		Name:    "update-test",
 		Version: "2.0.0",
 		Type:    EvaluationType,
@@ -620,6 +627,7 @@ func TestDownloader_Update_NoUpdatesAvailable(t *testing.T) {
 
 	// Add plugin to cache
 	plugin := &YAMLPlugin{
+		ID:      "test-plugin",
 		Name:    "test-plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -672,6 +680,7 @@ func TestDownloader_Update_ManifestFetchError(t *testing.T) {
 
 	// Add plugin to cache
 	plugin := &YAMLPlugin{
+		ID:      "test-plugin",
 		Name:    "test-plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -967,6 +976,7 @@ func TestDownloader_DownloadByCategory_AllManifestsFail(t *testing.T) {
 func TestDownloader_DownloadByCategory_PartialDownloadFailure(t *testing.T) {
 	// Create two plugins: one with valid URL, one with invalid
 	plugin1 := &YAMLPlugin{
+		ID:      "valid-plugin",
 		Name:    "valid-plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -1048,6 +1058,7 @@ func TestDownloader_Update_DownloadError(t *testing.T) {
 
 	// Add plugin to cache
 	plugin := &YAMLPlugin{
+		ID:      "test-plugin",
 		Name:    "test-plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
