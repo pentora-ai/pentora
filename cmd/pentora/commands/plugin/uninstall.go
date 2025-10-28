@@ -3,7 +3,9 @@ package plugin
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
@@ -60,6 +62,19 @@ all plugins in a category, or all plugins at once.`,
 func executeUninstallCommand(cmd *cobra.Command, target, cacheDir string) error {
 	ctx := context.Background()
 
+	// Setup structured logger
+	logger := log.With().
+		Str("component", "plugin.cli").
+		Str("op", "uninstall").
+		Logger()
+
+	start := time.Now()
+	defer func() {
+		logger.Info().
+			Dur("duration_ms", time.Since(start)).
+			Msg("uninstall completed")
+	}()
+
 	// Setup dependencies
 	formatter := getFormatter(cmd)
 	svc, err := getPluginService(cacheDir)
@@ -73,6 +88,13 @@ func executeUninstallCommand(cmd *cobra.Command, target, cacheDir string) error 
 		return err
 	}
 
+	// Log operation start with request snapshot
+	logger.Info().
+		Str("target", target).
+		Str("category", string(opts.Category)).
+		Bool("all", opts.All).
+		Msg("uninstall started")
+
 	// Call service layer
 	result, err := svc.Uninstall(ctx, target, opts)
 
@@ -85,8 +107,20 @@ func executeUninstallCommand(cmd *cobra.Command, target, cacheDir string) error 
 
 	// Handle total failure
 	if err != nil {
+		logger.Error().
+			Err(err).
+			Str("error_code", plugin.ErrorCode(err)).
+			Str("target", target).
+			Msg("uninstall failed")
 		return formatter.PrintError(err)
 	}
+
+	// Log success with metrics
+	logger.Info().
+		Int("removed_count", result.RemovedCount).
+		Int("failed_count", result.FailedCount).
+		Int("remaining_count", result.RemainingCount).
+		Msg("uninstall succeeded")
 
 	// Print results
 	return printUninstallResult(formatter, result)

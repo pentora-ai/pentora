@@ -2,7 +2,9 @@ package plugin
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
@@ -48,6 +50,19 @@ Use --dry-run to preview what would be deleted without actually deleting.`,
 
 // executeCleanCommand orchestrates the clean command execution
 func executeCleanCommand(cmd *cobra.Command, cacheDir string) error {
+	// Setup structured logger
+	logger := log.With().
+		Str("component", "plugin.cli").
+		Str("op", "clean").
+		Logger()
+
+	start := time.Now()
+	defer func() {
+		logger.Info().
+			Dur("duration_ms", time.Since(start)).
+			Msg("clean completed")
+	}()
+
 	// Setup dependencies
 	formatter := getFormatter(cmd)
 	svc, err := getPluginService(cacheDir)
@@ -61,6 +76,12 @@ func executeCleanCommand(cmd *cobra.Command, cacheDir string) error {
 		return err
 	}
 
+	// Log operation start with request snapshot
+	logger.Info().
+		Str("older_than", opts.OlderThan.String()).
+		Bool("dry_run", opts.DryRun).
+		Msg("clean started")
+
 	// Print header
 	if err := printCleanHeader(formatter, cacheDir, opts); err != nil {
 		return err
@@ -69,8 +90,19 @@ func executeCleanCommand(cmd *cobra.Command, cacheDir string) error {
 	// Call service layer
 	result, err := svc.Clean(cmd.Context(), opts)
 	if err != nil {
+		logger.Error().
+			Err(err).
+			Str("error_code", plugin.ErrorCode(err)).
+			Msg("clean failed")
 		return formatter.PrintError(err)
 	}
+
+	// Log success with metrics
+	logger.Info().
+		Int("removed_count", result.RemovedCount).
+		Int64("freed_bytes", result.Freed).
+		Bool("dry_run", opts.DryRun).
+		Msg("clean succeeded")
 
 	// Print results
 	return printCleanResult(formatter, result, opts.DryRun)

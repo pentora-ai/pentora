@@ -2,7 +2,9 @@ package plugin
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
@@ -50,6 +52,19 @@ Exit codes:
 
 // executeVerifyCommand orchestrates the verify command execution
 func executeVerifyCommand(cmd *cobra.Command, cacheDir string) error {
+	// Setup structured logger
+	logger := log.With().
+		Str("component", "plugin.cli").
+		Str("op", "verify").
+		Logger()
+
+	start := time.Now()
+	defer func() {
+		logger.Info().
+			Dur("duration_ms", time.Since(start)).
+			Msg("verify completed")
+	}()
+
 	// Setup dependencies
 	formatter := getFormatter(cmd)
 	svc, err := getPluginService(cacheDir)
@@ -63,11 +78,27 @@ func executeVerifyCommand(cmd *cobra.Command, cacheDir string) error {
 		return err
 	}
 
+	// Log operation start with request snapshot
+	logger.Info().
+		Str("plugin_id", opts.PluginID).
+		Msg("verify started")
+
 	// Call service layer
 	result, err := svc.Verify(cmd.Context(), opts)
 	if err != nil {
+		logger.Error().
+			Err(err).
+			Str("error_code", plugin.ErrorCode(err)).
+			Msg("verify failed")
 		return formatter.PrintError(err)
 	}
+
+	// Log success with metrics
+	logger.Info().
+		Int("total_count", result.TotalCount).
+		Int("failed_count", result.FailedCount).
+		Bool("all_valid", result.FailedCount == 0).
+		Msg("verify succeeded")
 
 	// Print results
 	if err := printVerifyResult(formatter, result); err != nil {
@@ -76,6 +107,9 @@ func executeVerifyCommand(cmd *cobra.Command, cacheDir string) error {
 
 	// Return error if any plugins failed
 	if result.FailedCount > 0 {
+		logger.Warn().
+			Int("failed_count", result.FailedCount).
+			Msg("verification failed for some plugins")
 		return fmt.Errorf("verification failed for %d plugin(s)", result.FailedCount)
 	}
 
