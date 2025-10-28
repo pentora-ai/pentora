@@ -18,6 +18,13 @@ import (
 	"github.com/pentora-ai/pentora/pkg/storage"
 )
 
+const (
+	// Log status constants for structured logging
+	logStatusSuccess        = "success"
+	logStatusPartialFailure = "partial_failure"
+	logStatusFail           = "fail"
+)
+
 // Interfaces for dependency injection (useful for testing)
 
 // CacheInterface defines the cache operations needed by Service
@@ -251,21 +258,49 @@ func defaultSources() []PluginSource {
 //	    return err
 //	}
 //	fmt.Printf("Installed %d plugins\n", result.InstalledCount)
+//
+//nolint:gocyclo // Complexity from business logic (target resolution, filtering), not logging
 func (s *Service) Install(ctx context.Context, target string, opts InstallOptions) (*InstallResult, error) {
+	start := time.Now()
+
 	// Validate inputs (defense-in-depth)
 	if err := validateTarget(target); err != nil {
+		s.logger.Error().
+			Str("component", "plugin.service").
+			Str("op", "install").
+			Str("target", target).
+			Str("status", logStatusFail).
+			Str("error_code", ErrorCode(err)).
+			Err(err).
+			Msg("Input validation failed")
 		return nil, err
 	}
 	if err := validateCategory(opts.Category); err != nil {
+		s.logger.Error().
+			Str("component", "plugin.service").
+			Str("op", "install").
+			Str("target", target).
+			Str("status", logStatusFail).
+			Str("error_code", ErrorCode(err)).
+			Err(err).
+			Msg("Category validation failed")
 		return nil, err
 	}
 	if err := validateSource(opts.Source); err != nil {
+		s.logger.Error().
+			Str("component", "plugin.service").
+			Str("op", "install").
+			Str("target", target).
+			Str("status", logStatusFail).
+			Str("error_code", ErrorCode(err)).
+			Err(err).
+			Msg("Source validation failed")
 		return nil, err
 	}
 
 	s.logger.Info().
-		Str("component", "plugin-service").
-		Str("operation", "install").
+		Str("component", "plugin.service").
+		Str("op", "install").
 		Str("target", target).
 		Bool("force", opts.Force).
 		Msg("Starting plugin installation")
@@ -278,11 +313,31 @@ func (s *Service) Install(ctx context.Context, target string, opts InstallOption
 	// Fetch manifests from sources
 	allPlugins, err := s.fetchPlugins(ctx, opts.Source)
 	if err != nil {
+		elapsed := time.Since(start)
+		s.logger.Error().
+			Str("component", "plugin.service").
+			Str("op", "install").
+			Str("target", target).
+			Str("status", logStatusFail).
+			Str("error_code", ErrorCode(err)).
+			Int("duration_ms", int(elapsed.Milliseconds())).
+			Err(err).
+			Msg("Failed to fetch plugins")
 		return nil, fmt.Errorf("fetch plugins: %w", err)
 	}
 
 	if len(allPlugins) == 0 {
-		return nil, fmt.Errorf("%w: no plugins found in any source", ErrNoPluginsFound)
+		elapsed := time.Since(start)
+		err := fmt.Errorf("%w: no plugins found in any source", ErrNoPluginsFound)
+		s.logger.Error().
+			Str("component", "plugin.service").
+			Str("op", "install").
+			Str("target", target).
+			Str("status", logStatusFail).
+			Str("error_code", ErrorCode(err)).
+			Int("duration_ms", int(elapsed.Milliseconds())).
+			Msg("No plugins found")
+		return nil, err
 	}
 
 	// Determine if target is category or plugin ID
@@ -304,7 +359,17 @@ func (s *Service) Install(ctx context.Context, target string, opts InstallOption
 	}
 
 	if len(toInstall) == 0 {
-		return nil, fmt.Errorf("%w: no plugins match criteria", ErrNoPluginsFound)
+		elapsed := time.Since(start)
+		err := fmt.Errorf("%w: no plugins match criteria", ErrNoPluginsFound)
+		s.logger.Error().
+			Str("component", "plugin.service").
+			Str("op", "install").
+			Str("target", target).
+			Str("status", logStatusFail).
+			Str("error_code", ErrorCode(err)).
+			Int("duration_ms", int(elapsed.Milliseconds())).
+			Msg("No plugins match criteria")
+		return nil, err
 	}
 
 	// Install each plugin
@@ -346,12 +411,21 @@ func (s *Service) Install(ctx context.Context, target string, opts InstallOption
 		}
 	}
 
+	elapsed := time.Since(start)
+	status := logStatusSuccess
+	if result.FailedCount > 0 {
+		status = logStatusPartialFailure
+	}
+
 	s.logger.Info().
-		Str("component", "plugin-service").
-		Str("operation", "install").
+		Str("component", "plugin.service").
+		Str("op", "install").
+		Str("target", target).
+		Str("status", status).
 		Int("installed", result.InstalledCount).
 		Int("skipped", result.SkippedCount).
 		Int("failed", result.FailedCount).
+		Int("duration_ms", int(elapsed.Milliseconds())).
 		Msg("Plugin installation completed")
 
 	// Return partial failure if any plugins failed
@@ -544,18 +618,36 @@ func pluginInfoFromManifestEntry(entry *PluginManifestEntry) *PluginInfo {
 //
 //	result, err := svc.Update(ctx, UpdateOptions{Category: CategorySSH})
 //	fmt.Printf("Updated %d plugins\n", result.UpdatedCount)
+//
+//nolint:gocyclo // Complexity from business logic (filtering, downloading), not logging
 func (s *Service) Update(ctx context.Context, opts UpdateOptions) (*UpdateResult, error) {
+	start := time.Now()
+
 	// Validate inputs (defense-in-depth)
 	if err := validateCategory(opts.Category); err != nil {
+		s.logger.Error().
+			Str("component", "plugin.service").
+			Str("op", "update").
+			Str("status", logStatusFail).
+			Str("error_code", ErrorCode(err)).
+			Err(err).
+			Msg("Category validation failed")
 		return nil, err
 	}
 	if err := validateSource(opts.Source); err != nil {
+		s.logger.Error().
+			Str("component", "plugin.service").
+			Str("op", "update").
+			Str("status", logStatusFail).
+			Str("error_code", ErrorCode(err)).
+			Err(err).
+			Msg("Source validation failed")
 		return nil, err
 	}
 
 	s.logger.Info().
-		Str("component", "plugin-service").
-		Str("operation", "update").
+		Str("component", "plugin.service").
+		Str("op", "update").
 		Str("source", opts.Source).
 		Str("category", string(opts.Category)).
 		Bool("force", opts.Force).
@@ -570,11 +662,29 @@ func (s *Service) Update(ctx context.Context, opts UpdateOptions) (*UpdateResult
 	// Fetch manifests from sources
 	allPlugins, err := s.fetchPlugins(ctx, opts.Source)
 	if err != nil {
+		elapsed := time.Since(start)
+		s.logger.Error().
+			Str("component", "plugin.service").
+			Str("op", "update").
+			Str("status", logStatusFail).
+			Str("error_code", ErrorCode(err)).
+			Int("duration_ms", int(elapsed.Milliseconds())).
+			Err(err).
+			Msg("Failed to fetch plugins")
 		return nil, fmt.Errorf("fetch plugins: %w", err)
 	}
 
 	if len(allPlugins) == 0 {
-		return nil, fmt.Errorf("%w: no plugins found in any source", ErrNoPluginsFound)
+		elapsed := time.Since(start)
+		err := fmt.Errorf("%w: no plugins found in any source", ErrNoPluginsFound)
+		s.logger.Error().
+			Str("component", "plugin.service").
+			Str("op", "update").
+			Str("status", logStatusFail).
+			Str("error_code", ErrorCode(err)).
+			Int("duration_ms", int(elapsed.Milliseconds())).
+			Msg("No plugins found")
+		return nil, err
 	}
 
 	// Filter by category if specified
@@ -586,7 +696,16 @@ func (s *Service) Update(ctx context.Context, opts UpdateOptions) (*UpdateResult
 	}
 
 	if len(toUpdate) == 0 {
-		return nil, fmt.Errorf("%w: no plugins match criteria", ErrNoPluginsFound)
+		elapsed := time.Since(start)
+		err := fmt.Errorf("%w: no plugins match criteria", ErrNoPluginsFound)
+		s.logger.Error().
+			Str("component", "plugin.service").
+			Str("op", "update").
+			Str("status", logStatusFail).
+			Str("error_code", ErrorCode(err)).
+			Int("duration_ms", int(elapsed.Milliseconds())).
+			Msg("No plugins match criteria")
+		return nil, err
 	}
 
 	s.logger.Debug().
@@ -680,12 +799,20 @@ func (s *Service) Update(ctx context.Context, opts UpdateOptions) (*UpdateResult
 			Msg("Plugin updated successfully")
 	}
 
+	elapsed := time.Since(start)
+	status := logStatusSuccess
+	if result.FailedCount > 0 {
+		status = logStatusPartialFailure
+	}
+
 	s.logger.Info().
-		Str("component", "plugin-service").
-		Str("operation", "update").
+		Str("component", "plugin.service").
+		Str("op", "update").
+		Str("status", status).
 		Int("updated", result.UpdatedCount).
 		Int("skipped", result.SkippedCount).
 		Int("failed", result.FailedCount).
+		Int("duration_ms", int(elapsed.Milliseconds())).
 		Msg("Plugin update completed")
 
 	// Return partial failure if any plugins failed
@@ -731,21 +858,41 @@ func (s *Service) Update(ctx context.Context, opts UpdateOptions) (*UpdateResult
 //
 //	// Uninstall all plugins
 //	result, err := svc.Uninstall(ctx, "", UninstallOptions{All: true})
+//
+//nolint:gocyclo // Complexity from business logic (mode validation, filtering), not logging
 func (s *Service) Uninstall(ctx context.Context, target string, opts UninstallOptions) (*UninstallResult, error) {
+	start := time.Now()
+
 	// Validate inputs (defense-in-depth)
 	// Target is optional when using category or all flags
 	if target != "" {
 		if err := validateTarget(target); err != nil {
+			s.logger.Error().
+				Str("component", "plugin.service").
+				Str("op", "uninstall").
+				Str("target", target).
+				Str("status", logStatusFail).
+				Str("error_code", ErrorCode(err)).
+				Err(err).
+				Msg("Target validation failed")
 			return nil, err
 		}
 	}
 	if err := validateCategory(opts.Category); err != nil {
+		s.logger.Error().
+			Str("component", "plugin.service").
+			Str("op", "uninstall").
+			Str("target", target).
+			Str("status", logStatusFail).
+			Str("error_code", ErrorCode(err)).
+			Err(err).
+			Msg("Category validation failed")
 		return nil, err
 	}
 
 	s.logger.Info().
-		Str("component", "plugin-service").
-		Str("operation", "uninstall").
+		Str("component", "plugin.service").
+		Str("op", "uninstall").
 		Str("target", target).
 		Bool("all", opts.All).
 		Str("category", string(opts.Category)).
@@ -772,16 +919,46 @@ func (s *Service) Uninstall(ctx context.Context, target string, opts UninstallOp
 	}
 
 	if modesCount == 0 {
-		return nil, fmt.Errorf("%w: must specify plugin ID, category, or --all", ErrInvalidInput)
+		elapsed := time.Since(start)
+		err := fmt.Errorf("%w: must specify plugin ID, category, or --all", ErrInvalidInput)
+		s.logger.Error().
+			Str("component", "plugin.service").
+			Str("op", "uninstall").
+			Str("target", target).
+			Str("status", logStatusFail).
+			Str("error_code", ErrorCode(err)).
+			Int("duration_ms", int(elapsed.Milliseconds())).
+			Msg("No uninstall mode specified")
+		return nil, err
 	}
 
 	if modesCount > 1 {
-		return nil, fmt.Errorf("%w: cannot specify multiple uninstall modes", ErrInvalidInput)
+		elapsed := time.Since(start)
+		err := fmt.Errorf("%w: cannot specify multiple uninstall modes", ErrInvalidInput)
+		s.logger.Error().
+			Str("component", "plugin.service").
+			Str("op", "uninstall").
+			Str("target", target).
+			Str("status", logStatusFail).
+			Str("error_code", ErrorCode(err)).
+			Int("duration_ms", int(elapsed.Milliseconds())).
+			Msg("Multiple uninstall modes specified")
+		return nil, err
 	}
 
 	// Get installed plugins from manifest
 	entries, err := s.manifest.List()
 	if err != nil {
+		elapsed := time.Since(start)
+		s.logger.Error().
+			Str("component", "plugin.service").
+			Str("op", "uninstall").
+			Str("target", target).
+			Str("status", logStatusFail).
+			Str("error_code", ErrorCode(err)).
+			Int("duration_ms", int(elapsed.Milliseconds())).
+			Err(err).
+			Msg("Failed to list installed plugins")
 		return nil, fmt.Errorf("list installed plugins: %w", err)
 	}
 
@@ -799,7 +976,17 @@ func (s *Service) Uninstall(ctx context.Context, target string, opts UninstallOp
 	} else if hasCategory {
 		toUninstall = s.filterManifestByCategory(entries, opts.Category)
 		if len(toUninstall) == 0 {
-			return nil, fmt.Errorf("%w: no plugins found in category '%s'", ErrNoPluginsFound, opts.Category)
+			elapsed := time.Since(start)
+			err := fmt.Errorf("%w: no plugins found in category '%s'", ErrNoPluginsFound, opts.Category)
+			s.logger.Error().
+				Str("component", "plugin.service").
+				Str("op", "uninstall").
+				Str("category", string(opts.Category)).
+				Str("status", logStatusFail).
+				Str("error_code", ErrorCode(err)).
+				Int("duration_ms", int(elapsed.Milliseconds())).
+				Msg("No plugins found in category")
+			return nil, err
 		}
 		s.logger.Info().
 			Str("category", string(opts.Category)).
@@ -817,7 +1004,17 @@ func (s *Service) Uninstall(ctx context.Context, target string, opts UninstallOp
 			}
 		}
 		if !found {
-			return nil, fmt.Errorf("%w: plugin '%s' not found (not installed)", ErrPluginNotFound, target)
+			elapsed := time.Since(start)
+			err := fmt.Errorf("%w: plugin '%s' not found (not installed)", ErrPluginNotFound, target)
+			s.logger.Error().
+				Str("component", "plugin.service").
+				Str("op", "uninstall").
+				Str("target", target).
+				Str("status", logStatusFail).
+				Str("error_code", ErrorCode(err)).
+				Int("duration_ms", int(elapsed.Milliseconds())).
+				Msg("Plugin not found")
+			return nil, err
 		}
 		s.logger.Info().Str("plugin", target).Msg("Uninstalling specific plugin")
 	}
@@ -868,12 +1065,21 @@ func (s *Service) Uninstall(ctx context.Context, target string, opts UninstallOp
 
 	result.RemainingCount = len(entries) - result.RemovedCount
 
+	elapsed := time.Since(start)
+	status := logStatusSuccess
+	if result.FailedCount > 0 {
+		status = logStatusPartialFailure
+	}
+
 	s.logger.Info().
-		Str("component", "plugin-service").
-		Str("operation", "uninstall").
+		Str("component", "plugin.service").
+		Str("op", "uninstall").
+		Str("target", target).
+		Str("status", status).
 		Int("removed", result.RemovedCount).
 		Int("failed", result.FailedCount).
 		Int("remaining", result.RemainingCount).
+		Int("duration_ms", int(elapsed.Milliseconds())).
 		Msg("Plugin uninstall completed")
 
 	// Return partial failure if any plugins failed
@@ -937,15 +1143,23 @@ func (s *Service) filterManifestByCategory(entries []*ManifestEntry, category Ca
 //	}
 //	fmt.Printf("Found %d installed plugins\n", len(plugins))
 func (s *Service) List(ctx context.Context) ([]*PluginInfo, error) {
+	start := time.Now()
+
 	s.logger.Debug().
-		Str("component", "plugin-service").
-		Str("operation", "list").
+		Str("component", "plugin.service").
+		Str("op", "list").
 		Msg("Listing installed plugins")
 
 	// Get all entries from manifest
 	entries, err := s.manifest.List()
 	if err != nil {
+		elapsed := time.Since(start)
 		s.logger.Error().
+			Str("component", "plugin.service").
+			Str("op", "list").
+			Str("status", logStatusFail).
+			Str("error_code", ErrorCode(err)).
+			Int("duration_ms", int(elapsed.Milliseconds())).
 			Err(err).
 			Msg("Failed to list manifest entries")
 		return nil, fmt.Errorf("list manifest: %w", err)
@@ -980,10 +1194,13 @@ func (s *Service) List(ctx context.Context) ([]*PluginInfo, error) {
 		plugins = append(plugins, info)
 	}
 
+	elapsed := time.Since(start)
 	s.logger.Info().
-		Str("component", "plugin-service").
-		Str("operation", "list").
+		Str("component", "plugin.service").
+		Str("op", "list").
+		Str("status", "success").
 		Int("count", len(plugins)).
+		Int("duration_ms", int(elapsed.Milliseconds())).
 		Msg("Plugin list completed")
 
 	return plugins, nil
@@ -1011,21 +1228,40 @@ func (s *Service) List(ctx context.Context) ([]*PluginInfo, error) {
 //	}
 //	fmt.Printf("Plugin: %s v%s (Size: %d bytes)\n", info.Name, info.Version, info.CacheSize)
 func (s *Service) GetInfo(ctx context.Context, pluginID string) (*PluginInfo, error) {
+	start := time.Now()
+
 	// Validate inputs (defense-in-depth)
 	if err := validatePluginID(pluginID); err != nil {
+		elapsed := time.Since(start)
+		s.logger.Error().
+			Str("component", "plugin.service").
+			Str("op", "get-info").
+			Str("plugin_id", pluginID).
+			Str("status", logStatusFail).
+			Str("error_code", ErrorCode(err)).
+			Int("duration_ms", int(elapsed.Milliseconds())).
+			Err(err).
+			Msg("Plugin ID validation failed")
 		return nil, err
 	}
 
 	s.logger.Debug().
-		Str("component", "plugin-service").
-		Str("operation", "get-info").
+		Str("component", "plugin.service").
+		Str("op", "get-info").
 		Str("plugin_id", pluginID).
 		Msg("Getting plugin info")
 
 	// Get all entries from manifest
 	entries, err := s.manifest.List()
 	if err != nil {
+		elapsed := time.Since(start)
 		s.logger.Error().
+			Str("component", "plugin.service").
+			Str("op", "get-info").
+			Str("plugin_id", pluginID).
+			Str("status", logStatusFail).
+			Str("error_code", ErrorCode(err)).
+			Int("duration_ms", int(elapsed.Milliseconds())).
 			Err(err).
 			Msg("Failed to list manifest entries")
 		return nil, fmt.Errorf("list manifest: %w", err)
@@ -1041,8 +1277,14 @@ func (s *Service) GetInfo(ctx context.Context, pluginID string) (*PluginInfo, er
 	}
 
 	if entry == nil {
+		elapsed := time.Since(start)
 		s.logger.Warn().
+			Str("component", "plugin.service").
+			Str("op", "get-info").
 			Str("plugin_id", pluginID).
+			Str("status", logStatusFail).
+			Str("error_code", ErrorCode(ErrPluginNotFound)).
+			Int("duration_ms", int(elapsed.Milliseconds())).
 			Msg("Plugin not found in manifest")
 		return nil, ErrPluginNotFound
 	}
@@ -1097,12 +1339,15 @@ func (s *Service) GetInfo(ctx context.Context, pluginID string) (*PluginInfo, er
 		}
 	}
 
+	elapsed := time.Since(start)
 	s.logger.Info().
-		Str("component", "plugin-service").
-		Str("operation", "get-info").
+		Str("component", "plugin.service").
+		Str("op", "get-info").
 		Str("plugin_id", pluginID).
+		Str("status", "success").
 		Str("version", info.Version).
 		Int64("cache_size", info.CacheSize).
+		Int("duration_ms", int(elapsed.Milliseconds())).
 		Msg("Plugin info retrieved successfully")
 
 	return info, nil
@@ -1149,14 +1394,25 @@ func calculateDirSize(path string) (int64, error) {
 //	}
 //	fmt.Printf("Would free %d bytes\n", result.Freed)
 func (s *Service) Clean(ctx context.Context, opts CleanOptions) (*CleanResult, error) {
+	start := time.Now()
+
 	// Check context cancellation
 	if err := ctx.Err(); err != nil {
+		elapsed := time.Since(start)
+		s.logger.Error().
+			Str("component", "plugin.service").
+			Str("op", "clean").
+			Str("status", logStatusFail).
+			Str("error_code", "context_canceled").
+			Int("duration_ms", int(elapsed.Milliseconds())).
+			Err(err).
+			Msg("Context canceled")
 		return nil, err
 	}
 
 	s.logger.Info().
-		Str("component", "plugin-service").
-		Str("operation", "clean").
+		Str("component", "plugin.service").
+		Str("op", "clean").
 		Dur("older_than", opts.OlderThan).
 		Bool("dry_run", opts.DryRun).
 		Msg("Cleaning plugin cache")
@@ -1170,6 +1426,7 @@ func (s *Service) Clean(ctx context.Context, opts CleanOptions) (*CleanResult, e
 
 	// Dry run: return early without actually pruning
 	if opts.DryRun {
+		elapsed := time.Since(start)
 		result := &CleanResult{
 			RemovedCount: 0,
 			SizeBefore:   sizeBefore,
@@ -1177,15 +1434,28 @@ func (s *Service) Clean(ctx context.Context, opts CleanOptions) (*CleanResult, e
 			Freed:        0,
 		}
 		s.logger.Info().
+			Str("component", "plugin.service").
+			Str("op", "clean").
+			Str("status", "success").
 			Int("removed", 0).
 			Int64("freed", 0).
-			Msg("Cache cleaning completed")
+			Int("duration_ms", int(elapsed.Milliseconds())).
+			Msg("Cache cleaning completed (dry run)")
 		return result, nil
 	}
 
 	// Run prune operation
 	removed, err := s.cache.Prune(ctx, opts.OlderThan)
 	if err != nil {
+		elapsed := time.Since(start)
+		s.logger.Error().
+			Str("component", "plugin.service").
+			Str("op", "clean").
+			Str("status", logStatusFail).
+			Str("error_code", ErrorCode(err)).
+			Int("duration_ms", int(elapsed.Milliseconds())).
+			Err(err).
+			Msg("Failed to prune cache")
 		return nil, fmt.Errorf("prune cache: %w", err)
 	}
 
@@ -1198,6 +1468,7 @@ func (s *Service) Clean(ctx context.Context, opts CleanOptions) (*CleanResult, e
 
 	freed := sizeBefore - sizeAfter
 
+	elapsed := time.Since(start)
 	result := &CleanResult{
 		RemovedCount: removed,
 		SizeBefore:   sizeBefore,
@@ -1206,8 +1477,12 @@ func (s *Service) Clean(ctx context.Context, opts CleanOptions) (*CleanResult, e
 	}
 
 	s.logger.Info().
+		Str("component", "plugin.service").
+		Str("op", "clean").
+		Str("status", "success").
 		Int("removed", removed).
 		Int64("freed", freed).
+		Int("duration_ms", int(elapsed.Milliseconds())).
 		Msg("Cache cleaning completed")
 
 	return result, nil
@@ -1225,14 +1500,25 @@ func (s *Service) Clean(ctx context.Context, opts CleanOptions) (*CleanResult, e
 //	}
 //	fmt.Printf("Verified %d plugins, %d failed\n", result.TotalCount, result.FailedCount)
 func (s *Service) Verify(ctx context.Context, opts VerifyOptions) (*VerifyResult, error) {
+	start := time.Now()
+
 	// Check context cancellation
 	if err := ctx.Err(); err != nil {
+		elapsed := time.Since(start)
+		s.logger.Error().
+			Str("component", "plugin.service").
+			Str("op", "verify").
+			Str("status", logStatusFail).
+			Str("error_code", "context_canceled").
+			Int("duration_ms", int(elapsed.Milliseconds())).
+			Err(err).
+			Msg("Context canceled")
 		return nil, err
 	}
 
 	s.logger.Info().
-		Str("component", "plugin-service").
-		Str("operation", "verify").
+		Str("component", "plugin.service").
+		Str("op", "verify").
 		Str("plugin_id", opts.PluginID).
 		Msg("Verifying plugin checksums")
 
@@ -1242,6 +1528,15 @@ func (s *Service) Verify(ctx context.Context, opts VerifyOptions) (*VerifyResult
 		// Verify specific plugin
 		entry, err := s.manifest.Get(opts.PluginID)
 		if err != nil {
+			elapsed := time.Since(start)
+			s.logger.Error().
+				Str("component", "plugin.service").
+				Str("op", "verify").
+				Str("plugin_id", opts.PluginID).
+				Str("status", logStatusFail).
+				Str("error_code", ErrorCode(ErrPluginNotFound)).
+				Int("duration_ms", int(elapsed.Milliseconds())).
+				Msg("Plugin not found")
 			return nil, ErrPluginNotFound
 		}
 		entries = []*ManifestEntry{entry}
@@ -1249,6 +1544,15 @@ func (s *Service) Verify(ctx context.Context, opts VerifyOptions) (*VerifyResult
 		// Verify all plugins
 		allEntries, err := s.manifest.List()
 		if err != nil {
+			elapsed := time.Since(start)
+			s.logger.Error().
+				Str("component", "plugin.service").
+				Str("op", "verify").
+				Str("status", logStatusFail).
+				Str("error_code", ErrorCode(err)).
+				Int("duration_ms", int(elapsed.Milliseconds())).
+				Err(err).
+				Msg("Failed to list plugins")
 			return nil, fmt.Errorf("list plugins: %w", err)
 		}
 		entries = allEntries
@@ -1327,6 +1631,7 @@ func (s *Service) Verify(ctx context.Context, opts VerifyOptions) (*VerifyResult
 		// Verification results are still valid even if save fails
 	}
 
+	elapsed := time.Since(start)
 	verifyResult := &VerifyResult{
 		TotalCount:   len(entries),
 		SuccessCount: successCount,
@@ -1334,10 +1639,19 @@ func (s *Service) Verify(ctx context.Context, opts VerifyOptions) (*VerifyResult
 		Results:      results,
 	}
 
+	status := "success"
+	if verifyResult.FailedCount > 0 {
+		status = "partial_failure"
+	}
+
 	s.logger.Info().
+		Str("component", "plugin.service").
+		Str("op", "verify").
+		Str("status", status).
 		Int("total", verifyResult.TotalCount).
 		Int("success", verifyResult.SuccessCount).
 		Int("failed", verifyResult.FailedCount).
+		Int("duration_ms", int(elapsed.Milliseconds())).
 		Msg("Plugin verification completed")
 
 	return verifyResult, nil
