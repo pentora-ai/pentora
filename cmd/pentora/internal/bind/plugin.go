@@ -7,6 +7,7 @@ package bind
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -14,19 +15,35 @@ import (
 	"github.com/pentora-ai/pentora/pkg/plugin"
 )
 
+// formatList formats a string slice as a comma-separated list.
+// Helper function for generating user-friendly error messages.
+func formatList(items []string) string {
+	return strings.Join(items, ", ")
+}
+
 // BindInstallOptions extracts and validates InstallOptions from command flags.
 //
 // This function reads the install-specific flags from the Cobra command and
 // constructs a properly validated InstallOptions struct for the service layer.
 //
+// Validation (Defense-in-Depth):
+//   - CLI layer: Early validation for better UX (this function)
+//   - Service layer: Redundant validation for safety (service.Install)
+//
 // Flags read:
 //   - --source: Optional plugin source name
 //   - --force: Force re-install flag
 //
-// Returns an error if validation fails (though currently install has no required flags).
+// Returns an error if validation fails.
 func BindInstallOptions(cmd *cobra.Command) (plugin.InstallOptions, error) {
 	source, _ := cmd.Flags().GetString("source")
 	force, _ := cmd.Flags().GetBool("force")
+
+	// Validate source whitelist (CLI layer - early validation)
+	if source != "" && !plugin.IsValidSource(source) {
+		return plugin.InstallOptions{}, fmt.Errorf("invalid source %q (valid: %s)",
+			source, formatList(plugin.ValidSources))
+	}
 
 	opts := plugin.InstallOptions{
 		Source: source,
@@ -41,18 +58,34 @@ func BindInstallOptions(cmd *cobra.Command) (plugin.InstallOptions, error) {
 // This function reads the update-specific flags from the Cobra command and
 // constructs a properly validated UpdateOptions struct for the service layer.
 //
+// Validation (Defense-in-Depth):
+//   - CLI layer: Early validation for better UX (this function)
+//   - Service layer: Redundant validation for safety (service.Update)
+//
 // Flags read:
 //   - --category: Optional category filter (ssh, http, tls, database, network, misc)
 //   - --source: Optional plugin source name
 //   - --force: Force re-download flag
 //   - --dry-run: Dry run mode (preview only)
 //
-// Returns an error if validation fails (e.g., invalid category).
+// Returns an error if validation fails (e.g., invalid category or source).
 func BindUpdateOptions(cmd *cobra.Command) (plugin.UpdateOptions, error) {
 	category, _ := cmd.Flags().GetString("category")
 	source, _ := cmd.Flags().GetString("source")
 	force, _ := cmd.Flags().GetBool("force")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
+
+	// Validate category whitelist (CLI layer - early validation)
+	if category != "" && !plugin.IsValidCategory(category) {
+		return plugin.UpdateOptions{}, fmt.Errorf("invalid category %q (valid: %s)",
+			category, formatList(plugin.GetValidCategories()))
+	}
+
+	// Validate source whitelist (CLI layer - early validation)
+	if source != "" && !plugin.IsValidSource(source) {
+		return plugin.UpdateOptions{}, fmt.Errorf("invalid source %q (valid: %s)",
+			source, formatList(plugin.ValidSources))
+	}
 
 	opts := plugin.UpdateOptions{
 		Source: source,
@@ -60,7 +93,7 @@ func BindUpdateOptions(cmd *cobra.Command) (plugin.UpdateOptions, error) {
 		DryRun: dryRun,
 	}
 
-	// Convert category string to Category type (validation happens in service layer)
+	// Convert category string to Category type
 	if category != "" {
 		opts.Category = plugin.Category(category)
 	}
@@ -73,6 +106,10 @@ func BindUpdateOptions(cmd *cobra.Command) (plugin.UpdateOptions, error) {
 // This function reads the uninstall-specific flags from the Cobra command and
 // constructs a properly validated UninstallOptions struct for the service layer.
 //
+// Validation (Defense-in-Depth):
+//   - CLI layer: Early validation for better UX (this function)
+//   - Service layer: Redundant validation for safety (service.Uninstall)
+//
 // Flags read:
 //   - --all: Uninstall all plugins flag
 //   - --category: Optional category filter (ssh, http, tls, database, network, misc)
@@ -82,18 +119,24 @@ func BindUninstallOptions(cmd *cobra.Command) (plugin.UninstallOptions, error) {
 	all, _ := cmd.Flags().GetBool("all")
 	category, _ := cmd.Flags().GetString("category")
 
-	opts := plugin.UninstallOptions{
-		All: all,
-	}
-
-	// Convert category string to Category type (validation happens in service layer)
-	if category != "" {
-		opts.Category = plugin.Category(category)
+	// Validate category whitelist (CLI layer - early validation)
+	if category != "" && !plugin.IsValidCategory(category) {
+		return plugin.UninstallOptions{}, fmt.Errorf("invalid category %q (valid: %s)",
+			category, formatList(plugin.GetValidCategories()))
 	}
 
 	// Validate flag conflicts
 	if all && category != "" {
-		return opts, fmt.Errorf("cannot use --all and --category together")
+		return plugin.UninstallOptions{}, fmt.Errorf("cannot use --all and --category together")
+	}
+
+	opts := plugin.UninstallOptions{
+		All: all,
+	}
+
+	// Convert category string to Category type
+	if category != "" {
+		opts.Category = plugin.Category(category)
 	}
 
 	return opts, nil
