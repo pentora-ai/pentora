@@ -185,3 +185,89 @@ func TestErrorCode(t *testing.T) {
 		})
 	}
 }
+
+func TestGetSuggestion(t *testing.T) {
+	tests := []struct {
+		name     string
+		err      error
+		expected string
+	}{
+		{
+			name:     "nil error returns empty string",
+			err:      nil,
+			expected: "",
+		},
+		{
+			name:     "ErrPluginNotFound suggests listing plugins",
+			err:      ErrPluginNotFound,
+			expected: "list available plugins with: pentora plugin list",
+		},
+		{
+			name:     "ErrPluginNotInstalled suggests installing",
+			err:      ErrPluginNotInstalled,
+			expected: "install the plugin first with: pentora plugin install <name>",
+		},
+		{
+			name:     "ErrNoPluginsFound suggests updating",
+			err:      ErrNoPluginsFound,
+			expected: "check plugin category and try: pentora plugin update",
+		},
+		{
+			name:     "ErrInvalidCategory suggests valid categories",
+			err:      ErrInvalidCategory,
+			expected: "valid categories: ssh, http, tls, database, network, misc",
+		},
+		{
+			name:     "ErrInvalidPluginID suggests naming convention",
+			err:      ErrInvalidPluginID,
+			expected: "use lowercase letters, numbers, and hyphens only",
+		},
+		{
+			name:     "ErrSourceNotAvailable suggests retry with different source",
+			err:      ErrSourceNotAvailable,
+			expected: "retry with different source: --source github",
+		},
+		{
+			name:     "ErrUnavailable suggests retry with different source",
+			err:      ErrUnavailable,
+			expected: "retry with different source: --source github",
+		},
+		{
+			name:     "ErrChecksumMismatch suggests force flag",
+			err:      ErrChecksumMismatch,
+			expected: "retry with --force to re-download",
+		},
+		{
+			name:     "ErrPluginAlreadyInstalled suggests force flag",
+			err:      ErrPluginAlreadyInstalled,
+			expected: "use --force to reinstall",
+		},
+		{
+			name:     "ErrConflict suggests uninstall and reinstall",
+			err:      ErrConflict,
+			expected: "uninstall existing version and reinstall",
+		},
+		{
+			name:     "ErrPartialFailure suggests JSON output",
+			err:      ErrPartialFailure,
+			expected: "use --output json for full error details",
+		},
+		{
+			name:     "unknown error suggests checking logs",
+			err:      errors.New("unknown"),
+			expected: "check logs for more details",
+		},
+		{
+			name:     "wrapped ErrChecksumMismatch returns force suggestion",
+			err:      fmt.Errorf("failed to download: %w", ErrChecksumMismatch),
+			expected: "retry with --force to re-download",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			suggestion := GetSuggestion(tt.err)
+			require.Equal(t, tt.expected, suggestion)
+		})
+	}
+}

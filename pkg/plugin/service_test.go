@@ -908,7 +908,7 @@ func TestService_Install_PartialFailures(t *testing.T) {
 		require.Equal(t, 1, result.InstalledCount, "one plugin should succeed")
 		require.Equal(t, 1, result.FailedCount, "one plugin should fail")
 		require.Len(t, result.Errors, 1, "should collect errors")
-		require.Contains(t, result.Errors[0].Error(), "download failed")
+		require.Contains(t, result.Errors[0].Error, "download failed")
 	})
 }
 
@@ -1395,7 +1395,7 @@ func TestService_Update_PartialFailures(t *testing.T) {
 		require.Equal(t, 1, result.UpdatedCount)
 		require.Equal(t, 1, result.FailedCount)
 		require.Len(t, result.Errors, 1)
-		require.Contains(t, result.Errors[0].Error(), "download failed")
+		require.Contains(t, result.Errors[0].Error, "download failed")
 	})
 }
 
@@ -1699,7 +1699,7 @@ func TestService_Uninstall_PartialFailures(t *testing.T) {
 		require.Equal(t, 1, result.RemovedCount)
 		require.Equal(t, 1, result.FailedCount)
 		require.Len(t, result.Errors, 1)
-		require.Contains(t, result.Errors[0].Error(), "removal failed")
+		require.Contains(t, result.Errors[0].Error, "removal failed")
 	})
 }
 
@@ -1783,7 +1783,7 @@ func TestService_Uninstall_ManifestErrors(t *testing.T) {
 		require.NotNil(t, result)
 		require.Equal(t, 1, result.RemovedCount)
 		require.Len(t, result.Errors, 1, "should collect save error")
-		require.Contains(t, result.Errors[0].Error(), "save manifest")
+		require.Contains(t, result.Errors[0].Error, "save manifest")
 	})
 }
 

@@ -46,8 +46,12 @@ type InstallPluginResponse struct {
 	// Plugins is the list of successfully installed plugins
 	Plugins []PluginInfoDTO `json:"plugins"`
 
-	// Errors contains error messages for failed plugins
-	Errors []string `json:"errors,omitempty"`
+	// Errors contains detailed error information for failed plugins
+	// Each error includes plugin ID, error message, error code, and actionable suggestion
+	Errors []PluginErrorDTO `json:"errors,omitempty"`
+
+	// PartialFailure indicates if some plugins succeeded while others failed
+	PartialFailure bool `json:"partial_failure"`
 }
 
 // UpdatePluginsRequest represents the request body for plugin updates
@@ -79,8 +83,12 @@ type UpdatePluginsResponse struct {
 	// Plugins is the list of updated plugins
 	Plugins []PluginInfoDTO `json:"plugins"`
 
-	// Errors contains error messages for failed plugins
-	Errors []string `json:"errors,omitempty"`
+	// Errors contains detailed error information for failed plugins
+	// Each error includes plugin ID, error message, error code, and actionable suggestion
+	Errors []PluginErrorDTO `json:"errors,omitempty"`
+
+	// PartialFailure indicates if some plugins succeeded while others failed
+	PartialFailure bool `json:"partial_failure"`
 }
 
 // PluginListResponse represents the response for listing plugins
@@ -90,6 +98,21 @@ type PluginListResponse struct {
 
 	// Count is the total number of plugins
 	Count int `json:"count"`
+}
+
+// PluginErrorDTO represents a plugin error in API responses (ADR-0003)
+type PluginErrorDTO struct {
+	// PluginID is the unique identifier of the plugin that failed
+	PluginID string `json:"plugin_id"`
+
+	// Error is the human-readable error message
+	Error string `json:"error"`
+
+	// Code is the machine-readable error code (e.g., CHECKSUM_MISMATCH, SOURCE_NOT_AVAILABLE)
+	Code string `json:"code"`
+
+	// Suggestion is an actionable suggestion for resolving the error
+	Suggestion string `json:"suggestion,omitempty"`
 }
 
 // PluginInfoDTO represents plugin information in API responses
@@ -172,7 +195,8 @@ func InstallPluginHandler(pluginService PluginService) http.HandlerFunc {
 			SkippedCount:   result.SkippedCount,
 			FailedCount:    result.FailedCount,
 			Plugins:        make([]PluginInfoDTO, 0, len(result.Plugins)),
-			Errors:         make([]string, 0, len(result.Errors)),
+			Errors:         make([]PluginErrorDTO, 0, len(result.Errors)),
+			PartialFailure: result.FailedCount > 0 && result.InstalledCount > 0,
 		}
 
 		// Convert plugins to DTO
@@ -188,11 +212,14 @@ func InstallPluginHandler(pluginService PluginService) http.HandlerFunc {
 			})
 		}
 
-		// Convert errors to strings
+		// Convert errors to DTO
 		for _, err := range result.Errors {
-			if err != nil {
-				resp.Errors = append(resp.Errors, err.Error())
-			}
+			resp.Errors = append(resp.Errors, PluginErrorDTO{
+				PluginID:   err.PluginID,
+				Error:      err.Error,
+				Code:       err.Code,
+				Suggestion: err.Suggestion,
+			})
 		}
 
 		api.WriteJSON(w, http.StatusOK, resp)
@@ -389,11 +416,12 @@ func UpdatePluginsHandler(pluginService PluginService) http.HandlerFunc {
 
 		// Build response
 		resp := UpdatePluginsResponse{
-			UpdatedCount: result.UpdatedCount,
-			SkippedCount: result.SkippedCount,
-			FailedCount:  result.FailedCount,
-			Plugins:      make([]PluginInfoDTO, 0, len(result.Plugins)),
-			Errors:       make([]string, 0, len(result.Errors)),
+			UpdatedCount:   result.UpdatedCount,
+			SkippedCount:   result.SkippedCount,
+			FailedCount:    result.FailedCount,
+			Plugins:        make([]PluginInfoDTO, 0, len(result.Plugins)),
+			Errors:         make([]PluginErrorDTO, 0, len(result.Errors)),
+			PartialFailure: result.FailedCount > 0 && result.UpdatedCount > 0,
 		}
 
 		// Convert plugins to DTO
@@ -409,11 +437,14 @@ func UpdatePluginsHandler(pluginService PluginService) http.HandlerFunc {
 			})
 		}
 
-		// Convert errors to strings
+		// Convert errors to DTO
 		for _, err := range result.Errors {
-			if err != nil {
-				resp.Errors = append(resp.Errors, err.Error())
-			}
+			resp.Errors = append(resp.Errors, PluginErrorDTO{
+				PluginID:   err.PluginID,
+				Error:      err.Error,
+				Code:       err.Code,
+				Suggestion: err.Suggestion,
+			})
 		}
 
 		api.WriteJSON(w, http.StatusOK, resp)

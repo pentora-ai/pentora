@@ -16,7 +16,8 @@ func TestLoader_Load(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create valid YAML plugin
-	validYAML := `name: Test Plugin
+	validYAML := `id: test-plugin
+name: Test Plugin
 version: 1.0.0
 type: evaluation
 author: pentora-test
@@ -75,6 +76,7 @@ func TestLoader_Load_JSON(t *testing.T) {
 
 	// Create valid JSON plugin
 	validJSON := `{
+  "id": "test-json-plugin",
   "name": "Test JSON Plugin",
   "version": "1.0.0",
   "type": "evaluation",
@@ -124,7 +126,8 @@ func TestLoader_Load_JSON(t *testing.T) {
 func TestLoader_Load_InvalidYAML(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	invalidYAML := `name: Invalid
+	invalidYAML := `id: invalid
+name: Invalid
 invalid yaml syntax here {{{
 `
 
@@ -143,7 +146,8 @@ func TestLoader_Load_ValidationFailure(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Missing required fields
-	invalidYAML := `name: Invalid Plugin
+	invalidYAML := `id: invalid-plugin
+name: Invalid Plugin
 # Missing version, type, author, etc.
 `
 
@@ -176,7 +180,8 @@ func TestLoader_LoadAll(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create multiple plugins
-	plugin1 := `name: Plugin 1
+	plugin1 := `id: plugin-1
+name: Plugin 1
 version: 1.0.0
 type: evaluation
 author: test
@@ -188,7 +193,8 @@ output:
   message: "Test 1"
 `
 
-	plugin2 := `name: Plugin 2
+	plugin2 := `id: plugin-2
+name: Plugin 2
 version: 1.0.0
 type: evaluation
 author: test
@@ -231,7 +237,8 @@ func TestLoader_LoadRecursive(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create plugins in both directories
-	plugin1 := `name: Root Plugin
+	plugin1 := `id: root-plugin
+name: Root Plugin
 version: 1.0.0
 type: evaluation
 author: test
@@ -243,7 +250,8 @@ output:
   message: "Root plugin"
 `
 
-	plugin2 := `name: Sub Plugin
+	plugin2 := `id: sub-plugin
+name: Sub Plugin
 version: 1.0.0
 type: evaluation
 author: test
@@ -314,7 +322,8 @@ func TestLoader_LoadAll_WithSubdirectory(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create plugin in root
-	plugin1 := `name: Plugin 1
+	plugin1 := `id: plugin-1
+name: Plugin 1
 version: 1.0.0
 type: evaluation
 author: test
@@ -329,7 +338,8 @@ output:
 	require.NoError(t, err)
 
 	// Create plugin in subdirectory (should NOT be loaded by LoadAll)
-	plugin2 := `name: Plugin 2
+	plugin2 := `id: plugin-2
+name: Plugin 2
 version: 1.0.0
 type: evaluation
 author: test
@@ -356,7 +366,8 @@ func TestLoader_LoadAll_WithErrors(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create valid plugin
-	validPlugin := `name: Valid Plugin
+	validPlugin := `id: valid-plugin
+name: Valid Plugin
 version: 1.0.0
 type: evaluation
 author: test
@@ -371,7 +382,8 @@ output:
 	require.NoError(t, err)
 
 	// Create invalid plugin (missing required fields)
-	invalidPlugin := `name: Invalid Plugin
+	invalidPlugin := `id: invalid-plugin
+name: Invalid Plugin
 # Missing version and other required fields
 `
 	err = os.WriteFile(filepath.Join(tmpDir, "invalid.yaml"), []byte(invalidPlugin), 0o644)
@@ -391,7 +403,8 @@ func TestLoader_LoadRecursive_WithErrors(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create valid plugin in root
-	validPlugin := `name: Valid Plugin
+	validPlugin := `id: valid-plugin
+name: Valid Plugin
 version: 1.0.0
 type: evaluation
 author: test
@@ -410,7 +423,8 @@ output:
 	err = os.MkdirAll(subDir, 0o755)
 	require.NoError(t, err)
 
-	invalidPlugin := `name: Invalid
+	invalidPlugin := `id: invalid
+name: Invalid
 # Missing required fields
 `
 	err = os.WriteFile(filepath.Join(subDir, "invalid.yaml"), []byte(invalidPlugin), 0o644)
@@ -430,7 +444,8 @@ func TestLoader_LoadRecursive_IgnoresNonPluginFiles(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create plugin
-	validPlugin := `name: Valid Plugin
+	validPlugin := `id: valid-plugin
+name: Valid Plugin
 version: 1.0.0
 type: evaluation
 author: test
@@ -471,7 +486,8 @@ func TestLoader_LoadRecursive_WalkError(t *testing.T) {
 func TestLoader_ClearCache(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	validYAML := `name: Test
+	validYAML := `id: test
+name: Test
 version: 1.0.0
 type: evaluation
 author: test

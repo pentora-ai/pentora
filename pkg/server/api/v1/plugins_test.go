@@ -81,7 +81,7 @@ func TestInstallPluginHandler_Success(t *testing.T) {
 					Tags:     []string{"ssh", "crypto"},
 				},
 			},
-			Errors: []error{},
+			Errors: []plugin.PluginError{},
 		},
 	}
 
@@ -423,7 +423,7 @@ func TestUpdatePluginsHandler_Success(t *testing.T) {
 					Author:  "pentora-security",
 				},
 			},
-			Errors: []error{},
+			Errors: []plugin.PluginError{},
 		},
 	}
 	handler := UpdatePluginsHandler(mockSvc)
@@ -468,7 +468,7 @@ func TestUpdatePluginsHandler_WithCategoryFilter(t *testing.T) {
 					Version: "1.0.1",
 				},
 			},
-			Errors: []error{},
+			Errors: []plugin.PluginError{},
 		},
 	}
 	handler := UpdatePluginsHandler(mockSvc)
@@ -500,7 +500,7 @@ func TestUpdatePluginsHandler_EmptyBody(t *testing.T) {
 			SkippedCount: 0,
 			FailedCount:  0,
 			Plugins:      []*plugin.PluginInfo{},
-			Errors:       []error{},
+			Errors:       []plugin.PluginError{},
 		},
 	}
 	handler := UpdatePluginsHandler(mockSvc)

@@ -47,6 +47,7 @@ func TestNewCacheManager_LoadsExistingPlugins(t *testing.T) {
 	require.NoError(t, os.MkdirAll(plugin1Dir, 0o755))
 
 	plugin1 := &YAMLPlugin{
+		ID:      "test-plugin-1",
 		Name:    "test-plugin-1",
 		Version: "1.0.0",
 		Type:    "evaluation",
@@ -80,6 +81,7 @@ func TestNewCacheManager_LoadsExistingPlugins(t *testing.T) {
 	require.NoError(t, os.MkdirAll(plugin2Dir, 0o755))
 
 	plugin2 := &YAMLPlugin{
+		ID:      "test-plugin-2",
 		Name:    "test-plugin-2",
 		Version: "2.0.0",
 		Type:    "evaluation",
@@ -133,6 +135,7 @@ func TestCacheManager_Add(t *testing.T) {
 	require.NoError(t, err)
 
 	plugin := &YAMLPlugin{
+		ID:      "test-plugin",
 		Name:    "test-plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -184,6 +187,7 @@ func TestCacheManager_Add_InvalidPlugin(t *testing.T) {
 
 	// Plugin missing required fields
 	plugin := &YAMLPlugin{
+		ID:   "invalid-plugin",
 		Name: "invalid-plugin",
 		// Missing version, type, author, etc.
 	}
@@ -200,6 +204,7 @@ func TestCacheManager_Add_Duplicate(t *testing.T) {
 	require.NoError(t, err)
 
 	plugin := &YAMLPlugin{
+		ID:      "test-plugin",
 		Name:    "test-plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -228,6 +233,7 @@ func TestCacheManager_Get(t *testing.T) {
 	require.NoError(t, err)
 
 	plugin := &YAMLPlugin{
+		ID:      "test-plugin",
 		Name:    "test-plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -258,6 +264,7 @@ func TestCacheManager_Remove(t *testing.T) {
 	require.NoError(t, err)
 
 	plugin := &YAMLPlugin{
+		ID:      "test-plugin",
 		Name:    "test-plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -307,8 +314,10 @@ func TestCacheManager_List(t *testing.T) {
 
 	// Add multiple plugins
 	for i := 1; i <= 3; i++ {
+		pluginID := "plugin-" + string(rune('0'+i))
 		plugin := &YAMLPlugin{
-			Name:    "plugin-" + string(rune('0'+i)),
+			ID:      pluginID,
+			Name:    pluginID,
 			Version: "1.0.0",
 			Type:    EvaluationType,
 			Author:  "test",
@@ -333,6 +342,7 @@ func TestCacheManager_Clear(t *testing.T) {
 
 	// Add plugins
 	plugin := &YAMLPlugin{
+		ID:      "test-plugin",
 		Name:    "test-plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -402,6 +412,7 @@ func TestCacheManager_Prune(t *testing.T) {
 
 	// Add recent plugin
 	recentPlugin := &YAMLPlugin{
+		ID:      "recent-plugin",
 		Name:    "recent-plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -438,7 +449,8 @@ func TestCacheManager_LoadFromDisk(t *testing.T) {
 	err := os.MkdirAll(pluginDir, 0o755)
 	require.NoError(t, err)
 
-	pluginYAML := `name: test-plugin
+	pluginYAML := `id: test-plugin
+name: test-plugin
 version: 1.0.0
 type: evaluation
 author: test
@@ -473,7 +485,8 @@ func TestCacheManager_LoadFromDisk_WithErrors(t *testing.T) {
 	err := os.MkdirAll(validDir, 0o755)
 	require.NoError(t, err)
 
-	validYAML := `name: valid-plugin
+	validYAML := `id: valid-plugin
+name: valid-plugin
 version: 1.0.0
 type: evaluation
 author: test
@@ -491,7 +504,8 @@ output:
 	err = os.MkdirAll(invalidDir, 0o755)
 	require.NoError(t, err)
 
-	invalidYAML := `name: invalid-plugin
+	invalidYAML := `id: invalid-plugin
+name: invalid-plugin
 version: 1.0.0
 # Missing required fields
 `
@@ -539,6 +553,7 @@ func TestCacheManager_Add_MkdirError(t *testing.T) {
 	require.NoError(t, err)
 
 	plugin := &YAMLPlugin{
+		ID:      "blocked-plugin",
 		Name:    "blocked-plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -609,6 +624,7 @@ func TestCacheManager_ListEntries_AllPresent(t *testing.T) {
 
 	plugins := []*YAMLPlugin{
 		{
+			ID:      "entry-plugin-1",
 			Name:    "entry-plugin-1",
 			Version: "1.0.0",
 			Type:    EvaluationType,
@@ -620,6 +636,7 @@ func TestCacheManager_ListEntries_AllPresent(t *testing.T) {
 			Output: OutputBlock{Message: "Test1"},
 		},
 		{
+			ID:      "entry-plugin-2",
 			Name:    "entry-plugin-2",
 			Version: "2.0.0",
 			Type:    EvaluationType,
@@ -658,6 +675,7 @@ func TestCacheManager_ListEntries_SkipsMissingFile(t *testing.T) {
 
 	// Add two plugins
 	present := &YAMLPlugin{
+		ID:      "present-plugin",
 		Name:    "present-plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,
@@ -669,6 +687,7 @@ func TestCacheManager_ListEntries_SkipsMissingFile(t *testing.T) {
 		Output: OutputBlock{Message: "Present"},
 	}
 	missing := &YAMLPlugin{
+		ID:      "missing-plugin",
 		Name:    "missing-plugin",
 		Version: "1.0.0",
 		Type:    EvaluationType,

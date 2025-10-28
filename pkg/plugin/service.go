@@ -271,7 +271,7 @@ func (s *Service) Install(ctx context.Context, target string, opts InstallOption
 
 	result := &InstallResult{
 		Plugins: []*PluginInfo{},
-		Errors:  []error{},
+		Errors:  []PluginError{},
 	}
 
 	// Fetch manifests from sources
@@ -324,7 +324,12 @@ func (s *Service) Install(ctx context.Context, target string, opts InstallOption
 					Msg("Plugin already installed")
 			} else {
 				result.FailedCount++
-				result.Errors = append(result.Errors, fmt.Errorf("install %s: %w", p.Name, err))
+				result.Errors = append(result.Errors, PluginError{
+					PluginID:   p.ID,
+					Error:      err.Error(),
+					Code:       ErrorCode(err),
+					Suggestion: GetSuggestion(err),
+				})
 				s.logger.Warn().
 					Str("plugin", p.Name).
 					Err(err).
@@ -558,7 +563,7 @@ func (s *Service) Update(ctx context.Context, opts UpdateOptions) (*UpdateResult
 
 	result := &UpdateResult{
 		Plugins: []*PluginInfo{},
-		Errors:  []error{},
+		Errors:  []PluginError{},
 	}
 
 	// Fetch manifests from sources
@@ -622,7 +627,12 @@ func (s *Service) Update(ctx context.Context, opts UpdateOptions) (*UpdateResult
 		_, err := s.downloader.Download(ctx, p.ID, p.Version)
 		if err != nil {
 			result.FailedCount++
-			result.Errors = append(result.Errors, fmt.Errorf("update %s: %w", p.Name, err))
+			result.Errors = append(result.Errors, PluginError{
+				PluginID:   p.ID,
+				Error:      err.Error(),
+				Code:       ErrorCode(err),
+				Suggestion: GetSuggestion(err),
+			})
 			s.logger.Warn().
 				Str("plugin", p.Name).
 				Err(err).
@@ -741,7 +751,7 @@ func (s *Service) Uninstall(ctx context.Context, target string, opts UninstallOp
 		Msg("Starting plugin uninstall")
 
 	result := &UninstallResult{
-		Errors: []error{},
+		Errors: []PluginError{},
 	}
 
 	// Validate input - only one mode allowed
@@ -822,7 +832,12 @@ func (s *Service) Uninstall(ctx context.Context, target string, opts UninstallOp
 
 		if err := s.uninstallOne(ctx, entry); err != nil {
 			result.FailedCount++
-			result.Errors = append(result.Errors, fmt.Errorf("uninstall %s: %w", entry.Name, err))
+			result.Errors = append(result.Errors, PluginError{
+				PluginID:   entry.ID,
+				Error:      err.Error(),
+				Code:       ErrorCode(err),
+				Suggestion: GetSuggestion(err),
+			})
 			s.logger.Warn().
 				Str("plugin", entry.Name).
 				Err(err).
@@ -841,7 +856,12 @@ func (s *Service) Uninstall(ctx context.Context, target string, opts UninstallOp
 	if result.RemovedCount > 0 {
 		if err := s.manifest.Save(); err != nil {
 			s.logger.Warn().Err(err).Msg("Failed to save manifest after uninstall")
-			result.Errors = append(result.Errors, fmt.Errorf("save manifest: %w", err))
+			result.Errors = append(result.Errors, PluginError{
+				PluginID:   "", // No specific plugin ID for manifest errors
+				Error:      fmt.Sprintf("save manifest: %s", err.Error()),
+				Code:       ErrorCode(err),
+				Suggestion: GetSuggestion(err),
+			})
 		}
 	}
 

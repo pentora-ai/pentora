@@ -130,7 +130,8 @@ func TestVerifier_VerifyPlugin_Success(t *testing.T) {
 	// Create test plugin file
 	tmpDir := t.TempDir()
 	pluginFile := filepath.Join(tmpDir, "plugin.yaml")
-	pluginYAML := `name: test-plugin
+	pluginYAML := `id: test-plugin
+name: test-plugin
 version: 1.0.0
 type: evaluation
 author: test
@@ -190,7 +191,8 @@ func TestVerifier_VerifyAll(t *testing.T) {
 
 	for i := 1; i <= 3; i++ {
 		pluginFile := filepath.Join(tmpDir, "plugin"+string(rune('0'+i))+".yaml")
-		pluginYAML := `name: plugin` + string(rune('0'+i)) + `
+		pluginYAML := `id: test-plugin
+name: plugin` + string(rune('0'+i)) + `
 version: 1.0.0
 type: evaluation
 author: test
@@ -233,7 +235,8 @@ func TestVerifier_VerifyAll_MissingChecksum(t *testing.T) {
 
 	// Create plugin
 	pluginFile := filepath.Join(tmpDir, "plugin.yaml")
-	pluginYAML := `name: test-plugin
+	pluginYAML := `id: test-plugin
+name: test-plugin
 version: 1.0.0
 type: evaluation
 author: test
@@ -267,7 +270,8 @@ func TestVerifier_VerifyAll_WrongChecksum(t *testing.T) {
 
 	// Create plugin
 	pluginFile := filepath.Join(tmpDir, "plugin.yaml")
-	pluginYAML := `name: test-plugin
+	pluginYAML := `id: test-plugin
+name: test-plugin
 version: 1.0.0
 type: evaluation
 author: test
