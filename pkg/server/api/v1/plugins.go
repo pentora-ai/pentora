@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/pentora-ai/pentora/pkg/plugin"
 	"github.com/pentora-ai/pentora/pkg/server/api"
@@ -171,6 +174,23 @@ type PluginInfoDTO struct {
 // Returns 400 for invalid requests, 500 for server errors, 504 for timeout.
 func InstallPluginHandler(pluginService PluginService, config api.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Setup structured logger with operation context
+		logger := log.With().
+			Str("component", "api.plugins").
+			Str("op", "install").
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Logger()
+
+		start := time.Now()
+		var statusCode int
+		defer func() {
+			logger.Info().
+				Int("status", statusCode).
+				Dur("duration_ms", time.Since(start)).
+				Msg("request completed")
+		}()
+
 		// Apply handler-level timeout (only if request context doesn't have deadline)
 		ctx := r.Context()
 		if _, hasDeadline := ctx.Deadline(); !hasDeadline && config.HandlerTimeout > 0 {
@@ -184,20 +204,41 @@ func InstallPluginHandler(pluginService PluginService, config api.Config) http.H
 
 		var req InstallPluginRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			api.WriteJSONError(w, http.StatusBadRequest, "Bad Request", "INVALID_REQUEST_BODY", "invalid request body: "+err.Error())
+			statusCode = http.StatusBadRequest
+			logger.Error().
+				Err(err).
+				Str("error_code", "INVALID_REQUEST_BODY").
+				Msg("failed to decode request")
+			api.WriteJSONError(w, statusCode, "Bad Request", "INVALID_REQUEST_BODY", "invalid request body: "+err.Error())
 			return
 		}
 
+		// Log request snapshot
+		logger.Info().
+			Str("target", req.Target).
+			Str("source", req.Source).
+			Bool("force", req.Force).
+			Msg("install started")
+
 		// Validate request - required fields
 		if req.Target == "" {
-			api.WriteJSONError(w, http.StatusBadRequest, "Bad Request", "TARGET_REQUIRED", "target is required")
+			statusCode = http.StatusBadRequest
+			logger.Error().
+				Str("error_code", "TARGET_REQUIRED").
+				Msg("validation failed: target required")
+			api.WriteJSONError(w, statusCode, "Bad Request", "TARGET_REQUIRED", "target is required")
 			return
 		}
 
 		// Validate source whitelist (API layer - defense-in-depth)
 		if req.Source != "" && !plugin.IsValidSource(req.Source) {
 			validSources := plugin.ValidSources
-			api.WriteJSONError(w, http.StatusBadRequest, "Bad Request", "INVALID_SOURCE",
+			statusCode = http.StatusBadRequest
+			logger.Error().
+				Str("error_code", "INVALID_SOURCE").
+				Str("source", req.Source).
+				Msg("validation failed: invalid source")
+			api.WriteJSONError(w, statusCode, "Bad Request", "INVALID_SOURCE",
 				"invalid source '"+req.Source+"' (valid: "+formatSourceList(validSources)+")")
 			return
 		}
@@ -213,10 +254,20 @@ func InstallPluginHandler(pluginService PluginService, config api.Config) http.H
 		if err != nil {
 			// Check if timeout occurred
 			if ctx.Err() == context.DeadlineExceeded {
-				api.WriteJSONError(w, http.StatusGatewayTimeout, "Gateway Timeout", "TIMEOUT",
+				statusCode = http.StatusGatewayTimeout
+				logger.Error().
+					Err(err).
+					Str("error_code", "TIMEOUT").
+					Msg("install failed: timeout")
+				api.WriteJSONError(w, statusCode, "Gateway Timeout", "TIMEOUT",
 					"operation timed out after "+config.HandlerTimeout.String())
 				return
 			}
+			statusCode = plugin.HTTPStatus(err)
+			logger.Error().
+				Err(err).
+				Str("error_code", plugin.ErrorCode(err)).
+				Msg("install failed")
 			api.WriteError(w, r, err)
 			return
 		}
@@ -254,7 +305,16 @@ func InstallPluginHandler(pluginService PluginService, config api.Config) http.H
 			})
 		}
 
-		api.WriteJSON(w, http.StatusOK, resp)
+		// Log success with result metrics
+		statusCode = http.StatusOK
+		logger.Info().
+			Int("installed_count", result.InstalledCount).
+			Int("skipped_count", result.SkippedCount).
+			Int("failed_count", result.FailedCount).
+			Bool("partial_failure", resp.PartialFailure).
+			Msg("install succeeded")
+
+		api.WriteJSON(w, statusCode, resp)
 	}
 }
 

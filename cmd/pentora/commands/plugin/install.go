@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
@@ -60,33 +61,69 @@ func executeInstallCommand(cmd *cobra.Command, target, cacheDir string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	// Setup dependencies
-	formatter := getFormatter(cmd)
-	svc, err := getPluginService(cacheDir)
-	if err != nil {
-		return err
-	}
-
-	// Bind flags to options
+	// Bind flags to options early for logging
 	opts, err := bind.BindInstallOptions(cmd)
 	if err != nil {
 		return err
 	}
 
+	// Setup structured logger with operation context
+	logger := log.With().
+		Str("component", "plugin.cli").
+		Str("op", "install").
+		Logger()
+
+	start := time.Now()
+	defer func() {
+		logger.Info().
+			Dur("duration_ms", time.Since(start)).
+			Msg("install completed")
+	}()
+
+	// Log operation start with request snapshot
+	logger.Info().
+		Str("target", target).
+		Str("source", opts.Source).
+		Bool("force", opts.Force).
+		Msg("install started")
+
+	// Setup dependencies
+	formatter := getFormatter(cmd)
+	svc, err := getPluginService(cacheDir)
+	if err != nil {
+		logger.Error().
+			Err(err).
+			Str("error_code", plugin.ErrorCode(err)).
+			Msg("failed to initialize plugin service")
+		return err
+	}
+
 	// Call service layer
 	result, err := svc.Install(ctx, target, opts)
-
-	// Handle partial failure (exit code 8)
-	if handleErr := handlePartialFailure(err, formatter, func() error {
-		return printInstallResult(formatter, result)
-	}); handleErr != nil {
-		return handleErr
-	}
-
-	// Handle total failure
+	// Handle errors with structured logging
 	if err != nil {
+		logger.Error().
+			Err(err).
+			Str("error_code", plugin.ErrorCode(err)).
+			Msg("install failed")
+
+		// Handle partial failure (exit code 8)
+		if handleErr := handlePartialFailure(err, formatter, func() error {
+			return printInstallResult(formatter, result)
+		}); handleErr != nil {
+			return handleErr
+		}
+
+		// Handle total failure
 		return formatter.PrintError(err)
 	}
+
+	// Log success with result metrics
+	logger.Info().
+		Int("installed_count", result.InstalledCount).
+		Int("skipped_count", result.SkippedCount).
+		Int("failed_count", result.FailedCount).
+		Msg("install succeeded")
 
 	// Print results
 	return printInstallResult(formatter, result)
