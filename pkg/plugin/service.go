@@ -35,6 +35,7 @@ type ManifestInterface interface {
 	List() ([]*ManifestEntry, error)
 	Remove(id string) error
 	Get(id string) (*ManifestEntry, error)
+	Update(id string, entry *ManifestEntry) error
 }
 
 // DownloaderInterface defines the downloader operations needed by Service
@@ -1305,6 +1306,25 @@ func (s *Service) Verify(ctx context.Context, opts VerifyOptions) (*VerifyResult
 		result.Valid = true
 		successCount++
 		results = append(results, result)
+
+		// Update last_verified timestamp on successful verification
+		entry.LastVerified = time.Now()
+		if updateErr := s.manifest.Update(entry.ID, entry); updateErr != nil {
+			s.logger.Warn().
+				Err(updateErr).
+				Str("plugin_id", entry.ID).
+				Msg("Failed to update last_verified timestamp")
+			// Don't fail verification, just log warning
+		}
+	}
+
+	// Save manifest after all verifications
+	if err := s.manifest.Save(); err != nil {
+		s.logger.Error().
+			Err(err).
+			Msg("Failed to save manifest after verification")
+		// Don't fail the entire operation, just log error
+		// Verification results are still valid even if save fails
 	}
 
 	verifyResult := &VerifyResult{

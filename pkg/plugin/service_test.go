@@ -406,6 +406,7 @@ type mockManifestManager struct {
 	listFunc   func() ([]*ManifestEntry, error)
 	removeFunc func(id string) error
 	getFunc    func(id string) (*ManifestEntry, error)
+	updateFunc func(id string, entry *ManifestEntry) error
 }
 
 func (m *mockManifestManager) Add(entry *ManifestEntry) error {
@@ -441,6 +442,13 @@ func (m *mockManifestManager) Get(id string) (*ManifestEntry, error) {
 		return m.getFunc(id)
 	}
 	return nil, ErrPluginNotFound
+}
+
+func (m *mockManifestManager) Update(id string, entry *ManifestEntry) error {
+	if m.updateFunc != nil {
+		return m.updateFunc(id, entry)
+	}
+	return nil
 }
 
 func TestService_Install_ByPluginID(t *testing.T) {
