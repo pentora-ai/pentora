@@ -2,10 +2,7 @@ package plugin
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -13,7 +10,6 @@ import (
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/format"
 	"github.com/pentora-ai/pentora/pkg/plugin"
-	"github.com/pentora-ai/pentora/pkg/storage"
 )
 
 func newUpdateCommand() *cobra.Command {
@@ -44,56 +40,7 @@ new or updated plugins to the local cache. By default, it downloads all core plu
   # JSON output
   pentora plugin update --output json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-			defer cancel()
-
-			// Create formatter
-			outputMode := format.ParseMode(cmd.Flag("output").Value.String())
-			quiet, _ := cmd.Flags().GetBool("quiet")
-			noColor, _ := cmd.Flags().GetBool("no-color")
-			formatter := format.New(os.Stdout, os.Stderr, outputMode, quiet, !noColor)
-
-			// Use default cache dir if not specified
-			if cacheDir == "" {
-				storageConfig, err := storage.DefaultConfig()
-				if err != nil {
-					return fmt.Errorf("get storage config: %w", err)
-				}
-				cacheDir = filepath.Join(storageConfig.WorkspaceRoot, "plugins", "cache")
-			}
-
-			// Create service
-			svc, err := plugin.NewService(cacheDir)
-			if err != nil {
-				return fmt.Errorf("create plugin service: %w", err)
-			}
-
-			// Bind flags to options (centralized binding)
-			opts, err := bind.BindUpdateOptions(cmd)
-			if err != nil {
-				return err
-			}
-
-			// Call service layer
-			result, err := svc.Update(ctx, opts)
-
-			// Handle partial failure (exit code 8)
-			if err != nil && errors.Is(err, plugin.ErrPartialFailure) {
-				// Print result even on partial failure
-				if printErr := printUpdateResult(formatter, result, opts.DryRun); printErr != nil {
-					return printErr
-				}
-				// Exit with code 8 for partial failure
-				os.Exit(plugin.ExitCode(err))
-			}
-
-			// Handle total failure (exit code 1, 2, 4, 7, etc.)
-			if err != nil {
-				return formatter.PrintError(err)
-			}
-
-			// Print results
-			return printUpdateResult(formatter, result, opts.DryRun)
+			return executeUpdateCommand(cmd, cacheDir)
 		},
 	}
 
@@ -109,104 +56,70 @@ new or updated plugins to the local cache. By default, it downloads all core plu
 	return cmd
 }
 
-// printUpdateResult formats and prints the update result using the formatter
-func printUpdateResult(f format.Formatter, result *plugin.UpdateResult, dryRun bool) error {
-	// JSON mode: output complete result as JSON
-	if f.IsJSON() {
-		jsonResult := map[string]any{
-			"plugins":         result.Plugins,
-			"updated_count":   result.UpdatedCount,
-			"skipped_count":   result.SkippedCount,
-			"failed_count":    result.FailedCount,
-			"dry_run":         dryRun,
-			"success":         result.FailedCount == 0,
-			"partial_failure": result.FailedCount > 0 && result.UpdatedCount > 0,
-			"errors":          result.Errors,
-		}
-		return f.PrintJSON(jsonResult)
+// executeUpdateCommand orchestrates the update command execution
+func executeUpdateCommand(cmd *cobra.Command, cacheDir string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	// Setup dependencies
+	formatter := getFormatter(cmd)
+	svc, err := getPluginService(cacheDir)
+	if err != nil {
+		return err
 	}
 
-	// Table mode: use existing table + summary pattern
-	// Build table rows
-	var rows [][]string
-	for _, p := range result.Plugins {
-		categoryStr := ""
-		if len(p.Tags) > 0 {
-			categoryStr = p.Tags[0]
-		}
-		rows = append(rows, []string{p.Name, p.Version, categoryStr})
+	// Bind flags to options
+	opts, err := bind.BindUpdateOptions(cmd)
+	if err != nil {
+		return err
+	}
+
+	// Call service layer
+	result, err := svc.Update(ctx, opts)
+
+	// Handle partial failure (exit code 8)
+	if handleErr := handlePartialFailure(err, formatter, func() error {
+		return printUpdateResult(formatter, result, opts.DryRun)
+	}); handleErr != nil {
+		return handleErr
+	}
+
+	// Handle total failure
+	if err != nil {
+		return formatter.PrintError(err)
+	}
+
+	// Print results
+	return printUpdateResult(formatter, result, opts.DryRun)
+}
+
+// printUpdateResult formats and prints the update result
+func printUpdateResult(f format.Formatter, result *plugin.UpdateResult, dryRun bool) error {
+	if f.IsJSON() {
+		return printUpdateJSON(f, result, dryRun)
 	}
 
 	// Dry run mode
 	if dryRun {
-		if len(rows) > 0 {
-			if err := f.PrintSummary(fmt.Sprintf("[DRY RUN] Would download %d plugin(s):", len(result.Plugins))); err != nil {
-				return err
-			}
-			if err := f.PrintTable([]string{"Name", "Version", "Category"}, rows); err != nil {
-				return err
-			}
-		}
-		return f.PrintSummary("Dry run completed (no changes made)")
+		return printUpdateDryRun(f, result)
 	}
 
-	// Print table if plugins were processed
+	// Print table
+	rows := buildPluginTable(result.Plugins)
 	if len(rows) > 0 {
 		if err := f.PrintTable([]string{"Name", "Version", "Category"}, rows); err != nil {
 			return err
 		}
 	}
 
-	// Summary
-	summary := fmt.Sprintf("Update Summary: Downloaded: %d, Skipped: %d", result.UpdatedCount, result.SkippedCount)
-	if result.FailedCount > 0 {
-		summary += fmt.Sprintf(", Failed: %d", result.FailedCount)
-	}
-	summary += fmt.Sprintf(", Total in cache: %d", result.UpdatedCount+result.SkippedCount)
-
-	if err := f.PrintSummary(summary); err != nil {
+	// Print summary
+	if err := f.PrintSummary(buildUpdateSummary(result)); err != nil {
 		return err
 	}
 
-	// Print errors if any (show first 5, truncate rest)
-	// nolint:dupl // Intentional code reuse across install/update/uninstall commands
-	if len(result.Errors) > 0 {
-		if err := f.PrintSummary("\nFailed plugins:"); err != nil {
-			return err
-		}
-
-		maxErrors := 5
-		for i, e := range result.Errors {
-			if i >= maxErrors {
-				remaining := len(result.Errors) - maxErrors
-				if err := f.PrintSummary(fmt.Sprintf("  ... and %d more (use --output json for full list)", remaining)); err != nil {
-					return err
-				}
-				break
-			}
-			if err := f.PrintSummary(fmt.Sprintf("  - %s: %s", e.PluginID, e.Error)); err != nil {
-				return err
-			}
-		}
-
-		// Print suggestions
-		if err := f.PrintSummary("\n💡 Suggestions:"); err != nil {
-			return err
-		}
-
-		// Collect unique suggestions
-		suggestions := make(map[string]bool)
-		for _, e := range result.Errors {
-			if e.Suggestion != "" {
-				suggestions[e.Suggestion] = true
-			}
-		}
-
-		for suggestion := range suggestions {
-			if err := f.PrintSummary(fmt.Sprintf("  → %s", suggestion)); err != nil {
-				return err
-			}
-		}
+	// Print errors if any
+	if err := printErrorList(f, result.Errors); err != nil {
+		return err
 	}
 
 	// Success message
@@ -215,4 +128,43 @@ func printUpdateResult(f format.Formatter, result *plugin.UpdateResult, dryRun b
 	}
 
 	return nil
+}
+
+// printUpdateJSON outputs update result as JSON
+func printUpdateJSON(f format.Formatter, result *plugin.UpdateResult, dryRun bool) error {
+	jsonResult := map[string]any{
+		"plugins":         result.Plugins,
+		"updated_count":   result.UpdatedCount,
+		"skipped_count":   result.SkippedCount,
+		"failed_count":    result.FailedCount,
+		"dry_run":         dryRun,
+		"success":         result.FailedCount == 0,
+		"partial_failure": result.FailedCount > 0 && result.UpdatedCount > 0,
+		"errors":          result.Errors,
+	}
+	return f.PrintJSON(jsonResult)
+}
+
+// printUpdateDryRun prints dry run output
+func printUpdateDryRun(f format.Formatter, result *plugin.UpdateResult) error {
+	rows := buildPluginTable(result.Plugins)
+	if len(rows) > 0 {
+		if err := f.PrintSummary(fmt.Sprintf("[DRY RUN] Would download %d plugin(s):", len(result.Plugins))); err != nil {
+			return err
+		}
+		if err := f.PrintTable([]string{"Name", "Version", "Category"}, rows); err != nil {
+			return err
+		}
+	}
+	return f.PrintSummary("Dry run completed (no changes made)")
+}
+
+// buildUpdateSummary builds the summary message for update results
+func buildUpdateSummary(result *plugin.UpdateResult) string {
+	summary := fmt.Sprintf("Update Summary: Downloaded: %d, Skipped: %d", result.UpdatedCount, result.SkippedCount)
+	if result.FailedCount > 0 {
+		summary += fmt.Sprintf(", Failed: %d", result.FailedCount)
+	}
+	summary += fmt.Sprintf(", Total in cache: %d", result.UpdatedCount+result.SkippedCount)
+	return summary
 }
