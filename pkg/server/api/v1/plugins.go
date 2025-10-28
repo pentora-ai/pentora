@@ -339,8 +339,33 @@ func InstallPluginHandler(pluginService PluginService, config api.Config) http.H
 //	}
 func ListPluginsHandler(pluginService PluginService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Setup structured logger
+		logger := log.With().
+			Str("component", "api.plugins").
+			Str("op", "list").
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Logger()
+
+		start := time.Now()
+		var statusCode int
+		defer func() {
+			logger.Info().
+				Int("status", statusCode).
+				Dur("duration_ms", time.Since(start)).
+				Msg("request completed")
+		}()
+
+		// Log operation start
+		logger.Info().Msg("list started")
+
 		plugins, err := pluginService.List(r.Context())
 		if err != nil {
+			statusCode = plugin.HTTPStatus(err)
+			logger.Error().
+				Err(err).
+				Str("error_code", plugin.ErrorCode(err)).
+				Msg("list failed")
 			api.WriteError(w, r, err)
 			return
 		}
@@ -364,7 +389,13 @@ func ListPluginsHandler(pluginService PluginService) http.HandlerFunc {
 			Count:   len(dtos),
 		}
 
-		api.WriteJSON(w, http.StatusOK, resp)
+		// Log success with metrics
+		statusCode = http.StatusOK
+		logger.Info().
+			Int("count", len(dtos)).
+			Msg("list succeeded")
+
+		api.WriteJSON(w, statusCode, resp)
 	}
 }
 
@@ -389,14 +420,46 @@ func ListPluginsHandler(pluginService PluginService) http.HandlerFunc {
 // Returns 404 if plugin not found.
 func GetPluginHandler(pluginService PluginService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Setup structured logger
+		logger := log.With().
+			Str("component", "api.plugins").
+			Str("op", "get").
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Logger()
+
+		start := time.Now()
+		var statusCode int
+		defer func() {
+			logger.Info().
+				Int("status", statusCode).
+				Dur("duration_ms", time.Since(start)).
+				Msg("request completed")
+		}()
+
 		id := r.PathValue("id")
 		if id == "" {
-			api.WriteJSONError(w, http.StatusBadRequest, "Bad Request", "PLUGIN_ID_REQUIRED", "plugin id is required")
+			statusCode = http.StatusBadRequest
+			logger.Error().
+				Str("error_code", "PLUGIN_ID_REQUIRED").
+				Msg("validation failed: plugin id required")
+			api.WriteJSONError(w, statusCode, "Bad Request", "PLUGIN_ID_REQUIRED", "plugin id is required")
 			return
 		}
 
+		// Log operation start with request snapshot
+		logger.Info().
+			Str("plugin_id", id).
+			Msg("get started")
+
 		info, err := pluginService.GetInfo(r.Context(), id)
 		if err != nil {
+			statusCode = plugin.HTTPStatus(err)
+			logger.Error().
+				Err(err).
+				Str("error_code", plugin.ErrorCode(err)).
+				Str("plugin_id", id).
+				Msg("get failed")
 			// Use WriteError which will automatically map plugin errors to correct HTTP status
 			api.WriteError(w, r, err)
 			return
@@ -413,7 +476,15 @@ func GetPluginHandler(pluginService PluginService) http.HandlerFunc {
 			Tags:     info.Tags,
 		}
 
-		api.WriteJSON(w, http.StatusOK, dto)
+		// Log success
+		statusCode = http.StatusOK
+		logger.Info().
+			Str("plugin_id", info.ID).
+			Str("plugin_name", info.Name).
+			Str("version", info.Version).
+			Msg("get succeeded")
+
+		api.WriteJSON(w, statusCode, dto)
 	}
 }
 
