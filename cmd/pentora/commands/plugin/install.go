@@ -99,6 +99,18 @@ You can install entire categories (ssh, http, tls, database, network) or specifi
 // printInstallResult formats and prints the install result using the formatter
 func printInstallResult(f format.Formatter, result *plugin.InstallResult) error {
 	// JSON mode: output complete result as JSON
+	if f.IsJSON() {
+		jsonResult := map[string]any{
+			"plugins":         result.Plugins,
+			"installed_count": result.InstalledCount,
+			"skipped_count":   result.SkippedCount,
+			"failed_count":    result.FailedCount,
+			"success":         result.FailedCount == 0,
+		}
+		return f.PrintJSON(jsonResult)
+	}
+
+	// Table mode: use existing table + summary pattern
 	if f == nil {
 		return fmt.Errorf("formatter is nil")
 	}

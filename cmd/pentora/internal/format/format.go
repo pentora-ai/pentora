@@ -37,6 +37,9 @@ type Formatter interface {
 
 	// PrintError outputs an error to stderr (or JSON to stdout in JSON mode)
 	PrintError(err error) error
+
+	// IsJSON returns true if the formatter is in JSON mode
+	IsJSON() bool
 }
 
 // formatter implements the Formatter interface
@@ -156,6 +159,11 @@ func (f *formatter) PrintError(err error) error {
 	}
 
 	return writeErr
+}
+
+// IsJSON returns true if the formatter is in JSON mode
+func (f *formatter) IsJSON() bool {
+	return f.mode == ModeJSON
 }
 
 // ValidateMode checks if the output mode is valid

@@ -83,6 +83,16 @@ found in the plugin cache directory.`,
 
 // printListResult formats and prints the list result using the formatter
 func printListResult(f format.Formatter, plugins []*plugin.PluginInfo, verbose bool) error {
+	// JSON mode: output complete structured result
+	if f.IsJSON() {
+		result := map[string]any{
+			"plugins": plugins,
+			"count":   len(plugins),
+		}
+		return f.PrintJSON(result)
+	}
+
+	// Table mode: use existing table + summary pattern
 	if len(plugins) == 0 {
 		if err := f.PrintSummary("No plugins installed."); err != nil {
 			return err
