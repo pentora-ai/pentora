@@ -298,21 +298,19 @@ func TestPluginAPIErrorCases(t *testing.T) {
 		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
-	t.Run("Update with invalid JSON is ignored (empty body behavior)", func(t *testing.T) {
-		// NOTE: Update endpoint ignores JSON decode errors intentionally
-		// because empty body is valid (updates all plugins)
-		// Invalid JSON is treated the same as empty body
+	t.Run("Update with invalid JSON returns 400", func(t *testing.T) {
+		// Invalid JSON should be rejected with 400 Bad Request
 		invalidJSON := bytes.NewReader([]byte(`{"category": invalid}`))
 		resp := makeRequest(t, "POST", baseURL+"/api/v1/plugins/update", invalidJSON)
 		defer resp.Body.Close()
 
-		// Should succeed (updates available plugins from remote)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
+		// Should fail with Bad Request
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
-		var updateResp v1.UpdatePluginsResponse
-		require.NoError(t, json.NewDecoder(resp.Body).Decode(&updateResp))
-		// May update plugins if available in remote repository
-		require.GreaterOrEqual(t, updateResp.UpdatedCount+updateResp.SkippedCount, 0)
+		var errResp map[string]interface{}
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&errResp))
+		require.Contains(t, errResp, "error")
+		require.Equal(t, "INVALID_REQUEST_BODY", errResp["code"])
 	})
 
 	_ = serverApp
