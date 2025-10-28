@@ -78,6 +78,9 @@ type Service struct {
 	// Plugin sources (default or custom)
 	sources []PluginSource
 
+	// Configuration (timeouts, limits)
+	config ServiceConfig
+
 	// Optional dependencies (injected via fluent API)
 	storage storage.Backend
 	logger  zerolog.Logger
@@ -130,6 +133,7 @@ func NewService(cacheDir string) (*Service, error) {
 		cache:    cache,
 		manifest: manifest,
 		sources:  defaultSources(),
+		config:   DefaultConfig(),
 		logger:   log.Logger,
 	}
 
@@ -165,6 +169,20 @@ func (s *Service) WithStorage(backend storage.Backend) *Service {
 //	svc := plugin.NewService(cacheDir).WithLogger(customLogger)
 func (s *Service) WithLogger(logger zerolog.Logger) *Service {
 	s.logger = logger
+	return s
+}
+
+// WithConfig injects custom service configuration (timeouts, limits).
+//
+// Example:
+//
+//	cfg := plugin.ServiceConfig{
+//	    InstallTimeout: 120 * time.Second,
+//	    UpdateTimeout:  120 * time.Second,
+//	}
+//	svc := plugin.NewService(cacheDir).WithConfig(cfg)
+func (s *Service) WithConfig(config ServiceConfig) *Service {
+	s.config = config
 	return s
 }
 
@@ -261,6 +279,13 @@ func defaultSources() []PluginSource {
 //
 //nolint:gocyclo // Complexity from business logic (target resolution, filtering), not logging
 func (s *Service) Install(ctx context.Context, target string, opts InstallOptions) (*InstallResult, error) {
+	// Apply timeout if not already set
+	if _, hasDeadline := ctx.Deadline(); !hasDeadline && s.config.InstallTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, s.config.InstallTimeout)
+		defer cancel()
+	}
+
 	start := time.Now()
 
 	// Validate inputs (defense-in-depth)
@@ -621,6 +646,13 @@ func pluginInfoFromManifestEntry(entry *PluginManifestEntry) *PluginInfo {
 //
 //nolint:gocyclo // Complexity from business logic (filtering, downloading), not logging
 func (s *Service) Update(ctx context.Context, opts UpdateOptions) (*UpdateResult, error) {
+	// Apply timeout if not already set
+	if _, hasDeadline := ctx.Deadline(); !hasDeadline && s.config.UpdateTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, s.config.UpdateTimeout)
+		defer cancel()
+	}
+
 	start := time.Now()
 
 	// Validate inputs (defense-in-depth)
@@ -861,6 +893,13 @@ func (s *Service) Update(ctx context.Context, opts UpdateOptions) (*UpdateResult
 //
 //nolint:gocyclo // Complexity from business logic (mode validation, filtering), not logging
 func (s *Service) Uninstall(ctx context.Context, target string, opts UninstallOptions) (*UninstallResult, error) {
+	// Apply timeout if not already set
+	if _, hasDeadline := ctx.Deadline(); !hasDeadline && s.config.UninstallTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, s.config.UninstallTimeout)
+		defer cancel()
+	}
+
 	start := time.Now()
 
 	// Validate inputs (defense-in-depth)
@@ -1143,6 +1182,13 @@ func (s *Service) filterManifestByCategory(entries []*ManifestEntry, category Ca
 //	}
 //	fmt.Printf("Found %d installed plugins\n", len(plugins))
 func (s *Service) List(ctx context.Context) ([]*PluginInfo, error) {
+	// Apply timeout if not already set
+	if _, hasDeadline := ctx.Deadline(); !hasDeadline && s.config.ListTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, s.config.ListTimeout)
+		defer cancel()
+	}
+
 	start := time.Now()
 
 	s.logger.Debug().
@@ -1228,6 +1274,13 @@ func (s *Service) List(ctx context.Context) ([]*PluginInfo, error) {
 //	}
 //	fmt.Printf("Plugin: %s v%s (Size: %d bytes)\n", info.Name, info.Version, info.CacheSize)
 func (s *Service) GetInfo(ctx context.Context, pluginID string) (*PluginInfo, error) {
+	// Apply timeout if not already set
+	if _, hasDeadline := ctx.Deadline(); !hasDeadline && s.config.GetInfoTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, s.config.GetInfoTimeout)
+		defer cancel()
+	}
+
 	start := time.Now()
 
 	// Validate inputs (defense-in-depth)
@@ -1394,6 +1447,13 @@ func calculateDirSize(path string) (int64, error) {
 //	}
 //	fmt.Printf("Would free %d bytes\n", result.Freed)
 func (s *Service) Clean(ctx context.Context, opts CleanOptions) (*CleanResult, error) {
+	// Apply timeout if not already set
+	if _, hasDeadline := ctx.Deadline(); !hasDeadline && s.config.CleanTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, s.config.CleanTimeout)
+		defer cancel()
+	}
+
 	start := time.Now()
 
 	// Check context cancellation
@@ -1500,6 +1560,13 @@ func (s *Service) Clean(ctx context.Context, opts CleanOptions) (*CleanResult, e
 //	}
 //	fmt.Printf("Verified %d plugins, %d failed\n", result.TotalCount, result.FailedCount)
 func (s *Service) Verify(ctx context.Context, opts VerifyOptions) (*VerifyResult, error) {
+	// Apply timeout if not already set
+	if _, hasDeadline := ctx.Deadline(); !hasDeadline && s.config.VerifyTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, s.config.VerifyTimeout)
+		defer cancel()
+	}
+
 	start := time.Now()
 
 	// Check context cancellation
