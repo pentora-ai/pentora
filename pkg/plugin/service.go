@@ -258,6 +258,8 @@ func defaultSources() []PluginSource {
 //	    return err
 //	}
 //	fmt.Printf("Installed %d plugins\n", result.InstalledCount)
+//
+//nolint:gocyclo // Complexity from business logic (target resolution, filtering), not logging
 func (s *Service) Install(ctx context.Context, target string, opts InstallOptions) (*InstallResult, error) {
 	start := time.Now()
 
@@ -616,6 +618,8 @@ func pluginInfoFromManifestEntry(entry *PluginManifestEntry) *PluginInfo {
 //
 //	result, err := svc.Update(ctx, UpdateOptions{Category: CategorySSH})
 //	fmt.Printf("Updated %d plugins\n", result.UpdatedCount)
+//
+//nolint:gocyclo // Complexity from business logic (filtering, downloading), not logging
 func (s *Service) Update(ctx context.Context, opts UpdateOptions) (*UpdateResult, error) {
 	start := time.Now()
 
@@ -854,6 +858,8 @@ func (s *Service) Update(ctx context.Context, opts UpdateOptions) (*UpdateResult
 //
 //	// Uninstall all plugins
 //	result, err := svc.Uninstall(ctx, "", UninstallOptions{All: true})
+//
+//nolint:gocyclo // Complexity from business logic (mode validation, filtering), not logging
 func (s *Service) Uninstall(ctx context.Context, target string, opts UninstallOptions) (*UninstallResult, error) {
 	start := time.Now()
 
