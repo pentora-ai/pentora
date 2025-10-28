@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/pentora-ai/pentora/pkg/plugin"
+	"github.com/pentora-ai/pentora/pkg/server/api"
 )
 
 // mockPluginService implements PluginService for testing
@@ -85,7 +86,7 @@ func TestInstallPluginHandler_Success(t *testing.T) {
 		},
 	}
 
-	handler := InstallPluginHandler(mockSvc)
+	handler := InstallPluginHandler(mockSvc, api.DefaultConfig())
 
 	reqBody := InstallPluginRequest{
 		Target: "ssh-weak-cipher",
@@ -119,7 +120,7 @@ func TestInstallPluginHandler_Success(t *testing.T) {
 // TestInstallPluginHandler_InvalidJSON tests handler with malformed JSON
 func TestInstallPluginHandler_InvalidJSON(t *testing.T) {
 	mockSvc := &mockPluginService{}
-	handler := InstallPluginHandler(mockSvc)
+	handler := InstallPluginHandler(mockSvc, api.DefaultConfig())
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/plugins/install", bytes.NewReader([]byte(`{"target": invalid}`)))
 	req.Header.Set("Content-Type", "application/json")
@@ -134,7 +135,7 @@ func TestInstallPluginHandler_InvalidJSON(t *testing.T) {
 // TestInstallPluginHandler_EmptyTarget tests handler with empty target
 func TestInstallPluginHandler_EmptyTarget(t *testing.T) {
 	mockSvc := &mockPluginService{}
-	handler := InstallPluginHandler(mockSvc)
+	handler := InstallPluginHandler(mockSvc, api.DefaultConfig())
 
 	reqBody := InstallPluginRequest{
 		Target: "",
@@ -156,7 +157,7 @@ func TestInstallPluginHandler_PluginNotFound(t *testing.T) {
 	mockSvc := &mockPluginService{
 		installError: plugin.ErrPluginNotFound,
 	}
-	handler := InstallPluginHandler(mockSvc)
+	handler := InstallPluginHandler(mockSvc, api.DefaultConfig())
 
 	reqBody := InstallPluginRequest{
 		Target: "nonexistent-plugin",
@@ -178,7 +179,7 @@ func TestInstallPluginHandler_ServiceError(t *testing.T) {
 	mockSvc := &mockPluginService{
 		installError: errors.New("cache failure"),
 	}
-	handler := InstallPluginHandler(mockSvc)
+	handler := InstallPluginHandler(mockSvc, api.DefaultConfig())
 
 	reqBody := InstallPluginRequest{
 		Target: "ssh-weak-cipher",
@@ -198,7 +199,7 @@ func TestInstallPluginHandler_ServiceError(t *testing.T) {
 // TestInstallPluginHandler_InvalidSource tests handler with invalid source
 func TestInstallPluginHandler_InvalidSource(t *testing.T) {
 	mockSvc := &mockPluginService{}
-	handler := InstallPluginHandler(mockSvc)
+	handler := InstallPluginHandler(mockSvc, api.DefaultConfig())
 
 	reqBody := InstallPluginRequest{
 		Target: "ssh-weak-cipher",
@@ -372,7 +373,7 @@ func TestUninstallPluginHandler_Success(t *testing.T) {
 			FailedCount:  0,
 		},
 	}
-	handler := UninstallPluginHandler(mockSvc)
+	handler := UninstallPluginHandler(mockSvc, api.DefaultConfig())
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/plugins/ssh-weak-cipher", nil)
 	req.SetPathValue("id", "ssh-weak-cipher")
@@ -395,7 +396,7 @@ func TestUninstallPluginHandler_NotFound(t *testing.T) {
 	mockSvc := &mockPluginService{
 		uninstallError: plugin.ErrPluginNotFound,
 	}
-	handler := UninstallPluginHandler(mockSvc)
+	handler := UninstallPluginHandler(mockSvc, api.DefaultConfig())
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/plugins/nonexistent", nil)
 	req.SetPathValue("id", "nonexistent")
@@ -412,7 +413,7 @@ func TestUninstallPluginHandler_ServiceError(t *testing.T) {
 	mockSvc := &mockPluginService{
 		uninstallError: errors.New("filesystem error"),
 	}
-	handler := UninstallPluginHandler(mockSvc)
+	handler := UninstallPluginHandler(mockSvc, api.DefaultConfig())
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/plugins/ssh-weak-cipher", nil)
 	req.SetPathValue("id", "ssh-weak-cipher")
@@ -448,7 +449,7 @@ func TestUpdatePluginsHandler_Success(t *testing.T) {
 			Errors: []plugin.PluginError{},
 		},
 	}
-	handler := UpdatePluginsHandler(mockSvc)
+	handler := UpdatePluginsHandler(mockSvc, api.DefaultConfig())
 
 	reqBody := UpdatePluginsRequest{
 		Category: "",
@@ -493,7 +494,7 @@ func TestUpdatePluginsHandler_WithCategoryFilter(t *testing.T) {
 			Errors: []plugin.PluginError{},
 		},
 	}
-	handler := UpdatePluginsHandler(mockSvc)
+	handler := UpdatePluginsHandler(mockSvc, api.DefaultConfig())
 
 	reqBody := UpdatePluginsRequest{
 		Category: "ssh",
@@ -525,7 +526,7 @@ func TestUpdatePluginsHandler_EmptyBody(t *testing.T) {
 			Errors:       []plugin.PluginError{},
 		},
 	}
-	handler := UpdatePluginsHandler(mockSvc)
+	handler := UpdatePluginsHandler(mockSvc, api.DefaultConfig())
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/plugins/update", nil)
 	w := httptest.NewRecorder()
@@ -545,7 +546,7 @@ func TestUpdatePluginsHandler_ServiceError(t *testing.T) {
 	mockSvc := &mockPluginService{
 		updateError: errors.New("network error"),
 	}
-	handler := UpdatePluginsHandler(mockSvc)
+	handler := UpdatePluginsHandler(mockSvc, api.DefaultConfig())
 
 	reqBody := UpdatePluginsRequest{}
 	bodyBytes, _ := json.Marshal(reqBody)
@@ -563,7 +564,7 @@ func TestUpdatePluginsHandler_ServiceError(t *testing.T) {
 // TestUpdatePluginsHandler_InvalidCategory tests handler with invalid category
 func TestUpdatePluginsHandler_InvalidCategory(t *testing.T) {
 	mockSvc := &mockPluginService{}
-	handler := UpdatePluginsHandler(mockSvc)
+	handler := UpdatePluginsHandler(mockSvc, api.DefaultConfig())
 
 	reqBody := UpdatePluginsRequest{
 		Category: "invalid-category", // Invalid category
@@ -584,7 +585,7 @@ func TestUpdatePluginsHandler_InvalidCategory(t *testing.T) {
 // TestUpdatePluginsHandler_InvalidSource tests handler with invalid source
 func TestUpdatePluginsHandler_InvalidSource(t *testing.T) {
 	mockSvc := &mockPluginService{}
-	handler := UpdatePluginsHandler(mockSvc)
+	handler := UpdatePluginsHandler(mockSvc, api.DefaultConfig())
 
 	reqBody := UpdatePluginsRequest{
 		Source: "custom", // Invalid source

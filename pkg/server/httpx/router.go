@@ -33,11 +33,11 @@ func NewRouter(cfg config.ServerConfig, deps *api.Deps) *http.ServeMux {
 		if deps.PluginService != nil {
 			// Type assert to v1.PluginService (the actual type will be *plugin.Service)
 			if pluginSvc, ok := deps.PluginService.(v1.PluginService); ok {
-				mux.HandleFunc("POST /api/v1/plugins/install", v1.InstallPluginHandler(pluginSvc))
-				mux.HandleFunc("POST /api/v1/plugins/update", v1.UpdatePluginsHandler(pluginSvc))
+				mux.HandleFunc("POST /api/v1/plugins/install", v1.InstallPluginHandler(pluginSvc, deps.Config))
+				mux.HandleFunc("POST /api/v1/plugins/update", v1.UpdatePluginsHandler(pluginSvc, deps.Config))
 				mux.HandleFunc("GET /api/v1/plugins", v1.ListPluginsHandler(pluginSvc))
 				mux.HandleFunc("GET /api/v1/plugins/{id}", v1.GetPluginHandler(pluginSvc))
-				mux.HandleFunc("DELETE /api/v1/plugins/{id}", v1.UninstallPluginHandler(pluginSvc))
+				mux.HandleFunc("DELETE /api/v1/plugins/{id}", v1.UninstallPluginHandler(pluginSvc, deps.Config))
 			}
 		}
 	}

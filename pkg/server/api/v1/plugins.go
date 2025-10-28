@@ -168,9 +168,17 @@ type PluginInfoDTO struct {
 //	  "errors": []
 //	}
 //
-// Returns 400 for invalid requests, 500 for server errors.
-func InstallPluginHandler(pluginService PluginService) http.HandlerFunc {
+// Returns 400 for invalid requests, 500 for server errors, 504 for timeout.
+func InstallPluginHandler(pluginService PluginService, config api.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Apply handler-level timeout (only if request context doesn't have deadline)
+		ctx := r.Context()
+		if _, hasDeadline := ctx.Deadline(); !hasDeadline && config.HandlerTimeout > 0 {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(ctx, config.HandlerTimeout)
+			defer cancel()
+		}
+
 		// Defense-in-depth: Limit request body size (2MB)
 		r.Body = http.MaxBytesReader(w, r.Body, plugin.MaxRequestBodySize)
 
@@ -200,9 +208,15 @@ func InstallPluginHandler(pluginService PluginService) http.HandlerFunc {
 			Source: req.Source,
 		}
 
-		// Call service
-		result, err := pluginService.Install(r.Context(), req.Target, opts)
+		// Call service with timeout context
+		result, err := pluginService.Install(ctx, req.Target, opts)
 		if err != nil {
+			// Check if timeout occurred
+			if ctx.Err() == context.DeadlineExceeded {
+				api.WriteJSONError(w, http.StatusGatewayTimeout, "Gateway Timeout", "TIMEOUT",
+					"operation timed out after "+config.HandlerTimeout.String())
+				return
+			}
 			api.WriteError(w, r, err)
 			return
 		}
@@ -357,9 +371,17 @@ func GetPluginHandler(pluginService PluginService) http.HandlerFunc {
 //	  "removed_count": 1
 //	}
 //
-// Returns 404 if plugin not found, 500 for server errors.
-func UninstallPluginHandler(pluginService PluginService) http.HandlerFunc {
+// Returns 404 if plugin not found, 500 for server errors, 504 for timeout.
+func UninstallPluginHandler(pluginService PluginService, config api.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Apply handler-level timeout (only if request context doesn't have deadline)
+		ctx := r.Context()
+		if _, hasDeadline := ctx.Deadline(); !hasDeadline && config.HandlerTimeout > 0 {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(ctx, config.HandlerTimeout)
+			defer cancel()
+		}
+
 		id := r.PathValue("id")
 		if id == "" {
 			api.WriteJSONError(w, http.StatusBadRequest, "Bad Request", "PLUGIN_ID_REQUIRED", "plugin id is required")
@@ -371,8 +393,14 @@ func UninstallPluginHandler(pluginService PluginService) http.HandlerFunc {
 			All: false,
 		}
 
-		result, err := pluginService.Uninstall(r.Context(), id, opts)
+		result, err := pluginService.Uninstall(ctx, id, opts)
 		if err != nil {
+			// Check if timeout occurred
+			if ctx.Err() == context.DeadlineExceeded {
+				api.WriteJSONError(w, http.StatusGatewayTimeout, "Gateway Timeout", "TIMEOUT",
+					"operation timed out after "+config.HandlerTimeout.String())
+				return
+			}
 			// Use WriteError which will automatically map plugin errors to correct HTTP status
 			api.WriteError(w, r, err)
 			return
@@ -407,8 +435,16 @@ func UninstallPluginHandler(pluginService PluginService) http.HandlerFunc {
 //	  "plugins": [{"id": "ssh-weak-cipher", "name": "...", ...}],
 //	  "errors": []
 //	}
-func UpdatePluginsHandler(pluginService PluginService) http.HandlerFunc {
+func UpdatePluginsHandler(pluginService PluginService, config api.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Apply handler-level timeout (only if request context doesn't have deadline)
+		ctx := r.Context()
+		if _, hasDeadline := ctx.Deadline(); !hasDeadline && config.HandlerTimeout > 0 {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(ctx, config.HandlerTimeout)
+			defer cancel()
+		}
+
 		// Defense-in-depth: Limit request body size (2MB)
 		r.Body = http.MaxBytesReader(w, r.Body, plugin.MaxRequestBodySize)
 
@@ -444,9 +480,15 @@ func UpdatePluginsHandler(pluginService PluginService) http.HandlerFunc {
 			opts.Category = plugin.Category(req.Category)
 		}
 
-		// Call service
-		result, err := pluginService.Update(r.Context(), opts)
+		// Call service with timeout context
+		result, err := pluginService.Update(ctx, opts)
 		if err != nil {
+			// Check if timeout occurred
+			if ctx.Err() == context.DeadlineExceeded {
+				api.WriteJSONError(w, http.StatusGatewayTimeout, "Gateway Timeout", "TIMEOUT",
+					"operation timed out after "+config.HandlerTimeout.String())
+				return
+			}
 			api.WriteError(w, r, err)
 			return
 		}

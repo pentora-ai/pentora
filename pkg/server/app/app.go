@@ -43,6 +43,7 @@ func New(ctx context.Context, cfg config.ServerConfig, deps *Deps) (*App, error)
 		Storage:       deps.Storage,
 		Workspace:     deps.Workspace,
 		PluginService: deps.PluginService,
+		Config:        api.DefaultConfig(), // Use default API config (30s handler timeout)
 		Ready:         ready,
 	}
 
