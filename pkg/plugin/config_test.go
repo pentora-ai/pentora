@@ -8,8 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pentora-ai/pentora/pkg/plugin"
 	"github.com/stretchr/testify/require"
+
+	"github.com/pentora-ai/pentora/pkg/plugin"
 )
 
 func TestDefaultConfig(t *testing.T) {

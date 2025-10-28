@@ -123,7 +123,7 @@ shutdown to drain in-flight requests and complete running jobs.`,
 			// Create plugin service for API endpoints
 			// Use storage config's WorkspaceRoot for plugin cache
 			pluginCacheDir := filepath.Join(storageConfig.WorkspaceRoot, "plugins", "cache")
-			pluginService, err := plugin.NewService(pluginCacheDir)
+			pluginService, err := plugin.NewService(plugin.WithCacheDir(pluginCacheDir))
 			if err != nil {
 				return fmt.Errorf("create plugin service: %w", err)
 			}

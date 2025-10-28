@@ -49,10 +49,12 @@ func TestPluginAPIFullLifecycle(t *testing.T) {
 	pluginCacheDir := filepath.Join(tmpDir, "plugins", "cache")
 
 	// Create plugin service with Nop logger to suppress logs in tests
-	pluginService, err := plugin.NewService(pluginCacheDir)
-	require.NoError(t, err)
 	nopLogger := zerolog.Nop()
-	pluginService = pluginService.WithLogger(nopLogger)
+	pluginService, err := plugin.NewService(
+		plugin.WithCacheDir(pluginCacheDir),
+		plugin.WithLogger(nopLogger),
+	)
+	require.NoError(t, err)
 
 	// Start server
 	port := 18080
@@ -199,10 +201,12 @@ func TestPluginAPICategoryInstall(t *testing.T) {
 	pluginCacheDir := filepath.Join(tmpDir, "plugins", "cache")
 
 	// Create plugin service with Nop logger to suppress logs in tests
-	pluginService, err := plugin.NewService(pluginCacheDir)
-	require.NoError(t, err)
 	nopLogger := zerolog.Nop()
-	pluginService = pluginService.WithLogger(nopLogger)
+	pluginService, err := plugin.NewService(
+		plugin.WithCacheDir(pluginCacheDir),
+		plugin.WithLogger(nopLogger),
+	)
+	require.NoError(t, err)
 
 	// Start server
 	port := 18081
@@ -254,10 +258,12 @@ func TestPluginAPIErrorCases(t *testing.T) {
 	pluginCacheDir := filepath.Join(tmpDir, "plugins", "cache")
 
 	// Create plugin service with Nop logger to suppress logs in tests
-	pluginService, err := plugin.NewService(pluginCacheDir)
-	require.NoError(t, err)
 	nopLogger := zerolog.Nop()
-	pluginService = pluginService.WithLogger(nopLogger)
+	pluginService, err := plugin.NewService(
+		plugin.WithCacheDir(pluginCacheDir),
+		plugin.WithLogger(nopLogger),
+	)
+	require.NoError(t, err)
 
 	// Start server
 	port := 18082
@@ -322,10 +328,12 @@ func TestPluginAPIUpdateOperations(t *testing.T) {
 	pluginCacheDir := filepath.Join(tmpDir, "plugins", "cache")
 
 	// Create plugin service with Nop logger to suppress logs in tests
-	pluginService, err := plugin.NewService(pluginCacheDir)
-	require.NoError(t, err)
 	nopLogger := zerolog.Nop()
-	pluginService = pluginService.WithLogger(nopLogger)
+	pluginService, err := plugin.NewService(
+		plugin.WithCacheDir(pluginCacheDir),
+		plugin.WithLogger(nopLogger),
+	)
+	require.NoError(t, err)
 
 	// Start server
 	port := 18083
