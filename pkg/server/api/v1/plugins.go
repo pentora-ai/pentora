@@ -497,6 +497,23 @@ func UninstallPluginHandler(pluginService PluginService, config api.Config) http
 //	}
 func UpdatePluginsHandler(pluginService PluginService, config api.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Setup structured logger
+		logger := log.With().
+			Str("component", "api.plugins").
+			Str("op", "update").
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Logger()
+
+		start := time.Now()
+		var statusCode int
+		defer func() {
+			logger.Info().
+				Int("status", statusCode).
+				Dur("duration_ms", time.Since(start)).
+				Msg("request completed")
+		}()
+
 		// Apply handler-level timeout (only if request context doesn't have deadline)
 		ctx := r.Context()
 		if _, hasDeadline := ctx.Deadline(); !hasDeadline && config.HandlerTimeout > 0 {
@@ -510,12 +527,33 @@ func UpdatePluginsHandler(pluginService PluginService, config api.Config) http.H
 
 		var req UpdatePluginsRequest
 		// Empty body is OK for update (updates all plugins)
-		_ = json.NewDecoder(r.Body).Decode(&req)
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err.Error() != "EOF" {
+			statusCode = http.StatusBadRequest
+			logger.Error().
+				Err(err).
+				Str("error_code", "INVALID_REQUEST_BODY").
+				Msg("failed to decode request")
+			api.WriteJSONError(w, statusCode, "Bad Request", "INVALID_REQUEST_BODY", "invalid request body: "+err.Error())
+			return
+		}
+
+		// Log request snapshot
+		logger.Info().
+			Str("source", req.Source).
+			Str("category", req.Category).
+			Bool("dry_run", req.DryRun).
+			Bool("force", req.Force).
+			Msg("update started")
 
 		// Validate category whitelist (API layer - defense-in-depth)
 		if req.Category != "" && !plugin.IsValidCategory(req.Category) {
 			validCategories := plugin.GetValidCategories()
-			api.WriteJSONError(w, http.StatusBadRequest, "Bad Request", "INVALID_CATEGORY",
+			statusCode = http.StatusBadRequest
+			logger.Error().
+				Str("error_code", "INVALID_CATEGORY").
+				Str("category", req.Category).
+				Msg("validation failed: invalid category")
+			api.WriteJSONError(w, statusCode, "Bad Request", "INVALID_CATEGORY",
 				"invalid category '"+req.Category+"' (valid: "+formatSourceList(validCategories)+")")
 			return
 		}
@@ -523,7 +561,12 @@ func UpdatePluginsHandler(pluginService PluginService, config api.Config) http.H
 		// Validate source whitelist (API layer - defense-in-depth)
 		if req.Source != "" && !plugin.IsValidSource(req.Source) {
 			validSources := plugin.ValidSources
-			api.WriteJSONError(w, http.StatusBadRequest, "Bad Request", "INVALID_SOURCE",
+			statusCode = http.StatusBadRequest
+			logger.Error().
+				Str("error_code", "INVALID_SOURCE").
+				Str("source", req.Source).
+				Msg("validation failed: invalid source")
+			api.WriteJSONError(w, statusCode, "Bad Request", "INVALID_SOURCE",
 				"invalid source '"+req.Source+"' (valid: "+formatSourceList(validSources)+")")
 			return
 		}
@@ -545,10 +588,20 @@ func UpdatePluginsHandler(pluginService PluginService, config api.Config) http.H
 		if err != nil {
 			// Check if timeout occurred
 			if ctx.Err() == context.DeadlineExceeded {
-				api.WriteJSONError(w, http.StatusGatewayTimeout, "Gateway Timeout", "TIMEOUT",
+				statusCode = http.StatusGatewayTimeout
+				logger.Error().
+					Err(err).
+					Str("error_code", "TIMEOUT").
+					Msg("update failed: timeout")
+				api.WriteJSONError(w, statusCode, "Gateway Timeout", "TIMEOUT",
 					"operation timed out after "+config.HandlerTimeout.String())
 				return
 			}
+			statusCode = plugin.HTTPStatus(err)
+			logger.Error().
+				Err(err).
+				Str("error_code", plugin.ErrorCode(err)).
+				Msg("update failed")
 			api.WriteError(w, r, err)
 			return
 		}
@@ -586,6 +639,15 @@ func UpdatePluginsHandler(pluginService PluginService, config api.Config) http.H
 			})
 		}
 
-		api.WriteJSON(w, http.StatusOK, resp)
+		// Log success with metrics
+		statusCode = http.StatusOK
+		logger.Info().
+			Int("updated_count", result.UpdatedCount).
+			Int("skipped_count", result.SkippedCount).
+			Int("failed_count", result.FailedCount).
+			Bool("partial_failure", resp.PartialFailure).
+			Msg("update succeeded")
+
+		api.WriteJSON(w, statusCode, resp)
 	}
 }

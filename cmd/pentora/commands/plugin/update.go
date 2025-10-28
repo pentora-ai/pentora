@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
@@ -74,6 +75,27 @@ func executeUpdateCommand(cmd *cobra.Command, cacheDir string) error {
 		return err
 	}
 
+	// Setup structured logger
+	logger := log.With().
+		Str("component", "plugin.cli").
+		Str("op", "update").
+		Logger()
+
+	start := time.Now()
+	defer func() {
+		logger.Info().
+			Dur("duration_ms", time.Since(start)).
+			Msg("update completed")
+	}()
+
+	// Log operation start with request snapshot
+	logger.Info().
+		Str("source", opts.Source).
+		Str("category", string(opts.Category)).
+		Bool("dry_run", opts.DryRun).
+		Bool("force", opts.Force).
+		Msg("update started")
+
 	// Call service layer
 	result, err := svc.Update(ctx, opts)
 
@@ -81,13 +103,31 @@ func executeUpdateCommand(cmd *cobra.Command, cacheDir string) error {
 	if handleErr := handlePartialFailure(err, formatter, func() error {
 		return printUpdateResult(formatter, result, opts.DryRun)
 	}); handleErr != nil {
+		if err != nil {
+			logger.Error().
+				Err(err).
+				Str("error_code", plugin.ErrorCode(err)).
+				Msg("update failed")
+		}
 		return handleErr
 	}
 
 	// Handle total failure
 	if err != nil {
+		logger.Error().
+			Err(err).
+			Str("error_code", plugin.ErrorCode(err)).
+			Msg("update failed")
 		return formatter.PrintError(err)
 	}
+
+	// Log success with metrics
+	logger.Info().
+		Int("updated_count", result.UpdatedCount).
+		Int("skipped_count", result.SkippedCount).
+		Int("failed_count", result.FailedCount).
+		Bool("dry_run", opts.DryRun).
+		Msg("update succeeded")
 
 	// Print results
 	return printUpdateResult(formatter, result, opts.DryRun)
