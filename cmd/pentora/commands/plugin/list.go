@@ -3,7 +3,9 @@ package plugin
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/format"
@@ -52,18 +54,49 @@ found in the plugin cache directory.`,
 func executeListCommand(cmd *cobra.Command, cacheDir string, verbose bool) error {
 	ctx := context.Background()
 
+	// Setup structured logger
+	logger := log.With().
+		Str("component", "plugin.cli").
+		Str("op", "list").
+		Logger()
+
+	start := time.Now()
+	defer func() {
+		logger.Info().
+			Dur("duration_ms", time.Since(start)).
+			Msg("list completed")
+	}()
+
+	// Log operation start
+	logger.Info().
+		Bool("verbose", verbose).
+		Msg("list started")
+
 	// Setup dependencies
 	formatter := getFormatter(cmd)
 	svc, err := getPluginService(cacheDir)
 	if err != nil {
+		logger.Error().
+			Err(err).
+			Str("error_code", plugin.ErrorCode(err)).
+			Msg("failed to initialize plugin service")
 		return err
 	}
 
 	// Call service layer
 	plugins, err := svc.List(ctx)
 	if err != nil {
+		logger.Error().
+			Err(err).
+			Str("error_code", plugin.ErrorCode(err)).
+			Msg("list failed")
 		return formatter.PrintError(err)
 	}
+
+	// Log success with metrics
+	logger.Info().
+		Int("count", len(plugins)).
+		Msg("list succeeded")
 
 	// Print results
 	return printListResult(formatter, plugins, verbose)

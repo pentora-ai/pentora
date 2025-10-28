@@ -3,7 +3,9 @@ package plugin
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/format"
@@ -46,21 +48,54 @@ installation path, and cache size.`,
 func executeInfoCommand(cmd *cobra.Command, pluginName, cacheDir string) error {
 	ctx := context.Background()
 
+	// Setup structured logger
+	logger := log.With().
+		Str("component", "plugin.cli").
+		Str("op", "info").
+		Logger()
+
+	start := time.Now()
+	defer func() {
+		logger.Info().
+			Dur("duration_ms", time.Since(start)).
+			Msg("info completed")
+	}()
+
+	// Log operation start with request snapshot
+	logger.Info().
+		Str("plugin_name", pluginName).
+		Msg("info started")
+
 	// Setup dependencies
 	formatter := getFormatter(cmd)
 	svc, err := getPluginService(cacheDir)
 	if err != nil {
+		logger.Error().
+			Err(err).
+			Str("error_code", plugin.ErrorCode(err)).
+			Msg("failed to initialize plugin service")
 		return err
 	}
 
 	// Call service layer
 	info, err := svc.GetInfo(ctx, pluginName)
 	if err != nil {
+		logger.Error().
+			Err(err).
+			Str("error_code", plugin.ErrorCode(err)).
+			Str("plugin_name", pluginName).
+			Msg("info failed")
 		if err == plugin.ErrPluginNotFound {
 			return formatter.PrintError(fmt.Errorf("plugin '%s' not found\n\nUse 'pentora plugin list' to see installed plugins", pluginName))
 		}
 		return formatter.PrintError(err)
 	}
+
+	// Log success
+	logger.Info().
+		Str("plugin_name", info.Name).
+		Str("version", info.Version).
+		Msg("info succeeded")
 
 	// Print results
 	return printPluginInfo(formatter, info)
