@@ -505,6 +505,23 @@ func GetPluginHandler(pluginService PluginService) http.HandlerFunc {
 // Returns 404 if plugin not found, 500 for server errors, 504 for timeout.
 func UninstallPluginHandler(pluginService PluginService, config api.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Setup structured logger
+		logger := log.With().
+			Str("component", "api.plugins").
+			Str("op", "uninstall").
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Logger()
+
+		start := time.Now()
+		var statusCode int
+		defer func() {
+			logger.Info().
+				Int("status", statusCode).
+				Dur("duration_ms", time.Since(start)).
+				Msg("request completed")
+		}()
+
 		// Apply handler-level timeout (only if request context doesn't have deadline)
 		ctx := r.Context()
 		if _, hasDeadline := ctx.Deadline(); !hasDeadline && config.HandlerTimeout > 0 {
@@ -515,9 +532,18 @@ func UninstallPluginHandler(pluginService PluginService, config api.Config) http
 
 		id := r.PathValue("id")
 		if id == "" {
-			api.WriteJSONError(w, http.StatusBadRequest, "Bad Request", "PLUGIN_ID_REQUIRED", "plugin id is required")
+			statusCode = http.StatusBadRequest
+			logger.Error().
+				Str("error_code", "PLUGIN_ID_REQUIRED").
+				Msg("validation failed: plugin id required")
+			api.WriteJSONError(w, statusCode, "Bad Request", "PLUGIN_ID_REQUIRED", "plugin id is required")
 			return
 		}
+
+		// Log operation start with request snapshot
+		logger.Info().
+			Str("plugin_id", id).
+			Msg("uninstall started")
 
 		// Build uninstall options (single plugin)
 		opts := plugin.UninstallOptions{
@@ -528,16 +554,36 @@ func UninstallPluginHandler(pluginService PluginService, config api.Config) http
 		if err != nil {
 			// Check if timeout occurred
 			if ctx.Err() == context.DeadlineExceeded {
-				api.WriteJSONError(w, http.StatusGatewayTimeout, "Gateway Timeout", "TIMEOUT",
+				statusCode = http.StatusGatewayTimeout
+				logger.Error().
+					Err(err).
+					Str("error_code", "TIMEOUT").
+					Str("plugin_id", id).
+					Msg("uninstall failed: timeout")
+				api.WriteJSONError(w, statusCode, "Gateway Timeout", "TIMEOUT",
 					"operation timed out after "+config.HandlerTimeout.String())
 				return
 			}
+			statusCode = plugin.HTTPStatus(err)
+			logger.Error().
+				Err(err).
+				Str("error_code", plugin.ErrorCode(err)).
+				Str("plugin_id", id).
+				Msg("uninstall failed")
 			// Use WriteError which will automatically map plugin errors to correct HTTP status
 			api.WriteError(w, r, err)
 			return
 		}
 
-		api.WriteJSON(w, http.StatusOK, map[string]interface{}{
+		// Log success with metrics
+		statusCode = http.StatusOK
+		logger.Info().
+			Str("plugin_id", id).
+			Int("removed_count", result.RemovedCount).
+			Int("remaining_count", result.RemainingCount).
+			Msg("uninstall succeeded")
+
+		api.WriteJSON(w, statusCode, map[string]interface{}{
 			"message":       "plugin uninstalled successfully",
 			"removed_count": result.RemovedCount,
 		})
