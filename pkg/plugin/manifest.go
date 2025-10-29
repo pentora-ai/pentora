@@ -133,6 +133,14 @@ func (m *ManifestManager) Save() error {
 	return nil
 }
 
+// Reload reloads the manifest from disk, discarding the in-memory cache.
+// This is used by the file watcher to pick up external changes (e.g., CLI updates).
+func (m *ManifestManager) Reload() error {
+	// Force reload by clearing cache first
+	m.manifest = nil
+	return m.Load()
+}
+
 // Add adds a plugin entry to the manifest.
 func (m *ManifestManager) Add(entry *ManifestEntry) error {
 	if m.manifest == nil {
