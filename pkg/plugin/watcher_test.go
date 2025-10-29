@@ -25,7 +25,7 @@ func TestNewManifestWatcher_Success(t *testing.T) {
 	// Create valid manifest file (plugins is a map, not array)
 	initialManifest := `{"version":"1.0","plugins":{},"last_updated":"2025-01-01T00:00:00Z"}`
 
-	err := os.WriteFile(manifestPath, []byte(initialManifest), 0644)
+	err := os.WriteFile(manifestPath, []byte(initialManifest), 0o644)
 	require.NoError(t, err)
 
 	// Create ManifestManager using constructor
@@ -55,7 +55,7 @@ func TestManifestWatcher_DetectsFileChange(t *testing.T) {
 	// Create initial manifest file (plugins is a map)
 	initialContent := `{"version":"1.0","plugins":{},"last_updated":"2025-01-01T00:00:00Z"}`
 
-	err := os.WriteFile(manifestPath, []byte(initialContent), 0644)
+	err := os.WriteFile(manifestPath, []byte(initialContent), 0o644)
 	require.NoError(t, err)
 
 	// Create ManifestManager
@@ -86,7 +86,7 @@ func TestManifestWatcher_DetectsFileChange(t *testing.T) {
 	// Modify the file (add a plugin to the map)
 	updatedContent := `{"version":"1.0","plugins":{"test-plugin":{"id":"test-plugin","name":"Test","version":"1.0.0","category":"test"}},"last_updated":"2025-01-01T01:00:00Z"}`
 
-	err = os.WriteFile(manifestPath, []byte(updatedContent), 0644)
+	err = os.WriteFile(manifestPath, []byte(updatedContent), 0o644)
 	require.NoError(t, err)
 
 	// Wait for debounce delay + processing time
@@ -117,7 +117,7 @@ func TestManifestWatcher_ContextCancellation(t *testing.T) {
 
 	manifestContent := `{"version":"1.0","plugins":{},"last_updated":"2025-01-01T00:00:00Z"}`
 
-	err := os.WriteFile(manifestPath, []byte(manifestContent), 0644)
+	err := os.WriteFile(manifestPath, []byte(manifestContent), 0o644)
 	require.NoError(t, err)
 
 	manifest, err := NewManifestManager(manifestPath)
@@ -157,7 +157,7 @@ func TestManifestWatcher_Close(t *testing.T) {
 
 	manifestContent := `{"version":"1.0","plugins":{},"last_updated":"2025-01-01T00:00:00Z"}`
 
-	err := os.WriteFile(manifestPath, []byte(manifestContent), 0644)
+	err := os.WriteFile(manifestPath, []byte(manifestContent), 0o644)
 	require.NoError(t, err)
 
 	manifest, err := NewManifestManager(manifestPath)
@@ -185,7 +185,7 @@ func TestService_StartManifestWatcher_WithRealManager(t *testing.T) {
 	// Create manifest file
 	manifestContent := `{"version":"1.0","plugins":{},"last_updated":"2025-01-01T00:00:00Z"}`
 
-	err := os.WriteFile(manifestPath, []byte(manifestContent), 0644)
+	err := os.WriteFile(manifestPath, []byte(manifestContent), 0o644)
 	require.NoError(t, err)
 
 	// Create ManifestManager
