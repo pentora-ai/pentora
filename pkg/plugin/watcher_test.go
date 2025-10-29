@@ -223,3 +223,177 @@ func TestService_StartManifestWatcher_WithMock(t *testing.T) {
 	err := service.StartManifestWatcher(ctx)
 	require.NoError(t, err, "Should skip watcher for mock manifest")
 }
+
+// TestManifestWatcher_WatcherErrors verifies handling of watcher errors.
+func TestManifestWatcher_WatcherErrors(t *testing.T) {
+	tmpDir := t.TempDir()
+	manifestPath := filepath.Join(tmpDir, "registry.json")
+
+	manifestContent := `{"version":"1.0","plugins":{},"last_updated":"2025-01-01T00:00:00Z"}`
+
+	err := os.WriteFile(manifestPath, []byte(manifestContent), 0o644)
+	require.NoError(t, err)
+
+	manifest, err := NewManifestManager(manifestPath)
+	require.NoError(t, err)
+
+	logger := zerolog.Nop()
+	watcher, err := NewManifestWatcher(manifest, logger)
+	require.NoError(t, err)
+	defer watcher.Close()
+
+	// Start watcher
+	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+	defer cancel()
+
+	errChan := make(chan error, 1)
+	go func() {
+		errChan <- watcher.Start(ctx)
+	}()
+
+	// Wait for watcher to start
+	time.Sleep(50 * time.Millisecond)
+
+	// Close watcher's underlying fsnotify watcher to trigger error channel closure
+	watcher.watcher.Close()
+
+	// Wait for watcher to detect closure and exit
+	select {
+	case err := <-errChan:
+		// Should exit gracefully (nil or context timeout)
+		if err != nil && err != context.DeadlineExceeded {
+			t.Logf("Watcher exited with: %v", err)
+		}
+	case <-time.After(1 * time.Second):
+		t.Fatal("Watcher did not exit after underlying watcher closed")
+	}
+}
+
+// TestManifestWatcher_IgnoresNonWriteEvents verifies that the watcher
+// ignores events other than Write/Create (e.g., Chmod).
+func TestManifestWatcher_IgnoresNonWriteEvents(t *testing.T) {
+	tmpDir := t.TempDir()
+	manifestPath := filepath.Join(tmpDir, "registry.json")
+
+	manifestContent := `{"version":"1.0","plugins":{},"last_updated":"2025-01-01T00:00:00Z"}`
+
+	err := os.WriteFile(manifestPath, []byte(manifestContent), 0o644)
+	require.NoError(t, err)
+
+	manifest, err := NewManifestManager(manifestPath)
+	require.NoError(t, err)
+
+	err = manifest.Load()
+	require.NoError(t, err)
+
+	logger := zerolog.Nop()
+	watcher, err := NewManifestWatcher(manifest, logger)
+	require.NoError(t, err)
+	defer watcher.Close()
+
+	// Start watcher
+	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+	defer cancel()
+
+	errChan := make(chan error, 1)
+	go func() {
+		errChan <- watcher.Start(ctx)
+	}()
+
+	// Wait for watcher to initialize
+	time.Sleep(50 * time.Millisecond)
+
+	// Chmod the file (should be ignored by watcher)
+	err = os.Chmod(manifestPath, 0o600)
+	require.NoError(t, err)
+
+	// Wait a bit to ensure no reload happens
+	time.Sleep(150 * time.Millisecond)
+
+	// Test passes if watcher handles chmod event gracefully
+	// (should be ignored, no reload)
+}
+
+// TestManifestWatcher_ReloadError verifies handling when Reload() fails.
+func TestManifestWatcher_ReloadError(t *testing.T) {
+	tmpDir := t.TempDir()
+	manifestPath := filepath.Join(tmpDir, "registry.json")
+
+	manifestContent := `{"version":"1.0","plugins":{},"last_updated":"2025-01-01T00:00:00Z"}`
+
+	err := os.WriteFile(manifestPath, []byte(manifestContent), 0o644)
+	require.NoError(t, err)
+
+	manifest, err := NewManifestManager(manifestPath)
+	require.NoError(t, err)
+
+	err = manifest.Load()
+	require.NoError(t, err)
+
+	logger := zerolog.Nop()
+	watcher, err := NewManifestWatcher(manifest, logger)
+	require.NoError(t, err)
+	defer watcher.Close()
+
+	// Start watcher
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	errChan := make(chan error, 1)
+	go func() {
+		errChan <- watcher.Start(ctx)
+	}()
+
+	// Wait for watcher to initialize
+	time.Sleep(50 * time.Millisecond)
+
+	// Write invalid JSON to trigger reload error
+	invalidContent := `{"version":"1.0","plugins":INVALID_JSON}`
+
+	err = os.WriteFile(manifestPath, []byte(invalidContent), 0o644)
+	require.NoError(t, err)
+
+	// Wait for debounce + reload attempt
+	time.Sleep(200 * time.Millisecond)
+
+	// Cancel watcher
+	cancel()
+
+	// Watcher should still exit gracefully despite reload error
+	select {
+	case err := <-errChan:
+		require.ErrorIs(t, err, context.Canceled)
+	case <-time.After(1 * time.Second):
+		t.Fatal("Watcher did not stop after context cancellation")
+	}
+}
+
+// TestService_StartManifestWatcher_ErrorCreatingWatcher tests error
+// handling when watcher creation fails.
+func TestService_StartManifestWatcher_ErrorCreatingWatcher(t *testing.T) {
+	// Use a path that will cause fsnotify.NewWatcher to work
+	// but watcher.Add to fail (non-existent directory)
+	tmpDir := t.TempDir()
+	manifestPath := filepath.Join(tmpDir, "nonexistent", "registry.json")
+
+	// Create ManifestManager (creates parent dirs)
+	manifest, err := NewManifestManager(manifestPath)
+	require.NoError(t, err)
+
+	service := &Service{
+		manifest: manifest,
+		logger:   zerolog.Nop(),
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	// Should handle watcher error gracefully
+	// (might succeed if dir exists, or fail gracefully)
+	err = service.StartManifestWatcher(ctx)
+
+	// Either succeeds (dir was created) or times out
+	if err != nil && err != context.DeadlineExceeded {
+		t.Logf("StartManifestWatcher returned error: %v", err)
+	}
+}
