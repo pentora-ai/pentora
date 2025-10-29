@@ -1,5 +1,6 @@
 # Pentora
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/pentora-ai/pentora)](https://goreportcard.com/report/github.com/pentora-ai/pentora)
 [![Test](https://github.com/pentora-ai/pentora/actions/workflows/test.yaml/badge.svg)](https://github.com/pentora-ai/pentora/actions/workflows/test.yaml)
 ![Coverage](https://img.shields.io/codecov/c/github/pentora-ai/pentora)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://opensource.org/license/apache-2-0)
