@@ -86,9 +86,9 @@ func executeInfoCommand(cmd *cobra.Command, pluginName, cacheDir string) error {
 			Str("plugin_name", pluginName).
 			Msg("info failed")
 		if err == plugin.ErrPluginNotFound {
-			return formatter.PrintError(fmt.Errorf("plugin '%s' not found\n\nUse 'pentora plugin list' to see installed plugins", pluginName))
+			return formatter.PrintTotalFailureSummary("info", fmt.Errorf("plugin '%s' not found", pluginName), plugin.ErrorCode(err))
 		}
-		return formatter.PrintError(err)
+		return formatter.PrintTotalFailureSummary("info", err, plugin.ErrorCode(err))
 	}
 
 	// Log success

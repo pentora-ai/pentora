@@ -94,7 +94,7 @@ func executeCleanCommand(cmd *cobra.Command, cacheDir string) error {
 			Err(err).
 			Str("error_code", plugin.ErrorCode(err)).
 			Msg("clean failed")
-		return formatter.PrintError(err)
+		return formatter.PrintTotalFailureSummary("clean", err, plugin.ErrorCode(err))
 	}
 
 	// Log success with metrics

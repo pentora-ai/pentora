@@ -118,7 +118,7 @@ func executeUpdateCommand(cmd *cobra.Command, cacheDir string) error {
 			Err(err).
 			Str("error_code", plugin.ErrorCode(err)).
 			Msg("update failed")
-		return formatter.PrintError(err)
+		return formatter.PrintTotalFailureSummary("update", err, plugin.ErrorCode(err))
 	}
 
 	// Log success with metrics

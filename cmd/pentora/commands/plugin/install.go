@@ -115,7 +115,7 @@ func executeInstallCommand(cmd *cobra.Command, target, cacheDir string) error {
 		}
 
 		// Handle total failure
-		return formatter.PrintError(err)
+		return formatter.PrintTotalFailureSummary("install", err, plugin.ErrorCode(err))
 	}
 
 	// Log success with result metrics

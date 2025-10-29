@@ -90,7 +90,7 @@ func executeVerifyCommand(cmd *cobra.Command, cacheDir string) error {
 			Err(err).
 			Str("error_code", plugin.ErrorCode(err)).
 			Msg("verify failed")
-		return formatter.PrintError(err)
+		return formatter.PrintTotalFailureSummary("verify", err, plugin.ErrorCode(err))
 	}
 
 	// Log success with metrics
