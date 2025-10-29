@@ -110,9 +110,9 @@ func TestService_Install_CacheWriteFailure(t *testing.T) {
 			return &PluginManifest{
 				Plugins: []PluginManifestEntry{
 					{
-						ID:         "test-plugin",
-						Name:       "Test Plugin",
-						Version:    "1.0.0",
+						ID:      "test-plugin",
+						Name:    "Test Plugin",
+						Version: "1.0.0",
 					},
 				},
 			}, nil
@@ -188,8 +188,8 @@ func TestService_GetInfo_CacheAccessFailure(t *testing.T) {
 	manifest := &mockManifestManager{
 		getFunc: func(id string) (*ManifestEntry, error) {
 			return &ManifestEntry{
-				ID:         id,
-				Version:    "1.0.0",
+				ID:      id,
+				Version: "1.0.0",
 			}, nil
 		},
 	}
@@ -284,18 +284,18 @@ func TestService_Install_ManifestAddFailure(t *testing.T) {
 			return &PluginManifest{
 				Plugins: []PluginManifestEntry{
 					{
-						ID:         "test-plugin",
-						Name:       "Test Plugin",
-						Version:    "1.0.0",
+						ID:      "test-plugin",
+						Name:    "Test Plugin",
+						Version: "1.0.0",
 					},
 				},
 			}, nil
 		},
 		downloadFunc: func(ctx context.Context, id, version string) (*CacheEntry, error) {
 			return &CacheEntry{
-				ID: id,
-				Version:  version,
-				Path:     "/tmp/plugin.yaml",
+				ID:      id,
+				Version: version,
+				Path:    "/tmp/plugin.yaml",
 			}, nil
 		},
 	}
@@ -380,9 +380,9 @@ func TestDownloader_DownloadTimeout(t *testing.T) {
 			return &PluginManifest{
 				Plugins: []PluginManifestEntry{
 					{
-						ID:         "test-plugin",
-						Name:       "Test Plugin",
-						Version:    "1.0.0",
+						ID:      "test-plugin",
+						Name:    "Test Plugin",
+						Version: "1.0.0",
 					},
 				},
 			}, nil
@@ -436,8 +436,8 @@ func TestService_Update_DownloaderTimeout(t *testing.T) {
 		listFunc: func() ([]*ManifestEntry, error) {
 			return []*ManifestEntry{
 				{
-					ID:         "existing-plugin",
-					Version:    "1.0.0",
+					ID:      "existing-plugin",
+					Version: "1.0.0",
 				},
 			}, nil
 		},
@@ -481,14 +481,14 @@ func TestService_Install_MixedCacheAndNetworkFailures(t *testing.T) {
 			return &PluginManifest{
 				Plugins: []PluginManifestEntry{
 					{
-						ID:         "plugin-one",
-						Name:       "Plugin One",
-						Version:    "1.0.0",
+						ID:      "plugin-one",
+						Name:    "Plugin One",
+						Version: "1.0.0",
 					},
 					{
-						ID:         "plugin-two",
-						Name:       "Plugin Two",
-						Version:    "1.0.0",
+						ID:      "plugin-two",
+						Name:    "Plugin Two",
+						Version: "1.0.0",
 					},
 				},
 			}, nil
@@ -498,9 +498,9 @@ func TestService_Install_MixedCacheAndNetworkFailures(t *testing.T) {
 			if id == "plugin-one" {
 				// First plugin downloads successfully
 				return &CacheEntry{
-					ID: id,
-					Version:  version,
-					Path:     "/tmp/plugin-one.yaml",
+					ID:      id,
+					Version: version,
+					Path:    "/tmp/plugin-one.yaml",
 				}, nil
 			}
 			// Second plugin fails with network error
@@ -566,16 +566,16 @@ func TestService_Update_MixedSourceAndChecksumFailures(t *testing.T) {
 			return &PluginManifest{
 				Plugins: []PluginManifestEntry{
 					{
-						ID:         "plugin-alpha",
-						Name:       "Plugin Alpha",
-						Version:    "2.0.0", // Newer version
-						Checksum:   "sha256:valid123",
+						ID:       "plugin-alpha",
+						Name:     "Plugin Alpha",
+						Version:  "2.0.0", // Newer version
+						Checksum: "sha256:valid123",
 					},
 					{
-						ID:         "plugin-beta",
-						Name:       "Plugin Beta",
-						Version:    "2.0.0",
-						Checksum:   "sha256:invalid456",
+						ID:       "plugin-beta",
+						Name:     "Plugin Beta",
+						Version:  "2.0.0",
+						Checksum: "sha256:invalid456",
 					},
 				},
 			}, nil
@@ -584,7 +584,7 @@ func TestService_Update_MixedSourceAndChecksumFailures(t *testing.T) {
 			if id == "plugin-alpha" {
 				// Alpha downloads but checksum mismatch
 				return &CacheEntry{
-					ID: id,
+					ID:       id,
 					Version:  version,
 					Path:     "/tmp/alpha.yaml",
 					Checksum: "sha256:wronghash",
@@ -599,12 +599,12 @@ func TestService_Update_MixedSourceAndChecksumFailures(t *testing.T) {
 		listFunc: func() ([]*ManifestEntry, error) {
 			return []*ManifestEntry{
 				{
-					ID:         "plugin-alpha",
-					Version:    "1.0.0",
+					ID:      "plugin-alpha",
+					Version: "1.0.0",
 				},
 				{
-					ID:         "plugin-beta",
-					Version:    "1.0.0",
+					ID:      "plugin-beta",
+					Version: "1.0.0",
 				},
 			}, nil
 		},
