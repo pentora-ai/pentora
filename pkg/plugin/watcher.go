@@ -64,7 +64,7 @@ func NewManifestWatcher(manifest *ManifestManager, logger zerolog.Logger) (*Mani
 
 // Start begins watching the manifest file for changes.
 //
-// This method blocks until the context is cancelled. It should be run
+// This method blocks until the context is canceled. It should be run
 // in a separate goroutine:
 //
 //	go watcher.Start(ctx)
@@ -91,14 +91,16 @@ func (w *ManifestWatcher) Start(ctx context.Context) error {
 		Msg("Started watching manifest file")
 
 	defer func() {
-		w.watcher.Close()
+		if err := w.watcher.Close(); err != nil {
+			w.logger.Warn().Err(err).Msg("Error closing watcher")
+		}
 		w.logger.Info().Msg("Stopped watching manifest file")
 	}()
 
 	for {
 		select {
 		case <-ctx.Done():
-			// Context cancelled, stop watching
+			// Context canceled, stop watching
 			return ctx.Err()
 
 		case event, ok := <-w.watcher.Events:

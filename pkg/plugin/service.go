@@ -1675,7 +1675,7 @@ func (s *Service) Verify(ctx context.Context, opts VerifyOptions) (*VerifyResult
 // CLI, the manifest file (registry.json) is updated, and the watcher triggers
 // an automatic reload so the server API immediately reflects the change.
 //
-// The watcher runs in a separate goroutine and can be stopped by cancelling
+// The watcher runs in a separate goroutine and can be stopped by canceling
 // the context. It includes debouncing (100ms) to avoid multiple reloads
 // during rapid successive writes.
 //
