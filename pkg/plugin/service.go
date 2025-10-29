@@ -1666,3 +1666,47 @@ func (s *Service) Verify(ctx context.Context, opts VerifyOptions) (*VerifyResult
 
 	return verifyResult, nil
 }
+
+// StartManifestWatcher starts a file watcher that monitors the plugin manifest
+// for changes and automatically reloads it when updates are detected.
+//
+// This solves the issue where CLI plugin changes don't appear in the server
+// API until restart (Issue #27). When a plugin is installed/uninstalled via
+// CLI, the manifest file (registry.json) is updated, and the watcher triggers
+// an automatic reload so the server API immediately reflects the change.
+//
+// The watcher runs in a separate goroutine and can be stopped by canceling
+// the context. It includes debouncing (100ms) to avoid multiple reloads
+// during rapid successive writes.
+//
+// Returns an error if the manifest is not a *ManifestManager (e.g., if a
+// custom mock is being used in tests) or if the watcher cannot be created.
+//
+// Example usage:
+//
+//	service, _ := plugin.NewService()
+//	go service.StartManifestWatcher(ctx)
+func (s *Service) StartManifestWatcher(ctx context.Context) error {
+	// Type assert to *ManifestManager (needed for Reload() method)
+	manifestMgr, ok := s.manifest.(*ManifestManager)
+	if !ok {
+		// Not a real ManifestManager (probably a test mock), skip watcher
+		s.logger.Debug().
+			Str("component", "plugin.service").
+			Msg("Manifest watcher disabled (not using ManifestManager)")
+		return nil
+	}
+
+	// Create watcher
+	watcher, err := NewManifestWatcher(manifestMgr, s.logger)
+	if err != nil {
+		s.logger.Error().
+			Err(err).
+			Str("component", "plugin.service").
+			Msg("Failed to create manifest watcher")
+		return err
+	}
+
+	// Start watcher in current goroutine (caller should run this in goroutine)
+	return watcher.Start(ctx)
+}

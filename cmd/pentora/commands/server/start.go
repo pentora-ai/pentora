@@ -131,6 +131,17 @@ shutdown to drain in-flight requests and complete running jobs.`,
 			// Create logger for server
 			logger := logging.NewLogger("server", zerolog.InfoLevel)
 
+			// Start manifest file watcher to auto-reload when CLI makes changes (Issue #27)
+			// This ensures server API immediately reflects CLI plugin install/uninstall
+			go func() {
+				if err := pluginService.StartManifestWatcher(cmd.Context()); err != nil {
+					// Log error but don't fail server startup (watcher is optional enhancement)
+					logger.Warn().
+						Err(err).
+						Msg("Manifest watcher failed (server will work but won't auto-sync with CLI changes)")
+				}
+			}()
+
 			// Build dependencies
 			deps := &app.Deps{
 				Storage:       storageBackend,
