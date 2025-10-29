@@ -90,7 +90,7 @@ func executeListCommand(cmd *cobra.Command, cacheDir string, verbose bool) error
 			Err(err).
 			Str("error_code", plugin.ErrorCode(err)).
 			Msg("list failed")
-		return formatter.PrintError(err)
+		return formatter.PrintTotalFailureSummary("list", err, plugin.ErrorCode(err))
 	}
 
 	// Log success with metrics

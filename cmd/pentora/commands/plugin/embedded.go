@@ -48,7 +48,7 @@ for common security issues across SSH, HTTP, TLS, Database, and Network protocol
 			// Load embedded plugins
 			plugins, err := plugin.LoadEmbeddedPlugins()
 			if err != nil {
-				return formatter.PrintError(fmt.Errorf("load embedded plugins: %w", err))
+				return formatter.PrintTotalFailureSummary("load embedded plugins", err, "LOAD_ERROR")
 			}
 
 			// Filter plugins by category
@@ -101,7 +101,7 @@ func filterPluginsByCategory(plugins map[plugin.Category][]*plugin.YAMLPlugin, c
 		case "misc":
 			categoryFilter = plugin.CategoryMisc
 		default:
-			return nil, formatter.PrintError(fmt.Errorf("unknown category: %s (valid: ssh, http, tls, database, network, misc)", category))
+			return nil, formatter.PrintTotalFailureSummary("embedded", fmt.Errorf("unknown category: %s", category), "INVALID_CATEGORY")
 		}
 
 		// Get plugins for the specified category
