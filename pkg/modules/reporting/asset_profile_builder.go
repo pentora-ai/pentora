@@ -45,7 +45,7 @@ func newAssetProfileBuilderModule() *AssetProfileBuilderModule {
 				{Key: "config.targets", DataTypeName: "[]string", Cardinality: engine.CardinalitySingle, IsOptional: true},
 				{Key: "discovery.live_hosts", DataTypeName: "discovery.ICMPPingDiscoveryResult", Cardinality: engine.CardinalityList, IsOptional: true},    // DataContext'te []interface{}{ICMPPingDiscoveryResult}
 				{Key: "discovery.open_tcp_ports", DataTypeName: "discovery.TCPPortDiscoveryResult", Cardinality: engine.CardinalityList, IsOptional: true}, // []interface{}{TCPPortDiscoveryResult1, TCPResult2}
-				{Key: "service.banner.tcp", DataTypeName: "scan.BannerScanResult", Cardinality: engine.CardinalityList, IsOptional: true},                  // []interface{}{BannerResult1, BannerResult2}
+				{Key: "service.banner.tcp", DataTypeName: "scan.BannerGrabResult", Cardinality: engine.CardinalityList, IsOptional: true},                  // []interface{}{BannerResult1, BannerResult2}
 				{Key: "service.http.details", DataTypeName: "parse.HTTPParsedInfo", Cardinality: engine.CardinalityList, IsOptional: true},                 // []interface{}{HTTPParsedInfo1, ...}
 				{Key: "service.ssh.details", DataTypeName: "parse.SSHParsedInfo", Cardinality: engine.CardinalityList, IsOptional: true},                   // []interface{}{SSHParsedInfo1, ...}
 				{Key: "service.fingerprint.details", DataTypeName: "parse.FingerprintParsedInfo", Cardinality: engine.CardinalityList, IsOptional: true},   // []interface{}{FingerprintParsedInfo1, ...}
