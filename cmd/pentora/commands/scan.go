@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -160,6 +159,9 @@ The command automatically plans the execution DAG using available modules.`,
 				fmt.Fprintf(os.Stderr, "\nScan finished with errors: %v\n", executionErr)
 			}
 			if len(finalProfiles) > 0 {
+				// Print summary table first
+				printScanSummary(res, finalProfiles)
+				// Then print detailed results
 				printAssetProfileTextOutput(finalProfiles)
 			} else {
 				fmt.Println("\nScan completed, but no asset profiles were generated.")
@@ -169,8 +171,7 @@ The command automatically plans the execution DAG using available modules.`,
 }
 
 func printAssetProfileTextOutput(profiles []engine.AssetProfile) {
-	spew.Dump(profiles[0].OpenPorts) // --- IGNORE ---
-	fmt.Println("\n--- Scan Results ---")
+	fmt.Println("--- Scan Results ---")
 	for _, asset := range profiles {
 		fmt.Printf("\n## Target: %s (IPs: %v)\n", asset.Target, getMapKeys(asset.ResolvedIPs))
 		fmt.Printf("   Is Alive: %v\n", asset.IsAlive)
@@ -272,6 +273,78 @@ func getMapKeys(m map[string]time.Time) []string {
 
 type progressLogger struct {
 	logger zerolog.Logger
+}
+
+// printScanSummary displays a human-readable summary table of scan results
+func printScanSummary(res *scanexec.Result, profiles []engine.AssetProfile) {
+	if res == nil || len(profiles) == 0 {
+		return
+	}
+
+	// Calculate summary statistics
+	hostsFound := len(profiles)
+	totalOpenPorts := 0
+	totalVulns := 0
+	servicesMap := make(map[string]bool) // unique services
+
+	for _, profile := range profiles {
+		totalVulns += profile.TotalVulnerabilities
+		for _, portList := range profile.OpenPorts {
+			totalOpenPorts += len(portList)
+			for _, port := range portList {
+				if port.Service.Name != "" {
+					serviceName := port.Service.Name
+					if port.PortNumber > 0 {
+						serviceName = fmt.Sprintf("%s (%d)", port.Service.Name, port.PortNumber)
+					}
+					servicesMap[serviceName] = true
+				}
+			}
+		}
+	}
+
+	// Build services string
+	var services []string
+	for svc := range servicesMap {
+		services = append(services, svc)
+	}
+	sort.Strings(services)
+	servicesStr := strings.Join(services, ", ")
+
+	// Calculate duration
+	var duration string
+	if res.StartTime != "" && res.EndTime != "" {
+		startTime, errStart := time.Parse(time.RFC3339Nano, res.StartTime)
+		endTime, errEnd := time.Parse(time.RFC3339Nano, res.EndTime)
+		if errStart == nil && errEnd == nil {
+			durationTime := endTime.Sub(startTime)
+			duration = fmt.Sprintf("%.1fs", durationTime.Seconds())
+		} else {
+			duration = "N/A"
+		}
+	} else {
+		duration = "N/A"
+	}
+
+	// Get primary target
+	target := "N/A"
+	if len(profiles) > 0 {
+		target = profiles[0].Target
+	}
+
+	// Print summary table
+	separator := "════════════════════════════════════════════════════"
+	fmt.Printf("\n%s\n", separator)
+	fmt.Printf("%-15s %s\n", "Target:", target)
+	fmt.Printf("%-15s %s\n", "Duration:", duration)
+	fmt.Printf("%-15s %d\n", "Hosts Found:", hostsFound)
+	fmt.Printf("%-15s %d\n", "Open Ports:", totalOpenPorts)
+	// Only show Services line if any services were detected
+	if servicesStr != "" {
+		fmt.Printf("%-15s %s\n", "Services:", servicesStr)
+	}
+	fmt.Printf("\n%-15s %d\n", "Vulnerabilities:", totalVulns)
+	fmt.Printf("%s\n\n", separator)
 }
 
 func (p *progressLogger) OnEvent(ev scanexec.ProgressEvent) {
