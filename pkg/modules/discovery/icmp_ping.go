@@ -76,7 +76,7 @@ func newICMPPingDiscoveryModule() *ICMPPingDiscoveryModule {
 		PacketTimeout: 1 * time.Second, // This will be used for pinger.Timeout
 		Privileged:    false,
 		Concurrency:   50,
-		AllowLoopback: false,
+		AllowLoopback: true,
 	}
 
 	return &ICMPPingDiscoveryModule{
