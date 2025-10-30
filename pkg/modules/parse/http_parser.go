@@ -17,7 +17,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/pentora-ai/pentora/pkg/engine"
-	"github.com/pentora-ai/pentora/pkg/modules/scan" // To consume scan.BannerScanResult
+	"github.com/pentora-ai/pentora/pkg/modules/scan" // To consume scan.BannerGrabResult
 )
 
 const (
@@ -159,7 +159,7 @@ func (m *HTTPParserModule) Execute(ctx context.Context, inputs map[string]interf
 
 		bannerResult, castOk := item.(scan.BannerGrabResult)
 		if !castOk {
-			logger.Warn().Int("item_index", i).Type("item_type", item).Msg("Item in 'service.banner.tcp' list is not of expected type scan.BannerScanResult")
+			logger.Warn().Int("item_index", i).Type("item_type", item).Msg("Item in 'service.banner.tcp' list is not of expected type scan.BannerGrabResult")
 			continue
 		}
 
@@ -174,7 +174,7 @@ func (m *HTTPParserModule) Execute(ctx context.Context, inputs map[string]interf
 			continue
 		}
 		// Further check for TLS handshake remnants if banner grabber might mix them
-		if bannerResult.IsTLS && (bannerResult.Port == 443 || bannerResult.Port == 8443) { // IsTLS field was in scan.BannerScanResult
+		if bannerResult.IsTLS && (bannerResult.Port == 443 || bannerResult.Port == 8443) { // IsTLS field was in scan.BannerGrabResult
 			// logger.Debug().Str("target", bannerResult.Target).Int("port", bannerResult.Port).Msg("Banner marked as TLS, skipping raw HTTP parse for typical HTTPS ports.")
 			// A dedicated TLS/HTTPS parser would handle this.
 			continue

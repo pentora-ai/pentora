@@ -21,7 +21,7 @@ const (
 )
 
 // DataType represents the expected Go type of a DataKey as a string.
-// Examples: "[]string", "int", "discovery.ICMPPingDiscoveryResult", "[]scan.BannerScanResult"
+// Examples: "[]string", "int", "discovery.ICMPPingDiscoveryResult", "[]scan.BannerGrabResult"
 type DataType string
 
 // DataCardinality indicates if a DataKey represents a single item or a list of items.

@@ -160,7 +160,7 @@ func (m *SSHParserModule) Execute(ctx context.Context, inputs map[string]interfa
 
 		bannerResult, castOk := item.(scan.BannerGrabResult) // This is the output from service-banner-scanner
 		if !castOk {
-			m.logger.Warn().Int("item_index", i).Type("item_type", item).Msg("Item in 'service.banner.tcp' list is not scan.BannerScanResult, skipping.")
+			m.logger.Warn().Int("item_index", i).Type("item_type", item).Msg("Item in 'service.banner.tcp' list is not scan.BannerGrabResult, skipping.")
 			continue
 		}
 
