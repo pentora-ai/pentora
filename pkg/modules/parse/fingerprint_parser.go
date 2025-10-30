@@ -54,7 +54,7 @@ func newFingerprintParserModule() *FingerprintParserModule {
 			Consumes: []engine.DataContractEntry{
 				{
 					Key:          "service.banner.tcp",
-					DataTypeName: "scan.BannerScanResult",
+					DataTypeName: "scan.BannerGrabResult",
 					Cardinality:  engine.CardinalityList,
 					IsOptional:   true,
 					Description:  "List of raw TCP banners captured from the service-banner module.",

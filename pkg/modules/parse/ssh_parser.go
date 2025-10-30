@@ -68,13 +68,13 @@ func newSSHParserModule() *SSHParserModule {
 					Key: "service.banner.tcp", // Expects output from service-banner-scanner
 					// DataTypeName is the type of *each item* within the []interface{} list
 					// that DataContext stores for "instance_id_of_banner_scanner.service.banner.tcp".
-					DataTypeName: "scan.BannerScanResult", // Defined in pkg/modules/scan
+					DataTypeName: "scan.BannerGrabResult", // Defined in pkg/modules/scan
 					// CardinalityList means this module expects the value for "service.banner.tcp"
 					// in its 'inputs' map to be an []interface{} list, where each element
-					// can be cast to scan.BannerScanResult.
+					// can be cast to scan.BannerGrabResult.
 					Cardinality: engine.CardinalityList,
 					IsOptional:  false, // Requires banner input to do any work
-					Description: "List of raw TCP banners, where each item is a scan.BannerScanResult.",
+					Description: "List of raw TCP banners, where each item is a scan.BannerGrabResult.",
 				},
 			},
 			Produces: []engine.DataContractEntry{
