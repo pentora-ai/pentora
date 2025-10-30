@@ -17,7 +17,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/pentora-ai/pentora/pkg/engine"
-	"github.com/pentora-ai/pentora/pkg/modules/scan" // To consume scan.BannerScanResult
+	"github.com/pentora-ai/pentora/pkg/modules/scan" // To consume scan.BannerGrabResult
 )
 
 const (
@@ -72,13 +72,13 @@ func newHTTPParserModule() *HTTPParserModule {
 					Key: "service.banner.tcp", // Expects output from service-banner-scanner
 					// DataTypeName is the type of *each item* within the []interface{} list
 					// that DataContext stores for "instance_id_of_banner_scanner.service.banner.tcp".
-					DataTypeName: "scan.BannerScanResult",
+					DataTypeName: "scan.BannerGrabResult",
 					// CardinalityList means this module expects the value for "service.banner.tcp"
 					// in its 'inputs' map to be an []interface{} list, where each element
-					// can be cast to scan.BannerScanResult.
+					// can be cast to scan.BannerGrabResult.
 					Cardinality: engine.CardinalityList,
 					IsOptional:  false, // Requires banner input to do any work
-					Description: "List of raw TCP banners, where each item is a scan.BannerScanResult.",
+					Description: "List of raw TCP banners, where each item is a scan.BannerGrabResult.",
 				},
 			},
 			Produces: []engine.DataContractEntry{
@@ -159,7 +159,7 @@ func (m *HTTPParserModule) Execute(ctx context.Context, inputs map[string]interf
 
 		bannerResult, castOk := item.(scan.BannerGrabResult)
 		if !castOk {
-			logger.Warn().Int("item_index", i).Type("item_type", item).Msg("Item in 'service.banner.tcp' list is not of expected type scan.BannerScanResult")
+			logger.Warn().Int("item_index", i).Type("item_type", item).Msg("Item in 'service.banner.tcp' list is not of expected type scan.BannerGrabResult")
 			continue
 		}
 
@@ -174,7 +174,7 @@ func (m *HTTPParserModule) Execute(ctx context.Context, inputs map[string]interf
 			continue
 		}
 		// Further check for TLS handshake remnants if banner grabber might mix them
-		if bannerResult.IsTLS && (bannerResult.Port == 443 || bannerResult.Port == 8443) { // IsTLS field was in scan.BannerScanResult
+		if bannerResult.IsTLS && (bannerResult.Port == 443 || bannerResult.Port == 8443) { // IsTLS field was in scan.BannerGrabResult
 			// logger.Debug().Str("target", bannerResult.Target).Int("port", bannerResult.Port).Msg("Banner marked as TLS, skipping raw HTTP parse for typical HTTPS ports.")
 			// A dedicated TLS/HTTPS parser would handle this.
 			continue

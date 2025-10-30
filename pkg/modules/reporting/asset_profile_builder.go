@@ -12,7 +12,7 @@ import (
 	"github.com/pentora-ai/pentora/pkg/engine"
 	"github.com/pentora-ai/pentora/pkg/modules/discovery" // For ICMPPingDiscoveryResult, TCPPortDiscoveryResult
 	"github.com/pentora-ai/pentora/pkg/modules/parse"     // For HTTPParsedInfo, SSHParsedInfo
-	"github.com/pentora-ai/pentora/pkg/modules/scan"      // For BannerScanResult
+	"github.com/pentora-ai/pentora/pkg/modules/scan"      // For BannerGrabResult
 	"github.com/pentora-ai/pentora/pkg/netutil"
 )
 

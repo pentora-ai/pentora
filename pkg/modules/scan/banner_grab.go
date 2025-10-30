@@ -125,7 +125,7 @@ func newBannerGrabModule() *BannerGrabModule {
 			Produces: []engine.DataContractEntry{
 				{
 					Key:          "service.banner.tcp",
-					DataTypeName: "scan.BannerScanResult",
+					DataTypeName: "scan.BannerGrabResult",
 					Cardinality:  engine.CardinalityList,
 					Description:  "List of banners (or errors) captured from TCP services, one result per target/port.",
 				},
