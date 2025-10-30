@@ -310,9 +310,6 @@ func printScanSummary(res *scanexec.Result, profiles []engine.AssetProfile) {
 	}
 	sort.Strings(services)
 	servicesStr := strings.Join(services, ", ")
-	if servicesStr == "" {
-		servicesStr = "None"
-	}
 
 	// Calculate duration
 	var duration string
@@ -342,7 +339,10 @@ func printScanSummary(res *scanexec.Result, profiles []engine.AssetProfile) {
 	fmt.Printf("%-15s %s\n", "Duration:", duration)
 	fmt.Printf("%-15s %d\n", "Hosts Found:", hostsFound)
 	fmt.Printf("%-15s %d\n", "Open Ports:", totalOpenPorts)
-	fmt.Printf("%-15s %s\n", "Services:", servicesStr)
+	// Only show Services line if any services were detected
+	if servicesStr != "" {
+		fmt.Printf("%-15s %s\n", "Services:", servicesStr)
+	}
 	fmt.Printf("\n%-15s %d\n", "Vulnerabilities:", totalVulns)
 	fmt.Printf("%s\n\n", separator)
 }
