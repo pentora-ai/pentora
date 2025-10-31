@@ -1,9 +1,9 @@
 package fingerprint
 
 import (
-    "context"
-    "sync"
-    "testing"
+	"context"
+	"sync"
+	"testing"
 )
 
 // helper to reset global registry between tests
