@@ -22,6 +22,8 @@ const (
 	fingerprintParserModuleAuthor      = "Pentora Team"
 )
 
+var getResolver = fingerprint.GetFingerprintResolver
+
 // FingerprintParsedInfo represents structured fingerprint output.
 type FingerprintParsedInfo struct {
 	Target      string  `json:"target"`
@@ -96,7 +98,7 @@ func (m *FingerprintParserModule) Execute(ctx context.Context, inputs map[string
 		return nil
 	}
 
-	resolver := fingerprint.GetFingerprintResolver()
+	resolver := getResolver()
 	matches := 0
 
 	for _, item := range bannerList {
