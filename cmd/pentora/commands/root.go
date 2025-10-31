@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
@@ -29,6 +30,7 @@ func NewCommand() *cobra.Command {
 		workspaceDisabled bool
 		appManager        engine.Manager
 		verbosityCount    int
+		verbose           bool
 	)
 
 	cmd := &cobra.Command{
@@ -57,6 +59,22 @@ func NewCommand() *cobra.Command {
 				log.Info().Msg("workspace disabled for this run")
 			}
 
+			// Configure global log level based on verbosity flags
+			// If explicit --verbose is set, show debug and above
+			// Else use -v count: 0=>Error, 1=>Info, 2+=>Debug
+			if verbose {
+				zerolog.SetGlobalLevel(zerolog.DebugLevel)
+			} else {
+				switch {
+				case verbosityCount <= 0:
+					zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+				case verbosityCount == 1:
+					zerolog.SetGlobalLevel(zerolog.InfoLevel)
+				default:
+					zerolog.SetGlobalLevel(zerolog.DebugLevel)
+				}
+			}
+
 			cmd.SetContext(ctx)
 			if root := cmd.Root(); root != nil && root != cmd {
 				root.SetContext(ctx)
@@ -77,6 +95,7 @@ func NewCommand() *cobra.Command {
 	cmd.PersistentFlags().StringVar(&workspaceDir, "workspace-dir", "", "Override workspace root directory")
 	cmd.PersistentFlags().BoolVar(&workspaceDisabled, "no-workspace", false, "Disable workspace persistence for this run")
 	cmd.PersistentFlags().CountVarP(&verbosityCount, "verbosity", "v", "Increase logging verbosity (repeatable)")
+	cmd.PersistentFlags().BoolVar(&verbose, "verbose", false, "Enable verbose logging (shows service layer logs)")
 
 	config.BindFlags(cmd.PersistentFlags())
 

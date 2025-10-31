@@ -91,10 +91,6 @@ func executeInstallCommand(cmd *cobra.Command, target, cacheDir string) error {
 	formatter := getFormatter(cmd)
 	svc, err := getPluginService(cacheDir)
 	if err != nil {
-		logger.Error().
-			Err(err).
-			Str("error_code", plugin.ErrorCode(err)).
-			Msg("failed to initialize plugin service")
 		return err
 	}
 
@@ -102,10 +98,6 @@ func executeInstallCommand(cmd *cobra.Command, target, cacheDir string) error {
 	result, err := svc.Install(ctx, target, opts)
 	// Handle errors with structured logging
 	if err != nil {
-		logger.Error().
-			Err(err).
-			Str("error_code", plugin.ErrorCode(err)).
-			Msg("install failed")
 
 		// Handle partial failure (exit code 8)
 		if handleErr := handlePartialFailure(err, formatter, func() error {

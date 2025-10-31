@@ -70,21 +70,12 @@ func executeInfoCommand(cmd *cobra.Command, pluginName, cacheDir string) error {
 	formatter := getFormatter(cmd)
 	svc, err := getPluginService(cacheDir)
 	if err != nil {
-		logger.Error().
-			Err(err).
-			Str("error_code", plugin.ErrorCode(err)).
-			Msg("failed to initialize plugin service")
 		return err
 	}
 
 	// Call service layer
 	info, err := svc.GetInfo(ctx, pluginName)
 	if err != nil {
-		logger.Error().
-			Err(err).
-			Str("error_code", plugin.ErrorCode(err)).
-			Str("plugin_name", pluginName).
-			Msg("info failed")
 		if err == plugin.ErrPluginNotFound {
 			return formatter.PrintTotalFailureSummary("info", fmt.Errorf("plugin '%s' not found", pluginName), plugin.ErrorCode(err))
 		}
