@@ -346,6 +346,17 @@ func (p *DAGPlanner) configureModule(meta ModuleMetadata, intent ScanIntent) map
 		p.logger.Debug().Str("module", meta.Name).Str("timeout", intent.CustomTimeout).Msg("Applied custom timeout config")
 	}
 
+	// Propagate global custom timeout to banner grabber as read/connect timeouts.
+	// This ensures slow networks have enough time for banners.
+	if meta.Name == "banner-grabber" && intent.CustomTimeout != "" {
+		// Use full timeout for read and half for connect to stay responsive.
+		cfg["read_timeout"] = intent.CustomTimeout
+		// We cannot easily halve the duration string without parsing here;
+		// keep connect equal to read for simplicity and reliability.
+		cfg["connect_timeout"] = intent.CustomTimeout
+		p.logger.Debug().Str("module", meta.Name).Str("read_timeout", intent.CustomTimeout).Str("connect_timeout", intent.CustomTimeout).Msg("Applied custom banner timeouts from intent")
+	}
+
 	// Pass global targets if module consumes "config.targets" and it's not set by a dependency yet
 	// This is implicitly handled by the orchestrator when it resolves inputs from DataContext.
 	// The config here is for module-specific parameters.

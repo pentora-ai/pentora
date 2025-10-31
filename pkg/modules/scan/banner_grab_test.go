@@ -55,8 +55,8 @@ func TestNewBannerGrabModule(t *testing.T) {
 	if module.meta.Type != engine.ScanModuleType {
 		t.Errorf("Expected module type '%s', got '%s'", engine.ScanModuleType, module.meta.Type)
 	}
-	if module.config.ReadTimeout != 3*time.Second {
-		t.Errorf("Expected read timeout 3s, got %v", module.config.ReadTimeout)
+	if module.config.ReadTimeout != 10*time.Second {
+		t.Errorf("Expected read timeout 10s, got %v", module.config.ReadTimeout)
 	}
 	if module.config.BufferSize != 2048 {
 		t.Errorf("Expected buffer size 2048, got %d", module.config.BufferSize)
@@ -95,8 +95,8 @@ func TestBannerGrabModule_Init(t *testing.T) {
 				"connect_timeout": "invalid",
 			},
 			expected: BannerGrabConfig{
-				ReadTimeout:           3 * time.Second,
-				ConnectTimeout:        2 * time.Second,
+				ReadTimeout:           10 * time.Second,
+				ConnectTimeout:        5 * time.Second,
 				BufferSize:            2048,
 				Concurrency:           50,
 				SendProbes:            true,
@@ -111,8 +111,8 @@ func TestBannerGrabModule_Init(t *testing.T) {
 				"concurrency": 100,
 			},
 			expected: BannerGrabConfig{
-				ReadTimeout:           3 * time.Second,
-				ConnectTimeout:        2 * time.Second,
+				ReadTimeout:           10 * time.Second,
+				ConnectTimeout:        5 * time.Second,
 				BufferSize:            4096,
 				Concurrency:           100,
 				SendProbes:            true,
@@ -125,8 +125,8 @@ func TestBannerGrabModule_Init(t *testing.T) {
 				"send_probes": false,
 			},
 			expected: BannerGrabConfig{
-				ReadTimeout:           3 * time.Second,
-				ConnectTimeout:        2 * time.Second,
+				ReadTimeout:           10 * time.Second,
+				ConnectTimeout:        5 * time.Second,
 				BufferSize:            2048,
 				Concurrency:           50,
 				SendProbes:            false,
@@ -142,8 +142,8 @@ func TestBannerGrabModule_Init(t *testing.T) {
 				"concurrency":     -1,
 			},
 			expected: BannerGrabConfig{
-				ReadTimeout:    3 * time.Second,
-				ConnectTimeout: 2 * time.Second,
+				ReadTimeout:    10 * time.Second,
+				ConnectTimeout: 5 * time.Second,
 				BufferSize:     2048,
 				Concurrency:    1,
 				SendProbes:     true,

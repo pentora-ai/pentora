@@ -5,8 +5,9 @@
 package plugin
 
 import (
-	"github.com/pentora-ai/pentora/pkg/storage"
 	"github.com/rs/zerolog"
+
+	"github.com/pentora-ai/pentora/pkg/storage"
 )
 
 // ServiceOption is a functional option for configuring Service.
