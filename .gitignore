@@ -15,7 +15,6 @@ build
 
 *.md
 !README.md
-!WORK-SUMMARY-*.md
 
 # UI build artifacts
 /pkg/ui/dist/*
