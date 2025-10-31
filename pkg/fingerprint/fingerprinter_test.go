@@ -6,153 +6,125 @@ import (
 	"testing"
 )
 
-type stubFingerprinter struct {
-	id         string
-	passive    func(ctx context.Context, obs PassiveObservation) (*ServiceCandidate, bool, error)
-	probes     []Probe
-	verifyFunc func(ctx context.Context, probe Probe, resp []byte) (*ServiceCandidate, bool, error)
+type mockExecutor func(ctx context.Context, probe Probe) ([]byte, error)
+
+func (m mockExecutor) Execute(ctx context.Context, probe Probe) ([]byte, error) { return m(ctx, probe) }
+
+type fpMock struct {
+	id          string
+	passiveCand *ServiceCandidate
+	passiveDone bool
+	passiveErr  error
+	probes      []Probe
+	verifySeq   []struct {
+		resp []byte
+		cand *ServiceCandidate
+		done bool
+		err  error
+	}
+	verifyIdx int
 }
 
-func (s *stubFingerprinter) ID() string { return s.id }
-
-func (s *stubFingerprinter) SupportedProtocols() []string { return []string{"tcp"} }
-
-func (s *stubFingerprinter) AnalyzePassive(ctx context.Context, obs PassiveObservation) (*ServiceCandidate, bool, error) {
-	if s.passive == nil {
+func (f *fpMock) ID() string                   { return f.id }
+func (f *fpMock) SupportedProtocols() []string { return nil }
+func (f *fpMock) AnalyzePassive(ctx context.Context, obs PassiveObservation) (*ServiceCandidate, bool, error) {
+	return f.passiveCand, f.passiveDone, f.passiveErr
+}
+func (f *fpMock) ActiveProbes() []Probe { return f.probes }
+func (f *fpMock) Verify(ctx context.Context, probe Probe, response []byte) (*ServiceCandidate, bool, error) {
+	if f.verifyIdx >= len(f.verifySeq) {
 		return nil, false, nil
 	}
-	return s.passive(ctx, obs)
+	v := f.verifySeq[f.verifyIdx]
+	f.verifyIdx++
+	return v.cand, v.done, v.err
 }
 
-func (s *stubFingerprinter) ActiveProbes() []Probe { return s.probes }
-
-func (s *stubFingerprinter) Verify(ctx context.Context, probe Probe, resp []byte) (*ServiceCandidate, bool, error) {
-	if s.verifyFunc == nil {
-		return nil, false, nil
-	}
-	return s.verifyFunc(ctx, probe, resp)
-}
-
-type stubExecutor struct {
-	responses map[string][]byte
-	failProbe string
-}
-
-//nolint:revive
-func (e *stubExecutor) Execute(ctx context.Context, probe Probe) ([]byte, error) {
-	if probe.ID == e.failProbe {
-		return nil, errors.New("probe failed")
-	}
-	if resp, ok := e.responses[probe.ID]; ok {
-		return resp, nil
-	}
-	return nil, nil
-}
-
-//nolint:revive
-func TestCoordinatorPassivePriority(t *testing.T) {
-	ctx := context.Background()
-	obs := PassiveObservation{Banner: []byte("SSH-2.0-OpenSSH"), Port: 2222}
-
-	sshFP := &stubFingerprinter{
-		id: "ssh",
-		passive: func(ctx context.Context, obs PassiveObservation) (*ServiceCandidate, bool, error) {
-			if string(obs.Banner) != "SSH-2.0-OpenSSH" {
-				return nil, false, nil
-			}
-			return &ServiceCandidate{Protocol: "ssh", Confidence: 0.95, Metadata: map[string]string{"banner": string(obs.Banner)}}, true, nil
-		},
-	}
-
-	httpFP := &stubFingerprinter{
-		id: "http",
-		passive: func(ctx context.Context, obs PassiveObservation) (*ServiceCandidate, bool, error) {
-			return &ServiceCandidate{Protocol: "http", Confidence: 0.40}, false, nil
-		},
-	}
-
-	coord := NewCoordinator(sshFP, httpFP)
-	cand, err := coord.Identify(ctx, obs, nil)
+func TestCoordinator_RegisterAndIdentify_NoFingerprinters(t *testing.T) {
+	c := NewCoordinator()
+	got, err := c.Identify(context.Background(), PassiveObservation{}, nil)
 	if err != nil {
-		t.Fatalf("Identify error: %v", err)
+		t.Fatalf("unexpected err: %v", err)
 	}
-	if cand == nil || cand.Protocol != "ssh" {
-		t.Fatalf("expected ssh candidate, got %#v", cand)
-	}
-	if cand.Source != "ssh" {
-		t.Fatalf("expected source ssh, got %s", cand.Source)
+	if got != nil {
+		t.Fatalf("expected nil, got %#v", got)
 	}
 }
 
-//nolint:revive
-func TestCoordinatorActiveProbe(t *testing.T) {
-	ctx := context.Background()
-	obs := PassiveObservation{Port: 80}
-
-	httpFP := &stubFingerprinter{
-		id:     "http",
-		probes: []Probe{{ID: "http-get", Payload: []byte("GET / HTTP/1.0\r\n\r\n")}},
-		verifyFunc: func(ctx context.Context, probe Probe, resp []byte) (*ServiceCandidate, bool, error) {
-			if probe.ID != "http-get" {
-				return nil, false, nil
-			}
-			if len(resp) == 0 {
-				return nil, false, nil
-			}
-			return &ServiceCandidate{Protocol: "http", Confidence: 0.88, Metadata: map[string]string{"status_line": string(resp)}}, true, nil
-		},
+func TestCoordinator_Register_Appends(t *testing.T) {
+	c := NewCoordinator()
+	c.Register(&fpMock{id: "a"})
+	c.Register(&fpMock{id: "b"})
+	if len(c.fingerprinters) != 2 {
+		t.Fatalf("expected 2 fingerprinters, got %d", len(c.fingerprinters))
 	}
+}
 
-	exec := &stubExecutor{responses: map[string][]byte{"http-get": []byte("HTTP/1.1 200 OK")}}
-
-	coord := NewCoordinator(httpFP)
-	cand, err := coord.Identify(ctx, obs, exec)
+func TestCoordinator_Identify_PassiveFinalizedWins(t *testing.T) {
+	fp := &fpMock{id: "fp1", passiveCand: &ServiceCandidate{Protocol: "http", Confidence: 0.9}, passiveDone: true}
+	c := NewCoordinator(fp)
+	got, err := c.Identify(context.Background(), PassiveObservation{}, nil)
 	if err != nil {
-		t.Fatalf("Identify error: %v", err)
+		t.Fatalf("unexpected err: %v", err)
 	}
-	if cand == nil || cand.Protocol != "http" {
-		t.Fatalf("expected http candidate, got %#v", cand)
-	}
-	if cand.MatchedProbe != "http-get" {
-		t.Fatalf("expected matched probe 'http-get', got %q", cand.MatchedProbe)
+	if got == nil || got.Source != "fp1" || got.Confidence != 0.9 {
+		t.Fatalf("unexpected result: %#v", got)
 	}
 }
 
-func TestCoordinatorProbeFailure(t *testing.T) {
-	ctx := context.Background()
-	fp := &stubFingerprinter{
-		id:     "ftp",
-		probes: []Probe{{ID: "ftp-banner"}},
-	}
-
-	exec := &stubExecutor{failProbe: "ftp-banner"}
-
-	coord := NewCoordinator(fp)
-	_, err := coord.Identify(ctx, PassiveObservation{}, exec)
-	if err == nil {
-		t.Fatalf("expected error when probe fails")
-	}
-}
-
-func TestRegistryHelpers(t *testing.T) {
-	fingerprinterMu.Lock()
-	fingerprinterSet = nil
-	fingerprinterMu.Unlock()
-
-	fp := &stubFingerprinter{id: "demo"}
-	RegisterFingerprinter(fp)
-
-	list := ListFingerprinters()
-	if len(list) != 1 || list[0].ID() != "demo" {
-		t.Fatalf("unexpected list result: %#v", list)
-	}
-
-	coord := NewDefaultCoordinator()
-	cand, err := coord.Identify(context.Background(), PassiveObservation{}, nil)
+func TestCoordinator_Identify_ActiveProbesAndBestConfidence(t *testing.T) {
+	fp1 := &fpMock{id: "fp1", probes: []Probe{{ID: "p1"}}, verifySeq: []struct {
+		resp []byte
+		cand *ServiceCandidate
+		done bool
+		err  error
+	}{
+		{nil, &ServiceCandidate{Protocol: "ssh", Confidence: 0.6}, true, nil},
+	}}
+	fp2 := &fpMock{id: "fp2", probes: []Probe{{ID: "p2"}}, verifySeq: []struct {
+		resp []byte
+		cand *ServiceCandidate
+		done bool
+		err  error
+	}{
+		{nil, &ServiceCandidate{Protocol: "http", Confidence: 0.8}, true, nil},
+	}}
+	exec := mockExecutor(func(ctx context.Context, probe Probe) ([]byte, error) { return []byte("ok"), nil })
+	c := NewCoordinator(fp1, fp2)
+	got, err := c.Identify(context.Background(), PassiveObservation{}, exec)
 	if err != nil {
-		t.Fatalf("Identify error: %v", err)
+		t.Fatalf("unexpected err: %v", err)
 	}
-	if cand != nil {
-		t.Fatalf("expected no candidate from empty fingerprinter, got %#v", cand)
+	if got == nil || got.Source != "fp2" || got.MatchedProbe != "p2" || got.Confidence != 0.8 {
+		t.Fatalf("unexpected result: %#v", got)
+	}
+}
+
+func TestCoordinator_Identify_ErrorPaths(t *testing.T) {
+	// passive error
+	fpE := &fpMock{id: "err", passiveErr: errors.New("boom")}
+	if _, err := NewCoordinator(fpE).Identify(context.Background(), PassiveObservation{}, nil); err == nil {
+		t.Fatalf("expected error from passive")
+	}
+
+	// probe error
+	fpP := &fpMock{id: "fp", probes: []Probe{{ID: "q"}}}
+	execErr := mockExecutor(func(ctx context.Context, probe Probe) ([]byte, error) { return nil, errors.New("x") })
+	if _, err := NewCoordinator(fpP).Identify(context.Background(), PassiveObservation{}, execErr); err == nil {
+		t.Fatalf("expected probe error")
+	}
+
+	// verify error
+	fpV := &fpMock{id: "fp", probes: []Probe{{ID: "q"}}, verifySeq: []struct {
+		resp []byte
+		cand *ServiceCandidate
+		done bool
+		err  error
+	}{
+		{nil, nil, false, errors.New("v")},
+	}}
+	execOK := mockExecutor(func(ctx context.Context, probe Probe) ([]byte, error) { return []byte("ok"), nil })
+	if _, err := NewCoordinator(fpV).Identify(context.Background(), PassiveObservation{}, execOK); err == nil {
+		t.Fatalf("expected verify error")
 	}
 }
