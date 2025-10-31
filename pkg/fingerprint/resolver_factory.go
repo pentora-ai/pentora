@@ -5,6 +5,11 @@ import (
 	"errors"
 )
 
+var (
+	WarmWithExternalFunc     = WarmWithExternal
+	GetFingerprintResolverFn = GetFingerprintResolver
+)
+
 // ResolverType defines which implementation to use.
 type ResolverType string
 
@@ -37,8 +42,8 @@ func (f *ResolverFactory) Get() (Resolver, error) {
 	}
 
 	if len(f.staticRules) == 0 {
-		WarmWithExternal("")
-		return GetFingerprintResolver(), nil
+		WarmWithExternalFunc("")
+		return GetFingerprintResolverFn(), nil
 	}
 
 	return NewRuleBasedResolver(f.staticRules), nil

@@ -54,9 +54,12 @@ func WarmProbeCatalogWithExternal(cacheDir string) error {
 		return fmt.Errorf("parse probe catalog cache: %w", err)
 	}
 
-	probeCatalogOnce = sync.Once{}
+	// Replace active catalog and ensure subsequent GetProbeCatalog does not overwrite it
 	probeCatalog = catalog
 	probeCatalogErr = nil
+	probeCatalogOnce = sync.Once{}
+	// Prime the once so that future GetProbeCatalog() does not reload embedded
+	probeCatalogOnce.Do(func() {})
 	return nil
 }
 
