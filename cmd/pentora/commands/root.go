@@ -16,7 +16,7 @@ import (
 	"github.com/pentora-ai/pentora/pkg/cli"
 	"github.com/pentora-ai/pentora/pkg/config"
 	"github.com/pentora-ai/pentora/pkg/engine"
-	"github.com/pentora-ai/pentora/pkg/workspace"
+	"github.com/pentora-ai/pentora/pkg/storage"
 )
 
 const cliExecutable = "pentora"
@@ -25,12 +25,12 @@ const cliExecutable = "pentora"
 // AppManager lifecycle, and shared workspace preparation.
 func NewCommand() *cobra.Command {
 	var (
-		configFile        string
-		workspaceDir      string
-		workspaceDisabled bool
-		appManager        engine.Manager
-		verbosityCount    int
-		verbose           bool
+		configFile      string
+		storageDir      string
+		storageDisabled bool
+		appManager      engine.Manager
+		verbosityCount  int
+		verbose         bool
 	)
 
 	cmd := &cobra.Command{
@@ -48,15 +48,18 @@ func NewCommand() *cobra.Command {
 			ctx := context.WithValue(cmd.Context(), engine.AppManagerKey, appManager)
 			ctx = appctx.WithConfig(ctx, appManager.Config())
 
-			if !workspaceDisabled {
-				prepared, err := workspace.Prepare(workspaceDir)
+			if !storageDisabled {
+				storageConfig, err := storage.DefaultConfig()
 				if err != nil {
-					return fmt.Errorf("prepare workspace: %w", err)
+					return fmt.Errorf("get storage config: %w", err)
 				}
-				ctx = workspace.WithContext(ctx, prepared)
-				log.Info().Str("workspace", prepared).Msg("workspace ready")
+				if storageDir != "" {
+					storageConfig.WorkspaceRoot = storageDir
+				}
+				ctx = storage.WithConfig(ctx, storageConfig)
+				log.Info().Str("storage_root", storageConfig.WorkspaceRoot).Msg("storage ready")
 			} else {
-				log.Info().Msg("workspace disabled for this run")
+				log.Info().Msg("storage disabled for this run")
 			}
 
 			// Configure global log level based on verbosity flags
@@ -92,8 +95,8 @@ func NewCommand() *cobra.Command {
 	cmd.SilenceUsage = true
 
 	cmd.PersistentFlags().StringVarP(&configFile, "config", "c", "", "Configuration file path")
-	cmd.PersistentFlags().StringVar(&workspaceDir, "workspace-dir", "", "Override workspace root directory")
-	cmd.PersistentFlags().BoolVar(&workspaceDisabled, "no-workspace", false, "Disable workspace persistence for this run")
+	cmd.PersistentFlags().StringVar(&storageDir, "storage-dir", "", "Override storage root directory")
+	cmd.PersistentFlags().BoolVar(&storageDisabled, "no-storage", false, "Disable storage persistence for this run")
 	cmd.PersistentFlags().CountVarP(&verbosityCount, "verbosity", "v", "Increase logging verbosity (repeatable)")
 	cmd.PersistentFlags().BoolVar(&verbose, "verbose", false, "Enable verbose logging (shows service layer logs)")
 

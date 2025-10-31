@@ -10,7 +10,7 @@ import (
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
 	"github.com/pentora-ai/pentora/pkg/fingerprint"
 	"github.com/pentora-ai/pentora/pkg/fingerprint/catalogsync"
-	"github.com/pentora-ai/pentora/pkg/workspace"
+	"github.com/pentora-ai/pentora/pkg/storage"
 )
 
 // NewFingerprintCommand wires CLI helpers for fingerprint catalog management.
@@ -50,10 +50,10 @@ func newFingerprintSyncCommand() *cobra.Command {
 
 			destination := opts.CacheDir
 			if destination == "" {
-				if ws, ok := workspace.FromContext(cmd.Context()); ok {
-					destination = filepath.Join(ws, "cache", "fingerprint")
+				if cfg, ok := storage.ConfigFromContext(cmd.Context()); ok {
+					destination = filepath.Join(cfg.WorkspaceRoot, "cache", "fingerprint")
 				} else {
-					return errors.New("workspace disabled; specify --cache-dir")
+					return errors.New("storage disabled; specify --cache-dir")
 				}
 			}
 
