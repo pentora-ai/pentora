@@ -81,10 +81,10 @@ pentora scan --targets 192.168.1.1 --vuln
 pentora scan --targets 10.0.0.0/24 --fingerprint
 
 # List previous scan results
-pentora workspace list
+pentora storage list
 
-# Export scan results to JSON
-pentora workspace export <scan-id> --format json -o results.json
+# Get scan details
+pentora storage get <scan-id>
 ```
 
 ### Server Mode
@@ -214,7 +214,7 @@ pentora/
 │   ├── scanexec/         # Scan execution logic
 │   ├── scanner/          # Port scanner and banner grabber
 │   ├── server/           # HTTP/gRPC server implementation
-│   ├── workspace/        # Scan result storage and queries
+│   ├── storage/         # Scan result persistence and queries
 │   └── version/          # Version information
 ├── ui/                   # Web UI (React/TypeScript) - In Development
 ├── docs/                 # Documentation website (Docusaurus)
