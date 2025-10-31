@@ -51,11 +51,11 @@ jobs:
           </html>
           EOF
 
-  - name: Run unit tests
-    run: make test-unit
-  - name: Run integration tests (build tag)
-    if: ${{ github.event_name == 'pull_request' }}
-    run: make test-integration
+      - name: Run unit tests
+        run: make test-unit
+      - name: Run integration tests (build tag)
+        if: ${{ github.event_name == 'pull_request' }}
+        run: make test-integration
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4
