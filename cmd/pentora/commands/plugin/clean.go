@@ -90,10 +90,6 @@ func executeCleanCommand(cmd *cobra.Command, cacheDir string) error {
 	// Call service layer
 	result, err := svc.Clean(cmd.Context(), opts)
 	if err != nil {
-		logger.Error().
-			Err(err).
-			Str("error_code", plugin.ErrorCode(err)).
-			Msg("clean failed")
 		return formatter.PrintTotalFailureSummary("clean", err, plugin.ErrorCode(err))
 	}
 

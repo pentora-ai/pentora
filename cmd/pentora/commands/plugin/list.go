@@ -76,20 +76,12 @@ func executeListCommand(cmd *cobra.Command, cacheDir string, verbose bool) error
 	formatter := getFormatter(cmd)
 	svc, err := getPluginService(cacheDir)
 	if err != nil {
-		logger.Error().
-			Err(err).
-			Str("error_code", plugin.ErrorCode(err)).
-			Msg("failed to initialize plugin service")
 		return err
 	}
 
 	// Call service layer
 	plugins, err := svc.List(ctx)
 	if err != nil {
-		logger.Error().
-			Err(err).
-			Str("error_code", plugin.ErrorCode(err)).
-			Msg("list failed")
 		return formatter.PrintTotalFailureSummary("list", err, plugin.ErrorCode(err))
 	}
 

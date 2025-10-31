@@ -83,13 +83,9 @@ func executeVerifyCommand(cmd *cobra.Command, cacheDir string) error {
 		Str("plugin_id", opts.PluginID).
 		Msg("verify started")
 
-	// Call service layer
+		// Call service layer
 	result, err := svc.Verify(cmd.Context(), opts)
 	if err != nil {
-		logger.Error().
-			Err(err).
-			Str("error_code", plugin.ErrorCode(err)).
-			Msg("verify failed")
 		return formatter.PrintTotalFailureSummary("verify", err, plugin.ErrorCode(err))
 	}
 

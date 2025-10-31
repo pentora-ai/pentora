@@ -107,11 +107,6 @@ func executeUninstallCommand(cmd *cobra.Command, target, cacheDir string) error 
 
 	// Handle total failure
 	if err != nil {
-		logger.Error().
-			Err(err).
-			Str("error_code", plugin.ErrorCode(err)).
-			Str("target", target).
-			Msg("uninstall failed")
 		return formatter.PrintTotalFailureSummary("uninstall", err, plugin.ErrorCode(err))
 	}
 

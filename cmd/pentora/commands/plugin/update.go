@@ -103,21 +103,11 @@ func executeUpdateCommand(cmd *cobra.Command, cacheDir string) error {
 	if handleErr := handlePartialFailure(err, formatter, func() error {
 		return printUpdateResult(formatter, result, opts.DryRun)
 	}); handleErr != nil {
-		if err != nil {
-			logger.Error().
-				Err(err).
-				Str("error_code", plugin.ErrorCode(err)).
-				Msg("update failed")
-		}
 		return handleErr
 	}
 
 	// Handle total failure
 	if err != nil {
-		logger.Error().
-			Err(err).
-			Str("error_code", plugin.ErrorCode(err)).
-			Msg("update failed")
 		return formatter.PrintTotalFailureSummary("update", err, plugin.ErrorCode(err))
 	}
 
