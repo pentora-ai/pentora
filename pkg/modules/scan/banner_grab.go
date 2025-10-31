@@ -96,8 +96,8 @@ type PortInfo struct {
 // newBannerGrabModule is the internal constructor for the BannerGrabModule.
 func newBannerGrabModule() *BannerGrabModule {
 	defaultConfig := BannerGrabConfig{
-		ReadTimeout:           3 * time.Second,
-		ConnectTimeout:        2 * time.Second,
+		ReadTimeout:           10 * time.Second,
+		ConnectTimeout:        5 * time.Second,
 		BufferSize:            2048,
 		Concurrency:           50,
 		SendProbes:            true,
@@ -182,10 +182,10 @@ func (m *BannerGrabModule) Init(instanceID string, configMap map[string]interfac
 	}
 
 	if cfg.ReadTimeout <= 0 {
-		cfg.ReadTimeout = 3 * time.Second
+		cfg.ReadTimeout = 10 * time.Second
 	}
 	if cfg.ConnectTimeout <= 0 {
-		cfg.ConnectTimeout = 2 * time.Second
+		cfg.ConnectTimeout = 5 * time.Second
 	}
 	if cfg.BufferSize <= 0 || cfg.BufferSize > 16384 {
 		cfg.BufferSize = 2048
