@@ -1,12 +1,15 @@
 package httpx
 
 import (
+	"bytes"
 	"context"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
 	"testing"
 
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
 
 	"github.com/pentora-ai/pentora/pkg/config"
@@ -103,6 +106,10 @@ func TestPluginRoutes_NotMounted_WhenServiceIsNil(t *testing.T) {
 	cfg.APIEnabled = true
 	cfg.UIEnabled = false // Disable UI to avoid catch-all "/" route
 
+	// Capture logs
+	var buf bytes.Buffer
+	log.Logger = zerolog.New(&buf).Level(zerolog.InfoLevel)
+
 	deps := &api.Deps{
 		Ready:         &atomic.Bool{},
 		PluginService: nil, // No plugin service
@@ -133,6 +140,41 @@ func TestPluginRoutes_NotMounted_WhenServiceIsNil(t *testing.T) {
 		require.Equal(t, http.StatusNotFound, w.Code,
 			"Expected 404 for %s %s when PluginService=nil, got %d", endpoint.method, endpoint.path, w.Code)
 	}
+
+	// Assert info log for skipping
+	require.Contains(t, buf.String(), "PluginService not provided - skipping plugin API routes")
+}
+
+// TestPluginRoutes_NotMounted_WhenServiceWrongType verifies that when PluginService exists
+// but does NOT implement v1.PluginService, routes are NOT mounted and a warning is logged.
+func TestPluginRoutes_NotMounted_WhenServiceWrongType(t *testing.T) {
+	cfg := config.DefaultServerConfig()
+	cfg.APIEnabled = true
+	cfg.UIEnabled = false // Disable UI to avoid catch-all "/" route
+
+	// Capture logs
+	var buf bytes.Buffer
+	log.Logger = zerolog.New(&buf).Level(zerolog.InfoLevel)
+
+	// Provide a wrong type for PluginService
+	deps := &api.Deps{
+		Ready:         &atomic.Bool{},
+		PluginService: struct{}{}, // wrong type, does not satisfy v1.PluginService
+		Config:        api.DefaultConfig(),
+	}
+
+	router := NewRouter(cfg, deps)
+
+	// Try to access a plugin endpoint - should be 404 because routes not mounted
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/plugins", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	require.Equal(t, http.StatusNotFound, w.Code)
+
+	// Assert warning log emitted
+	logStr := buf.String()
+	require.Contains(t, logStr, "PluginService type assertion failed")
+	require.Contains(t, logStr, "httpx.router")
 }
 
 // TestPluginRoutes_Mounted_WhenServiceExists tests that plugin routes ARE mounted when PluginService is present
@@ -142,6 +184,11 @@ func TestPluginRoutes_Mounted_WhenServiceExists(t *testing.T) {
 	cfg.UIEnabled = false // Disable UI to avoid catch-all "/" route
 
 	mockSvc := &mockPluginService{}
+
+	// Capture logs
+	var buf bytes.Buffer
+	log.Logger = zerolog.New(&buf).Level(zerolog.InfoLevel)
+
 	deps := &api.Deps{
 		Ready:         &atomic.Bool{},
 		PluginService: mockSvc, // Plugin service exists
@@ -173,6 +220,9 @@ func TestPluginRoutes_Mounted_WhenServiceExists(t *testing.T) {
 		require.NotEqual(t, http.StatusNotFound, w.Code,
 			"Expected plugin route %s %s to be mounted (not 404), got %d", endpoint.method, endpoint.path, w.Code)
 	}
+
+	// Assert info log for mounting
+	require.Contains(t, buf.String(), "mounting plugin API routes")
 }
 
 // TestPluginRoutes_NotMounted_WhenAPIDisabled tests that plugin routes are NOT mounted when APIEnabled=false

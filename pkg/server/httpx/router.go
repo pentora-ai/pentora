@@ -1,7 +1,10 @@
 package httpx
 
 import (
+	"fmt"
 	"net/http"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/pentora-ai/pentora/pkg/config"
 	"github.com/pentora-ai/pentora/pkg/server/api"
@@ -33,12 +36,24 @@ func NewRouter(cfg config.ServerConfig, deps *api.Deps) *http.ServeMux {
 		if deps.PluginService != nil {
 			// Type assert to v1.PluginService (the actual type will be *plugin.Service)
 			if pluginSvc, ok := deps.PluginService.(v1.PluginService); ok {
+				log.Info().
+					Str("component", "httpx.router").
+					Msg("mounting plugin API routes")
 				mux.HandleFunc("POST /api/v1/plugins/install", v1.InstallPluginHandler(pluginSvc, deps.Config))
 				mux.HandleFunc("POST /api/v1/plugins/update", v1.UpdatePluginsHandler(pluginSvc, deps.Config))
 				mux.HandleFunc("GET /api/v1/plugins", v1.ListPluginsHandler(pluginSvc))
 				mux.HandleFunc("GET /api/v1/plugins/{id}", v1.GetPluginHandler(pluginSvc))
 				mux.HandleFunc("DELETE /api/v1/plugins/{id}", v1.UninstallPluginHandler(pluginSvc, deps.Config))
+			} else {
+				log.Warn().
+					Str("component", "httpx.router").
+					Str("actual_type", fmt.Sprintf("%T", deps.PluginService)).
+					Msg("PluginService type assertion failed - plugin API routes NOT mounted")
 			}
+		} else {
+			log.Info().
+				Str("component", "httpx.router").
+				Msg("PluginService not provided - skipping plugin API routes")
 		}
 	}
 
