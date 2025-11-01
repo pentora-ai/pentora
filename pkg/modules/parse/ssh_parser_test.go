@@ -38,7 +38,7 @@ func TestSSHParser_Execute_WrongItemType(t *testing.T) {
 	inputs := map[string]interface{}{
 		"service.banner.tcp": []interface{}{[]scan.BannerGrabResult{}},
 	}
-	outCh := make(chan engine.ModuleOutput, 1)
+	outCh := make(chan engine.ModuleOutput, 3)
 	defer close(outCh)
 	err := m.Execute(context.Background(), inputs, outCh)
 	require.NoError(t, err)
@@ -125,7 +125,8 @@ func TestSSHParser_Execute_ParsesValidBanners(t *testing.T) {
 			inputs := map[string]interface{}{
 				"service.banner.tcp": tc.banners,
 			}
-			outCh := make(chan engine.ModuleOutput, len(tc.banners))
+			// Each banner produces 3 outputs: service.ssh.details, ssh.banner, ssh.version
+			outCh := make(chan engine.ModuleOutput, len(tc.banners)*3)
 			defer close(outCh)
 
 			err := m.Execute(context.Background(), inputs, outCh)
@@ -142,12 +143,29 @@ func TestSSHParser_Execute_ParsesValidBanners(t *testing.T) {
 
 			if tc.expectParse {
 				require.NotEmpty(t, outputs)
+				// Verify we have the expected output types
+				var foundDetails, foundBanner bool
 				for _, out := range outputs {
-					parsed, ok := out.Data.(SSHParsedInfo)
-					require.True(t, ok)
-					require.Equal(t, "SSH", parsed.ProtocolName)
-					require.NotEmpty(t, parsed.SSHVersion)
+					switch out.DataKey {
+					case "service.ssh.details":
+						parsed, ok := out.Data.(SSHParsedInfo)
+						require.True(t, ok, "service.ssh.details should be SSHParsedInfo")
+						require.Equal(t, "SSH", parsed.ProtocolName)
+						require.NotEmpty(t, parsed.SSHVersion)
+						foundDetails = true
+					case "ssh.banner":
+						banner, ok := out.Data.(string)
+						require.True(t, ok, "ssh.banner should be string")
+						require.NotEmpty(t, banner)
+						foundBanner = true
+					case "ssh.version":
+						version, ok := out.Data.(string)
+						require.True(t, ok, "ssh.version should be string")
+						require.NotEmpty(t, version)
+					}
 				}
+				require.True(t, foundDetails, "should have service.ssh.details output")
+				require.True(t, foundBanner, "should have ssh.banner output")
 			} else {
 				require.Empty(t, outputs)
 			}
@@ -165,7 +183,7 @@ func TestSSHParser_Execute_ContextCancellation(t *testing.T) {
 			{IP: "192.168.1.1", Port: 22, Banner: "SSH-2.0-OpenSSH_8.2p1"},
 		},
 	}
-	outCh := make(chan engine.ModuleOutput, 1)
+	outCh := make(chan engine.ModuleOutput, 3)
 	defer close(outCh)
 
 	err := m.Execute(ctx, inputs, outCh)
@@ -214,7 +232,7 @@ func TestSSHParser_Execute_MissingInputKey(t *testing.T) {
 	m := buildSSHParser(t)
 	inputs := map[string]interface{}{} // no service.banner.tcp key
 
-	outCh := make(chan engine.ModuleOutput, 1)
+	outCh := make(chan engine.ModuleOutput, 3)
 	defer close(outCh)
 
 	err := m.Execute(context.Background(), inputs, outCh)
@@ -229,7 +247,7 @@ func TestSSHParser_Execute_InputWrongType(t *testing.T) {
 		"service.banner.tcp": 12345,
 	}
 
-	outCh := make(chan engine.ModuleOutput, 1)
+	outCh := make(chan engine.ModuleOutput, 3)
 	defer close(outCh)
 
 	err := m.Execute(context.Background(), inputs, outCh)
@@ -245,7 +263,8 @@ func TestSSHParser_Execute_ParsesSoftwareVersionProperly(t *testing.T) {
 		},
 	}
 
-	outCh := make(chan engine.ModuleOutput, 1)
+	// Each banner produces 3 outputs: service.ssh.details, ssh.banner, ssh.version
+	outCh := make(chan engine.ModuleOutput, 3)
 	defer close(outCh)
 
 	err := m.Execute(context.Background(), inputs, outCh)
@@ -256,9 +275,23 @@ func TestSSHParser_Execute_ParsesSoftwareVersionProperly(t *testing.T) {
 		outputs = append(outputs, <-outCh)
 	}
 
-	require.Len(t, outputs, 1)
-	parsed, ok := outputs[0].Data.(SSHParsedInfo)
-	require.True(t, ok)
+	// Should have 3 outputs: service.ssh.details, ssh.banner, ssh.version
+	require.NotEmpty(t, outputs)
+
+	// Find and verify service.ssh.details output
+	var parsed SSHParsedInfo
+	var found bool
+	for _, out := range outputs {
+		if out.DataKey == "service.ssh.details" {
+			var ok bool
+			parsed, ok = out.Data.(SSHParsedInfo)
+			require.True(t, ok)
+			found = true
+			break
+		}
+	}
+	require.True(t, found, "should have service.ssh.details output")
+
 	require.Equal(t, "SSH", parsed.ProtocolName)
 	require.Equal(t, "2.0", parsed.SSHVersion)
 	require.Equal(t, "OpenSSH_9.0", parsed.VersionInfo)
@@ -275,7 +308,8 @@ func TestSSHParser_Execute_TypedSliceInput(t *testing.T) {
 		},
 	}
 
-	outCh := make(chan engine.ModuleOutput, 1)
+	// Each banner produces 3 outputs: service.ssh.details, ssh.banner, ssh.version
+	outCh := make(chan engine.ModuleOutput, 3)
 	defer close(outCh)
 
 	err := m.Execute(context.Background(), inputs, outCh)
@@ -286,9 +320,22 @@ func TestSSHParser_Execute_TypedSliceInput(t *testing.T) {
 		outputs = append(outputs, <-outCh)
 	}
 
-	require.Len(t, outputs, 1)
-	parsed, ok := outputs[0].Data.(SSHParsedInfo)
-	require.True(t, ok)
+	require.NotEmpty(t, outputs)
+
+	// Find and verify service.ssh.details output
+	var parsed SSHParsedInfo
+	var found bool
+	for _, out := range outputs {
+		if out.DataKey == "service.ssh.details" {
+			var ok bool
+			parsed, ok = out.Data.(SSHParsedInfo)
+			require.True(t, ok)
+			found = true
+			break
+		}
+	}
+	require.True(t, found, "should have service.ssh.details output")
+
 	require.Equal(t, "Dropbear", parsed.Software)
 	require.Equal(t, "2020.78", parsed.SoftwareVersion)
 	require.Equal(t, "2.0", parsed.SSHVersion)
