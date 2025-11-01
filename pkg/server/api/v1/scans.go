@@ -20,14 +20,33 @@ import (
 //	  {"id": "scan-1", "status": "completed", "start_time": "2024-01-01T00:00:00Z", "targets": 10},
 //	  {"id": "scan-2", "status": "running", "start_time": "2024-01-02T00:00:00Z", "targets": 5}
 //	]
+//
+// ListScansHandler handles GET /api/v1/scans
+//
+// Note: This handler currently applies offset-based, in-memory pagination
+// for OSS storage. See Issue #139 for cursor-based pagination to move
+// pagination into the storage layer for scalability.
 func ListScansHandler(deps *api.Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var scans []api.ScanMetadata
 		var err error
 
+		// Parse and validate query params (status, limit, offset)
+		query, qerr := ParseListScansQuery(r)
+		if qerr != nil {
+			api.WriteJSONError(w, http.StatusBadRequest, "Bad Request", "INVALID_QUERY", qerr.Error())
+			return
+		}
+
+		// Build storage filter (push down status when possible)
+		storageFilter := storage.ScanFilter{}
+		if query.Status != "" {
+			storageFilter.Status = query.Status
+		}
+
 		// Try new storage backend first, fall back to workspace
 		if deps.Storage != nil {
-			scans, err = listScansFromStorage(r.Context(), deps.Storage)
+			scans, err = listScansFromStorage(r.Context(), deps.Storage, storageFilter)
 		} else if deps.Workspace != nil {
 			scans, err = deps.Workspace.ListScans()
 		} else {
@@ -41,7 +60,19 @@ func ListScansHandler(deps *api.Deps) http.HandlerFunc {
 			return
 		}
 
-		api.WriteJSON(w, http.StatusOK, scans)
+		// Apply offset/limit (server-side pagination). Cursor-based pagination
+		// will replace this in Issue #139 to improve scalability.
+		start := query.Offset
+		if start > len(scans) {
+			start = len(scans)
+		}
+		end := start + query.Limit
+		if end > len(scans) {
+			end = len(scans)
+		}
+		page := scans[start:end]
+
+		api.WriteJSON(w, http.StatusOK, page)
 	}
 }
 
@@ -70,6 +101,10 @@ func ListScansHandler(deps *api.Deps) http.HandlerFunc {
 func GetScanHandler(deps *api.Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
+		if id == "" {
+			api.WriteJSONError(w, http.StatusBadRequest, "Bad Request", "SCAN_ID_REQUIRED", "scan id is required")
+			return
+		}
 
 		var scan *api.ScanDetail
 		var err error
@@ -95,9 +130,9 @@ func GetScanHandler(deps *api.Deps) http.HandlerFunc {
 }
 
 // listScansFromStorage converts storage scan metadata to API format
-func listScansFromStorage(ctx context.Context, backend storage.Backend) ([]api.ScanMetadata, error) {
-	// Get all scans from storage (orgID="default" for OSS)
-	storageScans, err := backend.Scans().List(ctx, "default", storage.ScanFilter{})
+func listScansFromStorage(ctx context.Context, backend storage.Backend, filter storage.ScanFilter) ([]api.ScanMetadata, error) {
+	// Get scans from storage (orgID="default" for OSS)
+	storageScans, err := backend.Scans().List(ctx, "default", filter)
 	if err != nil {
 		return nil, err
 	}
