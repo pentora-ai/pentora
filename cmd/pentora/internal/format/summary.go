@@ -241,6 +241,15 @@ func GetSuggestions(errorCode string, operation string) []string {
 			fmt.Sprintf("See full details:        pentora plugin %s --output json", operation),
 		)
 
+	case "NO_PLUGINS_FOUND":
+		suggestions = append(suggestions,
+			"Check network connection",
+			"Verify DNS resolution",
+			fmt.Sprintf("Try GitHub source:       pentora plugin %s <name> --source github", operation),
+			fmt.Sprintf("Force re-download:       pentora plugin %s --force", operation),
+			"List cached plugins:     pentora plugin list",
+		)
+
 	case "INVALID_CATEGORY":
 		suggestions = append(suggestions,
 			"Valid categories: ssh, http, tls, database, network, web, iot, misc",
