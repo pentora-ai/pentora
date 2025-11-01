@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
+	"github.com/pentora-ai/pentora/cmd/pentora/internal/format"
 	"github.com/pentora-ai/pentora/pkg/storage"
 )
 
@@ -30,18 +31,19 @@ The command reads retention policies from:
 
 Use --dry-run to preview which scans would be deleted without actually deleting them.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			formatter := format.FromCommand(cmd)
 			ctx := cmd.Context()
 
 			// Bind flags to options using centralized binder
 			opts, err := bind.BindStorageGCOptions(cmd)
 			if err != nil {
-				return err
+				return formatter.PrintTotalFailureSummary("garbage collection", err, storage.ErrorCode(err))
 			}
 
 			// Create storage backend
 			storageConfig, err := storage.DefaultConfig()
 			if err != nil {
-				return fmt.Errorf("get storage config: %w", err)
+				return formatter.PrintTotalFailureSummary("garbage collection", err, storage.ErrorCode(err))
 			}
 
 			// Apply retention policy overrides from flags
@@ -55,12 +57,13 @@ Use --dry-run to preview which scans would be deleted without actually deleting 
 
 			// Validate config
 			if err := storageConfig.Validate(); err != nil {
-				return fmt.Errorf("invalid storage config: %w", err)
+				wrapped := storage.FormatRetentionValidationError(err)
+				return formatter.PrintTotalFailureSummary("garbage collection", wrapped, storage.ErrorCode(wrapped))
 			}
 
 			backend, err := storage.NewBackend(ctx, storageConfig)
 			if err != nil {
-				return fmt.Errorf("create storage backend: %w", err)
+				return formatter.PrintTotalFailureSummary("garbage collection", err, storage.ErrorCode(err))
 			}
 			defer func() {
 				if err := backend.Close(); err != nil {
@@ -70,14 +73,8 @@ Use --dry-run to preview which scans would be deleted without actually deleting 
 
 			// Check if retention policy is enabled
 			if !storageConfig.Retention.IsEnabled() {
-				log.Warn().Msg("No retention policy configured. Use --max-scans or --max-age-days to enable GC.")
-				fmt.Println("No retention policy configured. Nothing to clean up.")
-				fmt.Println()
-				fmt.Println("To enable garbage collection, set a retention policy:")
-				fmt.Println("  pentora storage gc --max-scans=100")
-				fmt.Println("  pentora storage gc --max-age-days=30")
-				fmt.Println("  pentora storage gc --max-scans=100 --max-age-days=30")
-				return nil
+				err := storage.ErrRetentionPolicyNotConfigured
+				return formatter.PrintTotalFailureSummary("garbage collection", err, storage.ErrorCode(err))
 			}
 
 			// Log retention policy
@@ -109,7 +106,7 @@ Use --dry-run to preview which scans would be deleted without actually deleting 
 				OrgID:  opts.OrgID,
 			})
 			if err != nil {
-				return fmt.Errorf("garbage collection failed: %w", err)
+				return formatter.PrintTotalFailureSummary("garbage collection", err, storage.ErrorCode(err))
 			}
 
 			// Print results
@@ -149,6 +146,9 @@ Use --dry-run to preview which scans would be deleted without actually deleting 
 	cmd.Flags().String("org-id", "", "Organization ID to clean up (default: all orgs)")
 	cmd.Flags().Int("max-scans", 0, "Maximum number of scans to retain (0 = no limit)")
 	cmd.Flags().Int("max-age-days", 0, "Maximum age of scans in days (0 = no limit)")
+	cmd.Flags().String("output", "table", "Output format: json, table")
+	cmd.Flags().Bool("quiet", false, "Suppress non-essential output")
+	cmd.Flags().Bool("no-color", false, "Disable colored output")
 
 	return cmd
 }

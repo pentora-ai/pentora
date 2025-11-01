@@ -208,67 +208,234 @@ func (f *formatter) PrintTotalFailureSummary(operation string, err error, errorC
 	return writeErr
 }
 
-// GetSuggestions returns actionable hints based on error code and operation
-func GetSuggestions(errorCode string, operation string) []string {
-	suggestions := []string{}
-
-	switch errorCode {
-	case "PLUGIN_NOT_FOUND":
-		suggestions = append(suggestions,
+var suggestionGenerators = map[string]func(string) []string{
+	"PLUGIN_NOT_FOUND": func(operation string) []string {
+		return []string{
 			"List available plugins:  pentora plugin list",
 			fmt.Sprintf("Try GitHub source:       pentora plugin %s <plugin> --source github", operation),
-		)
-
-	case "SERVICE_UNAVAILABLE", "REMOTE_UNAVAILABLE":
-		suggestions = append(suggestions,
+		}
+	},
+	"SERVICE_UNAVAILABLE": func(operation string) []string {
+		return []string{
 			fmt.Sprintf("Retry with GitHub:       pentora plugin %s --source github", operation),
 			"Check network connection",
-		)
-
-	case "CHECKSUM_MISMATCH":
-		suggestions = append(suggestions,
+		}
+	},
+	"CHECKSUM_MISMATCH": func(operation string) []string {
+		return []string{
 			fmt.Sprintf("Force re-download:       pentora plugin %s --force", operation),
-		)
-
-	case "VERSION_CONFLICT":
-		suggestions = append(suggestions,
+		}
+	},
+	"VERSION_CONFLICT": func(operation string) []string {
+		return []string{
 			"Uninstall first:         pentora plugin uninstall <plugin>",
 			fmt.Sprintf("Force reinstall:         pentora plugin %s --force", operation),
-		)
-
-	case "PARTIAL_FAILURE":
-		suggestions = append(suggestions,
+		}
+	},
+	"PARTIAL_FAILURE": func(operation string) []string {
+		return []string{
 			fmt.Sprintf("See full details:        pentora plugin %s --output json", operation),
-		)
-
-	case "NO_PLUGINS_FOUND":
-		suggestions = append(suggestions,
+		}
+	},
+	"NO_PLUGINS_FOUND": func(operation string) []string {
+		return []string{
 			"Check network connection",
 			"Verify DNS resolution",
 			fmt.Sprintf("Try GitHub source:       pentora plugin %s <name> --source github", operation),
 			fmt.Sprintf("Force re-download:       pentora plugin %s --force", operation),
 			"List cached plugins:     pentora plugin list",
-		)
-
-	case "INVALID_CATEGORY":
-		suggestions = append(suggestions,
+		}
+	},
+	"INVALID_CATEGORY": func(string) []string {
+		return []string{
 			"Valid categories: ssh, http, tls, database, network, web, iot, misc",
 			"List plugins:     pentora plugin list",
-		)
-
-	case "INVALID_SOURCE":
-		suggestions = append(suggestions,
+		}
+	},
+	"INVALID_SOURCE": func(string) []string {
+		return []string{
 			"Valid sources: official, github",
-		)
-
-	case "PLUGIN_NOT_INSTALLED":
-		suggestions = append(suggestions,
+		}
+	},
+	"PLUGIN_NOT_INSTALLED": func(string) []string {
+		return []string{
 			"List installed:   pentora plugin list",
 			"Install plugin:   pentora plugin install <plugin>",
-		)
-	}
+		}
+	},
+	"INVALID_TARGET": func(string) []string {
+		return []string{
+			"Provide a target:           pentora scan 192.168.1.0/24",
+			"Scan multiple hosts:        pentora scan 10.0.0.1 10.0.0.2",
+		}
+	},
+	"CONFLICTING_DISCOVERY_FLAGS": func(string) []string {
+		return []string{
+			"Remove either --only-discover or --no-discover",
+			"Run help for options:       pentora scan --help",
+		}
+	},
+	"SCAN_FAILURE": func(string) []string {
+		return []string{
+			"Retry with verbose logs:    pentora scan <target> --verbose",
+			"Enable progress output:     pentora scan <target> --progress",
+		}
+	},
+	"NO_RETENTION_POLICY": func(string) []string {
+		return []string{
+			"Set max scans:              pentora storage gc --max-scans=100",
+			"Set max age days:           pentora storage gc --max-age-days=30",
+		}
+	},
+	"INVALID_RETENTION_POLICY": func(string) []string {
+		return []string{
+			"Use non-negative numbers for retention flags",
+			"Override config with flags: pentora storage gc --max-scans=100",
+		}
+	},
+	"WORKSPACE_INVALID": func(string) []string {
+		return []string{
+			"Set workspace dir:          pentora storage gc --storage-dir <path>",
+			"Ensure directory exists and is writable",
+		}
+	},
+	"WORKSPACE_PERMISSION_DENIED": func(string) []string {
+		return []string{
+			"Fix permissions for the storage directory",
+			"Run with appropriate user or adjust --storage-dir",
+		}
+	},
+	"STORAGE_INVALID_INPUT": func(string) []string {
+		return []string{
+			"Review storage values in configuration file",
+			"Override with CLI flags when running GC",
+		}
+	},
+	"STORAGE_FAILURE": func(string) []string {
+		return []string{
+			"Retry with verbose logs:    pentora storage gc --verbosity 1",
+			"Check storage directory permissions",
+		}
+	},
+	"SERVER_INVALID_PORT": func(string) []string {
+		return []string{
+			"Use a port between 1 and 65535",
+			"Example:                 pentora server start --port 8080",
+		}
+	},
+	"SERVER_INVALID_CONCURRENCY": func(string) []string {
+		return []string{
+			"Set jobs concurrency to at least 1",
+			"Example:                 pentora server start --jobs-concurrency 4",
+		}
+	},
+	"SERVER_FEATURES_DISABLED": func(string) []string {
+		return []string{
+			"Enable either UI or API flags",
+			"Remove one of --no-ui / --no-api",
+		}
+	},
+	"SERVER_CONFIG_UNAVAILABLE": func(string) []string {
+		return []string{
+			"Run via the pentora CLI so AppManager initializes",
+			"Avoid calling server start from custom scripts without init",
+		}
+	},
+	"SERVER_INVALID_CONFIG": func(string) []string {
+		return []string{
+			"Check configuration values in config file",
+			"Retry with --verbose for detailed validation errors",
+		}
+	},
+	"SERVER_STORAGE_INIT_FAILED": func(string) []string {
+		return []string{
+			"Verify storage directory permissions",
+			"Override storage root:     pentora server start --storage-dir <path>",
+		}
+	},
+	"SERVER_PLUGIN_INIT_FAILED": func(string) []string {
+		return []string{
+			"Check plugin cache directory access",
+			"Retry after running:      pentora plugin clean",
+		}
+	},
+	"SERVER_INIT_FAILED": func(string) []string {
+		return []string{
+			"Retry with verbose logging: pentora server start --verbose",
+			"Review configuration for invalid values",
+		}
+	},
+	"SERVER_RUNTIME_FAILED": func(string) []string {
+		return []string{
+			"Check server logs for runtime errors",
+			"Ensure no other process is using the selected port",
+		}
+	},
+	"FINGERPRINT_SOURCE_REQUIRED": func(string) []string {
+		return []string{
+			"Provide a source:          --file <path> or --url <address>",
+			"Example:                   pentora fingerprint sync --url https://example/catalog.yaml",
+		}
+	},
+	"FINGERPRINT_SOURCE_CONFLICT": func(string) []string {
+		return []string{
+			"Use only one source flag",
+			"Remove either --file or --url",
+		}
+	},
+	"FINGERPRINT_STORAGE_DISABLED": func(string) []string {
+		return []string{
+			"Set cache directory:       pentora fingerprint sync --cache-dir <path>",
+			"Enable storage via CLI root command",
+		}
+	},
+	"FINGERPRINT_SYNC_FAILED": func(string) []string {
+		return []string{
+			"Retry with --url pointing to a reachable catalog",
+			"Check network connectivity and cache directory permissions",
+		}
+	},
+	"DAG_LOAD_FAILED": func(string) []string {
+		return []string{
+			"Verify the DAG file path exists",
+			"Ensure the file is valid YAML or JSON",
+		}
+	},
+	"DAG_UNSUPPORTED_FORMAT": func(string) []string {
+		return []string{
+			"Use --format yaml or --format json",
+		}
+	},
+	"DAG_MARSHAL_FAILED": func(string) []string {
+		return []string{
+			"Check DAG definition for syntax issues",
+			"Retry exporting after fixing validation errors",
+		}
+	},
+	"DAG_WRITE_FAILED": func(string) []string {
+		return []string{
+			"Ensure destination path is writable",
+			"Retry without --output to print to stdout",
+		}
+	},
+	"DAG_INVALID": func(string) []string {
+		return []string{
+			"Run pentora dag validate on the export output",
+			"Fix reported validation errors before exporting again",
+		}
+	},
+}
 
-	return suggestions
+func init() {
+	suggestionGenerators["REMOTE_UNAVAILABLE"] = suggestionGenerators["SERVICE_UNAVAILABLE"]
+}
+
+// GetSuggestions returns actionable hints based on error code and operation.
+func GetSuggestions(errorCode string, operation string) []string {
+	if generator, ok := suggestionGenerators[errorCode]; ok {
+		return generator(operation)
+	}
+	return nil
 }
 
 // collectSuggestions gathers unique suggestions from multiple errors

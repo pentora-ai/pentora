@@ -1,13 +1,13 @@
 package commands
 
 import (
-	"errors"
 	"path/filepath"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
+	"github.com/pentora-ai/pentora/cmd/pentora/internal/format"
 	"github.com/pentora-ai/pentora/pkg/fingerprint"
 	"github.com/pentora-ai/pentora/pkg/fingerprint/catalogsync"
 	"github.com/pentora-ai/pentora/pkg/storage"
@@ -35,17 +35,11 @@ func newFingerprintSyncCommand() *cobra.Command {
 		Use:   "sync",
 		Short: "Sync fingerprint probes from a remote or local source",
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			formatter := format.FromCommand(cmd)
 			// Bind flags to options using centralized binder
 			opts, err := bind.BindFingerprintOptions(cmd)
 			if err != nil {
-				return err
-			}
-
-			if opts.FilePath == "" && opts.URL == "" {
-				return errors.New("either --file or --url must be provided")
-			}
-			if opts.FilePath != "" && opts.URL != "" {
-				return errors.New("only one of --file or --url may be provided at a time")
+				return formatter.PrintTotalFailureSummary("sync fingerprint catalog", err, fingerprint.ErrorCode(err))
 			}
 
 			destination := opts.CacheDir
@@ -53,7 +47,8 @@ func newFingerprintSyncCommand() *cobra.Command {
 				if cfg, ok := storage.ConfigFromContext(cmd.Context()); ok {
 					destination = filepath.Join(cfg.WorkspaceRoot, "cache", "fingerprint")
 				} else {
-					return errors.New("storage disabled; specify --cache-dir")
+					derr := fingerprint.NewStorageDisabledError()
+					return formatter.PrintTotalFailureSummary("sync fingerprint catalog", derr, fingerprint.ErrorCode(derr))
 				}
 			}
 
@@ -70,7 +65,8 @@ func newFingerprintSyncCommand() *cobra.Command {
 
 			catalog, err := svc.Sync(cmd.Context())
 			if err != nil {
-				return err
+				wrapped := fingerprint.WrapSyncError(err)
+				return formatter.PrintTotalFailureSummary("sync fingerprint catalog", wrapped, fingerprint.ErrorCode(wrapped))
 			}
 
 			log.Info().Str("cache", destination).Int("groups", len(catalog.Groups)).Int("probes", totalProbes(catalog)).Msg("fingerprint probes synced")

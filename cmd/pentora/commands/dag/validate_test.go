@@ -5,6 +5,7 @@
 package dag
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -160,6 +161,24 @@ nodes:
 	err = runValidate(dagFile, opts)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to load DAG")
+}
+
+func TestValidateCommand_MissingFileSuggestions(t *testing.T) {
+	cmd := newValidateCommand()
+	out := &bytes.Buffer{}
+	errOut := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetErr(errOut)
+
+	cmd.SetArgs([]string{"/nonexistent/file.yaml"})
+
+	err := cmd.Execute()
+	require.NoError(t, err)
+
+	output := out.String()
+	require.Contains(t, output, "✗ Failed to validate DAG")
+	require.Contains(t, output, "Verify the DAG file path exists")
+	require.Contains(t, output, "Ensure the file is valid YAML or JSON")
 }
 
 func TestValidateCommand_JSONFormat(t *testing.T) {

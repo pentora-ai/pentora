@@ -253,6 +253,7 @@ func TestBindScanOptions(t *testing.T) {
 
 			if tt.wantErr {
 				require.Error(t, err)
+				require.ErrorIs(t, err, scanexec.ErrConflictingDiscoveryFlags)
 				if tt.errMsg != "" {
 					require.Contains(t, err.Error(), tt.errMsg)
 				}

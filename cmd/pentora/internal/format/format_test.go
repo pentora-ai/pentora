@@ -364,6 +364,20 @@ func TestParseMode(t *testing.T) {
 	}
 }
 
+func TestGetSuggestionsNewCodes(t *testing.T) {
+	t.Run("invalid target", func(t *testing.T) {
+		suggestions := GetSuggestions("INVALID_TARGET", "scan")
+		require.NotEmpty(t, suggestions)
+		require.Contains(t, suggestions[0], "pentora scan")
+	})
+
+	t.Run("no retention policy", func(t *testing.T) {
+		suggestions := GetSuggestions("NO_RETENTION_POLICY", "garbage collection")
+		require.NotEmpty(t, suggestions)
+		require.Contains(t, suggestions[0], "pentora storage gc")
+	})
+}
+
 func TestPrintTableColorSupport(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	f := New(&stdout, &stderr, ModeTable, false, true) // color enabled

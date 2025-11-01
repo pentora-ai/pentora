@@ -1,26 +1,26 @@
 package commands
 
 import (
-	"context"
-	"os"
-	"path/filepath"
+	"bytes"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-func TestFingerprintSyncCommandFromFile(t *testing.T) {
-	cmd := newFingerprintSyncCommand()
-	tempDir := t.TempDir()
-	catalogPath := filepath.Join("..", "..", "..", "pkg", "fingerprint", "data", "probes.yaml")
+func TestFingerprintSyncCommand_SourceRequiredSuggestions(t *testing.T) {
+	cmd := NewFingerprintCommand()
+	out := &bytes.Buffer{}
+	errOut := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetErr(errOut)
 
-	cmd.SetArgs([]string{"--file", catalogPath, "--cache-dir", tempDir})
-	cmd.SetContext(context.Background())
+	cmd.SetArgs([]string{"sync"})
 
-	if err := cmd.Execute(); err != nil {
-		t.Fatalf("sync command failed: %v", err)
-	}
+	err := cmd.Execute()
+	require.NoError(t, err)
 
-	cached := filepath.Join(tempDir, "probe.catalog.yaml")
-	if _, err := os.Stat(cached); err != nil {
-		t.Fatalf("expected cached catalog at %s: %v", cached, err)
-	}
+	output := out.String()
+	require.Contains(t, output, "✗ Failed to sync fingerprint catalog")
+	require.Contains(t, output, "--file <path> or --url <address>")
+	require.Contains(t, output, "pentora fingerprint sync --url")
 }

@@ -11,10 +11,12 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
+	"github.com/pentora-ai/pentora/cmd/pentora/internal/format"
 	"github.com/pentora-ai/pentora/pkg/appctx"
 	"github.com/pentora-ai/pentora/pkg/config"
 	"github.com/pentora-ai/pentora/pkg/logging"
 	"github.com/pentora-ai/pentora/pkg/plugin"
+	serversvc "github.com/pentora-ai/pentora/pkg/server"
 	"github.com/pentora-ai/pentora/pkg/server/api"
 	"github.com/pentora-ai/pentora/pkg/server/app"
 	"github.com/pentora-ai/pentora/pkg/storage"
@@ -70,10 +72,12 @@ The server hosts multiple components in a single runtime:
 The server runs until interrupted (Ctrl+C) or killed, performing graceful
 shutdown to drain in-flight requests and complete running jobs.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			formatter := format.FromCommand(cmd)
+
 			// Bind flags to options using centralized binder
 			opts, err := bind.BindServerOptions(cmd)
 			if err != nil {
-				return fmt.Errorf("invalid server options: %w", err)
+				return formatter.PrintTotalFailureSummary("start server", err, serversvc.ErrorCode(err))
 			}
 
 			// Build server config
@@ -96,24 +100,28 @@ shutdown to drain in-flight requests and complete running jobs.`,
 
 			// Validate configuration
 			if err := cfg.Validate(); err != nil {
-				return fmt.Errorf("invalid server configuration: %w", err)
+				wrapped := serversvc.WrapInvalidConfig(err)
+				return formatter.PrintTotalFailureSummary("start server", wrapped, serversvc.ErrorCode(wrapped))
 			}
 
 			// Get config manager from context
 			cfgMgr, ok := appctx.Config(cmd.Context())
 			if !ok {
-				return fmt.Errorf("config manager not available in context")
+				err := serversvc.ErrConfigUnavailable
+				return formatter.PrintTotalFailureSummary("start server", err, serversvc.ErrorCode(err))
 			}
 
 			// Create storage backend
 			storageConfig, err := storage.DefaultConfig()
 			if err != nil {
-				return fmt.Errorf("get storage config: %w", err)
+				wrapped := serversvc.WrapStorageInit(err)
+				return formatter.PrintTotalFailureSummary("start server", wrapped, serversvc.ErrorCode(wrapped))
 			}
 
 			storageBackend, err := storage.NewBackend(cmd.Context(), storageConfig)
 			if err != nil {
-				return fmt.Errorf("create storage backend: %w", err)
+				wrapped := serversvc.WrapStorageInit(err)
+				return formatter.PrintTotalFailureSummary("start server", wrapped, serversvc.ErrorCode(wrapped))
 			}
 
 			// TODO: Keep stub workspace for backward compatibility during transition
@@ -125,7 +133,8 @@ shutdown to drain in-flight requests and complete running jobs.`,
 			pluginCacheDir := filepath.Join(storageConfig.WorkspaceRoot, "plugins", "cache")
 			pluginService, err := plugin.NewService(plugin.WithCacheDir(pluginCacheDir))
 			if err != nil {
-				return fmt.Errorf("create plugin service: %w", err)
+				wrapped := serversvc.WrapPluginInit(err)
+				return formatter.PrintTotalFailureSummary("start server", wrapped, serversvc.ErrorCode(wrapped))
 			}
 
 			// Create logger for server
@@ -154,11 +163,18 @@ shutdown to drain in-flight requests and complete running jobs.`,
 			// Create server app
 			serverApp, err := app.New(cmd.Context(), cfg, deps)
 			if err != nil {
-				return fmt.Errorf("create server: %w", err)
+				wrapped := serversvc.WrapAppInit(err)
+				return formatter.PrintTotalFailureSummary("start server", wrapped, serversvc.ErrorCode(wrapped))
 			}
 
 			// Run server (blocks until shutdown)
-			return serverApp.Run(cmd.Context())
+			runErr := serverApp.Run(cmd.Context())
+			if runErr != nil {
+				wrapped := serversvc.WrapRuntime(runErr)
+				return formatter.PrintTotalFailureSummary("start server", wrapped, serversvc.ErrorCode(wrapped))
+			}
+
+			return nil
 		},
 	}
 

@@ -5,6 +5,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
+
+	"github.com/pentora-ai/pentora/pkg/fingerprint"
 )
 
 func TestBindFingerprintOptions(t *testing.T) {
@@ -21,12 +23,7 @@ func TestBindFingerprintOptions(t *testing.T) {
 				"url":       "https://example.com/catalog",
 				"cache-dir": "/custom/cache",
 			},
-			want: FingerprintOptions{
-				FilePath: "/path/to/catalog.yaml",
-				URL:      "https://example.com/catalog",
-				CacheDir: "/custom/cache",
-			},
-			wantErr: false,
+			wantErr: true,
 		},
 		{
 			name: "only file set",
@@ -63,12 +60,7 @@ func TestBindFingerprintOptions(t *testing.T) {
 				"url":       "",
 				"cache-dir": "",
 			},
-			want: FingerprintOptions{
-				FilePath: "",
-				URL:      "",
-				CacheDir: "",
-			},
-			wantErr: false,
+			wantErr: true,
 		},
 	}
 
@@ -79,6 +71,12 @@ func TestBindFingerprintOptions(t *testing.T) {
 
 			if tt.wantErr {
 				require.Error(t, err)
+				switch tt.name {
+				case "all flags set":
+					require.ErrorIs(t, err, fingerprint.ErrSourceConflict)
+				case "defaults (all empty)":
+					require.ErrorIs(t, err, fingerprint.ErrSourceRequired)
+				}
 				return
 			}
 

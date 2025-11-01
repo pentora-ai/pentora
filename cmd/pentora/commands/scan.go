@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 	"time"
@@ -15,6 +14,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
+	"github.com/pentora-ai/pentora/cmd/pentora/internal/format"
 	"github.com/pentora-ai/pentora/pkg/appctx"
 	"github.com/pentora-ai/pentora/pkg/engine"
 	parsepkg "github.com/pentora-ai/pentora/pkg/modules/parse" // Alias for parse package functions
@@ -30,142 +30,162 @@ var ScanCmd = &cobra.Command{
 	Long: `Performs various scanning stages based on selected profile, level, or flags.
 The command automatically plans the execution DAG using available modules.`,
 	GroupID: "scan",
-	Args:    cobra.MinimumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		logger := log.With().Str("command", "scan").Logger()
-		logger.Info().Strs("targets", args).Msg("Initializing scan command")
+	Args:    cobra.ArbitraryArgs,
+	RunE:    runScanCommand,
+}
 
-		// Bind flags to options using centralized binder
-		params, err := bind.BindScanOptions(cmd, args)
+func runScanCommand(cmd *cobra.Command, args []string) error {
+	formatter := format.FromCommand(cmd)
+
+	if len(args) == 0 {
+		return formatter.PrintTotalFailureSummary("scan", scanexec.ErrNoTargets, scanexec.ErrorCode(scanexec.ErrNoTargets))
+	}
+
+	logger := log.With().Str("command", "scan").Logger()
+	logger.Info().Strs("targets", args).Msg("Initializing scan command")
+
+	// Bind flags to options using centralized binder
+	params, err := bind.BindScanOptions(cmd, args)
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to bind scan options")
+		return formatter.PrintTotalFailureSummary("scan", err, scanexec.ErrorCode(err))
+	}
+
+	svc := scanexec.NewService()
+
+	ctxFromCmd := cmd.Context()
+	if ctxFromCmd == nil && cmd.Root() != nil {
+		ctxFromCmd = cmd.Root().Context()
+	}
+	appMgr, ok := ctxFromCmd.Value(engine.AppManagerKey).(*engine.AppManager)
+	if !ok || appMgr == nil {
+		appErr := fmt.Errorf("app manager missing from context")
+		logger.Error().Err(appErr).Msg("AppManager not found in context.")
+		return formatter.PrintTotalFailureSummary("scan", appErr, scanexec.ErrorCode(appErr))
+	}
+	orchestratorCtx := context.WithValue(appMgr.Context(), engine.AppManagerKey, appMgr)
+	orchestratorCtx = appctx.WithConfig(orchestratorCtx, appMgr.Config())
+
+	// Create and attach storage backend for scan result persistence
+	storageConfig, err := storage.DefaultConfig()
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to get storage config, scans will not be persisted")
+	} else {
+		storageBackend, err := storage.NewBackend(orchestratorCtx, storageConfig)
 		if err != nil {
-			logger.Error().Err(err).Msg("Failed to bind scan options")
-			fmt.Fprintf(os.Stderr, "[ERROR] Invalid scan options: %v\n", err)
-			return
-		}
-
-		svc := scanexec.NewService()
-
-		ctxFromCmd := cmd.Context()
-		if ctxFromCmd == nil && cmd.Root() != nil {
-			ctxFromCmd = cmd.Root().Context()
-		}
-		appMgr, ok := ctxFromCmd.Value(engine.AppManagerKey).(*engine.AppManager)
-		if !ok || appMgr == nil {
-			logger.Error().Msg("AppManager not found in context.")
-			fmt.Fprintln(os.Stderr, "[ERROR] Critical: AppManager not found in context.")
-			return
-		}
-		orchestratorCtx := context.WithValue(appMgr.Context(), engine.AppManagerKey, appMgr)
-		orchestratorCtx = appctx.WithConfig(orchestratorCtx, appMgr.Config())
-
-		// Create and attach storage backend for scan result persistence
-		storageConfig, err := storage.DefaultConfig()
-		if err != nil {
-			logger.Warn().Err(err).Msg("Failed to get storage config, scans will not be persisted")
+			logger.Warn().Err(err).Msg("Failed to create storage backend, scans will not be persisted")
 		} else {
-			storageBackend, err := storage.NewBackend(orchestratorCtx, storageConfig)
-			if err != nil {
-				logger.Warn().Err(err).Msg("Failed to create storage backend, scans will not be persisted")
+			// Initialize storage
+			if err := storageBackend.Initialize(orchestratorCtx); err != nil {
+				logger.Warn().Err(err).Msg("Failed to initialize storage, scans will not be persisted")
 			} else {
-				// Initialize storage
-				if err := storageBackend.Initialize(orchestratorCtx); err != nil {
-					logger.Warn().Err(err).Msg("Failed to initialize storage, scans will not be persisted")
-				} else {
-					svc = svc.WithStorage(storageBackend)
-					logger.Info().Msg("Storage backend initialized for scan persistence")
+				svc = svc.WithStorage(storageBackend)
+				logger.Info().Msg("Storage backend initialized for scan persistence")
 
-					// Ensure storage is closed when scan completes
-					defer func() {
-						if err := storageBackend.Close(); err != nil {
-							logger.Warn().Err(err).Msg("Failed to close storage backend")
-						}
-					}()
-				}
+				// Ensure storage is closed when scan completes
+				defer func() {
+					if err := storageBackend.Close(); err != nil {
+						logger.Warn().Err(err).Msg("Failed to close storage backend")
+					}
+				}()
 			}
 		}
+	}
 
-		// Enable progress logging if interactive flag is set
-		interactive, _ := cmd.Flags().GetBool("progress")
-		if interactive {
-			svc = svc.WithProgressSink(&progressLogger{logger: logger})
+	// Enable progress logging if interactive flag is set
+	interactive, _ := cmd.Flags().GetBool("progress")
+	if interactive {
+		svc = svc.WithProgressSink(&progressLogger{logger: logger})
+	}
+
+	if params.OutputFormat == "text" {
+		logger.Info().Msg("Starting scan execution with automatically planned DAG...")
+	}
+
+	res, runErr := svc.Run(orchestratorCtx, params)
+	if runErr != nil {
+		logger.Error().Err(runErr).Msg("Scan execution failed")
+		return formatter.PrintTotalFailureSummary("scan", runErr, scanexec.ErrorCode(runErr))
+	}
+
+	dataCtx := extractDataContext(res)
+	return renderScanOutput(formatter, params, res, dataCtx, logger)
+}
+
+func extractDataContext(res *scanexec.Result) map[string]interface{} {
+	if res != nil && res.RawContext != nil {
+		return res.RawContext
+	}
+	return map[string]interface{}{}
+}
+
+func renderScanOutput(formatter format.Formatter, params scanexec.Params, res *scanexec.Result, dataCtx map[string]interface{}, logger zerolog.Logger) error {
+	profiles, missingProfiles, profileErr := collectAssetProfiles(dataCtx)
+
+	if missingProfiles {
+		logger.Info().Msg("No 'asset.profiles' data found in scan results.")
+	}
+	if profileErr != nil {
+		logger.Warn().Err(profileErr).Msg("Scan completed with post-processing errors")
+	}
+
+	switch strings.ToLower(params.OutputFormat) {
+	case "json":
+		if profiles == nil {
+			profiles = []engine.AssetProfile{}
 		}
-
-		if params.OutputFormat == "text" {
-			logger.Info().Msg("Starting scan execution with automatically planned DAG...")
+		jsonData, jsonErr := json.MarshalIndent(profiles, "", "  ")
+		if jsonErr != nil {
+			logger.Error().Err(jsonErr).Msg("Failed to marshal AssetProfile to JSON")
+			return formatter.PrintTotalFailureSummary("scan", jsonErr, scanexec.ErrorCode(jsonErr))
 		}
-
-		res, runErr := svc.Run(orchestratorCtx, params)
-		if runErr != nil {
-			logger.Error().Err(runErr).Msg("Scan execution failed")
+		fmt.Println(string(jsonData))
+	case "yaml":
+		if profiles == nil {
+			profiles = []engine.AssetProfile{}
 		}
-
-		finalDataContext := map[string]interface{}{}
-		if res != nil && res.RawContext != nil {
-			finalDataContext = res.RawContext
+		yamlData, yamlErr := yaml.Marshal(profiles)
+		if yamlErr != nil {
+			logger.Error().Err(yamlErr).Msg("Failed to marshal AssetProfile to YAML")
+			return formatter.PrintTotalFailureSummary("scan", yamlErr, scanexec.ErrorCode(yamlErr))
 		}
-
-		executionErr := runErr
-		assetProfileDataKey := "asset.profiles"
-
-		// 2. AssetProfile verisini DataContext'ten al ve cast et
-		var finalProfiles []engine.AssetProfile
-		if rawProfiles, found := finalDataContext[assetProfileDataKey]; found {
-			// DataContext, modül çıktılarını []interface{} listesi olarak saklar.
-			// AssetProfileBuilder tek bir çıktı (bir []AssetProfile listesi) ürettiği için,
-			// DataContext'teki liste tek elemanlıdır: []interface{}{ []engine.AssetProfile{...} }
-			if profileList, listOk := rawProfiles.([]interface{}); listOk && len(profileList) > 0 {
-				if castedProfiles, castOk := profileList[0].([]engine.AssetProfile); castOk {
-					finalProfiles = castedProfiles
-				} else if executionErr == nil {
-					executionErr = fmt.Errorf("could not cast asset profile data to expected type: %T", profileList[0])
-				}
-			} else if rawProfiles != nil && executionErr == nil {
-				executionErr = fmt.Errorf("asset profile data has unexpected type: %T", rawProfiles)
+		fmt.Println(string(yamlData))
+	default:
+		if len(profiles) > 0 {
+			if res != nil {
+				printScanSummary(res, profiles)
 			}
-		} else if executionErr == nil {
-			logger.Info().Msg("No 'asset.profiles' data found in scan results.")
-			executionErr = fmt.Errorf("scan completed, but no asset profile data was generated")
+			printAssetProfileTextOutput(profiles)
+		} else {
+			fmt.Println("\nScan completed, but no asset profiles were generated.")
 		}
+	}
 
-		// 3. Seçilen formata göre çıktıyı yazdır
-		switch strings.ToLower(params.OutputFormat) {
-		case "json":
-			// Eğer hiç profil yoksa ama hata da yoksa boş bir liste yazdır
-			if finalProfiles == nil {
-				finalProfiles = []engine.AssetProfile{}
-			}
-			jsonData, jsonErr := json.MarshalIndent(finalProfiles, "", "  ")
-			if jsonErr != nil {
-				logger.Error().Err(jsonErr).Msg("Failed to marshal AssetProfile to JSON")
-				fmt.Fprintf(os.Stderr, "[ERROR] Failed to generate JSON output: %v\n", jsonErr)
-			} else {
-				fmt.Println(string(jsonData))
-			}
-		case "yaml":
-			if finalProfiles == nil {
-				finalProfiles = []engine.AssetProfile{}
-			}
-			yamlData, yamlErr := yaml.Marshal(finalProfiles)
-			if yamlErr != nil {
-				logger.Error().Err(yamlErr).Msg("Failed to marshal AssetProfile to YAML")
-				fmt.Fprintf(os.Stderr, "[ERROR] Failed to generate YAML output: %v\n", yamlErr)
-			} else {
-				fmt.Println(string(yamlData))
-			}
-		default: // "text"
-			if executionErr != nil {
-				fmt.Fprintf(os.Stderr, "\nScan finished with errors: %v\n", executionErr)
-			}
-			if len(finalProfiles) > 0 {
-				// Print summary table first
-				printScanSummary(res, finalProfiles)
-				// Then print detailed results
-				printAssetProfileTextOutput(finalProfiles)
-			} else {
-				fmt.Println("\nScan completed, but no asset profiles were generated.")
-			}
-		}
-	},
+	return nil
+}
+
+func collectAssetProfiles(dataCtx map[string]interface{}) ([]engine.AssetProfile, bool, error) {
+	const assetProfileDataKey = "asset.profiles"
+
+	rawProfiles, found := dataCtx[assetProfileDataKey]
+	if !found || rawProfiles == nil {
+		return nil, true, nil
+	}
+
+	profileList, listOk := rawProfiles.([]interface{})
+	if !listOk {
+		return nil, false, fmt.Errorf("asset profile data has unexpected type: %T", rawProfiles)
+	}
+	if len(profileList) == 0 || profileList[0] == nil {
+		return nil, true, nil
+	}
+
+	castedProfiles, castOk := profileList[0].([]engine.AssetProfile)
+	if !castOk {
+		return nil, false, fmt.Errorf("could not cast asset profile data to expected type: %T", profileList[0])
+	}
+
+	return castedProfiles, false, nil
 }
 
 func printAssetProfileTextOutput(profiles []engine.AssetProfile) {

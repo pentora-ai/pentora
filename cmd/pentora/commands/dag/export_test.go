@@ -5,6 +5,7 @@
 package dag
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -181,18 +182,20 @@ func TestExportCommand_NoDiscover(t *testing.T) {
 }
 
 func TestExportCommand_InvalidFormat(t *testing.T) {
-	opts := bind.DAGExportOptions{
-		Output:     "",
-		Format:     "xml", // Invalid format
-		Targets:    "192.168.1.1",
-		Ports:      "80",
-		Vuln:       false,
-		NoDiscover: false,
-	}
+	cmd := newExportCommand()
+	out := &bytes.Buffer{}
+	errOut := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetErr(errOut)
 
-	err := runExport(opts)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "unsupported format")
+	cmd.SetArgs([]string{"--format", "xml"})
+
+	err := cmd.Execute()
+	require.NoError(t, err)
+
+	output := out.String()
+	require.Contains(t, output, "✗ Failed to export DAG")
+	require.Contains(t, output, "Use --format yaml or --format json")
 }
 
 func TestExportCommand_InvalidOutputPath(t *testing.T) {

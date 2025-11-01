@@ -1,9 +1,9 @@
 package bind
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
+
+	srv "github.com/pentora-ai/pentora/pkg/server"
 )
 
 // ServerOptions holds configuration options for the server start command.
@@ -40,17 +40,17 @@ func BindServerOptions(cmd *cobra.Command) (ServerOptions, error) {
 
 	// Validate port range
 	if port < 1 || port > 65535 {
-		return ServerOptions{}, fmt.Errorf("invalid port %d: must be between 1 and 65535", port)
+		return ServerOptions{}, srv.NewInvalidPortError(port)
 	}
 
 	// Validate concurrency
 	if concurrency < 1 {
-		return ServerOptions{}, fmt.Errorf("invalid concurrency %d: must be at least 1", concurrency)
+		return ServerOptions{}, srv.NewInvalidConcurrencyError(concurrency)
 	}
 
 	// Validate that at least UI or API is enabled
 	if noUI && noAPI {
-		return ServerOptions{}, fmt.Errorf("cannot disable both UI and API: at least one must be enabled")
+		return ServerOptions{}, srv.NewFeaturesDisabledError()
 	}
 
 	opts := ServerOptions{
