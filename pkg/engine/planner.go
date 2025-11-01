@@ -62,6 +62,13 @@ func (p *DAGPlanner) PlanDAG(intent ScanIntent) (*DAGDefinition, error) {
 	availableDataKeys := make(map[string]string) // DataKey -> Producing InstanceID
 	if len(intent.Targets) > 0 {
 		availableDataKeys["config.targets"] = "initial_input" // Mark config.targets as initially available
+
+		// If skipping discovery, treat all targets as live hosts
+		if intent.SkipDiscovery {
+			availableDataKeys["discovery.live_hosts"] = "initial_input"
+			p.logger.Debug().Msg("SkipDiscovery enabled: treating all targets as live hosts")
+		}
+
 		p.logger.Debug().Interface("initial_keys", availableDataKeys).Msg("Initial available data keys")
 	}
 	// Add other global/initial keys if necessary, e.g., from intent.CustomPortConfig if planner doesn't set it directly in module config
@@ -237,13 +244,20 @@ func (p *DAGPlanner) selectModulesForIntent(intent ScanIntent) []ModuleFactory {
 	selected = p.addParseModules(selected, allModules, intent)
 	if intent.SkipDiscovery {
 		filtered := selected[:0]
+		filteredCount := 0
 		for _, factory := range selected {
-			if factory().Metadata().Type == DiscoveryModuleType {
+			meta := factory().Metadata()
+			// Only filter host discovery modules (ICMP ping), NOT port scanning modules
+			if meta.Type == DiscoveryModuleType && meta.Name != "tcp-port-discovery" && meta.Name != "udp-port-discovery" {
+				filteredCount++
 				continue
 			}
 			filtered = append(filtered, factory)
 		}
 		selected = filtered
+		if filteredCount > 0 {
+			p.logger.Debug().Int("filtered_modules", filteredCount).Msg("Filtered host discovery modules due to SkipDiscovery")
+		}
 	}
 
 	return p.ensureReporter(selected, intent)
