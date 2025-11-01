@@ -19,6 +19,12 @@ import (
 //
 // This solves the issue where CLI plugin changes don't appear in the
 // server API until restart (#27).
+//
+// Testing:
+//   - Unit tests: watcher_test.go (18 test cases)
+//   - Integration tests: watcher_integration_test.go (4 test cases, Issue #103)
+//
+// Run integration tests: go test -tags=integration -v ./pkg/plugin -run TestManifestWatcher
 type ManifestWatcher struct {
 	// manifest is the ManifestManager to reload on changes
 	manifest *ManifestManager
