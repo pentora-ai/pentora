@@ -76,6 +76,52 @@ func TestListScansHandler_Success(t *testing.T) {
 	require.Equal(t, 10, scans[0].Targets)
 }
 
+func TestListScansHandler_InvalidLimit(t *testing.T) {
+	deps := &api.Deps{}
+	handler := ListScansHandler(deps)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/scans?limit=1000", nil)
+	w := httptest.NewRecorder()
+	handler(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestListScansHandler_InvalidOffset(t *testing.T) {
+	deps := &api.Deps{}
+	handler := ListScansHandler(deps)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/scans?offset=-1", nil)
+	w := httptest.NewRecorder()
+	handler(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestListScansHandler_DefaultLimitApplied(t *testing.T) {
+	// With storage backend; ensure pagination does not panic when list is empty
+	mockBackend := &mockStorageBackend{scans: []*storage.ScanMetadata{}}
+	deps := &api.Deps{Storage: mockBackend}
+	handler := ListScansHandler(deps)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/scans", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestGetScanHandler_EmptyID_ReturnsBadRequest(t *testing.T) {
+	deps := &api.Deps{}
+	handler := GetScanHandler(deps)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/scans/", nil)
+	w := httptest.NewRecorder()
+	handler(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+}
+
 func TestListScansHandler_EmptyList(t *testing.T) {
 	mockWs := &mockWorkspace{
 		scans: []api.ScanMetadata{},
@@ -261,7 +307,17 @@ func (m *mockScanStore) List(ctx context.Context, orgID string, filter storage.S
 	if m.backend.listError != nil {
 		return nil, m.backend.listError
 	}
-	return m.backend.scans, nil
+	scans := m.backend.scans
+	if filter.Status != "" {
+		filtered := make([]*storage.ScanMetadata, 0, len(scans))
+		for _, s := range scans {
+			if s.Status == filter.Status {
+				filtered = append(filtered, s)
+			}
+		}
+		scans = filtered
+	}
+	return scans, nil
 }
 
 func (m *mockScanStore) Get(ctx context.Context, orgID, scanID string) (*storage.ScanMetadata, error) {
@@ -354,6 +410,84 @@ func TestListScansHandler_WithStorage(t *testing.T) {
 	require.Len(t, scans, 2)
 	require.Equal(t, "storage-scan-1", scans[0].ID)
 	require.Equal(t, "completed", scans[0].Status)
+}
+
+func TestListScansHandler_StatusFilter(t *testing.T) {
+	now := time.Now()
+	mockStorage := &mockStorageBackend{
+		scans: []*storage.ScanMetadata{
+			{ID: "s1", Status: "running", StartedAt: now},
+			{ID: "s2", Status: "completed", StartedAt: now},
+			{ID: "s3", Status: "running", StartedAt: now},
+		},
+	}
+	deps := &api.Deps{Storage: mockStorage}
+	handler := ListScansHandler(deps)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/scans?status=running", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var scans []api.ScanMetadata
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&scans))
+	require.Len(t, scans, 2)
+	require.Equal(t, "running", scans[0].Status)
+}
+
+func TestListScansHandler_InvalidStatus(t *testing.T) {
+	deps := &api.Deps{}
+	handler := ListScansHandler(deps)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/scans?status=bogus", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	require.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestListScansHandler_NonIntegerLimitOffset(t *testing.T) {
+	deps := &api.Deps{}
+	handler := ListScansHandler(deps)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/scans?limit=abc", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	require.Equal(t, http.StatusBadRequest, w.Code)
+
+	req2 := httptest.NewRequest(http.MethodGet, "/api/v1/scans?offset=abc", nil)
+	w2 := httptest.NewRecorder()
+	handler.ServeHTTP(w2, req2)
+	require.Equal(t, http.StatusBadRequest, w2.Code)
+}
+
+func TestListScansHandler_OffsetBoundary(t *testing.T) {
+	now := time.Now()
+	mockStorage := &mockStorageBackend{
+		scans: []*storage.ScanMetadata{
+			{ID: "s1", Status: "completed", StartedAt: now},
+			{ID: "s2", Status: "completed", StartedAt: now},
+		},
+	}
+	deps := &api.Deps{Storage: mockStorage}
+	handler := ListScansHandler(deps)
+
+	// offset == len(list) -> empty page OK
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/scans?offset=2&limit=50", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+	var scans []api.ScanMetadata
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&scans))
+	require.Len(t, scans, 0)
+
+	// offset > len(list) -> empty page OK
+	req2 := httptest.NewRequest(http.MethodGet, "/api/v1/scans?offset=3&limit=50", nil)
+	w2 := httptest.NewRecorder()
+	handler.ServeHTTP(w2, req2)
+	require.Equal(t, http.StatusOK, w2.Code)
+	scans = nil
+	require.NoError(t, json.NewDecoder(w2.Body).Decode(&scans))
+	require.Len(t, scans, 0)
 }
 
 func TestListScansHandler_StorageError(t *testing.T) {
