@@ -172,22 +172,18 @@ pentora version
 
 ## Initial Configuration
 
-### Workspace Setup
+### Storage Setup
 
-Pentora uses a workspace directory to store scan results:
+Pentora uses a storage directory to store scan results:
 
 ```bash
-# Initialize workspace (default location)
-pentora workspace init
-
-# Default locations:
+# Default storage locations:
 # Linux: ~/.local/share/pentora
 # macOS: ~/Library/Application Support/Pentora
 # Windows: %AppData%\Pentora
 
-# Custom workspace location
-export PENTORA_WORKSPACE_DIR=/data/pentora-scans
-pentora workspace init
+# Custom storage location
+export PENTORA_STORAGE_DIR=/data/pentora-scans
 ```
 
 ### Configuration File
@@ -205,7 +201,7 @@ pentora config init > ~/.config/pentora/config.yaml
 Edit `~/.config/pentora/config.yaml`:
 
 ```yaml
-workspace:
+storage:
   dir: ~/.local/share/pentora
   enabled: true
   retention:
@@ -397,51 +393,51 @@ pentora scan 192.168.1.0/24 --exclude-file sensitive-hosts.txt
 pentora scan 192.168.1.0/24 --exclude-ports 25,465,587
 ```
 
-## Workspace Management
+## Storage Management
 
 ### View Scans
 
 ```bash
 # List all scans
-pentora workspace list
+pentora storage list
 
 # List recent scans
-pentora workspace list --limit 10
+pentora storage list --limit 10
 
 # Show specific scan
-pentora workspace show <scan-id>
+pentora storage show <scan-id>
 
 # Export scan results
-pentora workspace export <scan-id> -o results.json
+pentora storage export <scan-id> -o results.json
 ```
 
 ### Cleanup
 
 ```bash
 # Remove old scans
-pentora workspace gc --older-than 30d
+pentora storage gc --older-than 30d
 
 # Remove specific scan
-pentora workspace delete <scan-id>
+pentora storage delete <scan-id>
 
-# Check workspace size
-pentora workspace info
+# Check storage size
+pentora storage info
 
-# Validate workspace integrity
-pentora workspace check
+# Validate storage integrity
+pentora storage check
 ```
 
 ### Statistics
 
 ```bash
-# Show workspace statistics
-pentora workspace stats
+# Show storage statistics
+pentora storage stats
 
 # Example output:
 # Total scans: 145
 # Total targets: 5,234
 # Total findings: 1,823
-# Workspace size: 2.3 GB
+# Storage size: 2.3 GB
 # Oldest scan: 2024-01-15
 # Newest scan: 2024-10-06
 ```
@@ -631,8 +627,8 @@ pipeline {
 Configure Pentora via environment variables:
 
 ```bash
-# Workspace directory
-export PENTORA_WORKSPACE_DIR=/data/pentora
+# Storage directory
+export PENTORA_STORAGE_DIR=/data/pentora
 
 # Configuration file
 export PENTORA_CONFIG=/etc/pentora/config.yaml
@@ -661,7 +657,7 @@ Add to `~/.bashrc` or `~/.zshrc`:
 
 ```bash
 # Pentora configuration
-export PENTORA_WORKSPACE_DIR=~/pentora-workspace
+export PENTORA_STORAGE_DIR=~/pentora-storage
 export PENTORA_LOG_LEVEL=info
 export PENTORA_PROFILE=standard
 ```
@@ -721,17 +717,17 @@ pentora scan 192.168.1.100 --no-discover
 ping 192.168.1.100
 ```
 
-### Workspace Issues
+### Storage Issues
 
 ```bash
-# Check workspace integrity
-pentora workspace check
+# Check storage integrity
+pentora storage check
 
-# Fix corrupted workspace
-pentora workspace check --fix
+# Fix corrupted storage
+pentora storage check --fix
 
 # Clean old scans
-pentora workspace gc --older-than 7d
+pentora storage gc --older-than 7d
 
 # Check disk space
 df -h ~/.local/share/pentora
@@ -768,7 +764,7 @@ pentora version --check-updates
 ### Backup Before Upgrade
 
 ```bash
-# Backup workspace
+# Backup storage
 tar -czf pentora-backup-$(date +%Y%m%d).tar.gz ~/.local/share/pentora
 
 # Backup configuration
@@ -799,7 +795,7 @@ sudo rm /usr/local/bin/pentora
 # Remove configuration
 rm -rf ~/.config/pentora
 
-# Remove workspace (optional - contains scan results)
+# Remove storage (optional - contains scan results)
 rm -rf ~/.local/share/pentora  # Linux
 rm -rf ~/Library/Application\ Support/Pentora  # macOS
 rm -rf %AppData%\Pentora  # Windows
@@ -833,11 +829,11 @@ pentora scan 192.168.1.0/24 --discover-profile tcp
 # Encrypt sensitive scan results
 gpg --encrypt --recipient security@company.com results.json
 
-# Secure workspace permissions
+# Secure storage permissions
 chmod 700 ~/.local/share/pentora
 
-# Disable workspace for stateless scanning
-pentora scan 192.168.1.0/24 --no-workspace -o results.json
+# Disable storage for stateless scanning
+pentora scan 192.168.1.0/24 --no-storage -o results.json
 ```
 
 ## Next Steps

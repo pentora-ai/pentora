@@ -297,7 +297,7 @@ pentora fingerprint sync --url https://custom.repo/fingerprints.yaml
 pentora fingerprint list-catalogs
 ```
 
-**Cached Location**: `<workspace>/cache/fingerprints/`
+**Cached Location**: `<storage>/cache/fingerprints/`
 
 **Update Frequency**: Configurable TTL (default: 7 days)
 

@@ -25,7 +25,7 @@ pentora scan --targets 192.168.1.100 --output results.jsonl --format jsonl
 ### PDF (Enterprise)
 Executive reports:
 ```bash
-pentora workspace export scan-id --format pdf -o executive-report.pdf
+pentora storage export scan-id --format pdf -o executive-report.pdf
 ```
 
 ## Custom Templates

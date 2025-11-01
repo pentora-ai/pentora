@@ -9,7 +9,7 @@ Secure API access with token-based authentication.
 ```bash
 pentora server token create \
   --name "Production API" \
-  --scopes "scan:read,scan:write,workspace:read" \
+  --scopes "scan:read,scan:write,storage:read" \
   --expires 90d
 ```
 
@@ -47,8 +47,8 @@ curl -H "Authorization: Bearer $PENTORA_API_TOKEN" \
 - `scan:read` - View scans
 - `scan:write` - Create/delete scans
 - `scan:execute` - Execute scans
-- `workspace:read` - View workspace
-- `workspace:write` - Modify workspace
+- `storage:read` - View storage
+- `storage:write` - Modify storage
 - `admin` - Full access
 
 ## SSO Integration (Enterprise)

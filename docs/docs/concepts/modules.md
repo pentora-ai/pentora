@@ -100,7 +100,7 @@ Generate output in various formats.
 - `html_reporter`: Interactive HTML dashboard
 
 **Inputs**: All DataContext keys
-**Outputs**: Files written to workspace or stdout
+**Outputs**: Files written to storage or stdout
 
 ## Module Interface
 

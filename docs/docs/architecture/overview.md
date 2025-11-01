@@ -14,7 +14,7 @@ Pentora is built on a modular architecture centered around a DAG execution engin
 └─────────────┘   └──────────────┘   └─────────────┘
                      │         │
 ┌─────────────┐      │         │      ┌─────────────┐
-│     UI      │ ─────┘         └─────▶│  Workspace  │
+│     UI      │ ─────┘         └─────▶│  Storage    │
 └─────────────┘                       └─────────────┘
 ```
 
@@ -39,7 +39,7 @@ Pentora is built on a modular architecture centered around a DAG execution engin
 - Evaluation modules (CVE, compliance)
 - Reporter modules (JSON, CSV, PDF)
 
-### 4. Workspace
+### 4. Storage
 - Persistent scan storage
 - Queue management (server mode)
 - Cache (fingerprints, DNS)

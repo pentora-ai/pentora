@@ -26,7 +26,7 @@ Signed with Ed25519/ECDSA key.
 
 ## License File
 
-Location: `<workspace>/config/license.key`
+Location: `<storage>/config/license.key`
 
 ```bash
 # Install license

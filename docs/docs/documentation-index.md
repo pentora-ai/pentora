@@ -6,28 +6,25 @@ Complete documentation for the Pentora security scanner.
 
 - [Your First Scan](/getting-started/first-scan) - Step-by-step tutorial
 
-## Core Concepts (7 files)
+## Core Concepts (6 files)
 
 - [Overview](/concepts/overview) - Core concepts and philosophy
 - [Scan Pipeline](/concepts/scan-pipeline) - 9-stage scan process
-- [Workspace](/concepts/workspace) - Storage and retention
 - [DAG Engine](/concepts/dag-engine) - Execution orchestration
 - [Modules](/concepts/modules) - Module system and types
 - [Fingerprinting](/concepts/fingerprinting) - Service detection
 
-## CLI Reference (5 files)
+## CLI Reference (4 files)
 
 - [CLI Overview](/cli/overview) - Command structure and usage
 - [pentora scan](/cli/scan) - Scan command reference
-- [pentora workspace](/cli/workspace) - Workspace management
 - [pentora server](/cli/server) - Server control
 - [pentora fingerprint](/cli/fingerprint) - Fingerprint management
 
-## Configuration (4 files)
+## Configuration (3 files)
 
 - [Configuration Overview](/configuration/overview) - Config structure
 - [Scan Profiles](/configuration/scan-profiles) - Profile definitions
-- [Workspace Config](/configuration/workspace-config) - Workspace settings
 - [Logging](/configuration/logging) - Log configuration
 
 ## Architecture (5 files)
@@ -80,7 +77,6 @@ Complete documentation for the Pentora security scanner.
 - [API Overview](/api/overview) - Authentication and basics
 - [Authentication](/api/rest/authentication) - Token management
 - [Scans API](/api/rest/scans) - Scan endpoints
-- [Workspace API](/api/rest/workspace) - Workspace endpoints
 - [Jobs API](/api/rest/jobs) - Job management (Enterprise)
 
 ### UI Portal (4 files)
@@ -108,11 +104,11 @@ Complete documentation for the Pentora security scanner.
 6. Vulnerability Evaluation - CVE matching
 7. Compliance & Risk Scoring - CIS/PCI/NIST
 8. Reporting & Notification - JSON/PDF/integrations
-9. Archival & Analytics - Workspace storage
+9. Archival & Analytics - Storage persistence
 
 ### Pricing Tiers
 
-- **Starter (OSS)**: Free - Full pipeline, CLI, local workspace
+- **Starter (OSS)**: Free - Full pipeline, CLI, local storage
 - **Team**: $399/month - Scheduling, UI, webhooks, Slack
 - **Business**: $1,499/month - Distributed, SIEM, SSO
 - **Enterprise**: $80k-$120k/year - Multi-tenant, compliance, air-gapped
@@ -121,7 +117,7 @@ Complete documentation for the Pentora security scanner.
 
 - JWT-based licensing with offline grace period
 - Distributed scanning with worker pools
-- Multi-tenant workspace with RBAC
+- Multi-tenant storage with RBAC
 - SSO integration (OIDC, SAML)
 - SIEM integrations (Splunk, QRadar, Elastic)
 - Ticketing (Jira, ServiceNow)

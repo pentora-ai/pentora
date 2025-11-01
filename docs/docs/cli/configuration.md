@@ -9,7 +9,7 @@ Configuration loaded in order (later overrides earlier):
 1. Builtin defaults
 2. System config: `/etc/pentora/config.yaml`
 3. User config: `~/.config/pentora/config.yaml`
-4. Workspace config: `<workspace>/config/pentora.yaml`
+4. Storage config: `<storage>/config/pentora.yaml`
 5. Custom config: `--config /path/to/config.yaml`
 6. Environment variables: `PENTORA_*`
 7. CLI flags: `--flag value`
@@ -20,8 +20,8 @@ Available on all commands:
 
 ```bash
 --config string          Config file path (default: ~/.config/pentora/config.yaml)
---workspace-dir string   Workspace directory (default: OS-specific)
---no-workspace          Disable workspace persistence
+--storage-dir string    Storage directory (default: OS-specific)
+--no-storage            Disable storage persistence
 --log-level string      Logging level: debug, info, warn, error (default: info)
 --log-format string     Log format: json, text (default: text)
 --verbosity int         Increase logging verbosity (0-3)
@@ -37,7 +37,7 @@ Override config and flags:
 
 ```bash
 PENTORA_CONFIG           # Config file path
-PENTORA_WORKSPACE        # Workspace directory
+PENTORA_STORAGE_DIR      # Storage directory
 PENTORA_LOG_LEVEL        # Logging level
 PENTORA_SERVER           # Server URL for remote mode
 PENTORA_API_TOKEN        # API authentication token
@@ -49,7 +49,7 @@ YAML format:
 
 ```yaml
 # ~/.config/pentora/config.yaml
-workspace:
+storage:
   dir: ~/.local/share/pentora
   enabled: true
 
@@ -59,7 +59,7 @@ scanner:
   timeout: 3s
 
 fingerprint:
-  cache_dir: ${workspace}/cache/fingerprints
+  cache_dir: ${storage}/cache/fingerprints
   catalog:
     remote_url: https://catalog.pentora.io/fingerprints.yaml
 

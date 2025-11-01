@@ -1,6 +1,6 @@
 # CLI Overview
 
-The Pentora command-line interface (CLI) provides direct access to all scanning capabilities, workspace management, and server control. The CLI is designed for technical operators performing ad-hoc scans, troubleshooting, and integration into automation workflows.
+The Pentora command-line interface (CLI) provides direct access to all scanning capabilities, storage management, and server control. The CLI is designed for technical operators performing ad-hoc scans, troubleshooting, and integration into automation workflows.
 
 ## Philosophy
 
@@ -32,7 +32,7 @@ The CLI never accesses server internals directly. When interacting with a remote
 
 ```bash
 pentora scan --targets 192.168.1.0/24
-# Executes scan locally, writes to local workspace
+# Executes scan locally, writes to local storage
 ```
 
 **Remote Mode** (with server):
@@ -62,17 +62,17 @@ Performs complete scan pipeline or selective phases. Most commonly used command.
 
 See [Scan Command Reference](./scan.md) for details.
 
-### pentora workspace
+### pentora storage
 
-Manage workspace and scan results:
+Manage storage and scan results:
 
 ```bash
-pentora workspace list              # List all scans
-pentora workspace show <scan-id>    # Show scan details
-pentora workspace gc                # Garbage collection
+pentora storage list              # List all scans
+pentora storage show <scan-id>    # Show scan details
+pentora storage gc                # Garbage collection
 ```
 
-See [Workspace Commands](./workspace.md) for details.
+See [Storage Commands](./storage.md) for details.
 
 ### pentora server
 
@@ -140,13 +140,13 @@ pentora scan --targets 192.168.1.100 --vuln
 ### List Scan Results
 
 ```bash
-pentora workspace list
+pentora storage list
 ```
 
 ### Export Results
 
 ```bash
-pentora workspace export <scan-id> --format json -o report.json
+pentora storage export <scan-id> --format json -o report.json
 ```
 
 ## Learn More
@@ -206,6 +206,6 @@ pentora workspace export <scan-id> --format json -o report.json
 | Command                         | Description                       |
 | ------------------------------- | --------------------------------- |
 | [scan](./scan.md)               | Execute security scans            |
-| [workspace](./workspace.md)     | Manage scan results and workspace |
+| [storage](./storage.md)         | Manage scan results and storage   |
 | [server](./server.md)           | Control Pentora server            |
 | [fingerprint](./fingerprint.md) | Manage fingerprint database       |

@@ -35,7 +35,7 @@ docker run -it --rm pentora/pentora:latest /bin/bash
 
 # Inside container
 pentora scan 192.168.1.100
-pentora workspace list
+pentora storage list
 ```
 
 ## Docker Images
@@ -109,29 +109,29 @@ docker run --rm pentora/pentora scan 192.168.1.0/24 --profile quick
 docker run --rm pentora/pentora scan 10.0.0.0/16 --only-discover
 ```
 
-### Persistent Workspace
+### Persistent Storage
 
 ```bash
-# Create workspace directory
-mkdir -p ~/pentora-workspace
+# Create storage directory
+mkdir -p ~/pentora-storage
 
-# Run with workspace persistence
+# Run with storage persistence
 docker run --rm \
-  -v ~/pentora-workspace:/workspace \
-  -e PENTORA_WORKSPACE_DIR=/workspace \
+  -v ~/pentora-storage:/storage \
+  -e PENTORA_STORAGE_DIR=/storage \
   pentora/pentora scan 192.168.1.0/24
 
 # List scans
 docker run --rm \
-  -v ~/pentora-workspace:/workspace \
-  -e PENTORA_WORKSPACE_DIR=/workspace \
-  pentora/pentora workspace list
+  -v ~/pentora-storage:/storage \
+  -e PENTORA_STORAGE_DIR=/storage \
+  pentora/pentora storage list
 
 # View specific scan
 docker run --rm \
-  -v ~/pentora-workspace:/workspace \
-  -e PENTORA_WORKSPACE_DIR=/workspace \
-  pentora/pentora workspace show <scan-id>
+  -v ~/pentora-storage:/storage \
+  -e PENTORA_STORAGE_DIR=/storage \
+  pentora/pentora storage show <scan-id>
 ```
 
 ### Configuration Files
@@ -173,10 +173,10 @@ services:
     image: pentora/pentora:latest
     container_name: pentora
     volumes:
-      - ./workspace:/workspace
+      - ./storage:/storage
       - ./config:/config
     environment:
-      - PENTORA_WORKSPACE_DIR=/workspace
+      - PENTORA_STORAGE_DIR=/storage
       - PENTORA_CONFIG=/config/config.yaml
       - PENTORA_LOG_LEVEL=info
     network_mode: host
@@ -207,11 +207,11 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./workspace:/workspace
+      - ./storage:/storage
       - ./config:/config
       - ./logs:/logs
     environment:
-      - PENTORA_WORKSPACE_DIR=/workspace
+      - PENTORA_STORAGE_DIR=/storage
       - PENTORA_CONFIG=/config/config.yaml
       - PENTORA_LOG_LEVEL=info
     networks:
@@ -244,8 +244,8 @@ server:
   queue:
     max_jobs: 1000
 
-workspace:
-  dir: /workspace
+storage:
+  dir: /storage
   enabled: true
 
 logging:
@@ -326,12 +326,12 @@ services:
       - "8080:8080"
       - "443:443"
     volumes:
-      - ./workspace:/workspace
+      - ./storage:/storage
       - ./config:/config
       - ./logs:/logs
       - ./tls:/tls
     environment:
-      - PENTORA_WORKSPACE_DIR=/workspace
+      - PENTORA_STORAGE_DIR=/storage
       - PENTORA_CONFIG=/config/config.yaml
       - PENTORA_DB_HOST=postgres
       - PENTORA_DB_PORT=5432
@@ -454,8 +454,8 @@ data:
     server:
       bind: 0.0.0.0:8080
       workers: 4
-    workspace:
-      dir: /workspace
+    storage:
+      dir: /storage
       enabled: true
     logging:
       level: info
@@ -465,7 +465,7 @@ data:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: pentora-workspace
+  name: pentora-storage
   namespace: pentora
 spec:
   accessModes:
@@ -499,13 +499,13 @@ spec:
         - containerPort: 8080
           name: http
         env:
-        - name: PENTORA_WORKSPACE_DIR
-          value: /workspace
+        - name: PENTORA_STORAGE_DIR
+          value: /storage
         - name: PENTORA_CONFIG
           value: /config/config.yaml
         volumeMounts:
-        - name: workspace
-          mountPath: /workspace
+        - name: storage
+          mountPath: /storage
         - name: config
           mountPath: /config
         resources:
@@ -533,9 +533,9 @@ spec:
             - NET_RAW
             - NET_ADMIN
       volumes:
-      - name: workspace
+      - name: storage
         persistentVolumeClaim:
-          claimName: pentora-workspace
+          claimName: pentora-storage
       - name: config
         configMap:
           name: pentora-config
@@ -602,13 +602,13 @@ spec:
         - containerPort: 8080
           name: http
         env:
-        - name: PENTORA_WORKSPACE_DIR
-          value: /workspace
+        - name: PENTORA_STORAGE_DIR
+          value: /storage
         - name: PENTORA_REDIS_HOST
           value: redis-service
         volumeMounts:
-        - name: workspace
-          mountPath: /workspace
+        - name: storage
+          mountPath: /storage
         resources:
           requests:
             cpu: 1000m
@@ -618,7 +618,7 @@ spec:
             memory: 16Gi
   volumeClaimTemplates:
   - metadata:
-      name: workspace
+      name: storage
     spec:
       accessModes: ["ReadWriteOnce"]
       resources:
@@ -654,7 +654,7 @@ COPY scripts/ /usr/local/bin/
 
 # Set default environment variables
 ENV PENTORA_CONFIG=/etc/pentora/config.yaml
-ENV PENTORA_WORKSPACE_DIR=/workspace
+ENV PENTORA_STORAGE_DIR=/storage
 
 # Expose ports
 EXPOSE 8080
@@ -711,12 +711,12 @@ RUN setcap cap_net_raw,cap_net_admin+eip /usr/local/bin/pentora
 RUN adduser -D -u 1000 pentora
 
 # Create directories
-RUN mkdir -p /workspace /config && \
-    chown -R pentora:pentora /workspace /config
+RUN mkdir -p /storage /config && \
+    chown -R pentora:pentora /storage /config
 
 USER pentora
 
-WORKDIR /workspace
+WORKDIR /storage
 
 EXPOSE 8080
 
@@ -763,7 +763,7 @@ docker run --user pentora pentora/pentora scan 192.168.1.0/24
 ```bash
 docker run --read-only \
   -v /tmp --tmpfs /tmp \
-  -v $(pwd)/workspace:/workspace \
+  -v $(pwd)/storage:/storage \
   pentora/pentora scan 192.168.1.0/24
 ```
 
@@ -818,8 +818,8 @@ services:
 docker run --tmpfs /tmp:rw,size=1g pentora/pentora scan 192.168.1.0/24
 
 # Use volumes instead of bind mounts
-docker volume create pentora-workspace
-docker run -v pentora-workspace:/workspace pentora/pentora scan 192.168.1.0/24
+docker volume create pentora-storage
+docker run -v pentora-storage:/storage pentora/pentora scan 192.168.1.0/24
 ```
 
 ## Monitoring and Logging

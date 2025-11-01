@@ -35,24 +35,24 @@ Scan previously discovered hosts:
 pentora scan --targets 10.0.0.0/16 --only-discover
 
 # Then scan discovered hosts
-pentora workspace show <scan-id> | jq -r '.discovered_hosts[].ip' > live-hosts.txt
+pentora storage show <scan-id> | jq -r '.discovered_hosts[].ip' > live-hosts.txt
 pentora scan --target-file live-hosts.txt --no-discover
 ```
 
-## Custom Workspace
+## Custom Storage
 
-Use non-default workspace location:
+Use non-default storage location:
 
 ```bash
-pentora scan --targets 192.168.1.100 --workspace-dir /data/scans
+pentora scan --targets 192.168.1.100 --storage-dir /data/scans
 ```
 
 ## Stateless Scan
 
-No workspace persistence (ephemeral):
+No storage persistence (ephemeral):
 
 ```bash
-pentora scan --targets 192.168.1.100 --no-workspace --output results.json
+pentora scan --targets 192.168.1.100 --no-storage --output results.json
 ```
 
 ## Remote Execution
@@ -127,20 +127,20 @@ pentora scan --targets 10.0.0.0/8 --only-discover -o live-hosts.txt
 pentora scan --target-file live-hosts.txt --no-discover --vuln
 ```
 
-### 4. Use Workspaces for Organization
+### 4. Use Storage Directories for Organization
 
-Separate workspaces per project:
+Separate storage directories per project:
 
 ```bash
-pentora scan --targets client-a.txt --workspace-dir /data/pentora/client-a
-pentora scan --targets client-b.txt --workspace-dir /data/pentora/client-b
+pentora scan --targets client-a.txt --storage-dir /data/pentora/client-a
+pentora scan --targets client-b.txt --storage-dir /data/pentora/client-b
 ```
 
 ### 5. Automate Cleanup
 
-Prevent workspace bloat:
+Prevent storage bloat:
 
 ```bash
 # Weekly cleanup cron job
-0 0 * * 0 pentora workspace gc --older-than 30d --quiet
+0 0 * * 0 pentora storage gc --older-than 30d --quiet
 ```

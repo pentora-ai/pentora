@@ -15,7 +15,7 @@ The `server` command manages the Pentora server daemon, which provides:
 - Job queue and scheduler
 - Worker pools for distributed scanning (Enterprise)
 - Web UI hosting
-- Multi-tenant workspace (Enterprise)
+- Multi-tenant storage (Enterprise)
 
 ## Subcommands
 

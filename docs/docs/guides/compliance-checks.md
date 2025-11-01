@@ -27,7 +27,7 @@ pentora scan --targets critical.txt --compliance "cis-level1,nist-800-53"
 
 Generate compliance reports:
 ```bash
-pentora workspace export scan-id --format pdf --compliance-report pci-dss
+pentora storage export scan-id --format pdf --compliance-report pci-dss
 ```
 
 ## Common Controls

@@ -172,14 +172,14 @@ pentora scan 192.168.1.100 --timeout 200ms
 pentora scan 192.168.1.100 --timeout 5s
 ```
 
-## Workspace Operations
+## Storage Operations
 
 ### List Scans
 
 View all stored scans:
 
 ```bash
-pentora workspace list
+pentora storage list
 ```
 
 Output:
@@ -196,23 +196,23 @@ Output:
 ### View Scan Details
 
 ```bash
-pentora workspace show scan-2025-10-06-1
+pentora storage show scan-2025-10-06-1
 ```
 
 ### Export Scan
 
 ```bash
-pentora workspace export scan-2025-10-06-1 --format json -o export.json
+pentora storage export scan-2025-10-06-1 --format json -o export.json
 ```
 
 ### Clean Up Old Scans
 
 ```bash
 # Delete scans older than 30 days
-pentora workspace gc --older-than 30d
+pentora storage gc --older-than 30d
 
 # Delete all but last 10 scans
-pentora workspace gc --keep-last 10
+pentora storage gc --keep-last 10
 ```
 
 ## Practical Examples
@@ -257,8 +257,8 @@ scan:
   timeout: 2s
   rate: 100
 
-workspace:
-  dir: /var/pentora/workspace
+storage:
+  dir: /var/pentora/storage
   retention: 90d
 
 logging:
@@ -307,10 +307,10 @@ pentora scan 192.168.1.0/24 --compliance pci-dss --format pdf
 
 ## Stateless Mode
 
-Run without workspace persistence (like Nmap):
+Run without storage persistence (like Nmap):
 
 ```bash
-pentora scan 192.168.1.100 --no-workspace
+pentora scan 192.168.1.100 --no-storage
 ```
 
 Results print to stdout only, nothing saved to disk.

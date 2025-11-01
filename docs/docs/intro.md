@@ -136,7 +136,7 @@ sidebar_position: 1
 
   <div style={{position: 'relative', marginBottom: '0', paddingRight: '50%', paddingLeft: 0}}>
     <div style={{textAlign: 'right', paddingRight: '2.5rem'}}>
-      <h4 style={{color: '#6366f1', marginBottom: '0.5rem'}}>💾 Workspace Management</h4>
+      <h4 style={{color: '#6366f1', marginBottom: '0.5rem'}}>💾 Storage Management</h4>
       <p style={{color: 'var(--ifm-color-emphasis-700)', marginBottom: 0}}>Persistent storage for scan history, results, and analytics</p>
     </div>
     <div style={{position: 'absolute', right: 'calc(50% - 10px)', top: '5px', width: '20px', height: '20px', borderRadius: '50%', background: '#6366f1', border: '3px solid var(--ifm-background-color)', boxShadow: '0 0 10px rgba(99,102,241,0.5)', zIndex: 1}}></div>
@@ -182,7 +182,7 @@ sidebar_position: 1
         <h3>🏢 Enterprise Security Teams</h3>
       </div>
       <div className="card__body">
-        <p>Large organizations needing distributed scanning, multi-tenant workspaces, and SIEM/SOAR integrations.</p>
+        <p>Large organizations needing distributed scanning, multi-tenant storage, and SIEM/SOAR integrations.</p>
       </div>
     </div>
   </div>
@@ -195,7 +195,7 @@ sidebar_position: 1
 1. 🧩 **Modularity**: Every scan phase is a composable module in a directed acyclic graph (DAG)
 2. ⚡ **Performance**: Concurrent execution with intelligent rate limiting
 3. 🎯 **Accuracy**: Layered fingerprinting with confidence scoring
-4. 🔄 **Flexibility**: Both stateless (Nmap-style) and workspace-backed operations
+4. 🔄 **Flexibility**: Both stateless (Nmap-style) and storage-backed operations
 5. 📊 **Transparency**: Structured logging and comprehensive audit trails
 
 ## Key Features
@@ -231,7 +231,7 @@ sidebar_position: 1
           </li>
           <li style={{padding: '0.5rem 0', borderBottom: '1px solid rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'flex-start', gap: '0.75rem'}}>
             <span style={{color: '#10b981', fontSize: '1rem', marginTop: '0.1rem', flexShrink: 0}}>✓</span>
-            <span style={{fontSize: '0.95rem'}}>Workspace for scan history and result storage</span>
+            <span style={{fontSize: '0.95rem'}}>Storage for scan history and result storage</span>
           </li>
           <li style={{padding: '0.5rem 0', borderBottom: '1px solid rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'flex-start', gap: '0.75rem'}}>
             <span style={{color: '#10b981', fontSize: '1rem', marginTop: '0.1rem', flexShrink: 0}}>✓</span>
@@ -264,7 +264,7 @@ sidebar_position: 1
           </li>
           <li style={{padding: '0.5rem 0', borderBottom: '1px solid rgba(139, 92, 246, 0.1)', display: 'flex', alignItems: 'flex-start', gap: '0.75rem'}}>
             <span style={{color: '#8b5cf6', fontSize: '1rem', marginTop: '0.1rem', flexShrink: 0}}>★</span>
-            <span style={{fontSize: '0.95rem'}}>Multi-tenant workspace isolation</span>
+            <span style={{fontSize: '0.95rem'}}>Multi-tenant storage isolation</span>
           </li>
           <li style={{padding: '0.5rem 0', borderBottom: '1px solid rgba(139, 92, 246, 0.1)', display: 'flex', alignItems: 'flex-start', gap: '0.75rem'}}>
             <span style={{color: '#8b5cf6', fontSize: '1rem', marginTop: '0.1rem', flexShrink: 0}}>★</span>
@@ -318,8 +318,8 @@ pentora scan 192.168.1.100 --vuln
 pentora scan 192.168.1.0/24 --only-discover
 ```
 
-```bash title="View workspace scans"
-pentora workspace list
+```bash title="View storage scans"
+pentora storage list
 ```
 
 ## Architecture Overview

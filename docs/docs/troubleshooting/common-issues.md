@@ -97,7 +97,7 @@ pentora scan --targets 192.168.1.0/24 --rate 500
 pentora scan --targets 192.168.1.0/24 --concurrency 50
 ```
 
-## Workspace Issues
+## Storage Issues
 
 ### Disk Space Exhausted
 ```
@@ -107,14 +107,14 @@ Error: no space left on device
 **Solutions**:
 ```bash
 # Clean old scans
-pentora workspace gc --older-than 30d
+pentora storage gc --older-than 30d
 
-# Check workspace size
+# Check storage size
 du -sh ~/.local/share/pentora
 
 # Enable compression
 # Add to config.yaml:
-workspace:
+storage:
   scans:
     compress: true
 ```
@@ -126,14 +126,14 @@ Error: failed to read scan results
 
 **Solution**:
 ```bash
-# Check workspace integrity
-pentora workspace check
+# Check storage integrity
+pentora storage check
 
 # Attempt repair
-pentora workspace check --fix
+pentora storage check --fix
 
 # Delete corrupted scan
-pentora workspace delete <scan-id>
+pentora storage delete <scan-id>
 ```
 
 ## Server Issues

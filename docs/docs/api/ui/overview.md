@@ -37,7 +37,7 @@ Default credentials (change immediately):
 - Real-time status
 - Export options (JSON, CSV, PDF)
 
-### 3. Workspace Explorer
+### 3. Storage Explorer
 - Directory view of scans
 - File inspector for results
 - Search and filter
@@ -56,11 +56,11 @@ Default credentials (change immediately):
 ## Architecture
 
 ```
-[Browser] → [Pentora Server] → [REST API] → [Workspace]
+[Browser] → [Pentora Server] → [REST API] → [Storage]
                 ↓
          [Static UI Files]
 ```
 
-UI never reads workspace files directly; server abstracts storage.
+UI never reads storage files directly; server abstracts storage access.
 
 See [Dashboard Features](/api/ui/dashboard) for details.

@@ -270,7 +270,7 @@ Aggregate evidence from multiple sources:
 
 **Fingerprint Database**:
 - Builtin rules compiled into binary
-- Cached catalogs in workspace: `<workspace>/cache/fingerprints/`
+- Cached catalogs in storage: `<storage>/cache/fingerprints/`
 - Sync remote catalogs: `pentora fingerprint sync`
 
 **Output**: Service records with application, version, OS, and confidence scores.
@@ -278,7 +278,7 @@ Aggregate evidence from multiple sources:
 **Configuration**:
 ```yaml
 fingerprint:
-  cache_dir: ${workspace}/cache/fingerprints
+  cache_dir: ${storage}/cache/fingerprints
   probe_timeout: 5s
   max_protocols: 3  # Max protocols to probe per port
   catalog:
@@ -482,7 +482,7 @@ notifications:
       compliance_failed: true
 ```
 
-**Output**: Reports written to workspace and external systems notified.
+**Output**: Reports written to storage and external systems notified.
 
 **CLI Control**:
 ```bash
@@ -500,8 +500,8 @@ curl -X POST /api/scans -d '{"targets": [...], "notify": ["slack://security"]}'
 
 **Purpose**: Store scan results for historical analysis and trend detection.
 
-**Workspace Storage**:
-Results saved to: `<workspace>/scans/<scan-id>/`
+**Storage**:
+Results saved to: `<storage>/scans/<scan-id>/`
 ```
 scans/20231006-143022-a1b2c3/
 ├── request.json       # Original scan parameters
@@ -519,7 +519,7 @@ scans/20231006-143022-a1b2c3/
 
 **Retention Policies**:
 ```yaml
-workspace:
+storage:
   retention:
     enabled: true
     max_age: 90d         # Delete scans older than 90 days
@@ -537,13 +537,13 @@ workspace:
 **CLI Control**:
 ```bash
 # Clean old scans
-pentora workspace gc --older-than 30d
+pentora storage gc --older-than 30d
 
-# Disable workspace (stateless)
-pentora scan --targets 192.168.1.100 --no-workspace
+# Disable storage (stateless)
+pentora scan --targets 192.168.1.100 --no-storage
 
-# Custom workspace location
-pentora scan --targets 192.168.1.100 --workspace-dir /data/pentora
+# Custom storage location
+pentora scan --targets 192.168.1.100 --storage-dir /data/pentora
 ```
 
 ## Pipeline Control
@@ -637,5 +637,5 @@ Reporting stage always runs to capture partial results.
 
 - [DAG Engine](/concepts/dag-engine) - How stages are orchestrated
 - [Fingerprinting](/concepts/fingerprinting) - Deep dive into Layer 4
-- [Workspace](/concepts/workspace) - Where results are stored
+- [Storage](/concepts/storage) - Where results are stored
 - [Scan Profiles](/configuration/scan-profiles) - Customizing pipeline behavior

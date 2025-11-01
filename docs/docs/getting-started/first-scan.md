@@ -40,7 +40,7 @@ This command will:
 ```
 [INFO] Starting discovery scan for 192.168.1.0/24
 [INFO] Found 15 live hosts
-[INFO] Results saved to workspace: ~/.local/share/pentora/scans/<scan-id>/
+[INFO] Results saved to storage: ~/.local/share/pentora/scans/<scan-id>/
 ```
 
 ### Step 3: Run a Full Port Scan
@@ -62,7 +62,7 @@ This performs the complete scan pipeline:
 
 ### Step 4: Understanding Results
 
-Scan results are stored in your workspace directory (default: `~/.local/share/pentora/scans/<scan-id>/`):
+Scan results are stored in your storage directory (default: `~/.local/share/pentora/scans/<scan-id>/`):
 
 ```
 scans/
@@ -152,19 +152,19 @@ pentora scan --targets 192.168.1.100 --profile deep
 pentora scan --targets example.com --profile webapp
 ```
 
-### Workspace Control
+### Storage Control
 
 Manage where scan data is stored:
 
 ```bash
-# Use custom workspace directory
-pentora scan --targets 192.168.1.100 --workspace-dir /path/to/workspace
+# Use custom storage directory
+pentora scan --targets 192.168.1.100 --storage-dir /path/to/storage
 
-# Disable workspace (stateless mode, no persistence)
-pentora scan --targets 192.168.1.100 --no-workspace
+# Disable storage (stateless mode, no persistence)
+pentora scan --targets 192.168.1.100 --no-storage
 
 # Clean old scans
-pentora workspace gc --older-than 30d
+pentora storage gc --older-than 30d
 ```
 
 ## Understanding Output
@@ -248,6 +248,6 @@ If scans run slowly:
 
 ## Related Documentation
 
-- [Workspace Concept](/concepts/workspace) - Understanding workspace structure
+- [Storage Concept](/concepts/storage) - Understanding storage structure
 - [Scan Profiles](/configuration/scan-profiles) - Customizing scan behavior
 - [Network Scanning Best Practices](/guides/network-scanning) - Advanced techniques

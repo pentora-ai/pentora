@@ -106,6 +106,6 @@ pentora scan --targets prod-network.txt --profile production
 Profiles stored in:
 - System: `/etc/pentora/profiles/`
 - User: `~/.config/pentora/profiles/`
-- Workspace: `<workspace>/config/profiles/`
+- Storage: `<storage>/config/profiles/`
 
 See [Configuration Overview](/configuration/overview) for complete schema.

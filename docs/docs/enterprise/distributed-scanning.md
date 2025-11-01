@@ -5,7 +5,7 @@ Scale scanning across multiple worker nodes with centralized job orchestration.
 ## Architecture
 
 ```
-[API/UI] → [Job Queue] → [Worker Pool] → [Shared Workspace]
+[API/UI] → [Job Queue] → [Worker Pool] → [Shared Storage]
                               ↓
                           Worker 1
                           Worker 2

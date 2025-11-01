@@ -72,8 +72,8 @@ pentora scan --target-file live-hosts.txt --no-discover --profile standard
 Review and refine:
 ```bash
 # Compare scans
-pentora workspace show scan-1 > scan-1.json
-pentora workspace show scan-2 > scan-2.json
+pentora storage show scan-1 > scan-1.json
+pentora storage show scan-2 > scan-2.json
 diff scan-1.json scan-2.json
 ```
 

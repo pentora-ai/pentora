@@ -112,11 +112,11 @@ pentora scan --targets 192.168.1.0/24 --timeout 2s
 ### Solutions
 
 #### 1. Use Faster Storage
-Move workspace to SSD.
+Move storage to SSD.
 
 #### 2. Disable Artifacts
 ```yaml
-workspace:
+storage:
   scans:
     keep_artifacts: false
     keep_pcaps: false
@@ -124,7 +124,7 @@ workspace:
 
 #### 3. Enable Compression
 ```yaml
-workspace:
+storage:
   scans:
     compress: true
 ```

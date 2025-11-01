@@ -19,7 +19,7 @@ Server mode provides:
 - Job queue and scheduler
 - Worker pools for concurrent scanning
 - Web portal for scan management (Enterprise)
-- Multi-tenant workspace isolation (Enterprise)
+- Multi-tenant storage isolation (Enterprise)
 
 ## Prerequisites
 
@@ -29,7 +29,7 @@ Server mode provides:
 
 - **CPU**: 2 cores
 - **RAM**: 4 GB
-- **Disk**: 20 GB (including workspace)
+- **Disk**: 20 GB (including storage)
 - **OS**: Linux (Ubuntu 20.04+, RHEL/CentOS 8+, Debian 11+)
 
 #### Recommended for Production
@@ -90,8 +90,8 @@ sudo chown -R pentora:pentora /etc/pentora
 Create server configuration at `/etc/pentora/config.yaml`:
 
 ```yaml
-workspace:
-  dir: /var/lib/pentora/workspace
+storage:
+  dir: /var/lib/pentora/storage
   enabled: true
   retention:
     enabled: true
@@ -192,7 +192,7 @@ WorkingDirectory=/var/lib/pentora
 
 # Environment
 Environment="PENTORA_CONFIG=/etc/pentora/config.yaml"
-Environment="PENTORA_WORKSPACE_DIR=/var/lib/pentora/workspace"
+Environment="PENTORA_STORAGE_DIR=/var/lib/pentora/storage"
 
 # Start command
 ExecStart=/usr/local/bin/pentora server start --config /etc/pentora/config.yaml
@@ -562,7 +562,7 @@ Response:
     "running": 2,
     "failed": 0
   },
-  "workspace": {
+  "storage": {
     "scans": 145,
     "size_mb": 2340,
     "free_space_mb": 87650
@@ -660,12 +660,12 @@ alerts:
   - name: disk_space_low
     condition: free_space_mb < 10000
     action: slack,email
-    message: 'Workspace disk space low'
+    message: 'Storage disk space low'
 ```
 
 ## Backup and Recovery
 
-### Backup Workspace
+### Backup Storage
 
 ```bash
 # Create backup script
@@ -675,14 +675,14 @@ set -euo pipefail
 
 BACKUP_DIR="/var/backups/pentora"
 DATE=$(date +%Y%m%d-%H%M%S)
-WORKSPACE_DIR="/var/lib/pentora/workspace"
+STORAGE_DIR="/var/lib/pentora/storage"
 CONFIG_DIR="/etc/pentora"
 
 # Create backup directory
 mkdir -p "$BACKUP_DIR"
 
-# Backup workspace
-tar -czf "$BACKUP_DIR/workspace-$DATE.tar.gz" -C "$(dirname "$WORKSPACE_DIR")" "$(basename "$WORKSPACE_DIR")"
+# Backup storage
+tar -czf "$BACKUP_DIR/storage-$DATE.tar.gz" -C "$(dirname "$STORAGE_DIR")" "$(basename "$STORAGE_DIR")"
 
 # Backup configuration
 tar -czf "$BACKUP_DIR/config-$DATE.tar.gz" "$CONFIG_DIR"
@@ -712,8 +712,8 @@ sudo crontab -e
 # Stop service
 sudo systemctl stop pentora
 
-# Restore workspace
-sudo tar -xzf /var/backups/pentora/workspace-20241006-030000.tar.gz -C /var/lib/pentora/
+# Restore storage
+sudo tar -xzf /var/backups/pentora/storage-20241006-030000.tar.gz -C /var/lib/pentora/
 
 # Restore configuration
 sudo tar -xzf /var/backups/pentora/config-20241006-030000.tar.gz -C /
@@ -750,29 +750,29 @@ Deploy multiple Pentora servers behind load balancer:
            └─────────────┘
 ```
 
-### Shared Workspace Setup
+### Shared Storage Setup
 
-Use NFS for shared workspace:
+Use NFS for shared storage:
 
 ```bash
 # On NFS server
 sudo apt install nfs-kernel-server
-sudo mkdir -p /export/pentora-workspace
-sudo chown -R pentora:pentora /export/pentora-workspace
+sudo mkdir -p /export/pentora-storage
+sudo chown -R pentora:pentora /export/pentora-storage
 
 # Add to /etc/exports
-echo "/export/pentora-workspace 192.168.1.0/24(rw,sync,no_subtree_check)" | sudo tee -a /etc/exports
+echo "/export/pentora-storage 192.168.1.0/24(rw,sync,no_subtree_check)" | sudo tee -a /etc/exports
 sudo exportfs -ra
 
 # On Pentora servers
 sudo apt install nfs-common
-sudo mount -t nfs nfs-server:/export/pentora-workspace /var/lib/pentora/workspace
+sudo mount -t nfs nfs-server:/export/pentora-storage /var/lib/pentora/storage
 ```
 
 Add to `/etc/fstab`:
 
 ```
-nfs-server:/export/pentora-workspace /var/lib/pentora/workspace nfs defaults 0 0
+nfs-server:/export/pentora-storage /var/lib/pentora/storage nfs defaults 0 0
 ```
 
 ## Upgrading
@@ -780,7 +780,7 @@ nfs-server:/export/pentora-workspace /var/lib/pentora/workspace nfs defaults 0 0
 ### Backup Before Upgrade
 
 ```bash
-# Backup workspace and config
+# Backup storage and config
 /usr/local/bin/pentora-backup.sh
 
 # Note current version

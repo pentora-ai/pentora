@@ -44,7 +44,7 @@ Hidden by default:
 
 ### Step 4: Confirmation
 - Summary of configuration
-- Workspace path
+- Storage path
 - Notification recipients
 - **Start Scan** button
 

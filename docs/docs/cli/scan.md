@@ -359,27 +359,27 @@ Use custom output template.
 pentora scan --targets 192.168.1.100 --template custom-report.tmpl
 ```
 
-## Workspace Options
+## Storage Options
 
-### --workspace-dir
+### --storage-dir
 
-Specify workspace directory.
-
-**Example**:
-```bash
-pentora scan --targets 192.168.1.100 --workspace-dir /data/pentora
-```
-
-### --no-workspace
-
-Disable workspace persistence (stateless mode).
+Specify storage directory.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.100 --no-workspace
+pentora scan --targets 192.168.1.100 --storage-dir /data/pentora
 ```
 
-Results output to stdout/file only, no workspace storage.
+### --no-storage
+
+Disable storage persistence (stateless mode).
+
+**Example**:
+```bash
+pentora scan --targets 192.168.1.100 --no-storage
+```
+
+Results output to stdout/file only, no storage persistence.
 
 ### --scan-name
 
@@ -578,11 +578,11 @@ pentora scan --targets 10.0.0.0/16 \
   --output full-scan.json
 ```
 
-### Stateless Scan (No Workspace)
+### Stateless Scan (No Storage)
 
 ```bash
 pentora scan --targets 192.168.1.100 \
-  --no-workspace \
+  --no-storage \
   --output /tmp/scan-results.json
 ```
 

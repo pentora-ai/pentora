@@ -8,7 +8,7 @@ Pentora Enterprise extends the open-source core with advanced capabilities for o
 - Full scan pipeline
 - Embedded modules
 - CLI and basic server
-- Local workspace
+- Local storage
 - JSON/CSV export
 
 Optional support: $49/user/month
@@ -19,7 +19,7 @@ Up to 5 users
 **Features**:
 - Job scheduling
 - Web UI
-- Local workspace sync
+- Local storage sync
 - REST API & webhooks
 - Slack alerts
 - Basic RBAC
@@ -39,7 +39,7 @@ Up to 20 users
 Unlimited users
 
 **Additional Features**:
-- Multi-tenant workspace
+- Multi-tenant storage
 - Compliance packs (CIS/PCI/NIST)
 - Air-gapped deployments
 - Plugin marketplace

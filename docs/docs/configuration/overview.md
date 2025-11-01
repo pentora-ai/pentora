@@ -9,7 +9,7 @@ Configuration is loaded in order (later sources override earlier ones):
 1. **Builtin defaults** - Compiled into binary
 2. **System config** - `/etc/pentora/config.yaml` (Linux) or OS equivalent
 3. **User config** - `~/.config/pentora/config.yaml`
-4. **Workspace config** - `<workspace>/config/pentora.yaml`
+4. **Storage config** - `<storage>/config/pentora.yaml`
 5. **Custom config** - `--config /path/to/config.yaml`
 6. **Environment variables** - `PENTORA_*`
 7. **CLI flags** - Command-line arguments
@@ -19,7 +19,7 @@ Configuration is loaded in order (later sources override earlier ones):
 ```yaml
 # ~/.config/pentora/config.yaml
 
-workspace:
+storage:
   dir: ~/.local/share/pentora
   enabled: true
   auto_create: true
@@ -58,7 +58,7 @@ discovery:
 
 fingerprint:
   enabled: true
-  cache_dir: ${workspace}/cache/fingerprints
+  cache_dir: ${storage}/cache/fingerprints
   probe_timeout: 5s
   max_protocols: 3
   catalog:
@@ -124,7 +124,7 @@ notifications:
 
 # Enterprise-only sections
 enterprise:
-  license_file: ${workspace}/config/license.key
+  license_file: ${storage}/config/license.key
   multi_tenant:
     enabled: false
   distributed:

@@ -35,7 +35,7 @@ Shared key-value store passed through pipeline:
 - Type-safe accessors
 - Thread-safe operations
 - Size limits and eviction
-- Persistence to workspace
+- Persistence to storage
 
 ## Execution Model
 

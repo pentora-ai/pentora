@@ -12,14 +12,14 @@ Pentora supports multiple installation methods across macOS, Linux, and Windows 
 
 - **CPU**: 2 cores
 - **RAM**: 2 GB
-- **Disk**: 100 MB for binaries, additional space for workspace
+- **Disk**: 100 MB for binaries, additional space for storage
 - **OS**: macOS 10.15+, Linux (kernel 3.10+), Windows 10+
 
 ### Recommended for Large Scans
 
 - **CPU**: 4+ cores
 - **RAM**: 8+ GB
-- **Disk**: 10 GB+ for workspace and scan results
+- **Disk**: 10 GB+ for storage and scan results
 - **Network**: Low-latency connection for optimal scanning
 
 ## Quick Install (Recommended)
@@ -254,8 +254,8 @@ docker pull pentora/pentora:latest
 # Basic scan
 docker run --rm pentora/pentora scan 192.168.1.0/24
 
-# With workspace persistence
-docker run --rm -v $(pwd)/workspace:/workspace pentora/pentora scan 192.168.1.0/24
+# With storage persistence
+docker run --rm -v $(pwd)/storage:/storage pentora/pentora scan 192.168.1.0/24
 
 # Interactive mode
 docker run -it --rm pentora/pentora
@@ -271,10 +271,10 @@ services:
   pentora:
     image: pentora/pentora:latest
     volumes:
-      - ./workspace:/workspace
+      - ./storage:/storage
       - ./config:/config
     environment:
-      - PENTORA_WORKSPACE_DIR=/workspace
+      - PENTORA_STORAGE_DIR=/storage
     command: ['server', 'start']
     ports:
       - '8080:8080'
@@ -322,22 +322,22 @@ pentora config init > ~/.config/pentora/config.yaml
 
 See the [Configuration Guide](../configuration/overview.md) for detailed options.
 
-## Workspace Setup
+## Storage Setup
 
-Pentora uses a workspace directory to store scan results:
+Pentora uses a storage directory to store scan results:
 
 ```bash
-# Default workspace locations:
+# Default storage locations:
 # Linux: ~/.local/share/pentora or $XDG_DATA_HOME/pentora
 # macOS: ~/Library/Application Support/Pentora
 # Windows: %AppData%\Pentora
 
-# Initialize workspace
-pentora workspace init
+# Initialize storage
+pentora storage init
 
-# Set custom workspace
-export PENTORA_WORKSPACE_DIR=/path/to/workspace
-pentora workspace init
+# Set custom storage directory
+export PENTORA_STORAGE_DIR=/path/to/storage
+pentora storage init
 ```
 
 ## Updating Pentora
@@ -396,7 +396,7 @@ sudo rm /usr/local/bin/pentora
 # Remove configuration
 rm -rf ~/.config/pentora
 
-# Remove workspace (optional)
+# Remove storage (optional)
 rm -rf ~/.local/share/pentora  # Linux
 rm -rf ~/Library/Application\ Support/Pentora  # macOS
 ```

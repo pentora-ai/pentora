@@ -1,11 +1,11 @@
-# Multi-Tenant Workspace
+# Multi-Tenant Storage
 
 Isolate scan data and access between multiple tenants or customers.
 
 ## Directory Structure
 
 ```
-workspace/
+storage/
 ├── tenants/
 │   ├── customer-a/
 │   │   ├── scans/

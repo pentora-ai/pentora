@@ -8,7 +8,7 @@ Pentora provides a structured approach to security scanning through:
 
 - **Modular architecture**: Composable scan modules organized in a directed acyclic graph (DAG)
 - **Layered fingerprinting**: Multi-stage protocol detection with confidence scoring
-- **Shared workspace**: Persistent scan storage with retention policies
+- **Persistent storage**: Shared scan storage with retention policies
 - **Flexible execution**: CLI for ad-hoc scans, server mode for scheduled operations
 - **Enterprise features**: Distributed scanning, multi-tenancy, and advanced integrations
 
@@ -30,9 +30,9 @@ Every scan flows through a structured 9-stage pipeline:
 
 See [Scan Pipeline](/concepts/scan-pipeline) for detailed explanation.
 
-### 2. Workspace
+### 2. Storage
 
-The workspace is a shared directory structure that stores:
+The storage directory is a shared directory structure that stores:
 
 - **Scan results**: Structured JSON output per scan
 - **Request metadata**: Original scan parameters
@@ -46,7 +46,7 @@ Default locations:
 - **macOS**: `~/Library/Application Support/Pentora`
 - **Windows**: `%AppData%\Pentora`
 
-See [Workspace Concept](/concepts/workspace) for structure details.
+See [Storage Concept](/concepts/storage) for structure details.
 
 ### 3. DAG Engine
 
@@ -134,7 +134,7 @@ pentora scan --targets 192.168.1.0/24
 ```
 
 - No daemon required
-- Results written to workspace
+- Results written to storage
 - Progress displayed in terminal
 - Suitable for manual operations
 
@@ -191,11 +191,11 @@ Pentora uses a hierarchical configuration system:
 1. **Default values**: Compiled-in defaults
 2. **System config**: `/etc/pentora/config.yaml` (Linux) or OS equivalent
 3. **User config**: `~/.config/pentora/config.yaml`
-4. **Workspace config**: `<workspace>/config/pentora.yaml`
+4. **Storage config**: `<storage>/config/pentora.yaml`
 5. **CLI flags**: Override all file-based settings
 
 Configuration sections:
-- `workspace.*`: Storage and retention
+- `storage.*`: Storage directory and retention policies
 - `scanner.*`: Scan timing and concurrency
 - `fingerprint.*`: Detection rules and probes
 - `logging.*`: Output verbosity and format
@@ -212,7 +212,7 @@ Core scanning capabilities:
 - Full scan pipeline (all 9 stages)
 - Embedded modules
 - CLI and basic server mode
-- Local workspace
+- Local storage
 - JSON/CSV export
 
 ### Enterprise Tiers
@@ -234,7 +234,7 @@ See [Enterprise Overview](/enterprise/overview) for feature matrix.
 
 ### CLI vs UI
 
-- **CLI**: Targets technical operators for ad-hoc scans, workspace inspection, and troubleshooting
+- **CLI**: Targets technical operators for ad-hoc scans, storage inspection, and troubleshooting
 - **UI**: Empowers non-technical stakeholders with simplified workflows and dashboards
 - **Separation**: CLI communicates via REST API; never accesses server internals directly
 
@@ -292,7 +292,7 @@ POST /api/scans
 Dive deeper into specific concepts:
 
 - [Scan Pipeline](/concepts/scan-pipeline) - All 9 stages explained
-- [Workspace](/concepts/workspace) - Directory structure and retention
+- [Storage](/concepts/storage) - Directory structure and retention
 - [DAG Engine](/concepts/dag-engine) - Execution orchestration
 - [Modules](/concepts/modules) - Module types and lifecycle
 - [Fingerprinting](/concepts/fingerprinting) - Service detection internals
