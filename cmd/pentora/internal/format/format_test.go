@@ -11,6 +11,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/pentora-ai/pentora/pkg/plugin"
 )
 
 func TestNew(t *testing.T) {
@@ -262,6 +264,11 @@ func TestPrintError(t *testing.T) {
 					require.NoError(t, err)
 					require.False(t, result["success"].(bool))
 					require.Contains(t, result["error"], tt.err.Error())
+					// New fields: code and suggestion should be present for JSON errors
+					_, hasCode := result["code"]
+					require.True(t, hasCode, "expected 'code' in JSON error output")
+					_, hasSuggestion := result["suggestion"]
+					require.True(t, hasSuggestion, "expected 'suggestion' in JSON error output")
 				}
 			} else {
 				require.Empty(t, stdout.String())
@@ -273,6 +280,38 @@ func TestPrintError(t *testing.T) {
 			} else {
 				require.Empty(t, stderr.String())
 			}
+		})
+	}
+}
+
+func TestPrintError_JSON_IncludesCodeAndSuggestion_ForVariousErrors(t *testing.T) {
+	cases := []struct {
+		name string
+		err  error
+	}{
+		{name: "not found", err: plugin.ErrPluginNotFound},
+		{name: "invalid input", err: plugin.ErrInvalidInput},
+		{name: "service unavailable", err: plugin.ErrUnavailable},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			f := New(&stdout, &stderr, ModeJSON, false, false)
+
+			require.NoError(t, f.PrintError(tc.err))
+
+			var result map[string]any
+			require.NoError(t, json.Unmarshal(stdout.Bytes(), &result))
+			require.Equal(t, false, result["success"].(bool))
+			require.Contains(t, result["error"], tc.err.Error())
+
+			// Exact code should match plugin.ErrorCode
+			require.Equal(t, plugin.ErrorCode(tc.err), result["code"].(string))
+
+			// Suggestion should be present (non-empty string)
+			sugg, _ := result["suggestion"].(string)
+			require.NotEmpty(t, sugg)
 		})
 	}
 }

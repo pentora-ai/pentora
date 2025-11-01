@@ -12,6 +12,8 @@ import (
 	"text/tabwriter"
 
 	"github.com/fatih/color"
+
+	"github.com/pentora-ai/pentora/pkg/plugin"
 )
 
 // OutputMode defines the output format for CLI commands
@@ -154,8 +156,10 @@ func (f *formatter) PrintError(err error) error {
 	if f.mode == ModeJSON {
 		// JSON mode: error object to stdout (machine-readable)
 		return f.PrintJSON(map[string]any{
-			"success": false,
-			"error":   err.Error(),
+			"success":    false,
+			"error":      err.Error(),
+			"code":       plugin.ErrorCode(err),
+			"suggestion": plugin.GetSuggestion(err),
 		})
 	}
 
