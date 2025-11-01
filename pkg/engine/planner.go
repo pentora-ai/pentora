@@ -9,6 +9,13 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const (
+	// Module type names used throughout the planner
+	moduleTypeTCPPortDiscovery  = "tcp-port-discovery"
+	moduleTypeUDPPortDiscovery  = "udp-port-discovery"
+	moduleTypeICMPPingDiscovery = "icmp-ping-discovery"
+)
+
 // ScanIntent represents the user's high-level goal for the scan.
 type ScanIntent struct {
 	Targets          []string
@@ -42,6 +49,146 @@ func NewDAGPlanner(registry map[string]ModuleFactory) (*DAGPlanner, error) {
 	}, nil
 }
 
+// initializeDataKeys sets up initial data keys for DAG planning based on intent.
+func (p *DAGPlanner) initializeDataKeys(intent ScanIntent) map[string]string {
+	availableDataKeys := make(map[string]string)
+	if len(intent.Targets) > 0 {
+		availableDataKeys["config.targets"] = "initial_input"
+
+		// If skipping discovery, treat all targets as live hosts
+		if intent.SkipDiscovery {
+			availableDataKeys["discovery.live_hosts"] = "initial_input"
+			p.logger.Debug().Msg("SkipDiscovery enabled: treating all targets as live hosts")
+		}
+
+		p.logger.Debug().Interface("initial_keys", availableDataKeys).Msg("Initial available data keys")
+	}
+	return availableDataKeys
+}
+
+// checkModuleDependencies checks if all required dependencies for a module are met.
+func (p *DAGPlanner) checkModuleDependencies(
+	meta ModuleMetadata,
+	availableDataKeys map[string]string,
+) bool {
+	if len(meta.Consumes) == 0 {
+		return true
+	}
+
+	for _, consumedContract := range meta.Consumes {
+		consumedKeyString := consumedContract.Key
+		if _, keyIsAvailable := availableDataKeys[consumedKeyString]; !keyIsAvailable && !consumedContract.IsOptional {
+			p.logger.Trace().Str("module", meta.Name).Str("missing_key", consumedKeyString).
+				Msg("Dependency key not yet available for module")
+			return false
+		}
+	}
+	return true
+}
+
+// addModuleToDAG adds a module to the DAG and updates tracking structures.
+func (p *DAGPlanner) addModuleToDAG(
+	meta ModuleMetadata,
+	intent ScanIntent,
+	dagDef *DAGDefinition,
+	dagNodeConfigs map[string]DAGNodeConfig,
+	availableDataKeys map[string]string,
+) {
+	instanceID := p.generateInstanceID(meta.Name, dagNodeConfigs)
+
+	nodeCfg := DAGNodeConfig{
+		InstanceID: instanceID,
+		ModuleType: meta.Name,
+		Config:     p.configureModule(meta, intent),
+	}
+
+	dagDef.Nodes = append(dagDef.Nodes, nodeCfg)
+	dagNodeConfigs[instanceID] = dagDef.Nodes[len(dagDef.Nodes)-1]
+
+	p.logger.Debug().Str("module", meta.Name).Str("instance_id", instanceID).Msg("Added module to DAG")
+
+	// Register produced data keys
+	for _, producedContract := range meta.Produces {
+		producedKey := producedContract.Key
+		if existingProducer, found := availableDataKeys[producedKey]; found && existingProducer != "initial_input" {
+			p.logger.Warn().Str("data_key", producedKey).Str("new_producer", instanceID).
+				Str("existing_producer", existingProducer).
+				Msg("DataKey already produced by another module. Overwriting producer.")
+		}
+		availableDataKeys[producedKey] = instanceID
+		p.logger.Trace().Str("module_producer", meta.Name).Str("instance_id_producer", instanceID).
+			Str("produced_key", producedKey).Msg("Marked key as available")
+	}
+}
+
+// buildDAGIteratively builds the DAG by iteratively adding modules whose dependencies are met.
+func (p *DAGPlanner) buildDAGIteratively(
+	candidateModules []ModuleFactory,
+	intent ScanIntent,
+	dagDef *DAGDefinition,
+	availableDataKeys map[string]string,
+) map[string]bool {
+	dagNodeConfigs := make(map[string]DAGNodeConfig)
+	moduleTypesAddedToDAG := make(map[string]bool)
+
+	for {
+		addedInThisIteration := 0
+
+		for _, modFactory := range candidateModules {
+			tempMod := modFactory()
+			meta := tempMod.Metadata()
+
+			if moduleTypesAddedToDAG[meta.Name] {
+				continue
+			}
+
+			if p.checkModuleDependencies(meta, availableDataKeys) {
+				p.addModuleToDAG(meta, intent, dagDef, dagNodeConfigs, availableDataKeys)
+				moduleTypesAddedToDAG[meta.Name] = true
+				addedInThisIteration++
+			}
+		}
+
+		if addedInThisIteration == 0 {
+			p.logger.Debug().Int("total_dag_nodes", len(dagDef.Nodes)).
+				Msg("No more modules added in this planning iteration. Loop will terminate.")
+			break
+		}
+		p.logger.Debug().Int("added_this_iteration", addedInThisIteration).
+			Int("total_dag_nodes", len(dagDef.Nodes)).
+			Msg("Completed an iteration of DAG planning.")
+	}
+
+	return moduleTypesAddedToDAG
+}
+
+// logUnprocessedModules logs modules that couldn't be added due to unmet dependencies.
+func (p *DAGPlanner) logUnprocessedModules(
+	candidateModules []ModuleFactory,
+	moduleTypesAddedToDAG map[string]bool,
+	availableDataKeys map[string]string,
+) {
+	if len(moduleTypesAddedToDAG) >= len(candidateModules) {
+		return
+	}
+
+	p.logger.Warn().Msg("Not all candidate modules selected by intent could be added to the DAG. Logging unprocessed modules and their potential unmet dependencies:")
+	for _, modFactory := range candidateModules {
+		meta := modFactory().Metadata()
+		if !moduleTypesAddedToDAG[meta.Name] {
+			unmetDependencies := []string{}
+			for _, consumedContract := range meta.Consumes {
+				consumedKey := consumedContract.Key
+				if _, found := availableDataKeys[consumedKey]; !found {
+					unmetDependencies = append(unmetDependencies, consumedKey)
+				}
+			}
+			p.logger.Warn().Str("module", meta.Name).Strs("unmet_dependencies", unmetDependencies).
+				Msg("Unprocessed candidate module")
+		}
+	}
+}
+
 // PlanDAG attempts to create a DAGDefinition based on the provided scan intent.
 func (p *DAGPlanner) PlanDAG(intent ScanIntent) (*DAGDefinition, error) {
 	p.logger.Info().Interface("intent", intent).Msg("Planning DAG based on scan intent")
@@ -59,105 +206,16 @@ func (p *DAGPlanner) PlanDAG(intent ScanIntent) (*DAGDefinition, error) {
 	}
 	p.logger.Debug().Int("count", len(candidateModules)).Msg("Candidate modules selected")
 
-	availableDataKeys := make(map[string]string) // DataKey -> Producing InstanceID
-	if len(intent.Targets) > 0 {
-		availableDataKeys["config.targets"] = "initial_input" // Mark config.targets as initially available
-		p.logger.Debug().Interface("initial_keys", availableDataKeys).Msg("Initial available data keys")
-	}
-	// Add other global/initial keys if necessary, e.g., from intent.CustomPortConfig if planner doesn't set it directly in module config
-	// if intent.CustomPortConfig != "" {
-	// 	availableDataKeys["config.ports"] = "initial_input"
-	// }
+	// Initialize available data keys
+	availableDataKeys := p.initializeDataKeys(intent)
 
-	// Store node configs by instance ID to ensure uniqueness and for lookups
-	dagNodeConfigs := make(map[string]DAGNodeConfig)
-	// Track module types already added to the DAG to add each type at most once in this simple auto-plan
-	moduleTypesAddedToDAG := make(map[string]bool)
+	// Build DAG iteratively
+	moduleTypesAddedToDAG := p.buildDAGIteratively(candidateModules, intent, dagDef, availableDataKeys)
 
-	// Iteratively build the DAG layer by layer
-	for { // Loop until no more modules can be added in a full pass
-		addedInThisIteration := 0
+	// Log unprocessed modules if any
+	p.logUnprocessedModules(candidateModules, moduleTypesAddedToDAG, availableDataKeys)
 
-		for _, modFactory := range candidateModules {
-			tempMod := modFactory() // Create a temporary instance to get metadata
-			meta := tempMod.Metadata()
-
-			if moduleTypesAddedToDAG[meta.Name] { // If this module *type* has already been added
-				continue
-			}
-
-			// Check if all consumed keys for this module are currently available
-			allConsumesMet := true
-			if len(meta.Consumes) > 0 {
-				for _, consumedContract := range meta.Consumes {
-					consumedKeyString := consumedContract.Key // Use the string Key
-					if _, keyIsAvailable := availableDataKeys[consumedKeyString]; !keyIsAvailable && !consumedContract.IsOptional {
-						// If this key is not available and it's not optional, we cannot add this module yet
-						allConsumesMet = false
-						p.logger.Trace().Str("module", meta.Name).Str("missing_key", consumedKeyString).Msg("Dependency key not yet available for module")
-						break
-					}
-				}
-			} // Modules with no consumes (or all consumes met by initial_input) are considered for the first layer
-
-			if allConsumesMet {
-				// This module's dependencies are met, it can be added to the DAG
-				instanceID := p.generateInstanceID(meta.Name, dagNodeConfigs) // Pass current DAG nodes to ensure unique ID
-
-				nodeCfg := DAGNodeConfig{
-					InstanceID: instanceID,
-					ModuleType: meta.Name, // Use the registered module type name
-					Config:     p.configureModule(meta, intent),
-				}
-
-				dagDef.Nodes = append(dagDef.Nodes, nodeCfg)
-				dagNodeConfigs[instanceID] = dagDef.Nodes[len(dagDef.Nodes)-1] // Store pointer to the added node config
-				moduleTypesAddedToDAG[meta.Name] = true                        // Mark this module TYPE as added
-
-				p.logger.Debug().Str("module", meta.Name).Str("instance_id", instanceID).Msg("Added module to DAG")
-
-				// Add its produced keys to availableDataKeys for subsequent modules in this or next iterations
-				for _, producedContract := range meta.Produces {
-					producedKey := producedContract.Key // Use the string Key
-					if existingProducer, found := availableDataKeys[producedKey]; found && existingProducer != "initial_input" {
-						p.logger.Warn().Str("data_key", producedKey).Str("new_producer", instanceID).Str("existing_producer", existingProducer).Msg("DataKey already produced by another module. Overwriting producer.")
-					}
-					availableDataKeys[producedKey] = instanceID // Mark key as available, produced by this new instance
-					p.logger.Trace().Str("module_producer", meta.Name).Str("instance_id_producer", instanceID).Str("produced_key", producedKey).Msg("Marked key as available")
-				}
-				addedInThisIteration++
-			}
-		}
-
-		if addedInThisIteration == 0 {
-			// No new modules were added in this full pass over all candidates.
-			// This means either all addable modules are in, or remaining ones have unmet dependencies.
-			p.logger.Debug().Int("total_dag_nodes", len(dagDef.Nodes)).Msg("No more modules added in this planning iteration. Loop will terminate.")
-			break
-		}
-		p.logger.Debug().Int("added_this_iteration", addedInThisIteration).Int("total_dag_nodes", len(dagDef.Nodes)).Msg("Completed an iteration of DAG planning.")
-	} // End of main planning loop
-
-	// After the loop, check if all selected candidate modules were actually added
-	if len(moduleTypesAddedToDAG) < len(candidateModules) {
-		p.logger.Warn().Msg("Not all candidate modules selected by intent could be added to the DAG. Logging unprocessed modules and their potential unmet dependencies:")
-		for _, modFactory := range candidateModules {
-			meta := modFactory().Metadata()
-			if !moduleTypesAddedToDAG[meta.Name] {
-				unmetDependencies := []string{}
-				for _, consumedContract := range meta.Consumes {
-					consumedKey := consumedContract.Key // Use the string Key
-					if _, found := availableDataKeys[consumedKey]; !found {
-						unmetDependencies = append(unmetDependencies, consumedKey)
-					}
-				}
-				p.logger.Warn().Str("module", meta.Name).Strs("unmet_dependencies", unmetDependencies).Msg("Unprocessed candidate module")
-			}
-		}
-		// Depending on strictness, this could be an error or just a warning.
-		// If a core module for the intent couldn't be added, it might be an error.
-	}
-
+	// Validate DAG is not empty
 	if len(dagDef.Nodes) == 0 {
 		if len(candidateModules) > 0 {
 			p.logger.Error().Msg("Failed to plan any nodes for the DAG, though candidates were selected. Check dependencies or initial inputs.")
@@ -171,81 +229,151 @@ func (p *DAGPlanner) PlanDAG(intent ScanIntent) (*DAGDefinition, error) {
 	return dagDef, nil
 }
 
-// selectModulesForIntent filters moduleRegistry based on the scan intent.
-// This is a placeholder and needs to be implemented with more sophisticated logic.
-func (p *DAGPlanner) selectModulesForIntent(intent ScanIntent) []ModuleFactory {
+// filterHostDiscoveryModules removes host discovery modules when SkipDiscovery=true.
+// Only filters ICMP ping modules, preserves port scanners (tcp-port-discovery, udp-port-discovery).
+func (p *DAGPlanner) filterHostDiscoveryModules(selected []ModuleFactory) []ModuleFactory {
+	filtered := selected[:0]
+	filteredCount := 0
+	for _, factory := range selected {
+		meta := factory().Metadata()
+		// Only filter host discovery modules (ICMP ping), NOT port scanning modules
+		if meta.Type == DiscoveryModuleType &&
+			meta.Name != moduleTypeTCPPortDiscovery &&
+			meta.Name != moduleTypeUDPPortDiscovery {
+			filteredCount++
+			continue
+		}
+		filtered = append(filtered, factory)
+	}
+	if filteredCount > 0 {
+		p.logger.Debug().Int("filtered_modules", filteredCount).
+			Msg("Filtered host discovery modules due to SkipDiscovery")
+	}
+	return filtered
+}
+
+// selectModulesByType filters modules by type and tags from the registry.
+func (p *DAGPlanner) selectModulesByType(
+	moduleTypes []ModuleType,
+	intent ScanIntent,
+	logMessage string,
+) []ModuleFactory {
 	var selected []ModuleFactory
-	allModules := p.moduleRegistry // Assuming this holds ModuleName -> Factory
-
-	if intent.DiscoveryOnly {
-		for name, factory := range allModules {
-			meta := factory().Metadata()
-			if meta.Type == DiscoveryModuleType && p.matchesTags(meta.Tags, intent.IncludeTags, intent.ExcludeTags) {
+	for name, factory := range p.moduleRegistry {
+		meta := factory().Metadata()
+		for _, mType := range moduleTypes {
+			if meta.Type == mType && p.matchesTags(meta.Tags, intent.IncludeTags, intent.ExcludeTags) {
 				selected = append(selected, factory)
-				p.logger.Debug().Str("module", name).Msg("Selected module for discovery-only run")
+				p.logger.Debug().Str("module", name).Msg(logMessage)
+				break
 			}
 		}
-		selected = p.addParseModules(selected, allModules, intent)
-		return p.ensureReporter(selected, intent)
+	}
+	return selected
+}
+
+// selectDiscoveryModules selects only discovery modules (for DiscoveryOnly mode).
+func (p *DAGPlanner) selectDiscoveryModules(intent ScanIntent) []ModuleFactory {
+	return p.selectModulesByType(
+		[]ModuleType{DiscoveryModuleType},
+		intent,
+		"Selected module for discovery-only run",
+	)
+}
+
+// selectQuickDiscoveryModules selects modules for quick_discovery/light profile.
+func (p *DAGPlanner) selectQuickDiscoveryModules(intent ScanIntent) []ModuleFactory {
+	var selected []ModuleFactory
+	for name, factory := range p.moduleRegistry {
+		meta := factory().Metadata()
+		if (meta.Type == DiscoveryModuleType ||
+			(containsTag(meta.Tags, "quick") && meta.Type == ScanModuleType)) &&
+			p.matchesTags(meta.Tags, intent.IncludeTags, intent.ExcludeTags) {
+			selected = append(selected, factory)
+			p.logger.Debug().Str("module", name).Msg("Selected module for quick_discovery/light profile")
+		}
+	}
+	return selected
+}
+
+// selectFullScanModules selects modules for full_scan/comprehensive profile.
+func (p *DAGPlanner) selectFullScanModules(intent ScanIntent) []ModuleFactory {
+	var selected []ModuleFactory
+	for name, factory := range p.moduleRegistry {
+		meta := factory().Metadata()
+		// Include Discovery, Scan, Parse, Reporting, and optionally Evaluation
+		includeModule := meta.Type == DiscoveryModuleType ||
+			meta.Type == ScanModuleType ||
+			meta.Type == ParseModuleType ||
+			meta.Type == ReportingModuleType ||
+			(intent.EnableVulnChecks && meta.Type == EvaluationModuleType)
+
+		if includeModule && p.matchesTags(meta.Tags, intent.IncludeTags, intent.ExcludeTags) {
+			selected = append(selected, factory)
+			p.logger.Debug().Str("module", name).Msg("Selected module for full_scan/comprehensive profile")
+		}
+	}
+	return selected
+}
+
+// selectDefaultModules selects modules for default profile (discovery + scan, optionally vuln).
+func (p *DAGPlanner) selectDefaultModules(intent ScanIntent) []ModuleFactory {
+	var selected []ModuleFactory
+
+	// Select discovery and scan modules (non-intrusive)
+	for name, factory := range p.moduleRegistry {
+		meta := factory().Metadata()
+		if (meta.Type == DiscoveryModuleType || meta.Type == ScanModuleType) &&
+			!containsTag(meta.Tags, "intrusive") &&
+			p.matchesTags(meta.Tags, intent.IncludeTags, intent.ExcludeTags) {
+			selected = append(selected, factory)
+			p.logger.Debug().Str("module", name).Msg("Selected module for default profile")
+		}
 	}
 
-	// Basic filtering based on profile or level (example logic)
+	// Add evaluation modules if vuln checks enabled
+	if intent.EnableVulnChecks {
+		for name, factory := range p.moduleRegistry {
+			meta := factory().Metadata()
+			if meta.Type == EvaluationModuleType &&
+				p.matchesTags(meta.Tags, intent.IncludeTags, intent.ExcludeTags) {
+				selected = append(selected, factory)
+				p.logger.Debug().Str("module", name).Msg("Selected evaluation module for vuln-enabled default profile")
+			}
+		}
+	}
+
+	return selected
+}
+
+// selectModulesByProfile selects modules based on intent profile/level.
+func (p *DAGPlanner) selectModulesByProfile(intent ScanIntent) []ModuleFactory {
+	if intent.DiscoveryOnly {
+		return p.selectDiscoveryModules(intent)
+	}
 	if intent.Profile == "quick_discovery" || intent.Level == "light" {
-		for name, factory := range allModules {
-			meta := factory().Metadata()
-			if meta.Type == DiscoveryModuleType || (containsTag(meta.Tags, "quick") && meta.Type == ScanModuleType) {
-				// Further filter by IncludeTags/ExcludeTags
-				if p.matchesTags(meta.Tags, intent.IncludeTags, intent.ExcludeTags) {
-					selected = append(selected, factory)
-					p.logger.Debug().Str("module", name).Msg("Selected module for quick_discovery/light profile")
-				}
-			}
-		}
-	} else if intent.Profile == "full_scan" || intent.Level == "comprehensive" {
-		for name, factory := range allModules {
-			meta := factory().Metadata()
-			// Include Discovery, Scan, Parse. Conditionally Evaluation.
-			if meta.Type == DiscoveryModuleType || meta.Type == ScanModuleType || meta.Type == ParseModuleType || meta.Type == ReportingModuleType ||
-				(intent.EnableVulnChecks && meta.Type == EvaluationModuleType) {
-				if p.matchesTags(meta.Tags, intent.IncludeTags, intent.ExcludeTags) {
-					selected = append(selected, factory)
-					p.logger.Debug().Str("module", name).Msg("Selected module for full_scan/comprehensive profile")
-				}
-			}
-		}
-	} else { // Default: select discovery + scan modules
-		for name, factory := range allModules {
-			meta := factory().Metadata()
-			if (meta.Type == DiscoveryModuleType || meta.Type == ScanModuleType) && !containsTag(meta.Tags, "intrusive") {
-				if p.matchesTags(meta.Tags, intent.IncludeTags, intent.ExcludeTags) {
-					selected = append(selected, factory)
-					p.logger.Debug().Str("module", name).Msg("Selected module for default profile")
-				}
-			}
-		}
-		if intent.EnableVulnChecks {
-			for name, factory := range allModules {
-				meta := factory().Metadata()
-				if meta.Type == EvaluationModuleType && p.matchesTags(meta.Tags, intent.IncludeTags, intent.ExcludeTags) {
-					selected = append(selected, factory)
-					p.logger.Debug().Str("module", name).Msg("Selected evaluation module for vuln-enabled default profile")
-				}
-			}
-		}
+		return p.selectQuickDiscoveryModules(intent)
 	}
+	if intent.Profile == "full_scan" || intent.Level == "comprehensive" {
+		return p.selectFullScanModules(intent)
+	}
+	return p.selectDefaultModules(intent)
+}
 
-	selected = p.addParseModules(selected, allModules, intent)
+// selectModulesForIntent filters moduleRegistry based on the scan intent.
+func (p *DAGPlanner) selectModulesForIntent(intent ScanIntent) []ModuleFactory {
+	// Select modules based on profile/level
+	selected := p.selectModulesByProfile(intent)
+
+	// Add parse modules
+	selected = p.addParseModules(selected, p.moduleRegistry, intent)
+
+	// Filter host discovery modules if needed
 	if intent.SkipDiscovery {
-		filtered := selected[:0]
-		for _, factory := range selected {
-			if factory().Metadata().Type == DiscoveryModuleType {
-				continue
-			}
-			filtered = append(filtered, factory)
-		}
-		selected = filtered
+		selected = p.filterHostDiscoveryModules(selected)
 	}
 
+	// Ensure reporter module exists
 	return p.ensureReporter(selected, intent)
 }
 
@@ -330,7 +458,7 @@ func (p *DAGPlanner) configureModule(meta ModuleMetadata, intent ScanIntent) map
 
 	// Apply intent-specific overrides (this part needs more detailed logic)
 	// Example: if intent has specific port or timeout settings, apply them to relevant modules.
-	if meta.Name == "tcp-port-discovery" && intent.CustomPortConfig != "" {
+	if meta.Name == moduleTypeTCPPortDiscovery && intent.CustomPortConfig != "" {
 		// Parse intent.CustomPortConfig and override "ports" in cfg
 		// Example: cfg["ports"] = strings.Split(intent.CustomPortConfig, ",")
 		// For simplicity, assume CustomPortConfig is already []string or parseable
@@ -341,7 +469,7 @@ func (p *DAGPlanner) configureModule(meta ModuleMetadata, intent ScanIntent) map
 		}
 
 	}
-	if (meta.Name == "tcp-port-discovery" || meta.Name == "icmp-ping-discovery") && intent.CustomTimeout != "" {
+	if (meta.Name == moduleTypeTCPPortDiscovery || meta.Name == moduleTypeICMPPingDiscovery) && intent.CustomTimeout != "" {
 		cfg["timeout"] = intent.CustomTimeout // Assuming modules can parse duration string
 		p.logger.Debug().Str("module", meta.Name).Str("timeout", intent.CustomTimeout).Msg("Applied custom timeout config")
 	}
