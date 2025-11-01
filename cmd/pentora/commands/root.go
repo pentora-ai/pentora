@@ -16,6 +16,11 @@ import (
 	"github.com/pentora-ai/pentora/pkg/cli"
 	"github.com/pentora-ai/pentora/pkg/config"
 	"github.com/pentora-ai/pentora/pkg/engine"
+	// Register all available modules for DAG execution
+	_ "github.com/pentora-ai/pentora/pkg/modules/evaluation" // Vulnerability evaluation modules
+	_ "github.com/pentora-ai/pentora/pkg/modules/parse"      // Protocol parser modules
+	_ "github.com/pentora-ai/pentora/pkg/modules/reporting"  // Reporting modules
+	_ "github.com/pentora-ai/pentora/pkg/modules/scan"       // Scanner modules
 	"github.com/pentora-ai/pentora/pkg/storage"
 )
 

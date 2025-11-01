@@ -1,0 +1,32 @@
+name: "SSH Old Version Detector"
+version: "1.0.0"
+type: evaluation
+author: "pentora-security"
+
+metadata:
+  severity: medium
+  category: ssh
+  description: "Detects old SSH versions (6.x and 7.x) that may have known vulnerabilities"
+  tags: [ssh, version, outdated]
+
+triggers:
+  - data_key: "ssh.version"
+    condition: exists
+    value: true
+
+match:
+  logic: OR
+  rules:
+    - field: "ssh.version"
+      operator: "contains"
+      value: "OpenSSH_6"
+    - field: "ssh.version"
+      operator: "contains"
+      value: "OpenSSH_7"
+
+output:
+  vulnerability: true
+  severity: medium
+  message: "Outdated SSH version detected - consider upgrading to OpenSSH 8.x or later"
+  remediation: "Upgrade OpenSSH to version 8.0 or later for improved security and bug fixes"
+  reference: "https://www.openssh.com/releasenotes.html"

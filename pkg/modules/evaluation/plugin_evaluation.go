@@ -8,6 +8,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/pentora-ai/pentora/pkg/engine"
+	"github.com/pentora-ai/pentora/pkg/modules/parse"
 	"github.com/pentora-ai/pentora/pkg/plugin"
 )
 
@@ -56,16 +57,30 @@ func NewPluginEvaluationModule() *PluginEvaluationModule {
 				{
 					Key:          "ssh.version",
 					DataTypeName: "string",
-					Cardinality:  engine.CardinalitySingle,
+					Cardinality:  engine.CardinalityList,
 					IsOptional:   true,
 					Description:  "SSH version string from banner parsing",
 				},
 				{
 					Key:          "ssh.banner",
 					DataTypeName: "string",
-					Cardinality:  engine.CardinalitySingle,
+					Cardinality:  engine.CardinalityList,
 					IsOptional:   true,
 					Description:  "Raw SSH banner string",
+				},
+				{
+					Key:          "service.ssh.details",
+					DataTypeName: "parse.SSHParsedInfo",
+					Cardinality:  engine.CardinalityList,
+					IsOptional:   true,
+					Description:  "Parsed SSH service details for target/port extraction",
+				},
+				{
+					Key:          "service.banner.tcp",
+					DataTypeName: "scan.BannerGrabResult",
+					Cardinality:  engine.CardinalityList,
+					IsOptional:   true,
+					Description:  "TCP banner grab results for target/port extraction",
 				},
 				{
 					Key:          "http.server",
@@ -227,6 +242,8 @@ func (m *PluginEvaluationModule) Execute(ctx context.Context, inputs map[string]
 }
 
 // buildEvaluationContext builds a map[string]any from module inputs for plugin evaluation.
+//
+//nolint:gocyclo // Complexity is inherent to data handling logic
 func (m *PluginEvaluationModule) buildEvaluationContext(inputs map[string]interface{}) map[string]any {
 	context := make(map[string]any)
 
@@ -247,9 +264,55 @@ func (m *PluginEvaluationModule) buildEvaluationContext(inputs map[string]interf
 		"tls.cert_self_signed",
 	}
 
+	logger := log.With().Str("module", m.meta.Name).Str("instance_id", m.meta.ID).Logger()
+
 	for _, key := range knownKeys {
 		if value, ok := inputs[key]; ok && value != nil {
-			context[key] = value
+			// Handle array inputs - plugins expect single values, not arrays
+			// DataContext stores outputs as []interface{}, we need to extract first element
+			if arr, isArray := value.([]interface{}); isArray && len(arr) > 0 {
+				context[key] = arr[0] // Take first element for plugin evaluation
+				logger.Debug().Str("key", key).Interface("value", arr[0]).Msg("Added to evaluation context (from array)")
+			} else {
+				context[key] = value
+				logger.Debug().Str("key", key).Interface("value", value).Msg("Added to evaluation context")
+			}
+		}
+	}
+
+	// Extract target and port from service details (SSH, HTTP, etc.)
+	// This provides context for vulnerability reporting
+	if sshDetails, ok := inputs["service.ssh.details"].([]interface{}); ok && len(sshDetails) > 0 {
+		// Try parse.SSHParsedInfo struct first (direct type)
+		if sshInfo, ok := sshDetails[0].(parse.SSHParsedInfo); ok {
+			context["target"] = sshInfo.Target
+			context["service.port"] = sshInfo.Port
+		} else if sshInfo, ok := sshDetails[0].(map[string]interface{}); ok {
+			// Fallback to map (in case of JSON unmarshaling)
+			if target, ok := sshInfo["target"].(string); ok {
+				context["target"] = target
+			}
+			if port, ok := sshInfo["port"].(int); ok {
+				context["service.port"] = port
+			} else if port, ok := sshInfo["port"].(float64); ok {
+				context["service.port"] = int(port)
+			}
+		}
+	}
+
+	// Extract target from banner grab results if not found in service details
+	if _, hasTarget := context["target"]; !hasTarget {
+		if banners, ok := inputs["service.banner.tcp"].([]interface{}); ok && len(banners) > 0 {
+			if banner, ok := banners[0].(map[string]interface{}); ok {
+				if ip, ok := banner["ip"].(string); ok {
+					context["target"] = ip
+				}
+				if port, ok := banner["port"].(int); ok {
+					context["service.port"] = port
+				} else if port, ok := banner["port"].(float64); ok {
+					context["service.port"] = int(port)
+				}
+			}
 		}
 	}
 

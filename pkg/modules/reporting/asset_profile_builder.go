@@ -10,9 +10,10 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/pentora-ai/pentora/pkg/engine"
-	"github.com/pentora-ai/pentora/pkg/modules/discovery" // For ICMPPingDiscoveryResult, TCPPortDiscoveryResult
-	"github.com/pentora-ai/pentora/pkg/modules/parse"     // For HTTPParsedInfo, SSHParsedInfo
-	"github.com/pentora-ai/pentora/pkg/modules/scan"      // For BannerGrabResult
+	"github.com/pentora-ai/pentora/pkg/modules/discovery"  // For ICMPPingDiscoveryResult, TCPPortDiscoveryResult
+	"github.com/pentora-ai/pentora/pkg/modules/evaluation" // For VulnerabilityResult
+	"github.com/pentora-ai/pentora/pkg/modules/parse"      // For HTTPParsedInfo, SSHParsedInfo
+	"github.com/pentora-ai/pentora/pkg/modules/scan"       // For BannerGrabResult
 	"github.com/pentora-ai/pentora/pkg/netutil"
 )
 
@@ -49,8 +50,7 @@ func newAssetProfileBuilderModule() *AssetProfileBuilderModule {
 				{Key: "service.http.details", DataTypeName: "parse.HTTPParsedInfo", Cardinality: engine.CardinalityList, IsOptional: true},                 // []interface{}{HTTPParsedInfo1, ...}
 				{Key: "service.ssh.details", DataTypeName: "parse.SSHParsedInfo", Cardinality: engine.CardinalityList, IsOptional: true},                   // []interface{}{SSHParsedInfo1, ...}
 				{Key: "service.fingerprint.details", DataTypeName: "parse.FingerprintParsedInfo", Cardinality: engine.CardinalityList, IsOptional: true},   // []interface{}{FingerprintParsedInfo1, ...}
-				// Zafiyetler için genel bir pattern veya planner'ın dinamik olarak eklemesi gerekebilir:
-				// Örnek: {Key: "vulnerability.*", DataTypeName: "types.VulnerabilityFinding", Cardinality: engine.CardinalityList, IsOptional: true},
+				{Key: "evaluation.vulnerabilities", DataTypeName: "evaluation.VulnerabilityResult", Cardinality: engine.CardinalityList, IsOptional: true}, // []interface{}{VulnerabilityResult1, ...}
 			},
 			Produces: []engine.DataContractEntry{
 				{Key: "asset.profiles", DataTypeName: "[]engine.AssetProfile", Cardinality: engine.CardinalitySingle}, // Tek bir liste üretir
@@ -71,6 +71,7 @@ func (m *AssetProfileBuilderModule) Init(instanceID string, configMap map[string
 	return nil
 }
 
+//nolint:gocyclo // Complexity is inherent to aggregation logic
 func (m *AssetProfileBuilderModule) Execute(ctx context.Context, inputs map[string]interface{}, outputChan chan<- engine.ModuleOutput) error {
 	logger := log.With().Str("module", m.meta.Name).Str("instance_id", m.meta.ID).Logger()
 	logger.Info().Msg("Starting asset profile aggregation")
@@ -164,13 +165,28 @@ func (m *AssetProfileBuilderModule) Execute(ctx context.Context, inputs map[stri
 	// Bu modül, tüm bu anahtarları tarayarak veya belirli bir pattern'e uyanları alarak zafiyetleri toplar.
 	allVulnerabilities := make(map[string][]engine.VulnerabilityFinding) // Key: targetIP:port
 
-	// inputs map'i üzerinde dönerek vulnerability.* anahtarlarını bul (veya DataContext'i al)
-	for key, data := range inputs { // Bu basit bir yaklaşım, DataContext'in tamamına erişim daha iyi olabilir.
-		if strings.Contains(key, "vulnerability.") { // instanceID.vulnerability.ssh.default_creds gibi
+	// inputs map'i üzerinde dönerek vulnerability anahtarlarını bul
+	for key, data := range inputs {
+		// Check for both legacy "vulnerability.*" pattern and new "evaluation.vulnerabilities"
+		if strings.Contains(key, "vulnerability") || strings.Contains(key, "evaluation.vulnerabilities") {
 			if vulnList, listOk := data.([]interface{}); listOk {
 				for _, item := range vulnList {
-					if vuln, castOk := item.(engine.VulnerabilityFinding); castOk { // Varsayım: Zafiyet modülleri bu tipi üretir
-						targetPortKey := "nil"
+					// Try evaluation.VulnerabilityResult (new format from plugin evaluation)
+					if vulnResult, ok := item.(evaluation.VulnerabilityResult); ok {
+						// Convert to engine.VulnerabilityFinding
+						finding := engine.VulnerabilityFinding{
+							ID:           strings.Join(vulnResult.CVE, ", "), // Use CVE as ID if available
+							SourceModule: vulnResult.Plugin,
+							Summary:      vulnResult.Message,
+							Severity:     engine.FindingSeverity(vulnResult.Severity),
+							Remediation:  vulnResult.Remediation,
+							References:   []string{vulnResult.Reference},
+						}
+						targetPortKey := fmt.Sprintf("%s:%d", vulnResult.Target, vulnResult.Port)
+						allVulnerabilities[targetPortKey] = append(allVulnerabilities[targetPortKey], finding)
+					} else if vuln, castOk := item.(engine.VulnerabilityFinding); castOk {
+						// Legacy format support
+						targetPortKey := "nil" // Legacy format doesn't have target/port
 						allVulnerabilities[targetPortKey] = append(allVulnerabilities[targetPortKey], vuln)
 					}
 				}

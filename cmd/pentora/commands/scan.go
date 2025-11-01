@@ -17,9 +17,7 @@ import (
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
 	"github.com/pentora-ai/pentora/pkg/appctx"
 	"github.com/pentora-ai/pentora/pkg/engine"
-	parsepkg "github.com/pentora-ai/pentora/pkg/modules/parse" // Register parse modules if needed
-	_ "github.com/pentora-ai/pentora/pkg/modules/reporting"    // Register reporting modules if needed
-	_ "github.com/pentora-ai/pentora/pkg/modules/scan"         // Register this module
+	parsepkg "github.com/pentora-ai/pentora/pkg/modules/parse" // Alias for parse package functions
 	"github.com/pentora-ai/pentora/pkg/scanexec"
 	"github.com/pentora-ai/pentora/pkg/storage"
 	"github.com/pentora-ai/pentora/pkg/stringutil"

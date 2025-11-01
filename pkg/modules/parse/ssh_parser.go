@@ -87,13 +87,18 @@ func newSSHParserModule() *SSHParserModule {
 					Cardinality:  engine.CardinalityList, // Indicates DataContext will store a list for this DataKey.
 					Description:  "List of parsed SSH details, one result per successfully parsed SSH banner.",
 				},
-				// Optionally, a more generic output key if this parser becomes part of a larger dispatcher
-				// {
-				// 	Key: "service.identified_protocol_details",
-				// 	DataTypeName: "parse.SSHParsedInfo", // Or a generic "ParsedServiceInfo"
-				// 	Cardinality: engine.CardinalityList,
-				// 	Description: "Details of an identified SSH service.",
-				// },
+				{
+					Key:          "ssh.banner",
+					DataTypeName: "string",
+					Cardinality:  engine.CardinalityList,
+					Description:  "Raw SSH banner strings for plugin evaluation (e.g., 'SSH-2.0-OpenSSH_6.6.1p1').",
+				},
+				{
+					Key:          "ssh.version",
+					DataTypeName: "string",
+					Cardinality:  engine.CardinalityList,
+					Description:  "SSH version info for plugin evaluation (e.g., 'OpenSSH_6.6.1p1 Ubuntu-2ubuntu2.13').",
+				},
 			},
 			ConfigSchema: map[string]engine.ParameterDefinition{
 				// No specific config parameters for now for this simple parser.
@@ -128,6 +133,8 @@ func (m *SSHParserModule) Init(instanceID string, configMap map[string]interface
 }
 
 // Execute parses SSH banners.
+//
+//nolint:gocyclo // Complexity is inherent to banner parsing logic
 func (m *SSHParserModule) Execute(ctx context.Context, inputs map[string]interface{}, outputChan chan<- engine.ModuleOutput) error {
 	rawBannerInput, ok := inputs["service.banner.tcp"] // This comes from service-banner-scanner
 	if !ok {
@@ -206,12 +213,34 @@ func (m *SSHParserModule) Execute(ctx context.Context, inputs map[string]interfa
 		}
 
 		m.logger.Debug().Str("ip", bannerResult.IP).Int("port", bannerResult.Port).Str("ssh_version", parsedInfo.SSHVersion).Str("software", parsedInfo.Software).Msg("SSH banner parsed")
+
+		// Output structured SSH details
 		outputChan <- engine.ModuleOutput{
 			FromModuleName: m.meta.ID,
-			DataKey:        m.meta.Produces[0].Key, // "service.ssh.details"
+			DataKey:        "service.ssh.details",
 			Data:           parsedInfo,
 			Timestamp:      time.Now(),
 			Target:         bannerResult.IP,
+		}
+
+		// Output raw banner for plugin evaluation
+		outputChan <- engine.ModuleOutput{
+			FromModuleName: m.meta.ID,
+			DataKey:        "ssh.banner",
+			Data:           parsedInfo.RawBanner,
+			Timestamp:      time.Now(),
+			Target:         bannerResult.IP,
+		}
+
+		// Output version info for plugin evaluation
+		if parsedInfo.VersionInfo != "" {
+			outputChan <- engine.ModuleOutput{
+				FromModuleName: m.meta.ID,
+				DataKey:        "ssh.version",
+				Data:           parsedInfo.VersionInfo,
+				Timestamp:      time.Now(),
+				Target:         bannerResult.IP,
+			}
 		}
 	}
 
