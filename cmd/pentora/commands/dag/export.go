@@ -13,6 +13,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
+	"github.com/pentora-ai/pentora/cmd/pentora/internal/format"
 	"github.com/pentora-ai/pentora/pkg/engine"
 )
 
@@ -40,13 +41,17 @@ and exports it to YAML or JSON format. Useful for:
   # Export as JSON
   pentora dag export --targets 192.168.1.1 --format json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			formatter := format.FromCommand(cmd)
 			// Bind flags to options using centralized binder
 			opts, err := bind.BindDAGExportOptions(cmd)
 			if err != nil {
-				return err
+				return formatter.PrintTotalFailureSummary("export DAG", err, engine.ErrorCode(err))
 			}
 
-			return runExport(opts)
+			if err := runExport(opts); err != nil {
+				return formatter.PrintTotalFailureSummary("export DAG", err, engine.ErrorCode(err))
+			}
+			return nil
 		},
 	}
 
@@ -68,7 +73,7 @@ func runExport(opts bind.DAGExportOptions) error {
 	// Validate the generated DAG
 	result := dag.Validate()
 	if !result.IsValid() {
-		return fmt.Errorf("generated DAG is invalid:\n%s", result.String())
+		return engine.WrapInvalidDAG(fmt.Errorf("generated DAG is invalid:\n%s", result.String()))
 	}
 
 	// Marshal to requested format
@@ -81,11 +86,11 @@ func runExport(opts bind.DAGExportOptions) error {
 	case "json":
 		data, err = json.MarshalIndent(dag, "", "  ")
 	default:
-		return fmt.Errorf("unsupported format: %s (use yaml or json)", opts.Format)
+		return engine.NewUnsupportedFormatError(opts.Format)
 	}
 
 	if err != nil {
-		return fmt.Errorf("failed to marshal DAG: %w", err)
+		return engine.WrapMarshalError(err)
 	}
 
 	// Write to file or stdout
@@ -93,7 +98,7 @@ func runExport(opts bind.DAGExportOptions) error {
 		fmt.Print(string(data))
 	} else {
 		if err := os.WriteFile(opts.Output, data, 0o644); err != nil {
-			return fmt.Errorf("failed to write output file: %w", err)
+			return engine.WrapWriteError(err)
 		}
 		fmt.Printf("DAG exported to: %s\n", opts.Output)
 	}

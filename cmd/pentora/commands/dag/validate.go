@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/pentora-ai/pentora/cmd/pentora/internal/bind"
+	"github.com/pentora-ai/pentora/cmd/pentora/internal/format"
 	"github.com/pentora-ai/pentora/pkg/engine"
 )
 
@@ -44,14 +45,18 @@ The command returns different exit codes based on validation results:
   pentora dag validate dag.yaml --json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			formatter := format.FromCommand(cmd)
 			// Bind flags to options using centralized binder
 			opts, err := bind.BindDAGValidateOptions(cmd)
 			if err != nil {
-				return err
+				return formatter.PrintTotalFailureSummary("validate DAG", err, engine.ErrorCode(err))
 			}
 
 			file := args[0]
-			return runValidate(file, opts)
+			if err := runValidate(file, opts); err != nil {
+				return formatter.PrintTotalFailureSummary("validate DAG", err, engine.ErrorCode(err))
+			}
+			return nil
 		},
 	}
 
@@ -66,7 +71,7 @@ func runValidate(file string, opts bind.DAGValidateOptions) error {
 	// Load DAG from file (skip validation during load, we'll validate explicitly)
 	dag, err := engine.LoadDAGFromFile(file, true)
 	if err != nil {
-		return fmt.Errorf("failed to load DAG: %w", err)
+		return engine.WrapLoadError(err)
 	}
 
 	// Run validation

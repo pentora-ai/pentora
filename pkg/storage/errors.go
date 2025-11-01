@@ -3,6 +3,7 @@ package storage
 import (
 	"errors"
 	"fmt"
+	"os"
 )
 
 // Common errors returned by storage operations.
@@ -22,6 +23,9 @@ var (
 
 	// ErrClosed is returned when attempting to use a closed backend.
 	ErrClosed = errors.New("backend is closed")
+
+	// ErrRetentionPolicyNotConfigured indicates that GC was invoked without any retention policy.
+	ErrRetentionPolicyNotConfigured = errors.New("no retention policy configured")
 )
 
 // NotFoundError wraps ErrNotFound with additional context.
@@ -134,4 +138,171 @@ func IsNotSupported(err error) bool {
 // IsInvalidInput checks if an error is or wraps ErrInvalidInput.
 func IsInvalidInput(err error) bool {
 	return errors.Is(err, ErrInvalidInput)
+}
+
+const (
+	errorCodeNoRetention         = "NO_RETENTION_POLICY"
+	errorCodeInvalidRetention    = "INVALID_RETENTION_POLICY"
+	errorCodeWorkspaceInvalid    = "WORKSPACE_INVALID"
+	errorCodeWorkspacePerm       = "WORKSPACE_PERMISSION_DENIED"
+	errorCodeStorageFailure      = "STORAGE_FAILURE"
+	errorCodeStorageInvalidInput = "STORAGE_INVALID_INPUT"
+)
+
+type errorCoder interface {
+	Code() string
+}
+
+type storageCodeError struct {
+	error
+	code string
+}
+
+func (e *storageCodeError) Error() string {
+	return e.error.Error()
+}
+
+func (e *storageCodeError) Unwrap() error {
+	return e.error
+}
+
+func (e *storageCodeError) Code() string {
+	return e.code
+}
+
+// WithErrorCode wraps an error with a storage error code.
+func WithErrorCode(err error, code string) error {
+	if err == nil {
+		return nil
+	}
+	return &storageCodeError{error: err, code: code}
+}
+
+// ErrorCode resolves an error to its storage error code.
+func ErrorCode(err error) string {
+	if err == nil {
+		return ""
+	}
+
+	var coded errorCoder
+	if errors.As(err, &coded) {
+		if code := coded.Code(); code != "" {
+			return code
+		}
+	}
+
+	switch {
+	case errors.Is(err, ErrRetentionPolicyNotConfigured):
+		return errorCodeNoRetention
+	case errors.Is(err, ErrInvalidInput):
+		var invalid *InvalidInputError
+		if errors.As(err, &invalid) {
+			if invalid.Field == "workspace_root" {
+				return errorCodeWorkspaceInvalid
+			}
+			return errorCodeStorageInvalidInput
+		}
+	case errors.Is(err, ErrNotSupported), errors.Is(err, ErrClosed):
+		return errorCodeStorageFailure
+	}
+
+	var pathErr *os.PathError
+	if errors.As(err, &pathErr) {
+		if errors.Is(pathErr.Err, os.ErrPermission) {
+			return errorCodeWorkspacePerm
+		}
+		return errorCodeWorkspaceInvalid
+	}
+
+	return errorCodeStorageFailure
+}
+
+// ExitCode maps storage errors to CLI exit codes.
+func ExitCode(err error) int {
+	if err == nil {
+		return 0
+	}
+
+	switch ErrorCode(err) {
+	case errorCodeNoRetention,
+		errorCodeInvalidRetention,
+		errorCodeStorageInvalidInput:
+		return 2
+	case errorCodeWorkspacePerm,
+		errorCodeWorkspaceInvalid,
+		errorCodeStorageFailure:
+		return 1
+	default:
+		return 1
+	}
+}
+
+// HTTPStatus maps storage errors to HTTP status codes.
+func HTTPStatus(err error) int {
+	if err == nil {
+		return 200
+	}
+
+	switch ErrorCode(err) {
+	case errorCodeNoRetention,
+		errorCodeInvalidRetention,
+		errorCodeStorageInvalidInput:
+		return 400
+	case errorCodeWorkspacePerm:
+		return 403
+	case errorCodeWorkspaceInvalid:
+		return 404
+	default:
+		return 500
+	}
+}
+
+// Suggestions provides CLI hints for storage errors.
+func Suggestions(err error) []string {
+	if err == nil {
+		return nil
+	}
+
+	switch ErrorCode(err) {
+	case errorCodeNoRetention:
+		return []string{
+			"Set max scans:              pentora storage gc --max-scans=100",
+			"Set max age days:           pentora storage gc --max-age-days=30",
+		}
+	case errorCodeInvalidRetention:
+		return []string{
+			"Use non-negative numbers for retention flags",
+			"Override config with flags: pentora storage gc --max-scans=100",
+		}
+	case errorCodeWorkspaceInvalid:
+		return []string{
+			"Set workspace dir:          pentora storage gc --storage-dir <path>",
+			"Ensure directory exists and is writable",
+		}
+	case errorCodeWorkspacePerm:
+		return []string{
+			"Fix permissions for the storage directory",
+			"Run with appropriate user or adjust --storage-dir",
+		}
+	case errorCodeStorageInvalidInput:
+		return []string{
+			"Review storage values in configuration file",
+			"Override with CLI flags when running GC",
+		}
+	case errorCodeStorageFailure:
+		return []string{
+			"Retry with verbose logs:    pentora storage gc --verbosity 1",
+			"Check storage directory permissions",
+		}
+	default:
+		return nil
+	}
+}
+
+// FormatRetentionValidationError converts retention validation failures into invalid input errors.
+func FormatRetentionValidationError(err error) error {
+	if err == nil {
+		return nil
+	}
+	return WithErrorCode(fmt.Errorf("retention policy invalid: %w", err), errorCodeInvalidRetention)
 }

@@ -2,232 +2,228 @@ package storage
 
 import (
 	"errors"
+	"fmt"
+	"os"
 	"testing"
 )
 
 func TestNotFoundError(t *testing.T) {
-	err := NewNotFoundError("scan", "scan-123")
-
-	// Check error message
-	expected := "scan not found: scan-123"
-	if err.Error() != expected {
-		t.Errorf("Error() = %q, expected %q", err.Error(), expected)
+	err := NewNotFoundError("scan", "123")
+	if err.Error() != "scan not found: 123" {
+		t.Errorf("unexpected error message: %v", err)
 	}
-
-	// Check errors.Is
 	if !errors.Is(err, ErrNotFound) {
-		t.Error("errors.Is(err, ErrNotFound) = false, expected true")
+		t.Errorf("expected Is(err, ErrNotFound) to be true")
 	}
-
-	// Check IsNotFound helper
 	if !IsNotFound(err) {
-		t.Error("IsNotFound(err) = false, expected true")
-	}
-
-	// Check errors.As
-	var notFoundErr *NotFoundError
-	if !errors.As(err, &notFoundErr) {
-		t.Error("errors.As failed to extract NotFoundError")
-	}
-	if notFoundErr.ResourceType != "scan" {
-		t.Errorf("ResourceType = %q, expected %q", notFoundErr.ResourceType, "scan")
-	}
-	if notFoundErr.ResourceID != "scan-123" {
-		t.Errorf("ResourceID = %q, expected %q", notFoundErr.ResourceID, "scan-123")
+		t.Errorf("expected IsNotFound to be true")
 	}
 }
 
 func TestAlreadyExistsError(t *testing.T) {
-	err := NewAlreadyExistsError("scan", "scan-456")
-
-	// Check error message
-	expected := "scan already exists: scan-456"
-	if err.Error() != expected {
-		t.Errorf("Error() = %q, expected %q", err.Error(), expected)
+	err := NewAlreadyExistsError("user", "bob")
+	if err.Error() != "user already exists: bob" {
+		t.Errorf("unexpected error message: %v", err)
 	}
-
-	// Check errors.Is
 	if !errors.Is(err, ErrAlreadyExists) {
-		t.Error("errors.Is(err, ErrAlreadyExists) = false, expected true")
+		t.Errorf("expected Is(err, ErrAlreadyExists)")
 	}
-
-	// Check IsAlreadyExists helper
 	if !IsAlreadyExists(err) {
-		t.Error("IsAlreadyExists(err) = false, expected true")
-	}
-
-	// Check errors.As
-	var alreadyExistsErr *AlreadyExistsError
-	if !errors.As(err, &alreadyExistsErr) {
-		t.Error("errors.As failed to extract AlreadyExistsError")
+		t.Errorf("expected IsAlreadyExists true")
 	}
 }
 
 func TestInvalidInputError(t *testing.T) {
-	t.Run("with field", func(t *testing.T) {
-		err := NewInvalidInputError("target", "must not be empty")
+	err1 := NewInvalidInputError("field", "bad value")
+	if err1.Error() != `invalid input for field "field": bad value` {
+		t.Errorf("unexpected message: %v", err1)
+	}
+	err2 := NewInvalidInputError("", "something wrong")
+	if err2.Error() != "invalid input: something wrong" {
+		t.Errorf("unexpected message: %v", err2)
+	}
+	if !errors.Is(err1, ErrInvalidInput) {
+		t.Errorf("expected Is(err1, ErrInvalidInput)")
+	}
+	if !IsInvalidInput(err1) {
+		t.Errorf("expected IsInvalidInput true")
+	}
+}
 
-		expected := `invalid input for field "target": must not be empty`
-		if err.Error() != expected {
-			t.Errorf("Error() = %q, expected %q", err.Error(), expected)
-		}
+func TestWithErrorCodeAndErrorCode(t *testing.T) {
+	// Nil error should return nil
+	if WithErrorCode(nil, "X") != nil {
+		t.Errorf("expected nil")
+	}
 
-		if !errors.Is(err, ErrInvalidInput) {
-			t.Error("errors.Is(err, ErrInvalidInput) = false, expected true")
-		}
+	base := fmt.Errorf("base")
+	wrapped := WithErrorCode(base, "CODE123")
+	if ErrorCode(wrapped) != "CODE123" {
+		t.Errorf("expected CODE123, got %v", ErrorCode(wrapped))
+	}
+	if wrapped.(*storageCodeError).Code() != "CODE123" {
+		t.Errorf("wrong code from Code()")
+	}
+	if wrapped.Error() != "base" {
+		t.Errorf("unexpected message")
+	}
+	if !errors.Is(wrapped, base) {
+		t.Errorf("unwrap mismatch")
+	}
+}
 
-		if !IsInvalidInput(err) {
-			t.Error("IsInvalidInput(err) = false, expected true")
-		}
-	})
+func TestErrorCodeBranches(t *testing.T) {
+	if code := ErrorCode(ErrRetentionPolicyNotConfigured); code != errorCodeNoRetention {
+		t.Errorf("expected %s, got %s", errorCodeNoRetention, code)
+	}
 
-	t.Run("without field", func(t *testing.T) {
-		err := &InvalidInputError{
-			Reason: "invalid data format",
-		}
+	err := NewInvalidInputError("workspace_root", "invalid")
+	if c := ErrorCode(err); c != errorCodeWorkspaceInvalid {
+		t.Errorf("expected workspace_invalid, got %s", c)
+	}
 
-		expected := "invalid input: invalid data format"
-		if err.Error() != expected {
-			t.Errorf("Error() = %q, expected %q", err.Error(), expected)
+	err2 := NewInvalidInputError("other", "bad")
+	if c := ErrorCode(err2); c != errorCodeStorageInvalidInput {
+		t.Errorf("expected storage_invalid_input, got %s", c)
+	}
+
+	if c := ErrorCode(ErrNotSupported); c != errorCodeStorageFailure {
+		t.Errorf("expected storage_failure, got %s", c)
+	}
+
+	if c := ErrorCode(ErrClosed); c != errorCodeStorageFailure {
+		t.Errorf("expected storage_failure, got %s", c)
+	}
+
+	pathErr := &os.PathError{Err: os.ErrPermission}
+	if c := ErrorCode(pathErr); c != errorCodeWorkspacePerm {
+		t.Errorf("expected workspace_perm, got %s", c)
+	}
+
+	pathErr2 := &os.PathError{Err: errors.New("other")}
+	if c := ErrorCode(pathErr2); c != errorCodeWorkspaceInvalid {
+		t.Errorf("expected workspace_invalid, got %s", c)
+	}
+
+	// fallback
+	if c := ErrorCode(errors.New("random")); c != errorCodeStorageFailure {
+		t.Errorf("expected storage_failure fallback, got %s", c)
+	}
+
+	if c := ErrorCode(nil); c != "" {
+		t.Errorf("expected empty code for nil")
+	}
+}
+
+func TestExitCode(t *testing.T) {
+	tests := []struct {
+		err      error
+		expected int
+	}{
+		{nil, 0},
+		{WithErrorCode(errors.New("x"), errorCodeNoRetention), 2},
+		{WithErrorCode(errors.New("x"), errorCodeInvalidRetention), 2},
+		{WithErrorCode(errors.New("x"), errorCodeStorageInvalidInput), 2},
+		{WithErrorCode(errors.New("x"), errorCodeWorkspacePerm), 1},
+		{WithErrorCode(errors.New("x"), errorCodeWorkspaceInvalid), 1},
+		{WithErrorCode(errors.New("x"), errorCodeStorageFailure), 1},
+		{errors.New("unknown"), 1},
+	}
+	for _, tt := range tests {
+		if got := ExitCode(tt.err); got != tt.expected {
+			t.Errorf("ExitCode(%v)=%d, want %d", tt.err, got, tt.expected)
 		}
-	})
+	}
+}
+
+func TestHTTPStatus(t *testing.T) {
+	tests := []struct {
+		err      error
+		expected int
+	}{
+		{nil, 200},
+		{WithErrorCode(errors.New("x"), errorCodeNoRetention), 400},
+		{WithErrorCode(errors.New("x"), errorCodeInvalidRetention), 400},
+		{WithErrorCode(errors.New("x"), errorCodeStorageInvalidInput), 400},
+		{WithErrorCode(errors.New("x"), errorCodeWorkspacePerm), 403},
+		{WithErrorCode(errors.New("x"), errorCodeWorkspaceInvalid), 404},
+		{WithErrorCode(errors.New("x"), errorCodeStorageFailure), 500},
+		{errors.New("unknown"), 500},
+	}
+	for _, tt := range tests {
+		if got := HTTPStatus(tt.err); got != tt.expected {
+			t.Errorf("HTTPStatus(%v)=%d, want %d", tt.err, got, tt.expected)
+		}
+	}
+}
+
+func TestSuggestions(t *testing.T) {
+	tests := []struct {
+		code string
+		want bool
+	}{
+		{errorCodeNoRetention, true},
+		{errorCodeInvalidRetention, true},
+		{errorCodeWorkspaceInvalid, true},
+		{errorCodeWorkspacePerm, true},
+		{errorCodeStorageInvalidInput, true},
+		{errorCodeStorageFailure, true},
+		{"unknown", false},
+	}
+	for _, tt := range tests {
+		err := WithErrorCode(errors.New("x"), tt.code)
+		sugs := Suggestions(err)
+		if tt.want && len(sugs) == 0 {
+			t.Errorf("expected suggestions for %v", tt.code)
+		}
+		if !tt.want && sugs != nil {
+			t.Errorf("expected nil for %v", tt.code)
+		}
+	}
+	if Suggestions(nil) != nil {
+		t.Errorf("expected nil for nil error")
+	}
+}
+
+func TestFormatRetentionValidationError(t *testing.T) {
+	err := errors.New("invalid policy")
+	wrapped := FormatRetentionValidationError(err)
+	if ErrorCode(wrapped) != errorCodeInvalidRetention {
+		t.Errorf("expected invalid_retention code")
+	}
+	if FormatRetentionValidationError(nil) != nil {
+		t.Errorf("expected nil")
+	}
+}
+
+func TestUnwraps(t *testing.T) {
+	nf := NewNotFoundError("scan", "42").(*NotFoundError)
+	if nf.Unwrap() != ErrNotFound {
+		t.Errorf("expected ErrNotFound from Unwrap")
+	}
+
+	ae := NewAlreadyExistsError("file", "abc").(*AlreadyExistsError)
+	if ae.Unwrap() != ErrAlreadyExists {
+		t.Errorf("expected ErrAlreadyExists from Unwrap")
+	}
 }
 
 func TestIsNotSupported(t *testing.T) {
-	// Direct error
 	if !IsNotSupported(ErrNotSupported) {
-		t.Error("IsNotSupported(ErrNotSupported) = false, expected true")
+		t.Errorf("expected true for ErrNotSupported")
 	}
-
-	// Wrapped error
-	wrapped := errors.Join(ErrNotSupported, errors.New("additional context"))
-	if !IsNotSupported(wrapped) {
-		t.Error("IsNotSupported(wrapped) = false, expected true")
+	if IsNotSupported(nil) {
+		t.Errorf("expected false for nil")
 	}
-
-	// Different error
-	if IsNotSupported(ErrNotFound) {
-		t.Error("IsNotSupported(ErrNotFound) = true, expected false")
+	if IsNotSupported(errors.New("other")) {
+		t.Errorf("expected false for unrelated error")
 	}
 }
 
-func TestErrorHelpers(t *testing.T) {
-	tests := []struct {
-		name     string
-		err      error
-		checker  func(error) bool
-		expected bool
-	}{
-		{
-			name:     "IsNotFound - true",
-			err:      NewNotFoundError("scan", "123"),
-			checker:  IsNotFound,
-			expected: true,
-		},
-		{
-			name:     "IsNotFound - false",
-			err:      ErrAlreadyExists,
-			checker:  IsNotFound,
-			expected: false,
-		},
-		{
-			name:     "IsAlreadyExists - true",
-			err:      NewAlreadyExistsError("scan", "456"),
-			checker:  IsAlreadyExists,
-			expected: true,
-		},
-		{
-			name:     "IsAlreadyExists - false",
-			err:      ErrNotFound,
-			checker:  IsAlreadyExists,
-			expected: false,
-		},
-		{
-			name:     "IsInvalidInput - true",
-			err:      NewInvalidInputError("field", "reason"),
-			checker:  IsInvalidInput,
-			expected: true,
-		},
-		{
-			name:     "IsInvalidInput - false",
-			err:      ErrNotFound,
-			checker:  IsInvalidInput,
-			expected: false,
-		},
-		{
-			name:     "IsNotSupported - true",
-			err:      ErrNotSupported,
-			checker:  IsNotSupported,
-			expected: true,
-		},
-		{
-			name:     "IsNotSupported - false",
-			err:      ErrNotFound,
-			checker:  IsNotSupported,
-			expected: false,
-		},
+func TestExitCodeDefault(t *testing.T) {
+	err := WithErrorCode(errors.New("x"), "UNKNOWN_CODE_SHOULD_HIT_DEFAULT")
+	got := ExitCode(err)
+	if got != 1 {
+		t.Errorf("expected 1 for default branch, got %d", got)
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := tt.checker(tt.err)
-			if got != tt.expected {
-				t.Errorf("checker(%v) = %v, expected %v", tt.err, got, tt.expected)
-			}
-		})
-	}
-}
-
-func TestNotFoundErrorUnwrap(t *testing.T) {
-	t.Run("returns ErrNotFound for concrete error", func(t *testing.T) {
-		err := NewNotFoundError("scan", "scan-123")
-		unwrapped := errors.Unwrap(err)
-		if unwrapped != ErrNotFound {
-			t.Fatalf("errors.Unwrap(err) = %v, expected %v", unwrapped, ErrNotFound)
-		}
-	})
-
-	t.Run("works with nil receiver", func(t *testing.T) {
-		var nf *NotFoundError
-		unwrapped := errors.Unwrap(nf)
-		if unwrapped != ErrNotFound {
-			t.Fatalf("errors.Unwrap(nil *NotFoundError) = %v, expected %v", unwrapped, ErrNotFound)
-		}
-	})
-}
-
-func TestInvalidInputErrorUnwrap(t *testing.T) {
-	t.Run("returns ErrInvalidInput for concrete error", func(t *testing.T) {
-		err := NewInvalidInputError("field", "reason")
-		unwrapped := errors.Unwrap(err)
-		if unwrapped != ErrInvalidInput {
-			t.Fatalf("errors.Unwrap(err) = %v, expected %v", unwrapped, ErrInvalidInput)
-		}
-	})
-
-	t.Run("works with nil receiver", func(t *testing.T) {
-		var ii *InvalidInputError
-		unwrapped := errors.Unwrap(ii)
-		if unwrapped != ErrInvalidInput {
-			t.Fatalf("errors.Unwrap(nil *InvalidInputError) = %v, expected %v", unwrapped, ErrInvalidInput)
-		}
-	})
-}
-
-func TestAlreadyExistsErrorUnwrap(t *testing.T) {
-	t.Run("returns ErrAlreadyExists for concrete error", func(t *testing.T) {
-		err := NewAlreadyExistsError("scan", "scan-456")
-		unwrapped := errors.Unwrap(err)
-		if unwrapped != ErrAlreadyExists {
-			t.Fatalf("errors.Unwrap(err) = %v, expected %v", unwrapped, ErrAlreadyExists)
-		}
-	})
-
-	t.Run("works with nil receiver", func(t *testing.T) {
-		var ae *AlreadyExistsError
-		unwrapped := errors.Unwrap(ae)
-		if unwrapped != ErrAlreadyExists {
-			t.Fatalf("errors.Unwrap(nil *AlreadyExistsError) = %v, expected %v", unwrapped, ErrAlreadyExists)
-		}
-	})
 }

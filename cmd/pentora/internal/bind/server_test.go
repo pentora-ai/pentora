@@ -6,6 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
+
+	srv "github.com/pentora-ai/pentora/pkg/server"
 )
 
 func TestBindServerOptions(t *testing.T) {
@@ -163,6 +165,15 @@ func TestBindServerOptions(t *testing.T) {
 				require.Error(t, err)
 				if tt.errMsg != "" {
 					require.Contains(t, err.Error(), tt.errMsg)
+				}
+
+				switch tt.name {
+				case "invalid port - too low", "invalid port - too high":
+					require.ErrorIs(t, err, srv.ErrInvalidPort)
+				case "invalid concurrency":
+					require.ErrorIs(t, err, srv.ErrInvalidConcurrency)
+				case "both UI and API disabled":
+					require.ErrorIs(t, err, srv.ErrFeaturesDisabled)
 				}
 				return
 			}

@@ -1,8 +1,6 @@
 package bind
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 
 	"github.com/pentora-ai/pentora/pkg/scanexec"
@@ -52,7 +50,7 @@ func BindScanOptions(cmd *cobra.Command, targets []string) (scanexec.Params, err
 
 	// Validate conflicting flags
 	if onlyDiscover && skipDiscover {
-		return scanexec.Params{}, fmt.Errorf("cannot use --only-discover and --no-discover together")
+		return scanexec.Params{}, scanexec.ErrConflictingDiscoveryFlags
 	}
 
 	// If only-discover is set, disable vuln automatically

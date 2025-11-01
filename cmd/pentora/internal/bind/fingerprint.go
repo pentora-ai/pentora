@@ -2,6 +2,8 @@ package bind
 
 import (
 	"github.com/spf13/cobra"
+
+	"github.com/pentora-ai/pentora/pkg/fingerprint"
 )
 
 // FingerprintOptions holds configuration options for the fingerprint command.
@@ -31,6 +33,14 @@ func BindFingerprintOptions(cmd *cobra.Command) (FingerprintOptions, error) {
 		FilePath: filePath,
 		URL:      url,
 		CacheDir: cacheDir,
+	}
+
+	if filePath == "" && url == "" {
+		return opts, fingerprint.NewSourceRequiredError()
+	}
+
+	if filePath != "" && url != "" {
+		return opts, fingerprint.NewSourceConflictError()
 	}
 
 	return opts, nil
