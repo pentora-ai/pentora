@@ -35,12 +35,36 @@ func NewDataContext() *DataContext {
 }
 
 // RegisterCommonSchema registers commonly used keys with sensible defaults.
-// It is safe to call multiple times.
+// It is safe to call multiple times (idempotent).
+//
+// Note: Some complex types (e.g., asset.profiles, discovery results, parse results)
+// are deferred to avoid import cycles. Modules that produce these keys should
+// register their own schemas using RegisterType() with concrete types.
 func RegisterCommonSchema(dc *DataContext) {
-	// config.targets: []string, single
+	// Config keys (CardinalitySingle)
 	_ = dc.RegisterType("config.targets", reflect.TypeOf([]string{}), CardinalitySingle)
-	// asset.profiles: []engine.AssetProfile, list
-	// Defer concrete type binding here to avoid import cycles; users can override with concrete reflect.Type later.
+	_ = dc.RegisterType("config.ports", reflect.TypeOf([]int{}), CardinalitySingle)
+
+	// Simple parse keys (CardinalityList) - primitive types
+	// Note: For CardinalityList, register slice types ([]T) not element types (T)
+	_ = dc.RegisterType("ssh.banner", reflect.TypeOf([]string{}), CardinalityList)
+	_ = dc.RegisterType("ssh.version", reflect.TypeOf([]string{}), CardinalityList)
+	_ = dc.RegisterType("http.server", reflect.TypeOf([]string{}), CardinalityList)
+	_ = dc.RegisterType("tls.version", reflect.TypeOf([]string{}), CardinalityList)
+	_ = dc.RegisterType("service.port", reflect.TypeOf([]int{}), CardinalityList)
+
+	// Complex types deferred to modules to avoid import cycles:
+	// - discovery.live_hosts (discovery.ICMPPingDiscoveryResult)
+	// - discovery.open_tcp_ports (discovery.TCPPortDiscoveryResult)
+	// - service.banner.tcp (scan.BannerGrabResult)
+	// - service.http.details (parse.HTTPParsedInfo)
+	// - service.ssh.details (parse.SSHParsedInfo)
+	// - service.fingerprint.details (parse.FingerprintParsedInfo)
+	// - evaluation.vulnerabilities (evaluation.VulnerabilityResult)
+	// - asset.profiles ([]engine.AssetProfile)
+	//
+	// Modules producing these keys should call:
+	//   dc.RegisterType(key, reflect.TypeOf(MyType{}), cardinality)
 }
 
 // --- Legacy-compatible helpers used by orchestrator (to keep build green) ---
@@ -137,11 +161,18 @@ func (dc *DataContext) AppendValue(key string, item interface{}) error {
 	// Derive []T type from schema.typ.
 	expected := sch.typ // expected is a slice type, e.g., []T
 	// Ensure stored value is a slice of expected element type.
+	// Validate item type matches slice element type
+	elemType := expected.Elem() // Get T from []T
+	itemValue := reflect.ValueOf(item)
+	if itemValue.Type() != elemType {
+		return fmt.Errorf("type mismatch for key %s: expected element type %s, got %s", key, elemType, itemValue.Type())
+	}
+
 	cur, exists := dc.data[key]
 	if !exists {
 		// Initialize new slice with item
 		slice := reflect.MakeSlice(expected, 0, 1)
-		slice = reflect.Append(slice, reflect.ValueOf(item))
+		slice = reflect.Append(slice, itemValue)
 		dc.data[key] = slice.Interface()
 		return nil
 	}
@@ -149,7 +180,7 @@ func (dc *DataContext) AppendValue(key string, item interface{}) error {
 	if rv.Type() != expected {
 		return fmt.Errorf("type mismatch for key %s: expected %s, got %s", key, expected, rv.Type())
 	}
-	dc.data[key] = reflect.Append(rv, reflect.ValueOf(item)).Interface()
+	dc.data[key] = reflect.Append(rv, itemValue).Interface()
 	return nil
 }
 
