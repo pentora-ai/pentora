@@ -24,7 +24,7 @@ func TestValidation_ParseListScansQuery_OK_Defaults(t *testing.T) {
 	got, err := ParseListScansQuery(r)
 	assert.NoError(t, err)
 	assert.Equal(t, 50, got.Limit)
-	assert.Equal(t, 0, got.Offset)
+	assert.Equal(t, "", got.Cursor)
 	assert.Equal(t, "", got.Status)
 }
 
@@ -32,13 +32,13 @@ func TestValidation_ParseListScansQuery_AllValid(t *testing.T) {
 	r := newRequestWithQuery(map[string]string{
 		"status": "pending",
 		"limit":  "10",
-		"offset": "2",
+		"cursor": "eyJpZCI6InNjYW4tMTIzIiwidHMiOjE3MzA1NTI0MDAwMDAwMDAwMDB9",
 	})
 	got, err := ParseListScansQuery(r)
 	assert.NoError(t, err)
 	assert.Equal(t, "pending", got.Status)
 	assert.Equal(t, 10, got.Limit)
-	assert.Equal(t, 2, got.Offset)
+	assert.Equal(t, "eyJpZCI6InNjYW4tMTIzIiwidHMiOjE3MzA1NTI0MDAwMDAwMDAwMDB9", got.Cursor)
 }
 
 func TestValidation_ParseListScansQuery_InvalidStatus(t *testing.T) {
@@ -59,13 +59,6 @@ func TestValidation_ParseListScansQuery_InvalidLimit(t *testing.T) {
 
 func TestValidation_ParseListScansQuery_LimitOutOfRange(t *testing.T) {
 	r := newRequestWithQuery(map[string]string{"limit": "101"})
-	got, err := ParseListScansQuery(r)
-	assert.Nil(t, got)
-	assert.Error(t, err)
-}
-
-func TestValidation_ParseListScansQuery_InvalidOffset(t *testing.T) {
-	r := newRequestWithQuery(map[string]string{"offset": "-1"})
 	got, err := ParseListScansQuery(r)
 	assert.Nil(t, got)
 	assert.Error(t, err)
