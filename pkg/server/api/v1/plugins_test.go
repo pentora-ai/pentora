@@ -218,6 +218,26 @@ func TestInstallPluginHandler_InvalidSource(t *testing.T) {
 	require.Contains(t, w.Body.String(), "custom")
 }
 
+// TestInstallPluginHandler_InvalidTargetID tests invalid plugin ID format in target
+func TestInstallPluginHandler_InvalidTargetID(t *testing.T) {
+	mockSvc := &mockPluginService{}
+	handler := InstallPluginHandler(mockSvc, api.DefaultConfig())
+
+	reqBody := InstallPluginRequest{
+		Target: "Invalid_ID", // invalid: uppercase + underscore start invalid
+	}
+	bodyBytes, _ := json.Marshal(reqBody)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/plugins/install", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	require.Contains(t, w.Body.String(), "INVALID_PLUGIN_ID")
+}
+
 // TestListPluginsHandler_EmptyList tests handler with no plugins installed
 func TestListPluginsHandler_EmptyList(t *testing.T) {
 	mockSvc := &mockPluginService{
@@ -298,6 +318,19 @@ func TestListPluginsHandler_ServiceError(t *testing.T) {
 	require.Contains(t, w.Body.String(), "INTERNAL_ERROR")
 }
 
+// TestListPluginsHandler_InvalidCategoryQuery tests invalid category filter in list query
+func TestListPluginsHandler_InvalidCategoryQuery(t *testing.T) {
+	mockSvc := &mockPluginService{}
+	handler := ListPluginsHandler(mockSvc)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/plugins?category=bad-cat", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	require.Contains(t, w.Body.String(), "INVALID_QUERY")
+}
+
 // TestGetPluginHandler_Success tests successful plugin retrieval
 func TestGetPluginHandler_Success(t *testing.T) {
 	mockSvc := &mockPluginService{
@@ -329,6 +362,27 @@ func TestGetPluginHandler_Success(t *testing.T) {
 	require.Equal(t, "SSH Weak Cipher Detection", resp.Name)
 	require.Equal(t, "1.0.0", resp.Version)
 	require.Equal(t, "high", resp.Severity)
+}
+
+func TestGetPluginHandler_InvalidID(t *testing.T) {
+	mockSvc := &mockPluginService{}
+	handler := GetPluginHandler(mockSvc)
+
+	// Empty ID
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/plugins/", nil)
+	req.SetPathValue("id", "")
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	require.Contains(t, w.Body.String(), "PLUGIN_ID_REQUIRED")
+
+	// Invalid format
+	req2 := httptest.NewRequest(http.MethodGet, "/api/v1/plugins/Invalid_ID", nil)
+	req2.SetPathValue("id", "Invalid_ID")
+	w2 := httptest.NewRecorder()
+	handler.ServeHTTP(w2, req2)
+	require.Equal(t, http.StatusBadRequest, w2.Code)
+	require.Contains(t, w2.Body.String(), "INVALID_PLUGIN_ID")
 }
 
 // TestGetPluginHandler_NotFound tests handler when plugin not found
@@ -389,6 +443,27 @@ func TestUninstallPluginHandler_Success(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "plugin uninstalled successfully", resp["message"])
 	require.Equal(t, float64(1), resp["removed_count"])
+}
+
+func TestUninstallPluginHandler_InvalidID(t *testing.T) {
+	mockSvc := &mockPluginService{}
+	handler := UninstallPluginHandler(mockSvc, api.DefaultConfig())
+
+	// Empty ID
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/plugins/", nil)
+	req.SetPathValue("id", "")
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	require.Contains(t, w.Body.String(), "PLUGIN_ID_REQUIRED")
+
+	// Invalid format
+	req2 := httptest.NewRequest(http.MethodDelete, "/api/v1/plugins/Invalid_ID", nil)
+	req2.SetPathValue("id", "Invalid_ID")
+	w2 := httptest.NewRecorder()
+	handler.ServeHTTP(w2, req2)
+	require.Equal(t, http.StatusBadRequest, w2.Code)
+	require.Contains(t, w2.Body.String(), "INVALID_PLUGIN_ID")
 }
 
 // TestUninstallPluginHandler_NotFound tests handler when plugin not found
@@ -559,6 +634,39 @@ func TestUpdatePluginsHandler_ServiceError(t *testing.T) {
 
 	require.Equal(t, http.StatusInternalServerError, w.Code)
 	require.Contains(t, w.Body.String(), "INTERNAL_ERROR")
+}
+
+// Re-review additions: Ensure Update validation is wired via handler
+func TestUpdatePluginsHandler_InvalidCategory_ThroughHandler(t *testing.T) {
+	mockSvc := &mockPluginService{}
+	handler := UpdatePluginsHandler(mockSvc, api.DefaultConfig())
+
+	reqBody := UpdatePluginsRequest{Category: "invalid-cat"}
+	bodyBytes, _ := json.Marshal(reqBody)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/plugins/update", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	require.Contains(t, w.Body.String(), "INVALID_CATEGORY")
+}
+
+func TestUpdatePluginsHandler_InvalidSource_ThroughHandler(t *testing.T) {
+	mockSvc := &mockPluginService{}
+	handler := UpdatePluginsHandler(mockSvc, api.DefaultConfig())
+
+	reqBody := UpdatePluginsRequest{Source: "invalid-src"}
+	bodyBytes, _ := json.Marshal(reqBody)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/plugins/update", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	require.Contains(t, w.Body.String(), "INVALID_SOURCE")
 }
 
 // TestUpdatePluginsHandler_InvalidCategory tests handler with invalid category

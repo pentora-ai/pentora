@@ -19,6 +19,22 @@ func formatSourceList(items []string) string {
 	return strings.Join(items, ", ")
 }
 
+// classifyInstallValidationError maps a validation error from ParseInstallPlugin
+// to an API error code.
+func classifyInstallValidationError(err error, req InstallPluginRequest) string {
+	msg := err.Error()
+	switch {
+	case strings.Contains(msg, "target") && strings.Contains(msg, "required"):
+		return "TARGET_REQUIRED"
+	case strings.Contains(msg, "source"):
+		return "INVALID_SOURCE"
+	case strings.Contains(msg, "id") || strings.Contains(msg, "format"):
+		return "INVALID_PLUGIN_ID"
+	default:
+		return "INVALID_INPUT"
+	}
+}
+
 // PluginService defines the interface for plugin operations.
 // This allows for easy mocking in tests.
 // This interface matches the pkg/plugin.Service methods.
@@ -220,26 +236,17 @@ func InstallPluginHandler(pluginService PluginService, config api.Config) http.H
 			Bool("force", req.Force).
 			Msg("install started")
 
-		// Validate request - required fields
-		if req.Target == "" {
+			// Validate request fields (target/category/id, source)
+		if err := ParseInstallPlugin(req); err != nil {
 			statusCode = http.StatusBadRequest
-			logger.Error().
-				Str("error_code", "TARGET_REQUIRED").
-				Msg("validation failed: target required")
-			api.WriteJSONError(w, statusCode, "Bad Request", "TARGET_REQUIRED", "target is required")
-			return
-		}
-
-		// Validate source whitelist (API layer - defense-in-depth)
-		if req.Source != "" && !plugin.IsValidSource(req.Source) {
-			validSources := plugin.ValidSources
-			statusCode = http.StatusBadRequest
-			logger.Error().
-				Str("error_code", "INVALID_SOURCE").
-				Str("source", req.Source).
-				Msg("validation failed: invalid source")
-			api.WriteJSONError(w, statusCode, "Bad Request", "INVALID_SOURCE",
-				"invalid source '"+req.Source+"' (valid: "+formatSourceList(validSources)+")")
+			code := classifyInstallValidationError(err, req)
+			logger.Error().Str("error_code", code).Msg("validation failed: install request")
+			if code == "INVALID_SOURCE" {
+				api.WriteJSONError(w, statusCode, "Bad Request", code,
+					"invalid source '"+req.Source+"' (valid: "+formatSourceList(plugin.ValidSources)+")")
+			} else {
+				api.WriteJSONError(w, statusCode, "Bad Request", code, err.Error())
+			}
 			return
 		}
 
@@ -356,6 +363,12 @@ func ListPluginsHandler(pluginService PluginService) http.HandlerFunc {
 				Msg("request completed")
 		}()
 
+		// Validate optional query params (e.g., category) if provided
+		if verr := ParseListPlugins(r); verr != nil {
+			api.WriteJSONError(w, http.StatusBadRequest, "Bad Request", "INVALID_QUERY", verr.Error())
+			return
+		}
+
 		// Log operation start
 		logger.Info().Msg("list started")
 
@@ -438,12 +451,16 @@ func GetPluginHandler(pluginService PluginService) http.HandlerFunc {
 		}()
 
 		id := r.PathValue("id")
-		if id == "" {
+		if err := ValidatePluginID(id); err != nil {
 			statusCode = http.StatusBadRequest
+			code := "INVALID_PLUGIN_ID"
+			if strings.Contains(err.Error(), "required") {
+				code = "PLUGIN_ID_REQUIRED"
+			}
 			logger.Error().
-				Str("error_code", "PLUGIN_ID_REQUIRED").
-				Msg("validation failed: plugin id required")
-			api.WriteJSONError(w, statusCode, "Bad Request", "PLUGIN_ID_REQUIRED", "plugin id is required")
+				Str("error_code", code).
+				Msg("validation failed: invalid plugin id")
+			api.WriteJSONError(w, statusCode, "Bad Request", code, err.Error())
 			return
 		}
 
@@ -531,12 +548,17 @@ func UninstallPluginHandler(pluginService PluginService, config api.Config) http
 		}
 
 		id := r.PathValue("id")
-		if id == "" {
+		if err := ValidatePluginID(id); err != nil {
 			statusCode = http.StatusBadRequest
+			code := "INVALID_PLUGIN_ID"
+			if strings.Contains(err.Error(), "required") {
+				code = "PLUGIN_ID_REQUIRED"
+			}
 			logger.Error().
-				Str("error_code", "PLUGIN_ID_REQUIRED").
-				Msg("validation failed: plugin id required")
-			api.WriteJSONError(w, statusCode, "Bad Request", "PLUGIN_ID_REQUIRED", "plugin id is required")
+				Str("error_code", code).
+				Str("plugin_id", id).
+				Msg("validation failed: invalid plugin id")
+			api.WriteJSONError(w, statusCode, "Bad Request", code, err.Error())
 			return
 		}
 
@@ -662,29 +684,27 @@ func UpdatePluginsHandler(pluginService PluginService, config api.Config) http.H
 			Bool("force", req.Force).
 			Msg("update started")
 
-		// Validate category whitelist (API layer - defense-in-depth)
-		if req.Category != "" && !plugin.IsValidCategory(req.Category) {
-			validCategories := plugin.GetValidCategories()
+		// Validate update request fields (category/source)
+		if err := ParseUpdatePlugins(req); err != nil {
 			statusCode = http.StatusBadRequest
-			logger.Error().
-				Str("error_code", "INVALID_CATEGORY").
-				Str("category", req.Category).
-				Msg("validation failed: invalid category")
-			api.WriteJSONError(w, statusCode, "Bad Request", "INVALID_CATEGORY",
-				"invalid category '"+req.Category+"' (valid: "+formatSourceList(validCategories)+")")
-			return
-		}
-
-		// Validate source whitelist (API layer - defense-in-depth)
-		if req.Source != "" && !plugin.IsValidSource(req.Source) {
-			validSources := plugin.ValidSources
-			statusCode = http.StatusBadRequest
-			logger.Error().
-				Str("error_code", "INVALID_SOURCE").
-				Str("source", req.Source).
-				Msg("validation failed: invalid source")
-			api.WriteJSONError(w, statusCode, "Bad Request", "INVALID_SOURCE",
-				"invalid source '"+req.Source+"' (valid: "+formatSourceList(validSources)+")")
+			code := "INVALID_INPUT"
+			if strings.Contains(err.Error(), "category") {
+				code = "INVALID_CATEGORY"
+				validCategories := plugin.GetValidCategories()
+				logger.Error().Str("error_code", code).Msg("validation failed: invalid category")
+				api.WriteJSONError(w, statusCode, "Bad Request", code,
+					"invalid category '"+req.Category+"' (valid: "+formatSourceList(validCategories)+")")
+				return
+			}
+			if strings.Contains(err.Error(), "source") {
+				code = "INVALID_SOURCE"
+				logger.Error().Str("error_code", code).Msg("validation failed: invalid source")
+				api.WriteJSONError(w, statusCode, "Bad Request", code,
+					"invalid source '"+req.Source+"' (valid: "+formatSourceList(plugin.ValidSources)+")")
+				return
+			}
+			logger.Error().Str("error_code", code).Msg("validation failed: update request")
+			api.WriteJSONError(w, statusCode, "Bad Request", code, err.Error())
 			return
 		}
 
