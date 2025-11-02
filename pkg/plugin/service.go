@@ -478,7 +478,7 @@ func (s *Service) findPluginByID(plugins []PluginManifestEntry, id string) (Plug
 func (s *Service) installOne(ctx context.Context, p PluginManifestEntry, opts InstallOptions) error {
 	// Check if already cached (unless force reinstall)
 	if !opts.Force {
-		if _, err := s.cache.GetEntry(ctx, p.Name, p.Version); err == nil {
+		if entry, err := s.cache.GetEntry(ctx, p.ID, p.Version); err == nil && entry != nil {
 			s.logger.Debug().
 				Str("plugin", p.Name).
 				Str("version", p.Version).
@@ -522,21 +522,21 @@ func (s *Service) installOne(ctx context.Context, p PluginManifestEntry, opts In
 		Severity:    "medium", // Default severity (overridden when plugin loads)
 	}
 
-	// Add to manifest
+	// Add to manifest (failure contributes to partial failure semantics)
 	if err := s.manifest.Add(manifestEntry); err != nil {
-		s.logger.Warn().
+		s.logger.Error().
 			Str("plugin", p.Name).
 			Err(err).
-			Msg("Failed to add to manifest (plugin still downloaded)")
-		// Don't return error - plugin is downloaded, manifest update is best-effort
+			Msg("Failed to add to manifest")
+		return fmt.Errorf("manifest add: %w", err)
 	}
 
 	// Save manifest
 	if err := s.manifest.Save(); err != nil {
-		s.logger.Warn().
+		s.logger.Error().
 			Err(err).
 			Msg("Failed to save manifest")
-		// Don't return error - plugin is downloaded
+		return fmt.Errorf("manifest save: %w", err)
 	}
 
 	return nil
@@ -724,7 +724,7 @@ func (s *Service) Update(ctx context.Context, opts UpdateOptions) (*UpdateResult
 			result.FailedCount++
 			result.Errors = append(result.Errors, PluginError{
 				PluginID:   p.ID,
-				Error:      err.Error(),
+				Error:      fmt.Sprintf("Failed to add to manifest: %v", err),
 				Code:       ErrorCode(err),
 				Suggestion: GetSuggestion(err),
 			})
@@ -756,14 +756,30 @@ func (s *Service) Update(ctx context.Context, opts UpdateOptions) (*UpdateResult
 		}
 
 		if err := s.manifest.Add(manifestEntry); err != nil {
-			s.logger.Warn().
+			s.logger.Error().
 				Str("plugin", p.Name).
 				Err(err).
-				Msg("Failed to add to manifest (plugin still downloaded)")
+				Msg("Failed to add to manifest")
+			result.FailedCount++
+			result.Errors = append(result.Errors, PluginError{
+				PluginID:   p.ID,
+				Error:      fmt.Sprintf("Failed to save manifest: %v", err),
+				Code:       ErrorCode(err),
+				Suggestion: GetSuggestion(err),
+			})
+			continue
 		}
 
 		if err := s.manifest.Save(); err != nil {
-			s.logger.Warn().Err(err).Msg("Failed to save manifest")
+			s.logger.Error().Err(err).Msg("Failed to save manifest")
+			result.FailedCount++
+			result.Errors = append(result.Errors, PluginError{
+				PluginID:   p.ID,
+				Error:      err.Error(),
+				Code:       ErrorCode(err),
+				Suggestion: GetSuggestion(err),
+			})
+			continue
 		}
 
 		result.UpdatedCount++

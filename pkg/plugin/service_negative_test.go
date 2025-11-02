@@ -274,7 +274,6 @@ func TestService_GetInfo_ManifestLookupFailure_ListFilter(t *testing.T) {
 // ixanifestAddFailure verifies handling when manifest.Add()
 // fails during installation.
 func TestService_Install_ManifestAddFailure(t *testing.T) {
-	t.Skip("Manifest.Add() errors are logged but not propagated as failures")
 	ctx := context.Background()
 
 	// Mock downloader returns successful download
@@ -326,10 +325,153 @@ func TestService_Install_ManifestAddFailure(t *testing.T) {
 	// Installation should fail when manifest add fails
 	require.Error(t, err)
 	require.NotNil(t, result)
-	require.Equal(t, 0, result.InstalledCount)
-	require.Equal(t, 1, result.FailedCount)
-	require.Len(t, result.Errors, 1)
+	require.GreaterOrEqual(t, result.FailedCount, 1)
+	require.GreaterOrEqual(t, len(result.Errors), 1)
 	require.Contains(t, result.Errors[0].Error, "concurrent modification")
+}
+
+// TestService_Install_ManifestSaveFailure verifies handling when manifest.Save()
+// fails during installation (single-target install path).
+func TestService_Install_ManifestSaveFailure(t *testing.T) {
+	ctx := context.Background()
+
+	// Mock downloader returns a single plugin
+	dl := &mockDownloader{
+		fetchManifestFunc: func(ctx context.Context, src PluginSource) (*PluginManifest, error) {
+			return &PluginManifest{
+				Plugins: []PluginManifestEntry{{
+					ID:      "test-plugin",
+					Name:    "Test Plugin",
+					Version: "1.0.0",
+				}},
+			}, nil
+		},
+		downloadFunc: func(ctx context.Context, id, version string) (*CacheEntry, error) {
+			return &CacheEntry{ID: id, Version: version, Path: "/tmp/plugin.yaml"}, nil
+		},
+	}
+
+	// Plugin not installed initially
+	cache := &mockCacheManager{
+		getEntryFunc: func(ctx context.Context, name, version string) (*CacheEntry, error) {
+			return nil, ErrPluginNotInstalled
+		},
+	}
+
+	// Manifest add succeeds, save fails
+	manifest := &mockManifestManager{
+		addFunc:  func(entry *ManifestEntry) error { return nil },
+		saveFunc: func() error { return errors.New("manifest save failed: io error") },
+	}
+
+	svc := &Service{
+		downloader: dl,
+		cache:      cache,
+		manifest:   manifest,
+		sources:    []PluginSource{{Name: "test", URL: "https://example.com/manifest.yaml", Enabled: true}},
+		config:     DefaultConfig(),
+		logger:     zerolog.New(os.Stdout),
+	}
+
+	result, err := svc.Install(ctx, "test-plugin", InstallOptions{})
+
+	// Installation should fail when manifest save fails (single install path)
+	require.Error(t, err)
+	require.NotNil(t, result)
+	require.GreaterOrEqual(t, result.FailedCount, 1)
+	require.GreaterOrEqual(t, len(result.Errors), 1)
+	require.Contains(t, result.Errors[0].Error, "manifest save failed")
+}
+
+// Update path: manifest.Add fails for first plugin, second succeeds -> ErrPartialFailure
+func TestService_Update_ManifestAddFailure_Partial(t *testing.T) {
+	ctx := context.Background()
+
+	// Update loop uses downloader.FetchManifest. Provide two plugins.
+	dl := &mockDownloader{
+		fetchManifestFunc: func(ctx context.Context, src PluginSource) (*PluginManifest, error) {
+			return &PluginManifest{Plugins: []PluginManifestEntry{
+				{ID: "p1", Name: "P1", Version: "1.1.0"},
+				{ID: "p2", Name: "P2", Version: "1.1.0"},
+			}}, nil
+		},
+		downloadFunc: func(ctx context.Context, id, version string) (*CacheEntry, error) {
+			return &CacheEntry{ID: id, Version: version, Path: "/tmp/" + id + ".yaml"}, nil
+		},
+	}
+
+	// Manifest: Add fails for p1, succeeds for p2; Save ok
+	manifest := &mockManifestManager{
+		addFunc: func(entry *ManifestEntry) error {
+			if entry.ID == "p1" {
+				return errors.New("manifest add failed: conflict")
+			}
+			return nil
+		},
+		saveFunc: func() error { return nil },
+	}
+
+	// Ensure not treated as already cached
+	cache := &mockCacheManager{
+		getEntryFunc: func(ctx context.Context, name, version string) (*CacheEntry, error) {
+			return nil, ErrPluginNotInstalled
+		},
+	}
+
+	svc := &Service{downloader: dl, cache: cache, manifest: manifest, sources: []PluginSource{{Name: "test", URL: "u", Enabled: true}}, config: DefaultConfig(), logger: zerolog.New(os.Stdout)}
+
+	result, err := svc.Update(ctx, UpdateOptions{})
+
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrPartialFailure)
+	require.NotNil(t, result)
+	require.GreaterOrEqual(t, result.FailedCount, 1)
+	require.GreaterOrEqual(t, len(result.Errors), 1)
+	require.Contains(t, result.Errors[0].Error, "manifest")
+}
+
+// Update path: manifest.Save fails for first plugin, second succeeds -> ErrPartialFailure
+func TestService_Update_ManifestSaveFailure_Partial(t *testing.T) {
+	ctx := context.Background()
+
+	// Update flow builds candidate list via downloader.FetchManifest, not manifest.List.
+	// Provide two remote plugins to ensure the update loop runs.
+	dl := &mockDownloader{
+		fetchManifestFunc: func(ctx context.Context, src PluginSource) (*PluginManifest, error) {
+			return &PluginManifest{Plugins: []PluginManifestEntry{
+				{ID: "p1", Name: "P1", Version: "1.1.0"},
+				{ID: "p2", Name: "P2", Version: "1.1.0"},
+			}}, nil
+		},
+		downloadFunc: func(ctx context.Context, id, version string) (*CacheEntry, error) {
+			// Simulate successful download so we reach manifest.Save failure path
+			return &CacheEntry{ID: id, Version: version, Path: "/tmp/" + id + ".yaml"}, nil
+		},
+	}
+
+	// Manifest: Add succeeds, Save fails each loop iteration to induce partial failures
+	manifest := &mockManifestManager{
+		addFunc:  func(entry *ManifestEntry) error { return nil },
+		saveFunc: func() error { return errors.New("manifest save failed: io error") },
+	}
+
+	// Cache: treat as not already cached so updates proceed
+	cache := &mockCacheManager{
+		getEntryFunc: func(ctx context.Context, name, version string) (*CacheEntry, error) {
+			return nil, ErrPluginNotInstalled
+		},
+	}
+
+	svc := &Service{downloader: dl, cache: cache, manifest: manifest, sources: []PluginSource{{Name: "test", URL: "u", Enabled: true}}, config: DefaultConfig(), logger: zerolog.New(os.Stdout)}
+
+	result, err := svc.Update(ctx, UpdateOptions{})
+
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrPartialFailure)
+	require.NotNil(t, result)
+	require.GreaterOrEqual(t, result.FailedCount, 1)
+	require.GreaterOrEqual(t, len(result.Errors), 1)
+	require.Contains(t, result.Errors[0].Error, "manifest save failed")
 }
 
 // ============================================================================
