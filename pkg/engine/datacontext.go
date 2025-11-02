@@ -28,10 +28,19 @@ func (dc *DataContext) RLock()   { dc.mu.RLock() }
 func (dc *DataContext) RUnlock() { dc.mu.RUnlock() }
 
 func NewDataContext() *DataContext {
-	return &DataContext{
-		schema: make(map[string]dataKeySchema),
-		data:   make(map[string]interface{}),
-	}
+    return &DataContext{
+        schema: make(map[string]dataKeySchema),
+        data:   make(map[string]interface{}),
+    }
+}
+
+// RegisterCommonSchema registers commonly used keys with sensible defaults.
+// It is safe to call multiple times.
+func RegisterCommonSchema(dc *DataContext) {
+    // config.targets: []string, single
+    _ = dc.RegisterType("config.targets", reflect.TypeOf([]string{}), CardinalitySingle)
+    // asset.profiles: []engine.AssetProfile, list
+    // Defer concrete type binding here to avoid import cycles; users can override with concrete reflect.Type later.
 }
 
 // --- Legacy-compatible helpers used by orchestrator (to keep build green) ---

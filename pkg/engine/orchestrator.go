@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"reflect"
 	"sync"
 	"time"
 
@@ -274,12 +275,28 @@ func NewOrchestrator(dagDef *DAGDefinition) (*Orchestrator, error) {
 //
 // nolint:gocyclo // complex coordination; consider splitting in future iterations
 func (o *Orchestrator) Run(ctx context.Context, initialInputs map[string]interface{}) (map[string]interface{}, error) {
-	logger := log.With().Str("dag", o.dag.Name).Logger()
-	logger.Info().Msg("Starting DAG execution")
+    logger := log.With().Str("dag", o.dag.Name).Logger()
+    logger.Info().Msg("Starting DAG execution")
 
-	// Store initial inputs in the global data context
-	for key, value := range initialInputs {
-		o.dataCtx.SetInitial(key, value) // Use SetInitial for direct storage
+    // Ensure common schema exists (idempotent)
+    RegisterCommonSchema(o.dataCtx)
+
+    // Seed initial inputs (typed for known keys, else legacy)
+    if initialInputs != nil {
+        if raw, ok := initialInputs["config.targets"]; ok {
+            if targets, ok2 := raw.([]string); ok2 {
+                _ = o.dataCtx.RegisterType("config.targets", reflect.TypeOf([]string{}), CardinalitySingle)
+				_ = o.dataCtx.PublishValue("config.targets", targets)
+			} else {
+				o.dataCtx.SetInitial("config.targets", raw)
+			}
+		}
+		for key, value := range initialInputs {
+			if key == "config.targets" {
+				continue
+			}
+			o.dataCtx.SetInitial(key, value)
+		}
 	}
 
 	// Keep track of nodes that have finished execution
@@ -461,10 +478,18 @@ func (o *Orchestrator) Run(ctx context.Context, initialInputs map[string]interfa
 
 					// dataCtxKey := fmt.Sprintf("%s.%s", currentNode.instanceID, output.DataKey)
 					dataCtxKey := output.DataKey
-					// Use a method that appends if key exists and is a list, otherwise creates a list.
-					// This is what we had before and caused the CLI to expect []interface{}.
-					// So, the CLI MUST handle this.
-					o.dataCtx.AddOrAppendToList(dataCtxKey, output.Data) // Use AddOrAppendToList for module outputs
+					// Try typed append/publish if schema is registered; fallback to legacy append.
+					if sch, ok := o.dataCtx.schema[dataCtxKey]; ok {
+						if sch.cardinality == CardinalityList {
+							// Expect schema.typ to be a slice type; attempt to append reflectively
+							_ = o.dataCtx.AppendValue(dataCtxKey, output.Data)
+						} else {
+							_ = o.dataCtx.PublishValue(dataCtxKey, output.Data)
+						}
+					} else {
+						// Fallback for unregistered keys
+						o.dataCtx.AddOrAppendToList(dataCtxKey, output.Data)
+					}
 
 					if output.Error != nil {
 						// fmt.Fprintf(os.Stderr, "[ERROR] Output error from module '%s' for DataKey '%s': %v\n", currentNode.instanceID, output.DataKey, output.Error)
