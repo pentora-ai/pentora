@@ -34,6 +34,15 @@ func NewDataContext() *DataContext {
 	}
 }
 
+// RegisterCommonSchema registers commonly used keys with sensible defaults.
+// It is safe to call multiple times.
+func RegisterCommonSchema(dc *DataContext) {
+	// config.targets: []string, single
+	_ = dc.RegisterType("config.targets", reflect.TypeOf([]string{}), CardinalitySingle)
+	// asset.profiles: []engine.AssetProfile, list
+	// Defer concrete type binding here to avoid import cycles; users can override with concrete reflect.Type later.
+}
+
 // --- Legacy-compatible helpers used by orchestrator (to keep build green) ---
 
 // SetInitial stores an initial input value directly, overwriting if exists.
