@@ -275,17 +275,17 @@ func NewOrchestrator(dagDef *DAGDefinition) (*Orchestrator, error) {
 //
 // nolint:gocyclo // complex coordination; consider splitting in future iterations
 func (o *Orchestrator) Run(ctx context.Context, initialInputs map[string]interface{}) (map[string]interface{}, error) {
-    logger := log.With().Str("dag", o.dag.Name).Logger()
-    logger.Info().Msg("Starting DAG execution")
+	logger := log.With().Str("dag", o.dag.Name).Logger()
+	logger.Info().Msg("Starting DAG execution")
 
-    // Ensure common schema exists (idempotent)
-    RegisterCommonSchema(o.dataCtx)
+	// Ensure common schema exists (idempotent)
+	RegisterCommonSchema(o.dataCtx)
 
-    // Seed initial inputs (typed for known keys, else legacy)
-    if initialInputs != nil {
-        if raw, ok := initialInputs["config.targets"]; ok {
-            if targets, ok2 := raw.([]string); ok2 {
-                _ = o.dataCtx.RegisterType("config.targets", reflect.TypeOf([]string{}), CardinalitySingle)
+	// Seed initial inputs (typed for known keys, else legacy)
+	if initialInputs != nil {
+		if raw, ok := initialInputs["config.targets"]; ok {
+			if targets, ok2 := raw.([]string); ok2 {
+				_ = o.dataCtx.RegisterType("config.targets", reflect.TypeOf([]string{}), CardinalitySingle)
 				_ = o.dataCtx.PublishValue("config.targets", targets)
 			} else {
 				o.dataCtx.SetInitial("config.targets", raw)
