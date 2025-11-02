@@ -908,3 +908,96 @@ func TestOrchestrator_Run_DiamondPattern(t *testing.T) {
 	require.True(t, rightIdx == 1 || rightIdx == 2)
 	require.NotEqual(t, leftIdx, rightIdx)
 }
+
+// --- Additional Full Coverage Tests ---
+
+func TestDataContext_SetInitial_And_GetAll(t *testing.T) {
+	dc := NewDataContext()
+	dc.SetInitial("initial.key", "initial-value")
+	got, ok := dc.Get("initial.key")
+	require.True(t, ok)
+	require.Equal(t, "initial-value", got)
+
+	all := dc.GetAll()
+	require.Contains(t, all, "initial.key")
+	require.Equal(t, "initial-value", all["initial.key"])
+}
+
+func TestDataContext_AddOrAppendToList_PromotesNonList(t *testing.T) {
+	dc := NewDataContext()
+	dc.data["weird.key"] = "non-list"
+	dc.AddOrAppendToList("weird.key", 123)
+	got, ok := dc.Get("weird.key")
+	require.True(t, ok)
+	require.Equal(t, []interface{}{"non-list", 123}, got)
+}
+
+func TestStatus_String_OutOfRangePanicRecovery(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("Expected panic for out-of-range Status value, got none")
+		}
+	}()
+	_ = Status(100).String()
+}
+
+func TestOrchestrator_ExplicitDependencyNotFound_WarningPath(t *testing.T) {
+	RegisterModuleFactory("warn-mod", func() Module {
+		return &mockModule{
+			meta: ModuleMetadata{
+				Name: "warn-mod",
+				Type: ScanModuleType,
+			},
+			execFunc: func(ctx context.Context, inputs map[string]interface{}, out chan<- ModuleOutput) error {
+				return nil
+			},
+		}
+	})
+	defer delete(moduleRegistry, "warn-mod")
+
+	dag := &DAGDefinition{
+		Name: "explicit-dep-notfound",
+		Nodes: []DAGNodeConfig{
+			{
+				InstanceID: "mod1",
+				ModuleType: "warn-mod",
+				Config: map[string]interface{}{
+					"__depends_on": []interface{}{"nonexistent"},
+				},
+			},
+		},
+	}
+	orc, err := NewOrchestrator(dag)
+	require.NoError(t, err)
+	require.NotNil(t, orc)
+}
+
+func TestOrchestrator_Run_ModulePanicRecovery(t *testing.T) {
+	RegisterModuleFactory("panic-mod", func() Module {
+		return &mockModule{
+			meta: ModuleMetadata{
+				Name:     "panic-mod",
+				Type:     ScanModuleType,
+				Produces: []DataContractEntry{{Key: "panic.data"}},
+			},
+			execFunc: func(ctx context.Context, inputs map[string]interface{}, out chan<- ModuleOutput) error {
+				panic("simulated panic in module")
+			},
+		}
+	})
+	defer delete(moduleRegistry, "panic-mod")
+
+	dag := &DAGDefinition{
+		Name: "panic-recovery-test",
+		Nodes: []DAGNodeConfig{
+			{InstanceID: "mod1", ModuleType: "panic-mod", Config: map[string]interface{}{}},
+		},
+	}
+
+	orc, err := NewOrchestrator(dag)
+	require.NoError(t, err)
+
+	_, runErr := orc.Run(context.Background(), nil)
+	require.Error(t, runErr)
+	require.Contains(t, runErr.Error(), "panicked")
+}

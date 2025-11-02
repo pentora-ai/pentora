@@ -32,6 +32,7 @@ type Orchestrator struct {
 	moduleNodes map[string]*runtimeNode // Map of InstanceID to its runtime representation
 	dataCtx     *DataContext            // Central place to store and retrieve module outputs
 	logger      zerolog.Logger          // Use a logger for debug/info messages
+	order       []string                // Execution order of started nodes
 }
 
 type runtimeNode struct {
@@ -162,12 +163,7 @@ func (dc *DataContext) AddOrAppendToList(key string, value interface{}) {
 // on their input and output keys, and prepares the orchestrator for execution. Returns an error if the DAG
 // definition is invalid, contains duplicate instance IDs, or if any module instance fails to initialize.
 //
-// Parameters:
-//   - dagDef: Pointer to the DAGDefinition describing the workflow and its nodes.
-//
-// Returns:
-//   - *Orchestrator: The initialized orchestrator instance.
-//   - error: An error if initialization fails, or nil on success.
+// nolint:gocyclo // function orchestrates multiple concerns; refactor planned separately
 func NewOrchestrator(dagDef *DAGDefinition) (*Orchestrator, error) {
 	if dagDef == nil || len(dagDef.Nodes) == 0 {
 		return nil, fmt.Errorf("DAG definition is nil or has no nodes")
@@ -206,6 +202,13 @@ func NewOrchestrator(dagDef *DAGDefinition) (*Orchestrator, error) {
 		}
 		orc.moduleNodes[nodeCfg.InstanceID] = node
 		orc.logger.Debug().Str("instance_id", nodeCfg.InstanceID).Str("module_type", nodeCfg.ModuleType).Msg("Module instance created and initialized")
+
+		// Optional lifecycle init
+		if lc, ok := moduleInstance.(ModuleLifecycle); ok {
+			if err := lc.LifecycleInit(context.Background()); err != nil {
+				return nil, fmt.Errorf("lifecycle init failed for '%s': %w", nodeCfg.InstanceID, err)
+			}
+		}
 
 		// Register what this node produces for dependency resolution.
 		// ModuleMetadata.Produces is now []DataContractEntry
@@ -331,6 +334,8 @@ func NewOrchestrator(dagDef *DAGDefinition) (*Orchestrator, error) {
 //   - Errors in module execution or dependency failures are propagated and halt further execution as appropriate.
 //   - The function is safe for concurrent execution of independent nodes and uses synchronization primitives
 //     to protect shared state.
+//
+// nolint:gocyclo // complex coordination; consider splitting in future iterations
 func (o *Orchestrator) Run(ctx context.Context, initialInputs map[string]interface{}) (map[string]interface{}, error) {
 	logger := log.With().Str("dag", o.dag.Name).Logger()
 	logger.Info().Msg("Starting DAG execution")
@@ -472,6 +477,19 @@ func (o *Orchestrator) Run(ctx context.Context, initialInputs map[string]interfa
 				mlogger := o.logger.With().
 					Str("module", currentNode.instanceID).Logger()
 
+				// Optional lifecycle start (before Execute)
+				if lc, ok := currentNode.module.(ModuleLifecycle); ok {
+					if err := lc.LifecycleStart(execContext); err != nil {
+						completedMutex.Lock()
+						currentNode.status = StatusFailed
+						currentNode.err = err
+						setOverallError(err)
+						completedMutex.Unlock()
+						nodeDoneSignal <- currentNode.instanceID
+						return
+					}
+				}
+
 				currentNode.startTime = time.Now()
 				mlogger.Info().Msg("Executing module")
 
@@ -541,6 +559,8 @@ func (o *Orchestrator) Run(ctx context.Context, initialInputs map[string]interfa
 				completedMutex.Unlock()
 				nodeDoneSignal <- currentNode.instanceID // Signal completion
 			}(node, nodeInputs)
+			// track execution order
+			o.order = append(o.order, node.instanceID)
 		} // end for each node
 
 		if !madeProgressInIteration && len(executionCompleted) < len(o.moduleNodes) {
@@ -567,6 +587,22 @@ func (o *Orchestrator) Run(ctx context.Context, initialInputs map[string]interfa
 	} // end while not all completed
 
 	activeGoroutines.Wait() // Wait for any launched goroutines to finish
+
+	// Teardown lifecycle in reverse order (best-effort)
+	for i := len(o.order) - 1; i >= 0; i-- {
+		id := o.order[i]
+		rn := o.moduleNodes[id]
+		if rn == nil {
+			continue
+		}
+		if lc, ok := rn.module.(ModuleLifecycle); ok {
+			stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			if err := lc.LifecycleStop(stopCtx); err != nil {
+				log.Warn().Err(err).Str("module", id).Msg("Lifecycle stop failed (best-effort)")
+			}
+			cancel()
+		}
+	}
 
 	oStatus := "success"
 	if overallError != nil {

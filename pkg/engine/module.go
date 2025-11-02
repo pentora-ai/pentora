@@ -119,3 +119,18 @@ type Module interface {
 	// and a channel to send its outputs.
 	Execute(ctx context.Context, inputs map[string]interface{}, outputChan chan<- ModuleOutput) error
 }
+
+// ModuleLifecycle is an optional lifecycle interface that a Module can implement
+// to participate in orchestrator-managed setup/start/teardown phases. This is
+// opt-in and does not change the existing Module API.
+//
+// Note: Method names are prefixed with Lifecycle to avoid clashing with the
+// existing Module.Init signature.
+type ModuleLifecycle interface {
+	// LifecycleInit performs runtime initialization with a context (e.g., open connections).
+	LifecycleInit(ctx context.Context) error
+	// LifecycleStart activates long-running resources before Execute.
+	LifecycleStart(ctx context.Context) error
+	// LifecycleStop releases resources; orchestrator calls this best-effort with a timeout.
+	LifecycleStop(ctx context.Context) error
+}
