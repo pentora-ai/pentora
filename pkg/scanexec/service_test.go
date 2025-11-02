@@ -180,6 +180,11 @@ func (m *memScans) GetAnalytics(ctx context.Context, orgID string, period storag
 	return nil, storage.ErrNotSupported
 }
 
+func (m *memScans) ListPaginated(ctx context.Context, orgID string, filter storage.ScanFilter, cursor string, limit int) ([]*storage.ScanMetadata, string, int, error) {
+	// Simple mock implementation: return created scans (no actual pagination)
+	return m.created, "", len(m.created), nil
+}
+
 type memBackend struct{ scans *memScans }
 
 func (b *memBackend) Scans() storage.ScanStore             { return b.scans }

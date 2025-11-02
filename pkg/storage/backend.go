@@ -78,7 +78,28 @@ type ScanStore interface {
 	//
 	// Returns empty slice if no scans match the filter.
 	// Returns error if the operation fails.
+	//
+	// Deprecated: Use ListPaginated for better scalability with large datasets.
 	List(ctx context.Context, orgID string, filter ScanFilter) ([]*ScanMetadata, error)
+
+	// ListPaginated returns a paginated list of scans matching the given filter.
+	//
+	// Parameters:
+	//   - ctx: Request context
+	//   - orgID: Organization identifier (OSS uses "default")
+	//   - filter: Filtering criteria (status, etc.)
+	//   - cursor: Pagination cursor (empty string for first page)
+	//   - limit: Maximum number of results (1-100, default 50)
+	//
+	// Returns:
+	//   - scans: List of scan metadata (up to limit items)
+	//   - nextCursor: Cursor for next page (empty if no more results)
+	//   - total: Total count of scans matching filter
+	//   - error: Error if operation fails
+	//
+	// The cursor is an opaque string that should be passed as-is to get the next page.
+	// Cursors are base64-encoded and URL-safe.
+	ListPaginated(ctx context.Context, orgID string, filter ScanFilter, cursor string, limit int) (scans []*ScanMetadata, nextCursor string, total int, err error)
 
 	// Get retrieves metadata for a specific scan.
 	//

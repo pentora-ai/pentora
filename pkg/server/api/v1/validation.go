@@ -16,7 +16,7 @@ var validate = validator.New()
 type ListScansQuery struct {
 	Status string
 	Limit  int
-	Offset int
+	Cursor string // Opaque cursor for pagination (empty for first page)
 }
 
 // ParseListScansQuery parses and validates query params.
@@ -43,15 +43,10 @@ func ParseListScansQuery(r *http.Request) (*ListScansQuery, error) {
 		}
 		res.Limit = n
 	}
-	if v := strings.TrimSpace(q.Get("offset")); v != "" {
-		n, err := strconv.Atoi(v)
-		if err != nil {
-			return nil, &ValidationError{Field: "offset", Reason: "must be an integer"}
-		}
-		if err := validate.Var(n, "min=0"); err != nil {
-			return nil, &ValidationError{Field: "offset", Reason: "must be >= 0"}
-		}
-		res.Offset = n
+
+	// Cursor parameter (opaque string, no validation needed beyond trimming)
+	if v := strings.TrimSpace(q.Get("cursor")); v != "" {
+		res.Cursor = v
 	}
 
 	// Defaults
