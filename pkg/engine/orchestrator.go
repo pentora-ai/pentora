@@ -49,11 +49,8 @@ type runtimeNode struct {
 	// inputData    map[string]interface{}
 }
 
-type DataContext struct {
-	sync.RWMutex
-	data   map[string]interface{}
-	logger zerolog.Logger // Use a logger for debug/info messages
-}
+// Note: Typed DataContext with generics now exists in datacontext.go.
+// Keep this legacy struct name out to avoid duplicate type; migrate callers gradually.
 
 type Status int
 
@@ -73,90 +70,30 @@ func (s Status) String() string {
 
 // NewDataContext creates and returns a new instance of DataContext
 // with an initialized data map for storing key-value pairs.
-func NewDataContext() *DataContext {
-	return &DataContext{
-		data:   make(map[string]interface{}),
-		logger: log.With().Str("component", "DataContext").Logger(),
-	}
-}
+// NewDataContext now implemented in datacontext.go (typed)
 
 // Set adds or appends a value to the DataContext for a given key.
 // All values are stored as a list ([]interface{}) to consistently handle
 // single or multiple data items (e.g., multiple outputs from different targets for the same DataKey).
-func (dc *DataContext) Set(key string, value interface{}) {
-	dc.Lock()
-	defer dc.Unlock()
-	if existingData, found := dc.data[key]; found {
-		if list, ok := existingData.([]interface{}); ok {
-			dc.data[key] = append(list, value) // Append to existing list
-		} else {
-			// This case implies the key was somehow set with a non-list value directly,
-			// which shouldn't happen if all writes go through this Set method.
-			// Promote to a list, including the existing non-list item.
-			dc.logger.Warn().Str("key", key).
-				Str("existing_type", fmt.Sprintf("%T", existingData)).
-				Str("new_value_type", fmt.Sprintf("%T", value)).
-				Msg("Existing data for key was not a list. Promoting to list and appending new value.")
-			dc.data[key] = []interface{}{existingData, value}
-		}
-	} else {
-		// Key does not exist, create a new list with the value as its first element
-		dc.data[key] = []interface{}{value}
-	}
-
-	dc.logger.Debug().Str("key", key).Str("value_type_added_to_list", fmt.Sprintf("%T", value)).Msg("Set/Appended value in DataContext")
-}
+// Legacy Set removed; use Append/Publish in datacontext.go
 
 // Get retrieves the value associated with the given key from the DataContext.
 // It returns the value and a boolean indicating if the key was found.
-func (dc *DataContext) Get(key string) (interface{}, bool) {
-	dc.RLock()
-	defer dc.RUnlock()
-	value, found := dc.data[key]
-	return value, found
-}
+// Legacy Get(key string)(interface{},bool) removed; use typed Get[T]
 
 // GetAll returns a shallow copy of all data in the context.
-func (dc *DataContext) GetAll() map[string]interface{} {
-	dc.RLock()
-	defer dc.RUnlock()
-	dataCopy := make(map[string]interface{}, len(dc.data))
-	for k, v := range dc.data {
-		dataCopy[k] = v
-	}
-	return dataCopy
-}
+// Legacy GetAll removed
 
 // SetInitial stores an initial input value directly, overwriting if exists.
 // Used for global inputs like "config.targets".
-func (dc *DataContext) SetInitial(key string, value interface{}) {
-	dc.Lock()
-	defer dc.Unlock()
-	dc.data[key] = value
-	log.Trace().Msgf("[DEBUG-CTX-SET-INITIAL] Key: %s, Type: %T, Value: %+v", key, value, value)
-}
+// Legacy SetInitial removed
 
 // AddOrAppendToList adds a value to the DataContext.
 // If the key doesn't exist, it creates a new list with the value.
 // If the key exists and its value is a list, it appends.
 // If the key exists and its value is NOT a list, it converts it to a list and appends.
 // This is primarily for module outputs where multiple outputs for the same DataKey might occur.
-func (dc *DataContext) AddOrAppendToList(key string, value interface{}) {
-	dc.Lock()
-	defer dc.Unlock()
-	if existingData, found := dc.data[key]; found {
-		if list, ok := existingData.([]interface{}); ok {
-			dc.data[key] = append(list, value)
-		} else {
-			// Existing data was not a list, promote to list and append new value
-			dc.data[key] = []interface{}{existingData, value}
-		}
-	} else {
-		// Key does not exist, create a new list with the value
-		dc.data[key] = []interface{}{value}
-	}
-	dc.logger.Trace().Str("key", key).Type("new_value_type", value).Msg("Added/Appended value to DataContext list")
-}
+// Legacy AddOrAppendToList removed
 
 // NewOrchestrator creates and initializes a new Orchestrator instance based on the provided DAGDefinition.
 // It validates the DAG definition, instantiates module nodes, establishes dependencies between nodes based
@@ -436,7 +373,7 @@ func (o *Orchestrator) Run(ctx context.Context, initialInputs map[string]interfa
 						if consumedKeyString == "config.targets" { // Specific handling for initial inputs
 							if _, ok := val.([]string); ok {
 								nodeInputs[consumedKeyString] = val
-								o.dataCtx.logger.Trace().Msgf("Input '%s' for '%s' from DataContext (direct as []string): %+v", consumedKeyString, node.instanceID, val)
+								// trace disabled: no logger on DataContext
 							} else {
 								log.Error().Msgf("[ERROR-ORC] Expected 'config.targets' to be []string in DataContext, got %T", val)
 							}
@@ -580,7 +517,7 @@ func (o *Orchestrator) Run(ctx context.Context, initialInputs map[string]interfa
 			break // Exit main loop
 		}
 		if ctx.Err() != nil { // If main context was canceled
-			o.dataCtx.logger.Err(ctx.Err()).Msg("Orchestrator: Main context error, exiting DAG.")
+			// no-op: DataContext has no logger
 			break
 		}
 
