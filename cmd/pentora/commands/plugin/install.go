@@ -49,9 +49,6 @@ You can install entire categories (ssh, http, tls, database, network) or specifi
 	cmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Plugin cache directory (default: platform-specific, see storage config)")
 	cmd.Flags().String("source", "", "Install from specific source (e.g., 'official')")
 	cmd.Flags().Bool("force", false, "Force re-install even if already cached")
-	cmd.Flags().String("output", "table", "Output format: json, table")
-	cmd.Flags().Bool("quiet", false, "Suppress non-essential output")
-	cmd.Flags().Bool("no-color", false, "Disable colored output")
 
 	return cmd
 }

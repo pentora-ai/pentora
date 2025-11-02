@@ -6,6 +6,8 @@ package plugin
 
 import (
 	"github.com/spf13/cobra"
+
+	"github.com/pentora-ai/pentora/cmd/pentora/internal/format"
 )
 
 // NewCommand creates the plugin command with all subcommands.
@@ -37,7 +39,17 @@ Use these commands to list, inspect, verify, and maintain your plugin cache.`,
 
   # Clean unused cache entries
   pentora plugin clean`,
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			// Validate global --output once for all subcommands
+			output, _ := cmd.Flags().GetString("output")
+			return format.ValidateMode(output)
+		},
 	}
+
+	// Global flags inherited by subcommands
+	cmd.PersistentFlags().String("output", "table", "Output format: json, table")
+	cmd.PersistentFlags().Bool("quiet", false, "Suppress non-essential output")
+	cmd.PersistentFlags().Bool("no-color", false, "Disable colored output")
 
 	// Add subcommands
 	cmd.AddCommand(newListCommand())
