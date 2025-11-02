@@ -13,6 +13,26 @@ import (
 	"github.com/pentora-ai/pentora/pkg/server/api"
 )
 
+// DTO Evolution Policy
+//
+// These request/response DTOs are part of the public API contract used by CLI and HTTP API clients.
+// To evolve them safely without breaking existing clients:
+//
+// 1) Additive-only changes
+//    - You MAY add new optional fields
+//    - You MAY NOT remove or rename existing fields
+//    - Breaking changes require a new API version (v2)
+//
+// 2) Zero-value semantics
+//    - New fields MUST have safe zero-value behavior
+//    - Use `omitempty` for optional JSON fields to preserve old behavior
+//
+// 3) Examples
+//    ✓ Add `Tags []string \`json:"tags,omitempty"\`` (backward compatible)
+//    ✗ Remove or rename existing fields (breaks older clients)
+//
+// See Issue #92 for context and rationale.
+
 // formatSourceList formats a string slice as a comma-separated list.
 // Helper function for generating user-friendly error messages.
 func formatSourceList(items []string) string {

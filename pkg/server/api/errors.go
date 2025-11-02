@@ -11,6 +11,15 @@ import (
 	"github.com/pentora-ai/pentora/pkg/storage"
 )
 
+// Note on API Error DTOs and Evolution Policy
+//
+// The JSON error payloads produced here (error, code, message, etc.) are part of the
+// public API contract. Apply the DTO Evolution Policy:
+// - Additive-only: add optional fields; do not remove/rename existing fields
+// - Zero-value semantics: new fields must have safe zero-values; prefer `omitempty`
+// - Breaking changes should be introduced under a new API version (v2)
+// See Issue #92 for background.
+
 // ErrorResponse represents a standard JSON error response.
 // Used consistently across all API endpoints for error responses.
 //
