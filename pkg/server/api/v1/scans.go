@@ -11,27 +11,27 @@ import (
 
 // ListScansHandler handles GET /api/v1/scans
 //
-// Returns a JSON array of scan metadata (id, status, start time, target count).
+// Returns paginated scan metadata with cursor-based pagination for scalability.
 // This is a lightweight endpoint for listing scans without full details.
+//
+// Query parameters:
+//   - status: Filter by status (pending, running, completed, failed)
+//   - limit: Number of results per page (1-100, default 50)
+//   - cursor: Pagination cursor (empty for first page)
 //
 // Response format:
 //
-//	[
-//	  {"id": "scan-1", "status": "completed", "start_time": "2024-01-01T00:00:00Z", "targets": 10},
-//	  {"id": "scan-2", "status": "running", "start_time": "2024-01-02T00:00:00Z", "targets": 5}
-//	]
-//
-// ListScansHandler handles GET /api/v1/scans
-//
-// Note: This handler currently applies offset-based, in-memory pagination
-// for OSS storage. See Issue #139 for cursor-based pagination to move
-// pagination into the storage layer for scalability.
+//	{
+//	  "scans": [
+//	    {"id": "scan-1", "status": "completed", "start_time": "2024-01-01T00:00:00Z", "targets": 10},
+//	    {"id": "scan-2", "status": "running", "start_time": "2024-01-02T00:00:00Z", "targets": 5}
+//	  ],
+//	  "next_cursor": "eyJpZCI6InNjYW4tMiIsInRzIjoxNzA0MTU4NDAwMDAwMDAwMDAwfQ==",
+//	  "total": 100
+//	}
 func ListScansHandler(deps *api.Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var scans []api.ScanMetadata
-		var err error
-
-		// Parse and validate query params (status, limit, offset)
+		// Parse and validate query params (status, limit, cursor)
 		query, qerr := ParseListScansQuery(r)
 		if qerr != nil {
 			api.WriteJSONError(w, http.StatusBadRequest, "Bad Request", "INVALID_QUERY", qerr.Error())
@@ -44,35 +44,42 @@ func ListScansHandler(deps *api.Deps) http.HandlerFunc {
 			storageFilter.Status = query.Status
 		}
 
-		// Try new storage backend first, fall back to workspace
+		// Use cursor-based pagination from storage layer
 		if deps.Storage != nil {
-			scans, err = listScansFromStorage(r.Context(), deps.Storage, storageFilter)
-		} else if deps.Workspace != nil {
-			scans, err = deps.Workspace.ListScans()
-		} else {
-			err = errors.New("no storage backend configured")
-			api.WriteError(w, r, err)
+			scans, nextCursor, total, err := listScansFromStoragePaginated(
+				r.Context(), deps.Storage, storageFilter, query.Cursor, query.Limit,
+			)
+			if err != nil {
+				api.WriteError(w, r, err)
+				return
+			}
+
+			// Return paginated response with cursor and total
+			response := map[string]interface{}{
+				"scans":       scans,
+				"next_cursor": nextCursor,
+				"total":       total,
+			}
+			api.WriteJSON(w, http.StatusOK, response)
 			return
 		}
 
-		if err != nil {
-			api.WriteError(w, r, err)
+		// Fall back to workspace (legacy, offset-based pagination)
+		if deps.Workspace != nil {
+			scans, err := deps.Workspace.ListScans()
+			if err != nil {
+				api.WriteError(w, r, err)
+				return
+			}
+
+			// Legacy response format (array only, no pagination metadata)
+			api.WriteJSON(w, http.StatusOK, scans)
 			return
 		}
 
-		// Apply offset/limit (server-side pagination). Cursor-based pagination
-		// will replace this in Issue #139 to improve scalability.
-		start := query.Offset
-		if start > len(scans) {
-			start = len(scans)
-		}
-		end := start + query.Limit
-		if end > len(scans) {
-			end = len(scans)
-		}
-		page := scans[start:end]
-
-		api.WriteJSON(w, http.StatusOK, page)
+		// No storage backend configured
+		err := errors.New("no storage backend configured")
+		api.WriteError(w, r, err)
 	}
 }
 
@@ -129,12 +136,12 @@ func GetScanHandler(deps *api.Deps) http.HandlerFunc {
 	}
 }
 
-// listScansFromStorage converts storage scan metadata to API format
-func listScansFromStorage(ctx context.Context, backend storage.Backend, filter storage.ScanFilter) ([]api.ScanMetadata, error) {
-	// Get scans from storage (orgID="default" for OSS)
-	storageScans, err := backend.Scans().List(ctx, "default", filter)
+// listScansFromStoragePaginated uses cursor-based pagination from storage layer
+func listScansFromStoragePaginated(ctx context.Context, backend storage.Backend, filter storage.ScanFilter, cursor string, limit int) ([]api.ScanMetadata, string, int, error) {
+	// Get paginated scans from storage (orgID="default" for OSS)
+	storageScans, nextCursor, total, err := backend.Scans().ListPaginated(ctx, "default", filter, cursor, limit)
 	if err != nil {
-		return nil, err
+		return nil, "", 0, err
 	}
 
 	// Convert to API format
@@ -148,7 +155,7 @@ func listScansFromStorage(ctx context.Context, backend storage.Backend, filter s
 		})
 	}
 
-	return apiScans, nil
+	return apiScans, nextCursor, total, nil
 }
 
 // getScanFromStorage retrieves scan details from storage and converts to API format

@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -166,6 +167,137 @@ func (s *LocalScanStore) List(ctx context.Context, orgID string, filter ScanFilt
 	}
 
 	return scans, nil
+}
+
+// ListPaginated returns a paginated list of scans matching the given filter.
+func (s *LocalScanStore) ListPaginated(ctx context.Context, orgID string, filter ScanFilter, cursor string, limit int) ([]*ScanMetadata, string, int, error) {
+	// Validate limit
+	limit = s.normalizeLimit(limit)
+
+	// Decode cursor
+	cursorData, err := DecodeCursor(cursor)
+	if err != nil {
+		return nil, "", 0, NewInvalidInputError("cursor", err.Error())
+	}
+
+	// Load and filter scans
+	allScans, err := s.loadFilteredScans(ctx, orgID, filter)
+	if err != nil {
+		return nil, "", 0, err
+	}
+
+	// Sort by start time (newest first)
+	s.sortScansByTime(allScans)
+
+	// Paginate results
+	page, nextCursor := s.paginateScans(allScans, cursorData, limit)
+
+	return page, nextCursor, len(allScans), nil
+}
+
+// normalizeLimit validates and normalizes the limit parameter
+func (s *LocalScanStore) normalizeLimit(limit int) int {
+	if limit <= 0 {
+		return 50 // Default
+	}
+	if limit > 100 {
+		return 100 // Max
+	}
+	return limit
+}
+
+// loadFilteredScans loads all scans for an org and applies filters
+func (s *LocalScanStore) loadFilteredScans(ctx context.Context, orgID string, filter ScanFilter) ([]*ScanMetadata, error) {
+	orgDir := filepath.Join(s.root, orgID)
+
+	// Check if org directory exists
+	if _, err := os.Stat(orgDir); os.IsNotExist(err) {
+		return []*ScanMetadata{}, nil
+	}
+
+	// Read all scan directories
+	entries, err := os.ReadDir(orgDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read org directory: %w", err)
+	}
+
+	// Collect matching scans
+	var scans []*ScanMetadata
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		metadata, err := s.Get(ctx, orgID, entry.Name())
+		if err != nil {
+			continue // Skip invalid metadata
+		}
+
+		if s.matchesFilter(metadata, filter) {
+			scans = append(scans, metadata)
+		}
+	}
+
+	return scans, nil
+}
+
+// matchesFilter checks if a scan matches the given filter
+func (s *LocalScanStore) matchesFilter(metadata *ScanMetadata, filter ScanFilter) bool {
+	if filter.Status != "" && string(metadata.Status) != filter.Status {
+		return false
+	}
+	if filter.Target != "" && !strings.Contains(metadata.Target, filter.Target) {
+		return false
+	}
+	return true
+}
+
+// sortScansByTime sorts scans by start time (newest first)
+func (s *LocalScanStore) sortScansByTime(scans []*ScanMetadata) {
+	sort.Slice(scans, func(i, j int) bool {
+		return scans[i].StartedAt.After(scans[j].StartedAt)
+	})
+}
+
+// paginateScans applies cursor-based pagination to scan list
+func (s *LocalScanStore) paginateScans(scans []*ScanMetadata, cursorData *Cursor, limit int) ([]*ScanMetadata, string) {
+	// Find start index from cursor
+	startIdx := s.findCursorPosition(scans, cursorData)
+
+	// Calculate page boundaries
+	endIdx := startIdx + limit
+	if endIdx > len(scans) {
+		endIdx = len(scans)
+	}
+
+	page := scans[startIdx:endIdx]
+
+	// Generate next cursor
+	var nextCursor string
+	if endIdx < len(scans) && len(page) > 0 {
+		lastScan := page[len(page)-1]
+		nextCursor = EncodeCursor(&Cursor{
+			LastScanID: lastScan.ID,
+			LastTime:   lastScan.StartedAt.UnixNano(),
+		})
+	}
+
+	return page, nextCursor
+}
+
+// findCursorPosition finds the starting index for pagination based on cursor
+func (s *LocalScanStore) findCursorPosition(scans []*ScanMetadata, cursorData *Cursor) int {
+	if cursorData == nil {
+		return 0
+	}
+
+	for i, scan := range scans {
+		if scan.ID == cursorData.LastScanID {
+			return i + 1 // Start from next scan
+		}
+	}
+
+	return 0 // Cursor not found, start from beginning
 }
 
 // Get retrieves metadata for a specific scan.

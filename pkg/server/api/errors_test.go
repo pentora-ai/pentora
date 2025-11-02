@@ -273,3 +273,35 @@ func (b *brokenResponseWriter) WriteHeader(statusCode int) {
 	b.statusCode = statusCode
 	b.ResponseRecorder.WriteHeader(statusCode)
 }
+
+func TestHttpStatusText_Default(t *testing.T) {
+	require.Equal(t, http.StatusText(http.StatusTeapot), httpStatusText(http.StatusTeapot))
+}
+
+func TestIsPluginError(t *testing.T) {
+	require.True(t, isPluginError(plugin.ErrPluginNotFound))
+	require.False(t, isPluginError(errors.New("other error")))
+}
+
+func TestWriteError_InvalidInputError(t *testing.T) {
+	invalidErr := &storage.InvalidInputError{}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/scans", nil)
+	w := httptest.NewRecorder()
+
+	WriteError(w, req, invalidErr)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	require.Equal(t, "application/json", w.Header().Get("Content-Type"))
+
+	var response ErrorResponse
+	err := json.NewDecoder(w.Body).Decode(&response)
+	require.NoError(t, err)
+	require.Equal(t, "Bad Request", response.Error)
+	require.Equal(t, "INVALID_INPUT", response.Code)
+	require.Contains(t, response.Message, "invalid")
+}
+
+func TestHttpStatusText_InternalServerError(t *testing.T) {
+	require.Equal(t, "Internal Server Error", httpStatusText(http.StatusInternalServerError))
+}

@@ -2,6 +2,8 @@ package storage
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -520,4 +522,142 @@ func setupTestBackend(t *testing.T) *LocalBackend {
 	})
 
 	return backend
+}
+
+// --- extra tests for full coverage ---
+
+func TestLocalScanStore_NormalizeLimit(t *testing.T) {
+	s := &LocalScanStore{}
+	require.Equal(t, 50, s.normalizeLimit(0))
+	require.Equal(t, 50, s.normalizeLimit(-10))
+	require.Equal(t, 100, s.normalizeLimit(200))
+	require.Equal(t, 25, s.normalizeLimit(25))
+}
+
+func TestLocalScanStore_MatchesFilter(t *testing.T) {
+	s := &LocalScanStore{}
+	meta := &ScanMetadata{Status: string(StatusCompleted), Target: "host1"}
+
+	require.True(t, s.matchesFilter(meta, ScanFilter{}))
+	require.False(t, s.matchesFilter(meta, ScanFilter{Status: string(StatusPending)}))
+	require.False(t, s.matchesFilter(meta, ScanFilter{Target: "xyz"}))
+	require.True(t, s.matchesFilter(meta, ScanFilter{Target: "host"}))
+}
+
+func TestLocalScanStore_SortAndFindCursor(t *testing.T) {
+	s := &LocalScanStore{}
+	now := time.Now()
+	scans := []*ScanMetadata{
+		{ID: "1", StartedAt: now.Add(-3 * time.Minute)},
+		{ID: "2", StartedAt: now.Add(-1 * time.Minute)},
+		{ID: "3", StartedAt: now.Add(-2 * time.Minute)},
+	}
+
+	// sort by time descending
+	s.sortScansByTime(scans)
+	require.Equal(t, "2", scans[0].ID)
+
+	// find cursor positions
+	require.Equal(t, 0, s.findCursorPosition(scans, nil))
+	require.Equal(t, 1, s.findCursorPosition(scans, &Cursor{LastScanID: "2"}))
+	require.Equal(t, 0, s.findCursorPosition(scans, &Cursor{LastScanID: "x"}))
+}
+
+func TestLocalScanStore_PaginateScans(t *testing.T) {
+	s := &LocalScanStore{}
+	now := time.Now()
+	scans := []*ScanMetadata{
+		{ID: "a", StartedAt: now.Add(-3 * time.Minute)},
+		{ID: "b", StartedAt: now.Add(-2 * time.Minute)},
+		{ID: "c", StartedAt: now.Add(-1 * time.Minute)},
+	}
+
+	// first page (no cursor)
+	page, next := s.paginateScans(scans, nil, 2)
+	require.Len(t, page, 2)
+	require.NotEmpty(t, next)
+
+	// continue with cursor
+	cur, err := DecodeCursor(next)
+	require.NoError(t, err)
+	page2, next2 := s.paginateScans(scans, cur, 2)
+	require.Len(t, page2, 1)
+	require.Empty(t, next2)
+}
+
+func TestLocalScanStore_ListPaginated_AllBranches(t *testing.T) {
+	ctx := context.Background()
+	backend := setupTestBackend(t)
+	store := backend.Scans().(*LocalScanStore)
+
+	// create sample scans
+	now := time.Now()
+	for i := 0; i < 3; i++ {
+		scan := &ScanMetadata{
+			ID:        fmt.Sprintf("scan-%d", i),
+			Target:    "target",
+			Status:    string(StatusCompleted),
+			StartedAt: now.Add(-time.Duration(i) * time.Hour),
+		}
+		require.NoError(t, store.Create(ctx, "org", scan))
+	}
+
+	// valid pagination
+	cur := &Cursor{LastScanID: "scan-0", LastTime: now.UnixNano()}
+	cursorStr := EncodeCursor(cur)
+	page, next, total, err := store.ListPaginated(ctx, "org", ScanFilter{}, cursorStr, 1)
+	require.NoError(t, err)
+	require.NotEmpty(t, page)
+	require.NotZero(t, total)
+	require.NotEmpty(t, next)
+
+	// invalid cursor encoding
+	pageBad, nextBad, totalBad, err2 := store.ListPaginated(ctx, "org", ScanFilter{}, "%%%bad", 2)
+	require.Error(t, err2)
+	require.True(t, IsInvalidInput(err2))
+	require.Nil(t, pageBad)
+	require.Empty(t, nextBad)
+	require.Zero(t, totalBad)
+
+	// missing org
+	page, next, total, err = store.ListPaginated(ctx, "no-org", ScanFilter{}, "", 2)
+	require.NoError(t, err)
+	require.Empty(t, page)
+	require.Zero(t, total)
+	require.Empty(t, next)
+
+	// limit normalization
+	page, _, _, err = store.ListPaginated(ctx, "org", ScanFilter{}, "", 0)
+	require.NoError(t, err)
+	require.NotEmpty(t, page)
+	page, _, _, err = store.ListPaginated(ctx, "org", ScanFilter{}, "", 999)
+	require.NoError(t, err)
+	require.NotEmpty(t, page)
+}
+
+func TestLocalScanStore_LoadFilteredScans_Cases(t *testing.T) {
+	ctx := context.Background()
+	backend := setupTestBackend(t)
+	store := backend.Scans().(*LocalScanStore)
+
+	// no org dir
+	scans, err := store.loadFilteredScans(ctx, "none", ScanFilter{})
+	require.NoError(t, err)
+	require.Empty(t, scans)
+
+	// valid dir
+	org := "orgx"
+	require.NoError(t, os.MkdirAll(filepath.Join(store.root, org, "scan1"), 0o755))
+	meta := &ScanMetadata{
+		ID:        "scan1",
+		Target:    "target",
+		Status:    string(StatusCompleted),
+		StartedAt: time.Now(),
+	}
+	data, _ := json.Marshal(meta)
+	require.NoError(t, os.WriteFile(filepath.Join(store.root, org, "scan1", "metadata.json"), data, 0o644))
+
+	scans, err = store.loadFilteredScans(ctx, org, ScanFilter{})
+	require.NoError(t, err)
+	require.Len(t, scans, 1)
 }

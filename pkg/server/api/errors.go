@@ -51,11 +51,17 @@ func WriteError(w http.ResponseWriter, r *http.Request, err error) {
 	} else {
 		// Check for storage errors
 		var notFoundErr *storage.NotFoundError
+		var invalidInputErr *storage.InvalidInputError
 		if errors.As(err, &notFoundErr) {
 			statusCode = http.StatusNotFound
 			errorType = "Not Found"
 			errorCode = "RESOURCE_NOT_FOUND"
 			message = notFoundErr.Error()
+		} else if errors.As(err, &invalidInputErr) {
+			statusCode = http.StatusBadRequest
+			errorType = "Bad Request"
+			errorCode = "INVALID_INPUT"
+			message = invalidInputErr.Error()
 		} else {
 			// Generic error - return 500
 			statusCode = http.StatusInternalServerError

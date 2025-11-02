@@ -87,16 +87,7 @@ func TestListScansHandler_InvalidLimit(t *testing.T) {
 	require.Equal(t, http.StatusBadRequest, w.Code)
 }
 
-func TestListScansHandler_InvalidOffset(t *testing.T) {
-	deps := &api.Deps{}
-	handler := ListScansHandler(deps)
-
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/scans?offset=-1", nil)
-	w := httptest.NewRecorder()
-	handler(w, req)
-
-	require.Equal(t, http.StatusBadRequest, w.Code)
-}
+// TestListScansHandler_InvalidOffset removed - cursor-based pagination doesn't use offset
 
 func TestListScansHandler_DefaultLimitApplied(t *testing.T) {
 	// With storage backend; ensure pagination does not panic when list is empty
@@ -361,6 +352,33 @@ func (m *mockScanStore) GetAnalytics(ctx context.Context, orgID string, period s
 	return nil, storage.ErrNotSupported
 }
 
+func (m *mockScanStore) ListPaginated(ctx context.Context, orgID string, filter storage.ScanFilter, cursor string, limit int) ([]*storage.ScanMetadata, string, int, error) {
+	if m.backend.listError != nil {
+		return nil, "", 0, m.backend.listError
+	}
+
+	// Validate cursor (mimics real storage behavior)
+	if cursor != "" {
+		_, err := storage.DecodeCursor(cursor)
+		if err != nil {
+			return nil, "", 0, storage.NewInvalidInputError("cursor", err.Error())
+		}
+	}
+
+	scans := m.backend.scans
+	if filter.Status != "" {
+		filtered := make([]*storage.ScanMetadata, 0, len(scans))
+		for _, s := range scans {
+			if s.Status == filter.Status {
+				filtered = append(filtered, s)
+			}
+		}
+		scans = filtered
+	}
+	// Simple mock: return all matching scans, no actual pagination
+	return scans, "", len(scans), nil
+}
+
 func (m *mockStorageBackend) Initialize(ctx context.Context) error {
 	return nil
 }
@@ -404,12 +422,18 @@ func TestListScansHandler_WithStorage(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 	require.Equal(t, "application/json", w.Header().Get("Content-Type"))
 
-	var scans []api.ScanMetadata
-	err := json.NewDecoder(w.Body).Decode(&scans)
+	var response struct {
+		Scans      []api.ScanMetadata `json:"scans"`
+		NextCursor string             `json:"next_cursor"`
+		Total      int                `json:"total"`
+	}
+	err := json.NewDecoder(w.Body).Decode(&response)
 	require.NoError(t, err)
-	require.Len(t, scans, 2)
-	require.Equal(t, "storage-scan-1", scans[0].ID)
-	require.Equal(t, "completed", scans[0].Status)
+	require.Len(t, response.Scans, 2)
+	require.Equal(t, "storage-scan-1", response.Scans[0].ID)
+	require.Equal(t, "completed", response.Scans[0].Status)
+	require.Equal(t, "", response.NextCursor) // No cursor for small result set
+	require.Equal(t, 2, response.Total)
 }
 
 func TestListScansHandler_StatusFilter(t *testing.T) {
@@ -429,10 +453,15 @@ func TestListScansHandler_StatusFilter(t *testing.T) {
 	handler.ServeHTTP(w, req)
 
 	require.Equal(t, http.StatusOK, w.Code)
-	var scans []api.ScanMetadata
-	require.NoError(t, json.NewDecoder(w.Body).Decode(&scans))
-	require.Len(t, scans, 2)
-	require.Equal(t, "running", scans[0].Status)
+	var response struct {
+		Scans      []api.ScanMetadata `json:"scans"`
+		NextCursor string             `json:"next_cursor"`
+		Total      int                `json:"total"`
+	}
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&response))
+	require.Len(t, response.Scans, 2)
+	require.Equal(t, "running", response.Scans[0].Status)
+	require.Equal(t, 2, response.Total)
 }
 
 func TestListScansHandler_InvalidStatus(t *testing.T) {
@@ -445,7 +474,7 @@ func TestListScansHandler_InvalidStatus(t *testing.T) {
 	require.Equal(t, http.StatusBadRequest, w.Code)
 }
 
-func TestListScansHandler_NonIntegerLimitOffset(t *testing.T) {
+func TestListScansHandler_NonIntegerLimit(t *testing.T) {
 	deps := &api.Deps{}
 	handler := ListScansHandler(deps)
 
@@ -454,10 +483,7 @@ func TestListScansHandler_NonIntegerLimitOffset(t *testing.T) {
 	handler.ServeHTTP(w, req)
 	require.Equal(t, http.StatusBadRequest, w.Code)
 
-	req2 := httptest.NewRequest(http.MethodGet, "/api/v1/scans?offset=abc", nil)
-	w2 := httptest.NewRecorder()
-	handler.ServeHTTP(w2, req2)
-	require.Equal(t, http.StatusBadRequest, w2.Code)
+	// Cursor is opaque string, no integer validation needed
 }
 
 func TestListScansHandler_OffsetBoundary(t *testing.T) {
@@ -471,23 +497,25 @@ func TestListScansHandler_OffsetBoundary(t *testing.T) {
 	deps := &api.Deps{Storage: mockStorage}
 	handler := ListScansHandler(deps)
 
-	// offset == len(list) -> empty page OK
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/scans?offset=2&limit=50", nil)
+	// First page with cursor pagination
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/scans?limit=50", nil)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
-	var scans []api.ScanMetadata
-	require.NoError(t, json.NewDecoder(w.Body).Decode(&scans))
-	require.Len(t, scans, 0)
+	var response struct {
+		Scans      []api.ScanMetadata `json:"scans"`
+		NextCursor string             `json:"next_cursor"`
+		Total      int                `json:"total"`
+	}
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&response))
+	require.Len(t, response.Scans, 2)
+	require.Equal(t, 2, response.Total)
 
-	// offset > len(list) -> empty page OK
-	req2 := httptest.NewRequest(http.MethodGet, "/api/v1/scans?offset=3&limit=50", nil)
+	// Invalid cursor returns 400 from storage layer
+	req2 := httptest.NewRequest(http.MethodGet, "/api/v1/scans?cursor=invalid&limit=50", nil)
 	w2 := httptest.NewRecorder()
 	handler.ServeHTTP(w2, req2)
-	require.Equal(t, http.StatusOK, w2.Code)
-	scans = nil
-	require.NoError(t, json.NewDecoder(w2.Body).Decode(&scans))
-	require.Len(t, scans, 0)
+	require.Equal(t, http.StatusBadRequest, w2.Code) // Invalid cursor validation
 }
 
 func TestListScansHandler_StorageError(t *testing.T) {
