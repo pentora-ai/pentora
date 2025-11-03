@@ -15,6 +15,7 @@ build
 
 *.md
 !README.md
+!CONTRIBUTING.md
 
 # UI build artifacts
 /pkg/ui/dist/*

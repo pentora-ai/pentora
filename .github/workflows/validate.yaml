@@ -52,11 +52,6 @@ jobs:
       - name: Validate
         run: make validate-files
 
-      - name: Check error handling patterns
-        run: |
-          chmod +x .github/scripts/check-error-handling.sh
-          .github/scripts/check-error-handling.sh
-
   validate-generate:
     runs-on: ubuntu-latest
 
@@ -76,3 +71,60 @@ jobs:
         run: |
           go mod tidy
           git diff --exit-code
+
+  error-handling:
+    name: Error Handling Standards (${{ matrix.target }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Plugin commands (REQUIRED - enforced)
+          - target: plugin
+            path: cmd/pentora/commands/plugin
+            pattern: 'return\s+formatter\.PrintError\s*\('
+            suggestion: 'Use formatter.PrintTotalFailureSummary(operation, err, plugin.ErrorCode(err))'
+            required: true
+
+          # Future targets (NOT YET ENFORCED - will be enabled as standards are defined)
+          # - target: scan
+          #   path: cmd/pentora/commands/scan
+          #   pattern: 'return\s+formatter\.PrintError\s*\('
+          #   suggestion: 'Use standardized error wrapper (TBD)'
+          #   required: false
+          #
+          # - target: storage
+          #   path: cmd/pentora/commands/storage
+          #   pattern: 'return\s+formatter\.PrintError\s*\('
+          #   suggestion: 'Use standardized error wrapper (TBD)'
+          #   required: false
+          #
+          # - target: server
+          #   path: cmd/pentora/commands/server
+          #   pattern: 'return\s+formatter\.PrintError\s*\('
+          #   suggestion: 'Use standardized error wrapper (TBD)'
+          #   required: false
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Install ripgrep
+        run: |
+          curl -LO https://github.com/BurntSushi/ripgrep/releases/download/14.1.0/ripgrep_14.1.0-1_amd64.deb
+          sudo dpkg -i ripgrep_14.1.0-1_amd64.deb
+
+      - name: Check error handling patterns
+        run: |
+          chmod +x .github/scripts/check-error-handling.sh
+          .github/scripts/check-error-handling.sh \
+            "${{ matrix.path }}" \
+            "${{ matrix.pattern }}" \
+            "${{ matrix.suggestion }}"
+
+      - name: Report non-required violations
+        if: failure() && matrix.required == false
+        run: |
+          echo "::warning::Error handling violations found in ${{ matrix.target }}, but not yet enforced"
+          exit 0
