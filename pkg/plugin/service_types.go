@@ -6,6 +6,29 @@ package plugin
 
 import "time"
 
+// DTO Evolution Policy
+//
+// These types form the public API contract used by CLI, HTTP API, and future gRPC.
+// To avoid breaking existing clients, follow these rules:
+//
+// 1. Additive-only changes:
+//    - You MAY add new optional fields
+//    - You MAY NOT remove or rename existing fields
+//    - Breaking changes require a new API version (v2)
+//
+// 2. Zero-value semantics:
+//    - New fields MUST have safe zero-value behavior
+//    - Zero-value MUST preserve existing behavior
+//    - Use `omitempty` for optional JSON fields
+//
+// 3. Examples:
+//    ✓ Adding `Timeout time.Duration` (zero = no timeout, preserves old behavior)
+//    ✓ Adding `Tags []string \`json:"tags,omitempty"\`` (zero = empty, backward compatible)
+//    ✗ Removing `Force bool` (old clients still send it)
+//    ✗ Making an optional field required (old clients don't send it)
+//
+// See Issue #92 for background and rationale.
+
 // Service layer types for plugin operations
 // These types are used by the service layer to abstract business logic
 // from the CMD and API layers.

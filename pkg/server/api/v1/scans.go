@@ -10,10 +10,22 @@ import (
 )
 
 // DTO Evolution Policy
-// - Favor additive changes; avoid breaking fields
-// - Keep zero-values safe; document defaults for new fields
-// - For breaking changes, introduce /api/v2 with separate DTOs
-// - Use `omitempty` for optional fields; treat nil as absent
+// The request/response payloads handled in this file are part of the public API
+// contract. To evolve them safely without breaking existing clients:
+//
+// 1) Additive-only changes
+//    - You MAY add new optional fields
+//    - You MAY NOT remove or rename existing fields
+//    - Breaking changes require a new API version (v2)
+//
+// 2) Zero-value semantics
+//    - New fields MUST have safe zero-value behavior
+//    - Prefer `omitempty` for optional JSON fields to preserve old behavior
+//    - Treat nil slices/maps/pointers as "absent" (distinct from empty) when applicable
+//
+// 3) Examples
+//    ✓ Add `Tags []string \`json:"tags,omitempty"\`` (backward compatible)
+//    ✗ Remove or rename existing fields (breaks older clients)
 
 // ListScansHandler handles GET /api/v1/scans
 //
