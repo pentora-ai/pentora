@@ -121,6 +121,50 @@ func TestResolve_ThresholdFiltersLowConfidence(t *testing.T) {
 	}
 }
 
+func TestResolve_SkipsDifferentProtocolAndNonMatchingAndHardExclude(t *testing.T) {
+    rules := []StaticRule{
+        { // different protocol should be skipped
+            ID:        "ftp",
+            Protocol:  "ftp",
+            Product:   "FTPd",
+            Vendor:    "V",
+            CPE:       "cpe:/a:v:ftpd",
+            Match:     `^220`,
+        },
+        { // matches pattern but hard-exclude knocks it out
+            ID:               "hx",
+            Protocol:         "http",
+            Product:          "BadSvc",
+            Vendor:           "V",
+            CPE:              "cpe:/a:v:bad",
+            Match:            `server: bad`,
+            ExcludePatterns:  []string{`blockme`},
+            PatternStrength:  0.90,
+        },
+        { // proper candidate that should win
+            ID:              "ok",
+            Protocol:        "http",
+            Product:         "GoodSvc",
+            Vendor:          "V",
+            CPE:             "cpe:/a:v:good",
+            Match:           `server: good`,
+            PatternStrength: 0.80,
+        },
+    }
+    rb := NewRuleBasedResolver(rules)
+
+    // Banner triggers: FTP rule is different protocol (skip),
+    // second rule matches but contains hard-exclude token, third matches and should be selected.
+    banner := "Server: GOOD\nserver: bad blockme" // includes both patterns; hard exclude applies only to bad
+    res, err := rb.Resolve(context.TODO(), Input{Protocol: "http", Banner: banner})
+    if err != nil {
+        t.Fatalf("unexpected error: %v", err)
+    }
+    if res.Product != "GoodSvc" {
+        t.Fatalf("expected GoodSvc to be selected, got %s", res.Product)
+    }
+}
+
 func TestPrepareRules_EmptyAndNoVersionRegex(t *testing.T) {
 	rules := []StaticRule{{
 		ID:       "r2",
