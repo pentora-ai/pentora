@@ -13,9 +13,12 @@ import (
 //go:embed data/fingerprint_db.yaml
 var embeddedFingerprintYAML []byte
 
+// indirection for testing error paths
+var parseYAMLFn = parseFingerprintYAML
+
 // loadBuiltinRules loads fingerprint rules embedded in the binary.
 func loadBuiltinRules() []StaticRule {
-	rules, err := parseFingerprintYAML(embeddedFingerprintYAML)
+	rules, err := parseYAMLFn(embeddedFingerprintYAML)
 	if err != nil {
 		fmt.Printf("Failed to load embedded fingerprint rules: %v\n", err)
 		return nil
