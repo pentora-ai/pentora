@@ -340,3 +340,268 @@ func TestResolve_ReturnsErrorWhenNoCandidatesPassThreshold(t *testing.T) {
 		t.Fatalf("expected error due to threshold filtering of all candidates")
 	}
 }
+
+// MySQL Perfect Implementation Tests (Phase 3)
+
+func TestResolve_MySQLHandshake_MySQL57(t *testing.T) {
+	rules := []StaticRule{{
+		ID:                  "mysql.mysql",
+		Protocol:            "mysql",
+		Product:             "MySQL",
+		Vendor:              "Oracle",
+		CPE:                 "cpe:2.3:a:oracle:mysql:*:*:*:*:*:*:*:*",
+		Match:               `\x00\x00\x00\x0a`,
+		VersionExtraction:   `\x0a([\d\.p]+[\w\-]*)`,
+		ExcludePatterns:     []string{`http/`, `<html`, `<!doctype`, `<body`},
+		SoftExcludePatterns: []string{`error`, `denied`, `refused`, `unavailable`},
+		PatternStrength:     0.90,
+		PortBonuses:         []int{3306, 33060},
+		BinaryMinLength:     10,
+		BinaryMagic:         []string{`\x00\x00\x00\x0a`},
+	}}
+	rb := NewRuleBasedResolver(rules)
+
+	// Simulate MySQL 5.7 handshake banner
+	banner := "\x00\x00\x00\x0a5.7.44-log\x00"
+	res, err := rb.Resolve(context.TODO(), Input{Protocol: "mysql", Banner: banner, Port: 3306})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.Product != "MySQL" {
+		t.Fatalf("expected MySQL, got %s", res.Product)
+	}
+	if res.Version != "5.7.44-log" {
+		t.Fatalf("expected version 5.7.44-log, got %s", res.Version)
+	}
+	if res.Confidence < 0.90 {
+		t.Fatalf("expected high confidence (>0.90), got %v", res.Confidence)
+	}
+}
+
+func TestResolve_MySQLHandshake_MySQL80(t *testing.T) {
+	rules := []StaticRule{{
+		ID:                  "mysql.mysql",
+		Protocol:            "mysql",
+		Product:             "MySQL",
+		Vendor:              "Oracle",
+		CPE:                 "cpe:2.3:a:oracle:mysql:*:*:*:*:*:*:*:*",
+		Match:               `\x00\x00\x00\x0a`,
+		VersionExtraction:   `\x0a([\d\.p]+[\w\-]*)`,
+		ExcludePatterns:     []string{`http/`, `<html`, `<!doctype`, `<body`},
+		SoftExcludePatterns: []string{`error`, `denied`, `refused`, `unavailable`},
+		PatternStrength:     0.90,
+		PortBonuses:         []int{3306, 33060},
+		BinaryMinLength:     10,
+		BinaryMagic:         []string{`\x00\x00\x00\x0a`},
+	}}
+	rb := NewRuleBasedResolver(rules)
+
+	// Simulate MySQL 8.0 handshake banner
+	banner := "\x00\x00\x00\x0a8.0.35\x00"
+	res, err := rb.Resolve(context.TODO(), Input{Protocol: "mysql", Banner: banner, Port: 3306})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.Product != "MySQL" {
+		t.Fatalf("expected MySQL, got %s", res.Product)
+	}
+	if res.Version != "8.0.35" {
+		t.Fatalf("expected version 8.0.35, got %s", res.Version)
+	}
+	if res.Confidence < 0.90 {
+		t.Fatalf("expected high confidence (>0.90), got %v", res.Confidence)
+	}
+}
+
+func TestResolve_MySQLHandshake_MariaDB(t *testing.T) {
+	rules := []StaticRule{{
+		ID:                  "mysql.mysql",
+		Protocol:            "mysql",
+		Product:             "MySQL",
+		Vendor:              "Oracle",
+		CPE:                 "cpe:2.3:a:oracle:mysql:*:*:*:*:*:*:*:*",
+		Match:               `\x00\x00\x00\x0a`,
+		VersionExtraction:   `\x0a([\d\.p]+[\w\-]*)`,
+		ExcludePatterns:     []string{`http/`, `<html`, `<!doctype`, `<body`},
+		SoftExcludePatterns: []string{`error`, `denied`, `refused`, `unavailable`},
+		PatternStrength:     0.90,
+		PortBonuses:         []int{3306, 33060},
+		BinaryMinLength:     10,
+		BinaryMagic:         []string{`\x00\x00\x00\x0a`},
+	}}
+	rb := NewRuleBasedResolver(rules)
+
+	// Simulate MariaDB handshake banner
+	banner := "\x00\x00\x00\x0a10.11.6-MariaDB\x00"
+	res, err := rb.Resolve(context.TODO(), Input{Protocol: "mysql", Banner: banner, Port: 3306})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.Product != "MySQL" {
+		t.Fatalf("expected MySQL (MariaDB compatible), got %s", res.Product)
+	}
+	if res.Version != "10.11.6-mariadb" {
+		t.Fatalf("expected version 10.11.6-mariadb, got %s", res.Version)
+	}
+	if res.Confidence < 0.90 {
+		t.Fatalf("expected high confidence (>0.90), got %v", res.Confidence)
+	}
+}
+
+func TestResolve_MySQLHandshake_PortBonus(t *testing.T) {
+	rules := []StaticRule{{
+		ID:                  "mysql.mysql",
+		Protocol:            "mysql",
+		Product:             "MySQL",
+		Vendor:              "Oracle",
+		CPE:                 "cpe:2.3:a:oracle:mysql:*:*:*:*:*:*:*:*",
+		Match:               `\x00\x00\x00\x0a`,
+		VersionExtraction:   `\x0a([\d\.p]+[\w\-]*)`,
+		ExcludePatterns:     []string{`http/`, `<html`, `<!doctype`, `<body`},
+		SoftExcludePatterns: []string{`error`, `denied`, `refused`, `unavailable`},
+		PatternStrength:     0.90,
+		PortBonuses:         []int{3306, 33060},
+		BinaryMinLength:     10,
+		BinaryMagic:         []string{`\x00\x00\x00\x0a`},
+	}}
+	rb := NewRuleBasedResolver(rules)
+
+	banner := "\x00\x00\x00\x0a8.0.35\x00"
+
+	// Test with standard MySQL port (should get bonus)
+	resWithBonus, err := rb.Resolve(context.TODO(), Input{Protocol: "mysql", Banner: banner, Port: 3306})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Test with non-standard port (no bonus)
+	resNoBonus, err := rb.Resolve(context.TODO(), Input{Protocol: "mysql", Banner: banner, Port: 9999})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Confidence should be higher with port bonus
+	if resWithBonus.Confidence <= resNoBonus.Confidence {
+		t.Fatalf("expected port bonus to increase confidence: with=%v, without=%v", resWithBonus.Confidence, resNoBonus.Confidence)
+	}
+}
+
+func TestResolve_MySQLHandshake_HTTPFalsePositiveRejection(t *testing.T) {
+	rules := []StaticRule{{
+		ID:                  "mysql.mysql",
+		Protocol:            "mysql",
+		Product:             "MySQL",
+		Vendor:              "Oracle",
+		CPE:                 "cpe:2.3:a:oracle:mysql:*:*:*:*:*:*:*:*",
+		Match:               `\x00\x00\x00\x0a`,
+		VersionExtraction:   `\x0a([\d\.p]+[\w\-]*)`,
+		ExcludePatterns:     []string{`http/`, `<html`, `<!doctype`, `<body`},
+		SoftExcludePatterns: []string{`error`, `denied`, `refused`, `unavailable`},
+		PatternStrength:     0.90,
+		PortBonuses:         []int{3306, 33060},
+		BinaryMinLength:     10,
+		BinaryMagic:         []string{`\x00\x00\x00\x0a`},
+	}}
+	rb := NewRuleBasedResolver(rules)
+
+	testCases := []struct {
+		name   string
+		banner string
+	}{
+		{"HTTP Response Header", "http/1.1 200 ok\r\ncontent-type: text/html\r\n\r\n\x00\x00\x00\x0amysql"},
+		{"HTML Document", "<html><body>\x00\x00\x00\x0amysql</body></html>"},
+		{"HTML Doctype", "<!doctype html>\x00\x00\x00\x0amysql"},
+		{"HTML Body Tag", "<body>\x00\x00\x00\x0amysql</body>"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := rb.Resolve(context.TODO(), Input{Protocol: "mysql", Banner: tc.banner})
+			if err == nil {
+				t.Fatalf("expected HTTP false positive to be rejected for: %s", tc.name)
+			}
+		})
+	}
+}
+
+func TestResolve_MySQLHandshake_SoftExcludePenalty(t *testing.T) {
+	rules := []StaticRule{{
+		ID:                  "mysql.mysql",
+		Protocol:            "mysql",
+		Product:             "MySQL",
+		Vendor:              "Oracle",
+		CPE:                 "cpe:2.3:a:oracle:mysql:*:*:*:*:*:*:*:*",
+		Match:               `\x00\x00\x00\x0a`,
+		VersionExtraction:   `\x0a([\d\.p]+[\w\-]*)`,
+		ExcludePatterns:     []string{`http/`, `<html`, `<!doctype`, `<body`},
+		SoftExcludePatterns: []string{`error`, `denied`, `refused`, `unavailable`},
+		PatternStrength:     0.90,
+		PortBonuses:         []int{3306, 33060},
+		BinaryMinLength:     10,
+		BinaryMagic:         []string{`\x00\x00\x00\x0a`},
+	}}
+	rb := NewRuleBasedResolver(rules)
+
+	// Normal MySQL handshake
+	normalBanner := "\x00\x00\x00\x0a8.0.35\x00"
+	normalRes, err := rb.Resolve(context.TODO(), Input{Protocol: "mysql", Banner: normalBanner, Port: 3306})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// MySQL handshake with error text (should get penalized)
+	errorBanner := "\x00\x00\x00\x0a8.0.35\x00 access denied error"
+	errorRes, err := rb.Resolve(context.TODO(), Input{Protocol: "mysql", Banner: errorBanner, Port: 3306})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Error banner should have lower confidence due to soft exclude penalty
+	if errorRes.Confidence >= normalRes.Confidence {
+		t.Fatalf("expected soft exclude to penalize confidence: normal=%v, error=%v", normalRes.Confidence, errorRes.Confidence)
+	}
+}
+
+func TestResolve_MySQLHandshake_VersionExtractionEdgeCases(t *testing.T) {
+	rules := []StaticRule{{
+		ID:                  "mysql.mysql",
+		Protocol:            "mysql",
+		Product:             "MySQL",
+		Vendor:              "Oracle",
+		CPE:                 "cpe:2.3:a:oracle:mysql:*:*:*:*:*:*:*:*",
+		Match:               `\x00\x00\x00\x0a`,
+		VersionExtraction:   `\x0a([\d\.p]+[\w\-]*)`,
+		ExcludePatterns:     []string{`http/`, `<html`, `<!doctype`, `<body`},
+		SoftExcludePatterns: []string{`error`, `denied`, `refused`, `unavailable`},
+		PatternStrength:     0.90,
+		PortBonuses:         []int{3306, 33060},
+		BinaryMinLength:     10,
+		BinaryMagic:         []string{`\x00\x00\x00\x0a`},
+	}}
+	rb := NewRuleBasedResolver(rules)
+
+	testCases := []struct {
+		name            string
+		banner          string
+		expectedVersion string
+	}{
+		{"Simple Version", "\x00\x00\x00\x0a8.0.35\x00", "8.0.35"},
+		{"Version with Patch", "\x00\x00\x00\x0a5.7.44p1\x00", "5.7.44p1"},
+		{"Version with Suffix", "\x00\x00\x00\x0a8.0.35-log\x00", "8.0.35-log"},
+		{"MariaDB Version", "\x00\x00\x00\x0a10.11.6-MariaDB\x00", "10.11.6-mariadb"},
+		{"Percona Version", "\x00\x00\x00\x0a8.0.35-27-percona\x00", "8.0.35-27-percona"},
+		{"No Version", "\x00\x00\x00\x0a\x00", ""},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			res, err := rb.Resolve(context.TODO(), Input{Protocol: "mysql", Banner: tc.banner, Port: 3306})
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if res.Version != tc.expectedVersion {
+				t.Fatalf("expected version %s, got %s", tc.expectedVersion, res.Version)
+			}
+		})
+	}
+}

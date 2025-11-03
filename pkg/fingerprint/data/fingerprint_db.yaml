@@ -33,8 +33,32 @@ rules:
     product: 'MySQL'
     vendor: 'Oracle'
     cpe: 'cpe:2.3:a:oracle:mysql:*:*:*:*:*:*:*:*'
-    match: "^\\[\\x00\\x00\\x00\\x0a" # MySQL protocol header
-    version_extraction: "\\x0a([\\w\\.\\-]+)"
+
+    # Main pattern: MySQL binary handshake structure
+    match: "\\x00\\x00\\x00\\x0a"
+    version_extraction: "\\x0a([\\d\\.p]+[\\w\\-]*)"
+
+    # Anti-patterns: Prevent HTTP false positives
+    exclude_patterns:
+      - "http/"
+      - "<html"
+      - "<!doctype"
+      - "<body"
+
+    # Soft excludes: Reduce confidence for error responses
+    soft_exclude_patterns:
+      - "error"
+      - "denied"
+      - "refused"
+      - "unavailable"
+
+    # Confidence scoring
+    pattern_strength: 0.90  # High confidence for binary structure match
+    port_bonuses: [3306, 33060]  # MySQL and MySQL X Protocol ports
+
+    # Binary verification hints
+    binary_min_length: 10
+    binary_magic: ["\\x00\\x00\\x00\\x0a"]
 
   - id: 'smtp.postfix'
     protocol: 'smtp'
