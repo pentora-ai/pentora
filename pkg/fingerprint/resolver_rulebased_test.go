@@ -57,8 +57,142 @@ func TestResolve_BackwardCompatibility(t *testing.T) {
 	if res.Product != "MyHTTP" || res.Vendor != "Acme" || res.Version != "1.2.3" {
 		t.Fatalf("unexpected result: %+v", res)
 	}
-	if res.Confidence != 1.0 {
-		t.Fatalf("expected confidence 1.0, got %v", res.Confidence)
+	if res.Confidence <= 0.5 || res.Confidence > 1.0 {
+		t.Fatalf("expected confidence in (0.5,1], got %v", res.Confidence)
+	}
+}
+
+func TestResolve_MultiPhaseSelectionAndPenalties(t *testing.T) {
+	rules := []StaticRule{
+		{
+			ID:                "a",
+			Protocol:          "http",
+			Product:           "SvcA",
+			Vendor:            "V",
+			CPE:               "cpe:/a:v:svca",
+			Match:             `server: svc`,
+			VersionExtraction: `svc/(\d+\.\d+)`,
+			PatternStrength:   0.80,
+			// soft exclude matches will penalize this candidate
+			SoftExcludePatterns: []string{`beta`},
+		},
+		{
+			ID:                "b",
+			Protocol:          "http",
+			Product:           "SvcB",
+			Vendor:            "V",
+			CPE:               "cpe:/a:v:svcb",
+			Match:             `server: svc`,
+			VersionExtraction: `svc/(\d+\.\d+)`,
+			PatternStrength:   0.75,
+			// no soft excludes
+			PortBonuses: []int{8080},
+		},
+	}
+	rb := NewRuleBasedResolver(rules)
+
+	// Banner matches both; includes "beta" to penalize A. Port 8080 gives B a small bonus.
+	res, err := rb.Resolve(context.TODO(), Input{Protocol: "http", Banner: "Server: SVC svc/1.0 beta", Port: 8080})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.Product != "SvcB" {
+		t.Fatalf("expected SvcB to win after penalties/bonuses, got %s", res.Product)
+	}
+	if res.Confidence < 0.5 || res.Confidence > 1.0 {
+		t.Fatalf("confidence out of expected range: %v", res.Confidence)
+	}
+}
+
+func TestResolve_ThresholdFiltersLowConfidence(t *testing.T) {
+	rules := []StaticRule{{
+		ID:              "low",
+		Protocol:        "http",
+		Product:         "Low",
+		Vendor:          "V",
+		CPE:             "cpe:/a:v:low",
+		Match:           `server: low`,
+		PatternStrength: 0.40, // below threshold after defaulting
+	}}
+	rb := NewRuleBasedResolver(rules)
+	_, err := rb.Resolve(context.TODO(), Input{Protocol: "http", Banner: "server: low"})
+	if err == nil {
+		t.Fatalf("expected error due to threshold filtering")
+	}
+}
+
+func TestResolve_SkipsDifferentProtocolAndNonMatchingAndHardExclude(t *testing.T) {
+	rules := []StaticRule{
+		{ // different protocol should be skipped
+			ID:       "ftp",
+			Protocol: "ftp",
+			Product:  "FTPd",
+			Vendor:   "V",
+			CPE:      "cpe:/a:v:ftpd",
+			Match:    `^220`,
+		},
+		{ // matches pattern but hard-exclude knocks it out
+			ID:              "hx",
+			Protocol:        "http",
+			Product:         "BadSvc",
+			Vendor:          "V",
+			CPE:             "cpe:/a:v:bad",
+			Match:           `server: bad`,
+			ExcludePatterns: []string{`blockme`},
+			PatternStrength: 0.90,
+		},
+		{ // proper candidate that should win
+			ID:              "ok",
+			Protocol:        "http",
+			Product:         "GoodSvc",
+			Vendor:          "V",
+			CPE:             "cpe:/a:v:good",
+			Match:           `server: good`,
+			PatternStrength: 0.80,
+		},
+	}
+	rb := NewRuleBasedResolver(rules)
+
+	// Banner triggers: FTP rule is different protocol (skip),
+	// second rule matches but contains hard-exclude token, third matches and should be selected.
+	banner := "Server: GOOD\nserver: bad blockme" // includes both patterns; hard exclude applies only to bad
+	res, err := rb.Resolve(context.TODO(), Input{Protocol: "http", Banner: banner})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.Product != "GoodSvc" {
+		t.Fatalf("expected GoodSvc to be selected, got %s", res.Product)
+	}
+}
+
+func TestResolve_RegexNonMatchingBranchIsTaken(t *testing.T) {
+	rules := []StaticRule{
+		{
+			ID:              "nonmatch",
+			Protocol:        "http",
+			Product:         "Never",
+			Vendor:          "V",
+			CPE:             "cpe:/a:v:never",
+			Match:           `^zzz`, // won't match banner
+			PatternStrength: 0.90,
+		},
+		{
+			ID:              "winner",
+			Protocol:        "http",
+			Product:         "Winner",
+			Vendor:          "V",
+			CPE:             "cpe:/a:v:winner",
+			Match:           `server: ok`,
+			PatternStrength: 0.80,
+		},
+	}
+	rb := NewRuleBasedResolver(rules)
+	res, err := rb.Resolve(context.TODO(), Input{Protocol: "http", Banner: "server: ok"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.Product != "Winner" {
+		t.Fatalf("expected Winner, got %s", res.Product)
 	}
 }
 
@@ -78,5 +212,131 @@ func TestPrepareRules_EmptyAndNoVersionRegex(t *testing.T) {
 	}
 	if out[0].matchRegex == nil {
 		t.Fatalf("expected matchRegex compiled")
+	}
+}
+
+func TestResolve_HTTPFalsePositivePrevention(t *testing.T) {
+	// Simulate two protocols with overlapping text; ensure protocol filter prevents FP
+	rules := []StaticRule{
+		{ID: "mysql", Protocol: "mysql", Product: "MySQL", Vendor: "Oracle", CPE: "cpe:/a:oracle:mysql", Match: `^handshake mysql`, PatternStrength: 0.9},
+		{ID: "http", Protocol: "http", Product: "HTTPd", Vendor: "Generic", CPE: "cpe:/a:generic:httpd", Match: `server:`, PatternStrength: 0.8},
+	}
+	rb := NewRuleBasedResolver(rules)
+
+	// Banner looks like HTTP; with Protocol=mysql resolver must not return HTTP
+	if _, err := rb.Resolve(context.TODO(), Input{Protocol: "mysql", Banner: "Server: Apache"}); err == nil {
+		t.Fatalf("expected no match for protocol=mysql with HTTP-like banner")
+	}
+
+	// With Protocol=http, match should succeed
+	res, err := rb.Resolve(context.TODO(), Input{Protocol: "http", Banner: "server: nginx"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.Product != "HTTPd" {
+		t.Fatalf("expected HTTPd, got %s", res.Product)
+	}
+}
+
+func TestResolve_BinaryVerificationHints(t *testing.T) {
+	// Use BinaryMinLength and BinaryMagic as hints; current resolver doesn't hard-check
+	// but ensure rules compile and still match text banners correctly.
+	rules := []StaticRule{
+		{ID: "redis", Protocol: "redis", Product: "Redis", Vendor: "Redis", CPE: "cpe:/a:redislabs:redis", Match: `^\+ok|^-err|^\$`, PatternStrength: 0.85, BinaryMinLength: 0, BinaryMagic: []string{"\x2a\x31"}},
+	}
+	rb := NewRuleBasedResolver(rules)
+	// A simple Redis-like banner
+	_, err := rb.Resolve(context.TODO(), Input{Protocol: "redis", Banner: "+ok"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestResolve_PrefersHigherConfidenceWithBonusesAndPenalties(t *testing.T) {
+	rules := []StaticRule{
+		{
+			ID:                  "high-base-with-penalty",
+			Protocol:            "http",
+			Product:             "SvcHigh",
+			Vendor:              "V",
+			CPE:                 "cpe:/a:v:svchigh",
+			Match:               `server: svcx`,
+			VersionExtraction:   `svcx/(\d+\.\d+)`,
+			PatternStrength:     0.90,
+			SoftExcludePatterns: []string{`beta`}, // will penalize
+		},
+		{
+			ID:                "lower-base-with-bonus",
+			Protocol:          "http",
+			Product:           "SvcLow",
+			Vendor:            "V",
+			CPE:               "cpe:/a:v:svclow",
+			Match:             `server: svcx`,
+			VersionExtraction: `svcx/(\d+\.\d+)`,
+			PatternStrength:   0.80,
+			PortBonuses:       []int{8080},
+		},
+	}
+	rb := NewRuleBasedResolver(rules)
+	// Banner matches both; contains "beta" penalizing SvcHigh; port bonus helps SvcLow.
+	res, err := rb.Resolve(context.TODO(), Input{Protocol: "http", Banner: "Server: SVCX svcx/2.1 beta", Port: 8080})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.Product != "SvcLow" {
+		t.Fatalf("expected SvcLow to win after penalties/bonuses, got %s", res.Product)
+	}
+	if res.Version != "2.1" {
+		t.Fatalf("expected version 2.1, got %s", res.Version)
+	}
+}
+
+func TestResolve_HardExcludeBeatsPatternMatch(t *testing.T) {
+	rules := []StaticRule{
+		{
+			ID:              "bad",
+			Protocol:        "http",
+			Product:         "Bad",
+			Vendor:          "V",
+			CPE:             "cpe:/a:v:bad",
+			Match:           `server: bad`,
+			ExcludePatterns: []string{`block`},
+			PatternStrength: 0.95,
+		},
+		{
+			ID:              "good",
+			Protocol:        "http",
+			Product:         "Good",
+			Vendor:          "V",
+			CPE:             "cpe:/a:v:good",
+			Match:           `server: good`,
+			PatternStrength: 0.60,
+		},
+	}
+	rb := NewRuleBasedResolver(rules)
+	// Contains both patterns; hard exclude should eliminate "bad" despite higher base strength.
+	banner := "server: bad block\nserver: good"
+	res, err := rb.Resolve(context.TODO(), Input{Protocol: "http", Banner: banner})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.Product != "Good" {
+		t.Fatalf("expected Good due to hard-exclude on Bad, got %s", res.Product)
+	}
+}
+
+func TestResolve_ReturnsErrorWhenNoCandidatesPassThreshold(t *testing.T) {
+	rules := []StaticRule{{
+		ID:              "weak",
+		Protocol:        "http",
+		Product:         "Weak",
+		Vendor:          "V",
+		CPE:             "cpe:/a:v:weak",
+		Match:           `server: weak`,
+		PatternStrength: 0.45, // will remain below 0.5 after scoring
+	}}
+	rb := NewRuleBasedResolver(rules)
+	if _, err := rb.Resolve(context.TODO(), Input{Protocol: "http", Banner: "server: weak"}); err == nil {
+		t.Fatalf("expected error due to threshold filtering of all candidates")
 	}
 }

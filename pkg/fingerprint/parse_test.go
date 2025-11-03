@@ -2,41 +2,66 @@ package fingerprint
 
 import "testing"
 
-func TestParseFingerprintYAML_And_ValidateRules(t *testing.T) {
-	// valid: two rules, one with version extraction
+func TestParseFingerprintYAML_ValidList(t *testing.T) {
 	yaml := []byte(
-		"- id: r1\n" +
+		"- id: t1\n" +
 			"  protocol: http\n" +
-			"  description: test\n" +
-			"  product: X\n" +
+			"  product: Demo\n" +
 			"  vendor: V\n" +
-			"  cpe: cpe:2.3:a:v:x:*:*:*:*:*:*:*:*\n" +
-			"  match: x\\/([0-9.]+)\n" +
-			"  version_extraction: x\\/([0-9.]+)\n" +
-			"- id: r2\n" +
-			"  protocol: ssh\n" +
-			"  description: test2\n" +
-			"  product: Y\n" +
-			"  vendor: W\n" +
-			"  cpe: cpe:2.3:a:w:y:*:*:*:*:*:*:*:*\n" +
-			"  match: y\n",
+			"  cpe: cpe:/a:v:demo\n" +
+			"  match: 'server: demo'\n",
 	)
 	rules, err := parseFingerprintYAML(yaml)
 	if err != nil {
-		t.Fatalf("unexpected err: %v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(rules) != 2 {
-		t.Fatalf("expected 2 rules, got %d", len(rules))
+	if len(rules) != 1 {
+		t.Fatalf("expected 1 rule, got %d", len(rules))
 	}
+}
 
-	// invalid: missing product and match
+func TestParseFingerprintYAML_WrappedRules(t *testing.T) {
+	yaml := []byte(
+		"rules:\n" +
+			"  - id: t1\n" +
+			"    protocol: ssh\n" +
+			"    product: OpenSSH\n" +
+			"    vendor: OpenBSD\n" +
+			"    cpe: cpe:/a:openbsd:openssh\n" +
+			"    match: '^ssh-2.0-'\n",
+	)
+	rules, err := parseFingerprintYAML(yaml)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(rules) != 1 {
+		t.Fatalf("expected 1 rule, got %d", len(rules))
+	}
+}
+
+func TestParseFingerprintYAML_InvalidMissingFields(t *testing.T) {
 	bad := []byte(
 		"- id: bad\n" +
 			"  protocol: http\n" +
-			"  vendor: z\n" +
-			"  cpe: cpe:2.3:a:z:z:*:*:*:*:*:*:*:*\n",
+			"  product: \n" +
+			"  vendor: V\n" +
+			"  cpe: \n" +
+			"  match: ''\n",
 	)
 	if _, err := parseFingerprintYAML(bad); err == nil {
-		t.Fatalf("expected validation error for bad rule")
+		t.Fatalf("expected validation error for missing required fields")
+	}
+}
+
+func TestParseFingerprintYAML_Empty(t *testing.T) {
+	if _, err := parseFingerprintYAML([]byte("")); err == nil {
+		t.Fatalf("expected error for empty yaml")
+	}
+}
+
+func TestParseFingerprintYAML_NoRulesFound(t *testing.T) {
+	// valid YAML but empty rules list
+	if _, err := parseFingerprintYAML([]byte("rules: []\n")); err == nil {
+		t.Fatalf("expected error for no fingerprint rules found")
 	}
 }
