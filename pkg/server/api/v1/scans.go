@@ -9,6 +9,12 @@ import (
 	"github.com/pentora-ai/pentora/pkg/storage"
 )
 
+// DTO Evolution Policy
+// - Favor additive changes; avoid breaking fields
+// - Keep zero-values safe; document defaults for new fields
+// - For breaking changes, introduce /api/v2 with separate DTOs
+// - Use `omitempty` for optional fields; treat nil as absent
+
 // ListScansHandler handles GET /api/v1/scans
 //
 // Returns paginated scan metadata with cursor-based pagination for scalability.

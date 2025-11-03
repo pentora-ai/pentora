@@ -28,7 +28,7 @@ type PluginError struct {
 	// Error is the human-readable error message
 	Error string `json:"error"`
 
-	// Code is the machine-readable error code from error taxonomy (ADR-0001)
+	// Code is the machine-readable error code from the project's error taxonomy
 	// Examples: PLUGIN_NOT_FOUND, CHECKSUM_MISMATCH, SOURCE_NOT_AVAILABLE
 	Code string `json:"code"`
 
@@ -68,7 +68,7 @@ type InstallResult struct {
 
 	// Errors contains all errors encountered during installation
 	// Each error includes plugin ID, error message, error code, and actionable suggestion
-	// Collected for partial failure scenarios (ADR-0003)
+	// Collected for partial failure scenarios per project policy
 	Errors []PluginError
 }
 
@@ -103,7 +103,7 @@ type UpdateResult struct {
 
 	// Errors contains all errors encountered during update
 	// Each error includes plugin ID, error message, error code, and actionable suggestion
-	// Collected for partial failure scenarios (ADR-0003)
+	// Collected for partial failure scenarios per project policy
 	Errors []PluginError
 }
 

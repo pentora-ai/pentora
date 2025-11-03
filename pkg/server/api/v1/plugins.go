@@ -13,6 +13,12 @@ import (
 	"github.com/pentora-ai/pentora/pkg/server/api"
 )
 
+// DTO Evolution Policy
+// - Additive-only changes to preserve backward compatibility
+// - Safe zero-value semantics for newly added fields
+// - Use new versioned paths (e.g., /api/v2) for breaking changes with separate types
+// - Prefer `omitempty` for optional fields; treat nil slices/maps/pointers as "absent" (distinct from empty)
+
 // formatSourceList formats a string slice as a comma-separated list.
 // Helper function for generating user-friendly error messages.
 func formatSourceList(items []string) string {
