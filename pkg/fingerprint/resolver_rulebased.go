@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -65,31 +66,66 @@ func NewRuleBasedResolver(rules []StaticRule) *RuleBasedResolver {
 func (r *RuleBasedResolver) Resolve(_ context.Context, in Input) (Result, error) {
 	normalizedBanner := strings.ToLower(in.Banner)
 
+	type candidate struct {
+		rule       StaticRule
+		version    string
+		confidence float64
+	}
+	cands := make([]candidate, 0, 8)
+
 	for _, rule := range r.rules {
 		if rule.Protocol != in.Protocol {
 			continue // skip unrelated protocol
 		}
-
-		if rule.matchRegex.MatchString(normalizedBanner) {
-			version := ""
-			matches := rule.versionRegex.FindStringSubmatch(normalizedBanner)
-			if len(matches) >= 2 {
-				version = matches[1]
-			}
-
-			return Result{
-				Product:     rule.Product,
-				Vendor:      rule.Vendor,
-				Version:     version,
-				CPE:         rule.CPE,
-				Confidence:  1.0, // static match is high confidence
-				Technique:   "static",
-				Description: rule.Description,
-			}, nil
+		if !rule.matchRegex.MatchString(normalizedBanner) {
+			continue
 		}
+		// Hard exclude
+		if isHardRejected(normalizedBanner, rule.excludeRegex) {
+			continue
+		}
+		// Version extraction (optional)
+		version := ""
+		if rule.versionRegex != nil {
+			if m := rule.versionRegex.FindStringSubmatch(normalizedBanner); len(m) >= 2 {
+				version = m[1]
+			}
+		}
+		version = normalizeVersion(version)
+
+		// Soft exclude penalties
+		softPenalty := softExcludePenalty(normalizedBanner, rule.softExRegex, 0.20)
+		// Port bonus
+		portBonus := 0.0
+		if in.Port > 0 && containsPort(rule.PortBonuses, in.Port) {
+			portBonus = 0.05
+		}
+		// Base strength defaulted in prepareRules()
+		base := rule.PatternStrength
+		conf := calculateConfidence(base, softPenalty, portBonus)
+
+		// Threshold filter
+		if conf < 0.50 {
+			continue
+		}
+		cands = append(cands, candidate{rule: rule, version: version, confidence: conf})
 	}
 
-	return Result{}, fmt.Errorf("no matching rule found")
+	if len(cands) == 0 {
+		return Result{}, fmt.Errorf("no matching rule found")
+	}
+	sort.SliceStable(cands, func(i, j int) bool { return cands[i].confidence > cands[j].confidence })
+	best := cands[0]
+
+	return Result{
+		Product:     best.rule.Product,
+		Vendor:      best.rule.Vendor,
+		Version:     best.version,
+		CPE:         best.rule.CPE,
+		Confidence:  best.confidence,
+		Technique:   "static",
+		Description: best.rule.Description,
+	}, nil
 }
 
 func prepareRules(rules []StaticRule) []StaticRule {

@@ -57,8 +57,67 @@ func TestResolve_BackwardCompatibility(t *testing.T) {
 	if res.Product != "MyHTTP" || res.Vendor != "Acme" || res.Version != "1.2.3" {
 		t.Fatalf("unexpected result: %+v", res)
 	}
-	if res.Confidence != 1.0 {
-		t.Fatalf("expected confidence 1.0, got %v", res.Confidence)
+	if res.Confidence <= 0.5 || res.Confidence > 1.0 {
+		t.Fatalf("expected confidence in (0.5,1], got %v", res.Confidence)
+	}
+}
+
+func TestResolve_MultiPhaseSelectionAndPenalties(t *testing.T) {
+	rules := []StaticRule{
+		{
+			ID:                "a",
+			Protocol:          "http",
+			Product:           "SvcA",
+			Vendor:            "V",
+			CPE:               "cpe:/a:v:svca",
+			Match:             `server: svc`,
+			VersionExtraction: `svc/(\d+\.\d+)`,
+			PatternStrength:   0.80,
+			// soft exclude matches will penalize this candidate
+			SoftExcludePatterns: []string{`beta`},
+		},
+		{
+			ID:                "b",
+			Protocol:          "http",
+			Product:           "SvcB",
+			Vendor:            "V",
+			CPE:               "cpe:/a:v:svcb",
+			Match:             `server: svc`,
+			VersionExtraction: `svc/(\d+\.\d+)`,
+			PatternStrength:   0.75,
+			// no soft excludes
+			PortBonuses: []int{8080},
+		},
+	}
+	rb := NewRuleBasedResolver(rules)
+
+	// Banner matches both; includes "beta" to penalize A. Port 8080 gives B a small bonus.
+	res, err := rb.Resolve(context.TODO(), Input{Protocol: "http", Banner: "Server: SVC svc/1.0 beta", Port: 8080})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.Product != "SvcB" {
+		t.Fatalf("expected SvcB to win after penalties/bonuses, got %s", res.Product)
+	}
+	if res.Confidence < 0.5 || res.Confidence > 1.0 {
+		t.Fatalf("confidence out of expected range: %v", res.Confidence)
+	}
+}
+
+func TestResolve_ThresholdFiltersLowConfidence(t *testing.T) {
+	rules := []StaticRule{{
+		ID:              "low",
+		Protocol:        "http",
+		Product:         "Low",
+		Vendor:          "V",
+		CPE:             "cpe:/a:v:low",
+		Match:           `server: low`,
+		PatternStrength: 0.40, // below threshold after defaulting
+	}}
+	rb := NewRuleBasedResolver(rules)
+	_, err := rb.Resolve(context.TODO(), Input{Protocol: "http", Banner: "server: low"})
+	if err == nil {
+		t.Fatalf("expected error due to threshold filtering")
 	}
 }
 
