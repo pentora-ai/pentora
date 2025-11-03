@@ -41,9 +41,6 @@ Use --dry-run to preview what would be deleted without actually deleting.`,
 	cmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Plugin cache directory (default: platform-specific, see storage config)")
 	cmd.Flags().Bool("dry-run", false, "Preview what would be deleted without actually deleting")
 	cmd.Flags().String("older-than", "720h", "Remove cache entries older than this duration (e.g., 720h for 30 days)")
-	cmd.Flags().String("output", "table", "Output format: json, table")
-	cmd.Flags().Bool("quiet", false, "Suppress non-essential output")
-	cmd.Flags().Bool("no-color", false, "Disable colored output")
 
 	return cmd
 }

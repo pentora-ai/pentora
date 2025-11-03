@@ -73,9 +73,6 @@ for common security issues across SSH, HTTP, TLS, Database, and Network protocol
 
 	cmd.Flags().BoolVar(&verbose, "verbose", false, "Show detailed information")
 	cmd.Flags().StringVar(&category, "category", "", "Filter by category (ssh, http, tls, database, network, misc)")
-	cmd.Flags().String("output", "table", "Output format: json, table")
-	cmd.Flags().Bool("quiet", false, "Suppress non-essential output")
-	cmd.Flags().Bool("no-color", false, "Disable colored output")
 
 	return cmd
 }

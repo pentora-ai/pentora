@@ -50,9 +50,6 @@ new or updated plugins to the local cache. By default, it downloads all core plu
 	cmd.Flags().String("category", "", "Download only plugins from category (ssh, http, tls, database, network)")
 	cmd.Flags().Bool("dry-run", false, "Show what would be downloaded without downloading")
 	cmd.Flags().Bool("force", false, "Force re-download even if already cached")
-	cmd.Flags().String("output", "table", "Output format: json, table")
-	cmd.Flags().Bool("quiet", false, "Suppress non-essential output")
-	cmd.Flags().Bool("no-color", false, "Disable colored output")
 
 	return cmd
 }

@@ -37,9 +37,6 @@ installation path, and cache size.`,
 	}
 
 	cmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Plugin cache directory (default: platform-specific, see storage config)")
-	cmd.Flags().String("output", "table", "Output format: json, table")
-	cmd.Flags().Bool("quiet", false, "Suppress non-essential output")
-	cmd.Flags().Bool("no-color", false, "Disable colored output")
 
 	return cmd
 }

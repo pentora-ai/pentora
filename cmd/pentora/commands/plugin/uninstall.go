@@ -51,9 +51,6 @@ all plugins in a category, or all plugins at once.`,
 	cmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Plugin cache directory (default: platform-specific, see storage config)")
 	cmd.Flags().Bool("all", false, "Uninstall all plugins")
 	cmd.Flags().String("category", "", "Uninstall all plugins from category (ssh, http, tls, database, network)")
-	cmd.Flags().String("output", "table", "Output format: json, table")
-	cmd.Flags().Bool("quiet", false, "Suppress non-essential output")
-	cmd.Flags().Bool("no-color", false, "Disable colored output")
 
 	return cmd
 }
