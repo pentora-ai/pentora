@@ -52,6 +52,11 @@ jobs:
       - name: Validate
         run: make validate-files
 
+      - name: Check error handling patterns
+        run: |
+          chmod +x .github/scripts/check-error-handling.sh
+          .github/scripts/check-error-handling.sh
+
   validate-generate:
     runs-on: ubuntu-latest
 
