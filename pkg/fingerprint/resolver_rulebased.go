@@ -19,9 +19,23 @@ type StaticRule struct {
 	Match             string `yaml:"match"`              // regex or plain string
 	VersionExtraction string `yaml:"version_extraction"` // regex with capturing group
 
+	// Anti-patterns and exclusions
+	ExcludePatterns     []string `yaml:"exclude_patterns"`
+	SoftExcludePatterns []string `yaml:"soft_exclude_patterns"`
+
+	// Confidence and scoring metadata
+	PatternStrength float64 `yaml:"pattern_strength"`
+	PortBonuses     []int   `yaml:"port_bonuses"`
+
+	// Binary verification fields
+	BinaryMinLength int      `yaml:"binary_min_length"`
+	BinaryMagic     []string `yaml:"binary_magic"`
+
 	// Compiled expressions (not serialized)
 	matchRegex   *regexp.Regexp
 	versionRegex *regexp.Regexp
+	excludeRegex []*regexp.Regexp
+	softExRegex  []*regexp.Regexp
 }
 
 // RuleBasedResolver uses a preloaded list of static rules to resolve banners into metadata.
@@ -87,6 +101,21 @@ func prepareRules(rules []StaticRule) []StaticRule {
 		}
 		if copy.versionRegex == nil && copy.VersionExtraction != "" {
 			copy.versionRegex = regexp.MustCompile(copy.VersionExtraction)
+		}
+		// Defaults
+		if copy.PatternStrength == 0 {
+			copy.PatternStrength = 0.80
+		}
+		// Compile exclude patterns
+		if len(copy.ExcludePatterns) > 0 && copy.excludeRegex == nil {
+			for _, p := range copy.ExcludePatterns {
+				copy.excludeRegex = append(copy.excludeRegex, regexp.MustCompile(p))
+			}
+		}
+		if len(copy.SoftExcludePatterns) > 0 && copy.softExRegex == nil {
+			for _, p := range copy.SoftExcludePatterns {
+				copy.softExRegex = append(copy.softExRegex, regexp.MustCompile(p))
+			}
 		}
 		compiled = append(compiled, copy)
 	}

@@ -5,8 +5,9 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/pentora-ai/pentora/pkg/plugin"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/pentora-ai/pentora/pkg/plugin"
 )
 
 // --- helper for request ---
