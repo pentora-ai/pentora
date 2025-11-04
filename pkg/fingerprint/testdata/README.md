@@ -355,3 +355,5 @@ For questions about validation dataset:
 ## CI/CD Integration
 
 The fingerprint validation workflow automatically runs on every PR that touches `pkg/fingerprint/**`. It compares validation metrics between the PR branch and main baseline, posting results as a PR comment.
+
+**Bot Authentication**: The workflow uses `PENTORABOT_ISSUE_TOKEN` secret to post comments as `pentorabot`, which allows it to work with both main repo PRs and fork PRs without permission issues.
