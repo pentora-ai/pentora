@@ -101,17 +101,17 @@ Geomean time/op delta: ~-7%
 
 | Benchmark | time/op | B/op | allocs/op |
 |-----------|---------|------|-----------|
-| ResolverMemory | ~1.00 µs | ~2.7 KiB | 4 |
-| ValidationRunnerMemory | ~136 µs | ~414 KiB | 516 |
+| ResolverMemory | ~1.01 µs | ~2.79 KiB | 4 |
+| ValidationRunnerMemory | ~140 µs | ~420 KiB | 541 |
 
 ### Scaling Behavior (130 → 1k → 5k → 10k)
 
 Measured locally (indicative):
 
-- `ValidationRunner` (~130 cases): ~136 µs/op, ~414 KiB/op, 516 allocs/op
-- `ValidationRunnerLargeDataset` (1k): ~1.03 ms/op, ~3.5 MiB/op, ~3.8k allocs/op
-- `…5k`: ~5.6 ms/op, ~18 MiB/op, ~19k allocs/op
-- `…10k`: ~11.3 ms/op, ~37–39 MiB/op, ~38k allocs/op
+- `ValidationRunner` (~130 cases): ~139 µs/op, ~420 KiB/op, 541 allocs/op
+- `ValidationRunnerLargeDataset` (1k): ~1.10 ms/op, ~3.19 MiB/op, ~3.84k allocs/op
+- `…5k`: ~4.8–6.0 ms/op, ~15.7 MiB/op, ~19.1k allocs/op
+- `…10k`: ~9.3–10.0 ms/op, ~31.2 MiB/op, ~38.1k allocs/op
 
 Notes:
 - Time and memory scale near-linearly with dataset size.
@@ -119,10 +119,16 @@ Notes:
 
 ### Per-Operation Metrics (Highlights)
 
-- ResolverSingleMatch: ~435 ns/op, ~2.73 KiB/op, 3 allocs/op
-- ResolverMultipleRules: ~0.98 µs/op, ~2.73 KiB/op, 4 allocs/op
-- ResolverVersionExtraction: ~0.57 µs/op, ~2.77 KiB/op, 4 allocs/op
-- ValidationMetricsCalculation: ~2.35 µs/op, ~2.52 KiB/op, 10 allocs/op
+| Benchmark | time/op | B/op | allocs/op |
+|-----------|---------|------|-----------|
+| ResolverSingleMatch | ~0.44–0.45 µs | ~2.73 KiB | 3 |
+| ResolverMultipleRules | ~0.96–0.97 µs | ~2.79 KiB | 4 |
+| ResolverNoMatch | ~0.52–0.53 µs | ~2.69 KiB | 4 |
+| ResolverVersionExtraction | ~0.57 µs | ~2.84 KiB | 4 |
+| ResolverWithAntiPatterns | ~0.52 µs | ~2.79 KiB | 3 |
+| ResolverWithTelemetry | ~1.97–2.00 µs | ~2.96 KiB | 5 |
+| ResolverConcurrent | ~0.65–0.72 µs | ~2.95 KiB | 4 |
+| ValidationMetricsCalculation | ~5.5 µs | ~9.3 KiB | 41 |
 
 ### Optimization Recommendations
 
