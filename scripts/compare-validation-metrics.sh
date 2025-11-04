@@ -11,9 +11,9 @@ candidate="$2"
 
 extract() {
   local file="$1" key="$2"
-  # Expect lines like: "False Positive Rate: 23.68%" or "F1 Score: 0.6351"
-  # Normalize key spacing
-  grep -E "^${key}:" "$file" | head -n1 | awk -F': ' '{print $2}' | tr -d '%' || true
+  # Expect lines like: "    validation_test.go:86: False Positive Rate: 23.68%"
+  # Allow leading whitespace and validation_test.go prefix
+  grep -E "${key}:" "$file" | head -n1 | sed 's/.*'"${key}"': *//' | tr -d '%' || true
 }
 
 percent_change() {
