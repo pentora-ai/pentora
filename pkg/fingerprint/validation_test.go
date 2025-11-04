@@ -76,17 +76,17 @@ func TestValidationRunner(t *testing.T) {
 		require.GreaterOrEqual(t, metrics.MetricsPassed, 0)
 		require.LessOrEqual(t, metrics.MetricsPassed, 10) // Max 10 metrics
 
-		// Log metrics for inspection
+		// Log metrics for inspection (using full names for CI script parsing)
 		t.Logf("Validation Metrics:")
 		t.Logf("  Total Test Cases: %d", metrics.TotalTestCases)
 		t.Logf("  True Positives: %d", metrics.TruePositivesCount)
 		t.Logf("  True Negatives: %d", metrics.TrueNegativesCount)
 		t.Logf("  False Positives: %d", metrics.FalsePositivesCount)
 		t.Logf("  False Negatives: %d", metrics.FalseNegativesCount)
-		t.Logf("  FPR: %.2f%% (target: <%.0f%%)", metrics.FalsePositiveRate*100, metrics.TargetFPR*100)
-		t.Logf("  TPR: %.2f%% (target: >%.0f%%)", metrics.TruePositiveRate*100, metrics.TargetTPR*100)
-		t.Logf("  Precision: %.2f%% (target: >%.0f%%)", metrics.Precision*100, metrics.TargetPrecision*100)
-		t.Logf("  F1 Score: %.4f (target: >%.2f)", metrics.F1Score, metrics.TargetF1)
+		t.Logf("False Positive Rate: %.2f%%", metrics.FalsePositiveRate*100)
+		t.Logf("True Positive Rate: %.2f%%", metrics.TruePositiveRate*100)
+		t.Logf("Precision: %.2f%%", metrics.Precision*100)
+		t.Logf("F1 Score: %.4f", metrics.F1Score)
 		t.Logf("  Protocols Covered: %d (target: %d+)", metrics.ProtocolsCovered, metrics.TargetProtocols)
 		t.Logf("  Version Extraction Rate: %.2f%% (target: >%.0f%%)", metrics.VersionExtractionRate*100, metrics.TargetVersionRate*100)
 		t.Logf("  Avg Detection Time: %.2fms (target: <%.0fms)", metrics.AvgDetectionTimeMs, metrics.TargetPerfMs)
