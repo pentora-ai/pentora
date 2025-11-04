@@ -17,15 +17,15 @@ type ValidationError struct {
 	Severity string // "error" or "warning"
 }
 
-// ValidationResult contains the results of a validation run.
-type ValidationResult struct {
+// DatabaseValidationResult contains the results of a database validation run.
+type DatabaseValidationResult struct {
 	Errors    []ValidationError
 	Warnings  []ValidationError
 	RuleCount int
 }
 
 // IsValid returns true if there are no errors (warnings are allowed).
-func (r *ValidationResult) IsValid() bool {
+func (r *DatabaseValidationResult) IsValid() bool {
 	return len(r.Errors) == 0
 }
 
@@ -40,8 +40,8 @@ func NewValidator(strict bool) *Validator {
 }
 
 // Validate validates a list of static rules.
-func (v *Validator) Validate(rules []StaticRule) *ValidationResult {
-	result := &ValidationResult{
+func (v *Validator) Validate(rules []StaticRule) *DatabaseValidationResult {
+	result := &DatabaseValidationResult{
 		Errors:    make([]ValidationError, 0),
 		Warnings:  make([]ValidationError, 0),
 		RuleCount: len(rules),
@@ -70,7 +70,7 @@ func (v *Validator) Validate(rules []StaticRule) *ValidationResult {
 }
 
 // validateRequiredFields checks that all required fields are present and non-empty.
-func (v *Validator) validateRequiredFields(rule StaticRule, result *ValidationResult) {
+func (v *Validator) validateRequiredFields(rule StaticRule, result *DatabaseValidationResult) {
 	requiredFields := map[string]string{
 		"id":       rule.ID,
 		"protocol": rule.Protocol,
@@ -111,7 +111,7 @@ func (v *Validator) validateRequiredFields(rule StaticRule, result *ValidationRe
 }
 
 // validateDuplicateID checks for duplicate rule IDs.
-func (v *Validator) validateDuplicateID(rule StaticRule, seenIDs map[string]bool, result *ValidationResult) {
+func (v *Validator) validateDuplicateID(rule StaticRule, seenIDs map[string]bool, result *DatabaseValidationResult) {
 	if seenIDs[rule.ID] {
 		result.Errors = append(result.Errors, ValidationError{
 			RuleID:   rule.ID,
@@ -124,7 +124,7 @@ func (v *Validator) validateDuplicateID(rule StaticRule, seenIDs map[string]bool
 }
 
 // validateRegexPatterns validates regex syntax for match and version_extraction fields.
-func (v *Validator) validateRegexPatterns(rule StaticRule, result *ValidationResult) {
+func (v *Validator) validateRegexPatterns(rule StaticRule, result *DatabaseValidationResult) {
 	// Validate match pattern
 	if rule.Match != "" {
 		if _, err := regexp.Compile(rule.Match); err != nil {
@@ -184,7 +184,7 @@ func (v *Validator) validateRegexPatterns(rule StaticRule, result *ValidationRes
 }
 
 // validateCPEFormat validates CPE format (basic check).
-func (v *Validator) validateCPEFormat(rule StaticRule, result *ValidationResult) {
+func (v *Validator) validateCPEFormat(rule StaticRule, result *DatabaseValidationResult) {
 	if rule.CPE == "" {
 		result.Warnings = append(result.Warnings, ValidationError{
 			RuleID:   rule.ID,
@@ -219,7 +219,7 @@ func (v *Validator) validateCPEFormat(rule StaticRule, result *ValidationResult)
 }
 
 // validateConfidenceMetadata validates confidence scoring metadata.
-func (v *Validator) validateConfidenceMetadata(rule StaticRule, result *ValidationResult) {
+func (v *Validator) validateConfidenceMetadata(rule StaticRule, result *DatabaseValidationResult) {
 	// Check pattern_strength range (0.0 to 1.0)
 	if rule.PatternStrength < 0.0 || rule.PatternStrength > 1.0 {
 		result.Errors = append(result.Errors, ValidationError{
