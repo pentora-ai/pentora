@@ -1,31 +1,244 @@
 # List of fingerprinting rules for various services
 rules:
+  # Web Services
+  - id: 'http.apache'
+    protocol: 'http'
+    description: 'Apache HTTP Server banner'
+    product: 'Apache HTTP Server'
+    vendor: 'Apache Software Foundation'
+    cpe: 'cpe:2.3:a:apache:http_server:*:*:*:*:*:*:*:*'
+    match: 'server:\\s*apache'
+    version_extraction: "apache/([\\d\\.]+)"
+
+    exclude_patterns:
+      - "nginx"
+      - "iis"
+      - "litespeed"
+
+    soft_exclude_patterns:
+      - "error"
+      - "forbidden"
+      - "unavailable"
+
+    pattern_strength: 0.85
+    port_bonuses: [80, 443, 8080, 8443]
+
+  - id: 'http.nginx'
+    protocol: 'http'
+    description: 'nginx HTTP server banner'
+    product: 'nginx'
+    vendor: 'F5 Networks'
+    cpe: 'cpe:2.3:a:f5:nginx:*:*:*:*:*:*:*:*'
+    match: 'server:\\s*nginx'
+    version_extraction: "nginx/([\\d\\.]+)"
+
+    exclude_patterns:
+      - "apache"
+      - "iis"
+      - "litespeed"
+
+    soft_exclude_patterns:
+      - "error"
+      - "forbidden"
+      - "unavailable"
+
+    pattern_strength: 0.85
+    port_bonuses: [80, 443, 8080, 8443]
+
+  - id: 'http.iis'
+    protocol: 'http'
+    description: 'Microsoft Internet Information Services banner'
+    product: 'IIS'
+    vendor: 'Microsoft'
+    cpe: 'cpe:2.3:a:microsoft:iis:*:*:*:*:*:*:*:*'
+    match: 'server:\\s*microsoft-iis'
+    version_extraction: "microsoft-iis/([\\d\\.]+)"
+
+    exclude_patterns:
+      - "apache"
+      - "nginx"
+      - "litespeed"
+
+    soft_exclude_patterns:
+      - "error"
+      - "forbidden"
+      - "unavailable"
+
+    pattern_strength: 0.85
+    port_bonuses: [80, 443, 8080]
+
   - id: 'http.litespeed'
     protocol: 'http'
     description: 'LiteSpeed Web Server HTTP banner'
     product: 'LiteSpeed Web Server'
     vendor: 'LiteSpeed Technologies'
     cpe: 'cpe:2.3:a:litespeedtech:litespeed_web_server:*:*:*:*:*:*:*:*'
-    match: 'Server: LiteSpeed'
-    version_extraction: "Server: LiteSpeed(?:\\s|/)([\\w\\.-]+)?"
+    match: 'server:\\s*litespeed'
+    version_extraction: "litespeed(?:\\s|/)([\\w\\.-]+)"
 
+    exclude_patterns:
+      - "apache"
+      - "nginx"
+      - "iis"
+
+    soft_exclude_patterns:
+      - "error"
+      - "forbidden"
+      - "unavailable"
+
+    pattern_strength: 0.85
+    port_bonuses: [80, 443, 8080, 8443]
+
+  - id: 'http.tomcat'
+    protocol: 'http'
+    description: 'Apache Tomcat application server banner'
+    product: 'Apache Tomcat'
+    vendor: 'Apache Software Foundation'
+    cpe: 'cpe:2.3:a:apache:tomcat:*:*:*:*:*:*:*:*'
+    match: 'server:\\s*(?:apache-coyote|tomcat)'
+    version_extraction: "(?:tomcat|apache-coyote)/([\\d\\.]+)"
+
+    exclude_patterns:
+      - "nginx"
+      - "iis"
+      - "litespeed"
+
+    soft_exclude_patterns:
+      - "error"
+      - "forbidden"
+      - "unavailable"
+
+    pattern_strength: 0.85
+    port_bonuses: [8080, 8443, 8009]
+
+  # FTP Servers
   - id: 'ftp.pureftpd'
     protocol: 'ftp'
     description: 'Pure-FTPd FTP banner'
     product: 'Pure-FTPd'
     vendor: 'PureFTPd Project'
     cpe: 'cpe:2.3:a:pureftpd:pure-ftpd:*:*:*:*:*:*:*:*'
-    match: 'Welcome to Pure-FTPd'
-    version_extraction: "Pure-FTPd\\s+([\\d\\.]+)"
+    match: 'pure-ftpd'
+    version_extraction: "pure-ftpd\\s+([\\d\\.]+)"
 
+    exclude_patterns:
+      - "proftpd"
+      - "vsftpd"
+
+    soft_exclude_patterns:
+      - "error"
+      - "denied"
+      - "unavailable"
+
+    pattern_strength: 0.88
+    port_bonuses: [21, 2121]
+
+  - id: 'ftp.proftpd'
+    protocol: 'ftp'
+    description: 'ProFTPD FTP server banner'
+    product: 'ProFTPD'
+    vendor: 'ProFTPD Project'
+    cpe: 'cpe:2.3:a:proftpd:proftpd:*:*:*:*:*:*:*:*'
+    match: 'proftpd'
+    version_extraction: "proftpd\\s+([\\d\\.]+)"
+
+    exclude_patterns:
+      - "pure-ftpd"
+      - "vsftpd"
+
+    soft_exclude_patterns:
+      - "error"
+      - "denied"
+      - "unavailable"
+
+    pattern_strength: 0.88
+    port_bonuses: [21, 2121]
+
+  - id: 'ftp.vsftpd'
+    protocol: 'ftp'
+    description: 'vsftpd FTP server banner'
+    product: 'vsftpd'
+    vendor: 'vsftpd Project'
+    cpe: 'cpe:2.3:a:vsftpd:vsftpd:*:*:*:*:*:*:*:*'
+    match: 'vsftpd'
+    version_extraction: "vsftpd\\s+([\\d\\.]+)"
+
+    exclude_patterns:
+      - "pure-ftpd"
+      - "proftpd"
+
+    soft_exclude_patterns:
+      - "error"
+      - "denied"
+      - "unavailable"
+
+    pattern_strength: 0.88
+    port_bonuses: [21, 2121]
+
+  # SSH Services
   - id: 'ssh.openssh'
     protocol: 'ssh'
     description: 'OpenSSH server banner'
     product: 'OpenSSH'
     vendor: 'OpenBSD'
     cpe: 'cpe:2.3:a:openbsd:openssh:*:*:*:*:*:*:*:*'
-    match: "^SSH-\\d\\.\\d+-OpenSSH_"
-    version_extraction: "OpenSSH_([\\d\\.p]+)"
+    match: "ssh-\\d\\.\\d+-openssh_"
+    version_extraction: "openssh_([\\d\\.p]+)"
+
+    exclude_patterns:
+      - "dropbear"
+      - "libssh"
+      - "rosssh"
+
+    soft_exclude_patterns:
+      - "error"
+      - "refused"
+      - "denied"
+
+    pattern_strength: 0.90
+    port_bonuses: [22, 2222]
+
+  - id: 'ssh.dropbear'
+    protocol: 'ssh'
+    description: 'Dropbear SSH server'
+    product: 'Dropbear SSH'
+    vendor: 'Matt Johnston'
+    cpe: 'cpe:2.3:a:dropbear_ssh_project:dropbear_ssh:*:*:*:*:*:*:*:*'
+    match: "dropbear"
+    version_extraction: "dropbear[_-]([\\d\\.]+)"
+
+    exclude_patterns:
+      - "openssh"
+      - "libssh"
+
+    soft_exclude_patterns:
+      - "error"
+      - "refused"
+      - "denied"
+
+    pattern_strength: 0.88
+    port_bonuses: [22, 2222]
+
+  - id: 'ssh.libssh'
+    protocol: 'ssh'
+    description: 'libssh SSH library implementation'
+    product: 'libssh'
+    vendor: 'libssh.org'
+    cpe: 'cpe:2.3:a:libssh:libssh:*:*:*:*:*:*:*:*'
+    match: "libssh"
+    version_extraction: "libssh[_-]([\\d\\.]+)"
+
+    exclude_patterns:
+      - "openssh"
+      - "dropbear"
+
+    soft_exclude_patterns:
+      - "error"
+      - "refused"
+      - "denied"
+
+    pattern_strength: 0.88
+    port_bonuses: [22, 2222]
 
   - id: 'mysql.mysql'
     protocol: 'mysql'
@@ -60,14 +273,322 @@ rules:
     binary_min_length: 10
     binary_magic: ["\\x00\\x00\\x00\\x0a"]
 
+  # Database Services
+  - id: 'db.postgresql'
+    protocol: 'postgresql'
+    description: 'PostgreSQL database server'
+    product: 'PostgreSQL'
+    vendor: 'PostgreSQL Global Development Group'
+    cpe: 'cpe:2.3:a:postgresql:postgresql:*:*:*:*:*:*:*:*'
+    match: "postgres"
+    version_extraction: "postgres(?:ql)?\\s+([\\d\\.]+)"
+
+    exclude_patterns:
+      - "mysql"
+      - "mongodb"
+      - "redis"
+      - "memcached"
+
+    soft_exclude_patterns:
+      - "error"
+      - "denied"
+      - "refused"
+      - "unavailable"
+
+    pattern_strength: 0.88
+    port_bonuses: [5432, 5433]
+
+  - id: 'db.redis'
+    protocol: 'redis'
+    description: 'Redis in-memory data store'
+    product: 'Redis'
+    vendor: 'Redis Ltd'
+    cpe: 'cpe:2.3:a:redis:redis:*:*:*:*:*:*:*:*'
+    match: "redis_version:"
+    version_extraction: "redis_version:([\\d\\.]+)"
+
+    exclude_patterns:
+      - "mysql"
+      - "postgres"
+      - "mongodb"
+      - "memcached"
+
+    soft_exclude_patterns:
+      - "error"
+      - "denied"
+      - "noauth"
+      - "unavailable"
+
+    pattern_strength: 0.90
+    port_bonuses: [6379, 6380]
+
+  - id: 'db.mongodb'
+    protocol: 'mongodb'
+    description: 'MongoDB NoSQL database'
+    product: 'MongoDB'
+    vendor: 'MongoDB Inc'
+    cpe: 'cpe:2.3:a:mongodb:mongodb:*:*:*:*:*:*:*:*'
+    match: "mongodb|\"version\""
+    version_extraction: "(?:version[\\s:\"]+|mongodb[\\s/]+)([\\d\\.]+)"
+
+    exclude_patterns:
+      - "mysql"
+      - "postgres"
+      - "redis"
+      - "memcached"
+
+    soft_exclude_patterns:
+      - "error"
+      - "denied"
+      - "unauthorized"
+      - "unavailable"
+
+    pattern_strength: 0.88
+    port_bonuses: [27017, 27018, 27019]
+
+  - id: 'db.memcached'
+    protocol: 'memcached'
+    description: 'Memcached memory caching system'
+    product: 'Memcached'
+    vendor: 'Memcached'
+    cpe: 'cpe:2.3:a:memcached:memcached:*:*:*:*:*:*:*:*'
+    match: "version\\s+[\\d\\.]+"
+    version_extraction: "version\\s+([\\d\\.]+)"
+
+    exclude_patterns:
+      - "mysql"
+      - "postgres"
+      - "redis"
+      - "mongodb"
+
+    soft_exclude_patterns:
+      - "error"
+      - "denied"
+      - "refused"
+      - "unavailable"
+
+    pattern_strength: 0.85
+    port_bonuses: [11211, 11212]
+
+  - id: 'db.elasticsearch'
+    protocol: 'http'
+    description: 'Elasticsearch search and analytics engine'
+    product: 'Elasticsearch'
+    vendor: 'Elastic'
+    cpe: 'cpe:2.3:a:elastic:elasticsearch:*:*:*:*:*:*:*:*'
+    match: "elasticsearch|\"version\""
+    version_extraction: "(?:elasticsearch|version)[\\s:\"]+([\\d\\.]+)"
+
+    exclude_patterns:
+      - "mysql"
+      - "postgres"
+      - "redis"
+      - "mongodb"
+
+    soft_exclude_patterns:
+      - "error"
+      - "denied"
+      - "unauthorized"
+      - "unavailable"
+
+    pattern_strength: 0.88
+    port_bonuses: [9200, 9300]
+
+  # Mail Servers
   - id: 'smtp.postfix'
     protocol: 'smtp'
     description: 'Postfix SMTP server banner'
     product: 'Postfix'
     vendor: 'Postfix Project'
     cpe: 'cpe:2.3:a:postfix:postfix:*:*:*:*:*:*:*:*'
-    match: 'ESMTP Postfix'
-    version_extraction: "Postfix\\s+([\\d\\.]+)"
+    match: 'esmtp postfix'
+    version_extraction: "postfix\\s+([\\d\\.]+)"
+
+    exclude_patterns:
+      - "exim"
+      - "sendmail"
+      - "dovecot"
+
+    soft_exclude_patterns:
+      - "error"
+      - "relay denied"
+      - "unavailable"
+
+    pattern_strength: 0.88
+    port_bonuses: [25, 587, 465]
+
+  - id: 'smtp.exim'
+    protocol: 'smtp'
+    description: 'Exim SMTP server banner'
+    product: 'Exim'
+    vendor: 'Exim Project'
+    cpe: 'cpe:2.3:a:exim:exim:*:*:*:*:*:*:*:*'
+    match: 'exim'
+    version_extraction: "exim\\s+([\\d\\.]+)"
+
+    exclude_patterns:
+      - "postfix"
+      - "sendmail"
+      - "dovecot"
+
+    soft_exclude_patterns:
+      - "error"
+      - "relay denied"
+      - "unavailable"
+
+    pattern_strength: 0.88
+    port_bonuses: [25, 587, 465]
+
+  - id: 'smtp.sendmail'
+    protocol: 'smtp'
+    description: 'Sendmail SMTP server banner'
+    product: 'Sendmail'
+    vendor: 'Sendmail Consortium'
+    cpe: 'cpe:2.3:a:sendmail:sendmail:*:*:*:*:*:*:*:*'
+    match: 'sendmail'
+    version_extraction: "sendmail\\s+([\\d\\.]+)"
+
+    exclude_patterns:
+      - "postfix"
+      - "exim"
+      - "dovecot"
+
+    soft_exclude_patterns:
+      - "error"
+      - "relay denied"
+      - "unavailable"
+
+    pattern_strength: 0.88
+    port_bonuses: [25, 587, 465]
+
+  - id: 'smtp.dovecot'
+    protocol: 'smtp'
+    description: 'Dovecot IMAP/POP3 server'
+    product: 'Dovecot'
+    vendor: 'Dovecot Project'
+    cpe: 'cpe:2.3:a:dovecot:dovecot:*:*:*:*:*:*:*:*'
+    match: 'dovecot'
+    version_extraction: "dovecot\\s+(?:ready\\.?\\s+)?([\\d\\.]+)"
+
+    exclude_patterns:
+      - "postfix"
+      - "exim"
+      - "sendmail"
+
+    soft_exclude_patterns:
+      - "error"
+      - "denied"
+      - "unavailable"
+
+    pattern_strength: 0.88
+    port_bonuses: [143, 993, 110, 995]
+
+  # Other Services
+  - id: 'rdp.microsoft'
+    protocol: 'rdp'
+    description: 'Microsoft Remote Desktop Protocol'
+    product: 'Microsoft RDP'
+    vendor: 'Microsoft'
+    cpe: 'cpe:2.3:a:microsoft:remote_desktop_protocol:*:*:*:*:*:*:*:*'
+    match: 'rdp|remote desktop'
+    version_extraction: "(?:protocol|rdp)\\s+([\\d\\.]+)"
+
+    exclude_patterns:
+      - "vnc"
+      - "telnet"
+
+    soft_exclude_patterns:
+      - "error"
+      - "denied"
+      - "unavailable"
+
+    pattern_strength: 0.88
+    port_bonuses: [3389]
+
+  - id: 'vnc.realvnc'
+    protocol: 'vnc'
+    description: 'RealVNC or VNC protocol banner'
+    product: 'VNC'
+    vendor: 'RealVNC'
+    cpe: 'cpe:2.3:a:realvnc:vnc:*:*:*:*:*:*:*:*'
+    match: 'rfb|vnc'
+    version_extraction: "(?:rfb|vnc)\\s+([\\d\\.]+)"
+
+    exclude_patterns:
+      - "rdp"
+      - "telnet"
+
+    soft_exclude_patterns:
+      - "error"
+      - "denied"
+      - "unavailable"
+
+    pattern_strength: 0.88
+    port_bonuses: [5900, 5901, 5902]
+
+  - id: 'telnet.generic'
+    protocol: 'telnet'
+    description: 'Telnet service banner'
+    product: 'Telnet'
+    vendor: 'Generic'
+    cpe: 'cpe:2.3:a:telnet:telnet:*:*:*:*:*:*:*:*'
+    match: 'telnet'
+    version_extraction: "telnet\\s+([\\d\\.]+)"
+
+    exclude_patterns:
+      - "ssh"
+      - "rdp"
+      - "vnc"
+
+    soft_exclude_patterns:
+      - "error"
+      - "denied"
+      - "unavailable"
+
+    pattern_strength: 0.85
+    port_bonuses: [23, 2323]
+
+  - id: 'snmp.net-snmp'
+    protocol: 'snmp'
+    description: 'Net-SNMP or SNMP service'
+    product: 'Net-SNMP'
+    vendor: 'Net-SNMP Project'
+    cpe: 'cpe:2.3:a:net-snmp:net-snmp:*:*:*:*:*:*:*:*'
+    match: 'snmp|net-snmp'
+    version_extraction: "(?:snmp|net-snmp)\\s+([\\d\\.]+)"
+
+    exclude_patterns:
+      - "ssh"
+      - "http"
+
+    soft_exclude_patterns:
+      - "error"
+      - "denied"
+      - "timeout"
+
+    pattern_strength: 0.88
+    port_bonuses: [161, 162]
+
+  - id: 'smb.samba'
+    protocol: 'smb'
+    description: 'Samba SMB/CIFS file sharing'
+    product: 'Samba'
+    vendor: 'Samba Project'
+    cpe: 'cpe:2.3:a:samba:samba:*:*:*:*:*:*:*:*'
+    match: 'samba|smb'
+    version_extraction: "(?:samba|smb)\\s+([\\d\\.]+)"
+
+    exclude_patterns:
+      - "http"
+      - "ftp"
+
+    soft_exclude_patterns:
+      - "error"
+      - "denied"
+      - "unavailable"
+
+    pattern_strength: 0.88
+    port_bonuses: [445, 139]
 
   - id: 'http.winrm'
     protocol: 'http'
@@ -75,4 +596,4 @@ rules:
     product: 'WinRM'
     vendor: 'Microsoft'
     cpe: 'cpe:2.3:a:microsoft:winrm:*:*:*:*:*:*:*:*'
-    match: "Microsoft-HTTPAPI/2\\.0"
+    match: "microsoft-httpapi/2\\.0"
