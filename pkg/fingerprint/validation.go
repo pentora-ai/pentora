@@ -2,6 +2,7 @@ package fingerprint
 
 import (
 	"context"
+	"sync"
 	"time"
 )
 
@@ -96,70 +97,29 @@ type ProtocolMetrics struct {
 
 // ValidationRunner executes validation tests and computes metrics.
 type ValidationRunner struct {
-	resolver   Resolver
-	dataset    *ValidationDataset
-	thresholds ValidationThresholds
+	resolver Resolver
+	dataset  *ValidationDataset
+	// configurable options
+	// thresholds holds target values; expose as ValidationThresholds via getter
+	thresholds       ValidationMetrics
+	parallelism      int
+	timeout          time.Duration
+	progressCallback func(float64)
+	verbose          bool
 }
 
-// calculateMetrics is deprecated; kept for test compatibility. It forwards to
-// CalculateMetrics in validation_metrics.go with default targets.
-func (vr *ValidationRunner) calculateMetrics(results []ValidationResult) *ValidationMetrics {
-	targets := ValidationMetrics{
-		TargetFPR:         0.10,
-		TargetTPR:         0.80,
-		TargetPrecision:   0.85,
-		TargetF1:          0.82,
-		TargetProtocols:   20,
-		TargetVersionRate: 0.70,
-		TargetPerfMs:      50.0,
-	}
-	return CalculateMetrics(results, targets)
+// ValidationOption configures ValidationRunner behavior.
+type ValidationOption func(*ValidationRunner)
+
+// WithThresholds sets custom validation targets used in metrics pass/fail.
+func WithThresholds(t ValidationMetrics) ValidationOption {
+	return func(vr *ValidationRunner) { vr.thresholds = t }
 }
 
-// NewValidationRunner creates a new validation runner with the given resolver and default thresholds.
-// For custom thresholds, use NewValidationRunnerWithThresholds.
-func NewValidationRunner(resolver Resolver, datasetPath string) (*ValidationRunner, error) {
-	return NewValidationRunnerWithThresholds(resolver, datasetPath, DefaultThresholds())
-}
-
-// NewValidationRunnerWithThresholds creates a new validation runner with custom thresholds.
-// This allows fine-tuning validation criteria per use case (e.g., strict vs relaxed profiles).
-func NewValidationRunnerWithThresholds(resolver Resolver, datasetPath string, thresholds ValidationThresholds) (*ValidationRunner, error) {
-	dataset, err := LoadValidationDataset(datasetPath)
-	if err != nil {
-		return nil, err
-	}
-	return &ValidationRunner{
-		resolver:   resolver,
-		dataset:    dataset,
-		thresholds: thresholds,
-	}, nil
-}
-
-// Run executes all validation tests and returns aggregated metrics.
-func (vr *ValidationRunner) Run(ctx context.Context) (*ValidationMetrics, []ValidationResult, error) {
-	var results []ValidationResult
-
-	// Run true positive tests
-	for _, tc := range vr.dataset.TruePositives {
-		result := vr.runTestCase(ctx, tc, true)
-		results = append(results, result)
-	}
-
-	// Run true negative tests
-	for _, tc := range vr.dataset.TrueNegatives {
-		result := vr.runTestCase(ctx, tc, false)
-		results = append(results, result)
-	}
-
-	// Run edge case tests
-	for _, tc := range vr.dataset.EdgeCases {
-		result := vr.runTestCase(ctx, tc, true) // Edge cases should match
-		results = append(results, result)
-	}
-
-	// Calculate metrics using configured thresholds
-	targets := ValidationMetrics{
+// Thresholds returns the configured thresholds as ValidationThresholds shape
+// for compatibility with tests expecting this exact type.
+func (vr *ValidationRunner) Thresholds() ValidationThresholds {
+	return ValidationThresholds{
 		TargetFPR:         vr.thresholds.TargetFPR,
 		TargetTPR:         vr.thresholds.TargetTPR,
 		TargetPrecision:   vr.thresholds.TargetPrecision,
@@ -168,8 +128,169 @@ func (vr *ValidationRunner) Run(ctx context.Context) (*ValidationMetrics, []Vali
 		TargetVersionRate: vr.thresholds.TargetVersionRate,
 		TargetPerfMs:      vr.thresholds.TargetPerfMs,
 	}
-	metrics := CalculateMetrics(results, targets)
+}
 
+// WithParallelism sets number of concurrent test executions.
+func WithParallelism(n int) ValidationOption {
+	return func(vr *ValidationRunner) {
+		if n > 0 {
+			vr.parallelism = n
+		}
+	}
+}
+
+// WithTimeout sets maximum duration for entire validation run.
+func WithTimeout(d time.Duration) ValidationOption {
+	return func(vr *ValidationRunner) { vr.timeout = d }
+}
+
+// WithProgressCallback sets callback for progress updates in [0,1].
+func WithProgressCallback(cb func(float64)) ValidationOption {
+	return func(vr *ValidationRunner) { vr.progressCallback = cb }
+}
+
+// WithVerbose enables verbose behavior (reserved for future logs).
+func WithVerbose(v bool) ValidationOption {
+	return func(vr *ValidationRunner) { vr.verbose = v }
+}
+
+// internal item type to represent a test work unit.
+type item struct {
+	tc          ValidationTestCase
+	shouldMatch bool
+}
+
+// runParallel executes items with a bounded worker pool and updates results.
+func (vr *ValidationRunner) runParallel(ctx context.Context, items []item, results []ValidationResult, total int) {
+	sem := make(chan struct{}, vr.parallelism)
+	var wg sync.WaitGroup
+	for idx, it := range items {
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(i int, it item) {
+			defer wg.Done()
+			select {
+			case <-ctx.Done():
+				results[i] = ValidationResult{TestCase: it.tc, Matched: false, Error: ctx.Err(), IsCorrect: !it.shouldMatch}
+			default:
+				results[i] = vr.runTestCase(ctx, it.tc, it.shouldMatch)
+			}
+			<-sem
+			if vr.progressCallback != nil && total > 0 {
+				// approximate progress based on filled results slots
+				done := 0
+				for _, r := range results {
+					if r.TestCase.Protocol != "" || r.Error != nil || r.DurationMicros > 0 {
+						done++
+					}
+				}
+				vr.progressCallback(float64(done) / float64(total))
+			}
+		}(idx, it)
+	}
+	wg.Wait()
+}
+
+// calculateMetrics is deprecated; kept for test compatibility. It forwards to
+// CalculateMetrics in validation_metrics.go with default targets.
+func (vr *ValidationRunner) calculateMetrics(results []ValidationResult) *ValidationMetrics {
+	targets := vr.defaultThresholds()
+	return CalculateMetrics(results, targets)
+}
+
+// NewValidationRunner creates a new validation runner with the given resolver.
+func NewValidationRunner(resolver Resolver, datasetPath string, opts ...ValidationOption) (*ValidationRunner, error) {
+	dataset, err := LoadValidationDataset(datasetPath)
+	if err != nil {
+		return nil, err
+	}
+	// default thresholds to upstream defaults unless overridden by options
+	defs := DefaultThresholds()
+	vr := &ValidationRunner{
+		resolver: resolver,
+		dataset:  dataset,
+		thresholds: ValidationMetrics{
+			TargetFPR:         defs.TargetFPR,
+			TargetTPR:         defs.TargetTPR,
+			TargetPrecision:   defs.TargetPrecision,
+			TargetF1:          defs.TargetF1,
+			TargetProtocols:   defs.TargetProtocols,
+			TargetVersionRate: defs.TargetVersionRate,
+			TargetPerfMs:      defs.TargetPerfMs,
+		},
+		parallelism: 1,
+		timeout:     0,
+		verbose:     false,
+	}
+	for _, opt := range opts {
+		opt(vr)
+	}
+	return vr, nil
+}
+
+// NewValidationRunnerWithThresholds preserves upstream API by constructing a runner
+// with provided thresholds. Options like parallelism/timeout can still be adjusted later
+// via dedicated With* options on a new runner if required.
+func NewValidationRunnerWithThresholds(resolver Resolver, datasetPath string, thresholds ValidationThresholds) (*ValidationRunner, error) {
+	// Map ValidationThresholds into our ValidationMetrics targets
+	// If ValidationThresholds matches ValidationMetrics fields, adapt accordingly.
+	vr, err := NewValidationRunner(resolver, datasetPath)
+	if err != nil {
+		return nil, err
+	}
+	// Best-effort mapping; if names match, set them.
+	vr.thresholds = ValidationMetrics{
+		TargetFPR:         thresholds.TargetFPR,
+		TargetTPR:         thresholds.TargetTPR,
+		TargetPrecision:   thresholds.TargetPrecision,
+		TargetF1:          thresholds.TargetF1,
+		TargetProtocols:   thresholds.TargetProtocols,
+		TargetVersionRate: thresholds.TargetVersionRate,
+		TargetPerfMs:      thresholds.TargetPerfMs,
+	}
+	return vr, nil
+}
+
+// Run executes all validation tests and returns aggregated metrics.
+func (vr *ValidationRunner) Run(ctx context.Context) (*ValidationMetrics, []ValidationResult, error) {
+	// Apply timeout if configured
+	if vr.timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, vr.timeout)
+		defer cancel()
+	}
+
+	// Flatten all test cases with shouldMatch flag
+	items := make([]item, 0, len(vr.dataset.TruePositives)+len(vr.dataset.TrueNegatives)+len(vr.dataset.EdgeCases))
+	for _, tc := range vr.dataset.TruePositives {
+		items = append(items, item{tc, true})
+	}
+	for _, tc := range vr.dataset.TrueNegatives {
+		items = append(items, item{tc, false})
+	}
+	for _, tc := range vr.dataset.EdgeCases {
+		items = append(items, item{tc, true})
+	}
+
+	total := len(items)
+	results := make([]ValidationResult, total)
+
+	if vr.parallelism <= 1 {
+		for i, it := range items {
+			results[i] = vr.runTestCase(ctx, it.tc, it.shouldMatch)
+			if vr.progressCallback != nil && total > 0 {
+				vr.progressCallback(float64(i+1) / float64(total))
+			}
+		}
+	} else {
+		vr.runParallel(ctx, items, results, total)
+	}
+
+	if vr.progressCallback != nil {
+		vr.progressCallback(1.0)
+	}
+
+	metrics := CalculateMetrics(results, vr.defaultThresholds())
 	return metrics, results, nil
 }
 
@@ -179,7 +300,7 @@ func (vr *ValidationRunner) runTestCase(ctx context.Context, tc ValidationTestCa
 		TestCase: tc,
 	}
 
-	// Measure detection time
+	// Measure detection time (ensure non-zero by flooring to at least 1µs)
 	start := time.Now()
 
 	// Run resolver
@@ -191,7 +312,11 @@ func (vr *ValidationRunner) runTestCase(ctx context.Context, tc ValidationTestCa
 
 	resolverResult, err := vr.resolver.Resolve(ctx, input)
 	duration := time.Since(start)
-	result.DurationMicros = duration.Microseconds()
+	micros := duration.Microseconds()
+	if micros == 0 {
+		micros = 1
+	}
+	result.DurationMicros = micros
 
 	if err != nil {
 		// No match

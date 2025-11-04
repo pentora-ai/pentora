@@ -214,7 +214,7 @@ func TestValidationRunnerWithCustomThresholds(t *testing.T) {
 		require.NotNil(t, runner)
 
 		// Verify default thresholds are used
-		require.Equal(t, DefaultThresholds(), runner.thresholds)
+		require.Equal(t, DefaultThresholds(), runner.Thresholds())
 	})
 
 	t.Run("use strict thresholds", func(t *testing.T) {
@@ -235,7 +235,7 @@ func TestValidationRunnerWithCustomThresholds(t *testing.T) {
 		require.NotNil(t, runner)
 
 		// Verify strict thresholds are used
-		require.Equal(t, StrictThresholds(), runner.thresholds)
+		require.Equal(t, StrictThresholds(), runner.Thresholds())
 	})
 
 	t.Run("metrics use custom thresholds", func(t *testing.T) {
