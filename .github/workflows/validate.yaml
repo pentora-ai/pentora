@@ -72,6 +72,26 @@ jobs:
           go mod tidy
           git diff --exit-code
 
+  fingerprint-db-validation:
+    name: Validate Fingerprint Database
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Go ${{ env.GO_VERSION }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+
+      - name: Build pentora CLI
+        run: go build -o dist/pentora ./cmd
+
+      - name: Validate fingerprint_db.yaml
+        run: ./dist/pentora fingerprint validate pkg/fingerprint/data/fingerprint_db.yaml
+
   error-handling:
     name: Error Handling Standards (${{ matrix.target }})
     runs-on: ubuntu-latest
