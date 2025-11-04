@@ -1,0 +1,5 @@
+"""
+Placeholder for benchmark baselines.
+Generate with:
+  go test -bench=. -benchmem ./pkg/fingerprint -run=^$ -benchtime=5s > pkg/fingerprint/testdata/baseline.txt
+"""
