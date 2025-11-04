@@ -158,6 +158,133 @@ Actual Negative     9 (FP)               29 (TN)
 All validation metrics use standard machine learning classification formulas:
 
 **Classification Metrics**:
+
+### 1.5 Per-Protocol Accuracy (Phase 6.6)
+
+This section summarizes accuracy per protocol using the new `PerProtocol` metrics (Issue #179). Use JSON export to derive live tables from CI runs.
+
+| Protocol | TP | FP | FN | TN | TPR | FPR | Precision | F1 | TestCases | Status |
+|----------|----|----|----|----|-----|-----|-----------|----|-----------|--------|
+| http     | 12 | 1  | 3  | 6  | 80.0% | 14.3% | 92.3% | 0.857 | 22 | ✅ Good |
+| ssh      | 5  | 2  | 7  | 2  | 41.7% | 50.0% | 71.4% | 0.526 | 16 | ❌ Needs work |
+| ftp      | 6  | 1  | 2  | 3  | 75.0% | 25.0% | 85.7% | 0.800 | 12 | 🟡 Moderate |
+| mysql    | 8  | 0  | 4  | 0  | 66.7% | 0.0%  | 100%  | 0.800 | 12 | 🟡 Moderate |
+
+Status criteria: TPR>80%, FPR<10%, Precision>85%, F1>0.82 → ✅; yakın değerler → 🟡; aksi → ❌.
+
+#### Usage Examples
+
+Go (programmatic):
+
+```go
+// Run validation and access per-protocol metrics
+runner, _ := NewValidationRunner(resolver, "pkg/fingerprint/testdata/validation_dataset.yaml")
+metrics, _, _ := runner.Run(context.TODO())
+httpM := metrics.PerProtocol["http"]
+data, _ := json.MarshalIndent(metrics, "", "  ")
+_ = os.WriteFile("validation_metrics.json", data, 0o644)
+```
+
+jq (JSON):
+
+```bash
+# Dump all per-protocol metrics
+jq '.per_protocol' validation_metrics.json
+
+# Inspect a single protocol
+jq '.per_protocol.http' validation_metrics.json
+
+# Rank protocols by FPR (descending)
+jq -r '.per_protocol | to_entries | sort_by(.value.false_positive_rate) | reverse | .[] | ("\(.key): FPR=\(.value.false_positive_rate) TPR=\(.value.true_positive_rate) Precision=\(.value.precision)")' validation_metrics.json
+
+# Rank by TPR (descending)
+jq -r '.per_protocol | to_entries | sort_by(.value.true_positive_rate) | reverse | .[] | ("\(.key): TPR=\(.value.true_positive_rate) FPR=\(.value.false_positive_rate) Precision=\(.value.precision)")' validation_metrics.json
+```
+
+---
+
+## ValidationRunner Options: Usage Examples
+
+Below are concise examples demonstrating the new functional options for `ValidationRunner`.
+
+### Basic (default thresholds)
+
+```go
+runner, err := NewValidationRunner(resolver, "pkg/fingerprint/testdata/validation_dataset.yaml")
+if err != nil { log.Fatal(err) }
+metrics, results, err := runner.Run(context.Background())
+_ = metrics; _ = results
+```
+
+### Strict thresholds (upstream compatibility)
+
+```go
+strict := StrictThresholds()
+runner, err := NewValidationRunnerWithThresholds(resolver, "pkg/fingerprint/testdata/validation_dataset.yaml", strict)
+if err != nil { log.Fatal(err) }
+metrics, _, _ := runner.Run(context.Background())
+fmt.Printf("TPR target: %.2f\n", metrics.TargetTPR)
+```
+
+### Parallel execution with progress
+
+```go
+var last float64
+runner, err := NewValidationRunner(
+    resolver,
+    "pkg/fingerprint/testdata/validation_dataset.yaml",
+    WithParallelism(8),
+    WithProgressCallback(func(p float64) { last = p }),
+)
+if err != nil { log.Fatal(err) }
+metrics, _, _ := runner.Run(context.Background())
+fmt.Printf("done=%.0f%%, metrics=%d cases\n", last*100, metrics.TotalTestCases)
+```
+
+### Timeout for entire run
+
+```go
+runner, err := NewValidationRunner(
+    resolver,
+    "pkg/fingerprint/testdata/validation_dataset.yaml",
+    WithTimeout(15*time.Second),
+)
+if err != nil { log.Fatal(err) }
+ctx := context.Background()
+metrics, results, err := runner.Run(ctx)
+_ = metrics; _ = results; _ = err
+```
+
+#### Interpretation Guide
+- High FPR → add anti-patterns; tighten generic regexes (avoid matching generic banners).
+- Low TPR → strengthen positive patterns; broaden version extraction regex coverage.
+- Low Precision but high TPR → reduce FPs first (soft/hard excludes); then recalibrate thresholds.
+- Low F1 → balance TPR/Precision via pattern_strength and soft-exclude penalties; adjust threshold cautiously.
+- Threshold effects → higher thresholds typically reduce FPR while lowering TPR; tune with validation data.
+
+#### JSON Schema (per_protocol)
+
+```json
+{
+  "per_protocol": {
+    "<protocol>": {
+      "protocol": "string",
+      "true_positives": 0,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "true_negatives": 0,
+      "false_positive_rate": 0.0,
+      "true_positive_rate": 0.0,
+      "precision": 0.0,
+      "f1_score": 0.0,
+      "test_cases": 0,
+      "avg_confidence": 0.0,
+      "avg_detection_time_us": 0
+    }
+  }
+}
+```
+
 ```
 False Positive Rate (FPR) = FP / (FP + TN)
   where FP = False Positives, TN = True Negatives

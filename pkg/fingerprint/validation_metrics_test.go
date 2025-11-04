@@ -196,3 +196,29 @@ func TestCalculateMetrics_PerProtocolBreakdown(t *testing.T) {
 		t.Fatalf("unexpected ssh avg confidence: %v", ssh.AvgConfidence)
 	}
 }
+
+func TestCalculateMetrics_PerProtocol_EdgeCases(t *testing.T) {
+	// Protocol with no TP: avg confidence should be 0, rates well-defined
+	ptrue := true
+	pfalse := false
+	results := []ValidationResult{
+		{TestCase: ValidationTestCase{Protocol: "imap", ExpectedMatch: &ptrue}, Matched: false, IsCorrect: false, DurationMicros: 100}, // FN
+		{TestCase: ValidationTestCase{Protocol: "imap", ExpectedMatch: &pfalse}, Matched: true, IsCorrect: false, DurationMicros: 200}, // FP
+		{TestCase: ValidationTestCase{Protocol: "imap", ExpectedMatch: &pfalse}, Matched: false, IsCorrect: true, DurationMicros: 300}, // TN
+	}
+	m := CalculateMetrics(results, ValidationMetrics{})
+	imap := m.PerProtocol["imap"]
+	if imap.TruePositives != 0 || imap.FalsePositives != 1 || imap.FalseNegatives != 1 || imap.TrueNegatives != 1 {
+		t.Fatalf("unexpected imap counts: %+v", imap)
+	}
+	if imap.AvgConfidence != 0 {
+		t.Fatalf("expected avg confidence 0 when no TP, got %v", imap.AvgConfidence)
+	}
+	// FPR = 1/(1+1)=0.5, TPR = 0/(0+1)=0, Precision=0/(0+1)=0
+	if imap.FalsePositiveRate < 0.49 || imap.FalsePositiveRate > 0.51 {
+		t.Fatalf("unexpected FPR: %v", imap.FalsePositiveRate)
+	}
+	if imap.TruePositiveRate != 0 || imap.Precision != 0 {
+		t.Fatalf("unexpected TPR/Precision: %v/%v", imap.TruePositiveRate, imap.Precision)
+	}
+}
