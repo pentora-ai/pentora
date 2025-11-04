@@ -118,6 +118,7 @@ func NewCommand() *cobra.Command {
 	cmd.AddCommand(cli.NewVersionCommand(cliExecutable))
 	cmd.AddCommand(ScanCmd)
 	cmd.AddCommand(NewFingerprintCommand())
+	cmd.AddCommand(NewStatsCommand())
 
 	return cmd
 }
