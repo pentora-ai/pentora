@@ -77,8 +77,9 @@ type ValidationMetrics struct {
 
 // ValidationRunner executes validation tests and computes metrics.
 type ValidationRunner struct {
-	resolver Resolver
-	dataset  *ValidationDataset
+	resolver   Resolver
+	dataset    *ValidationDataset
+	thresholds ValidationThresholds
 }
 
 // calculateMetrics is deprecated; kept for test compatibility. It forwards to
@@ -96,13 +97,24 @@ func (vr *ValidationRunner) calculateMetrics(results []ValidationResult) *Valida
 	return CalculateMetrics(results, targets)
 }
 
-// NewValidationRunner creates a new validation runner with the given resolver.
+// NewValidationRunner creates a new validation runner with the given resolver and default thresholds.
+// For custom thresholds, use NewValidationRunnerWithThresholds.
 func NewValidationRunner(resolver Resolver, datasetPath string) (*ValidationRunner, error) {
+	return NewValidationRunnerWithThresholds(resolver, datasetPath, DefaultThresholds())
+}
+
+// NewValidationRunnerWithThresholds creates a new validation runner with custom thresholds.
+// This allows fine-tuning validation criteria per use case (e.g., strict vs relaxed profiles).
+func NewValidationRunnerWithThresholds(resolver Resolver, datasetPath string, thresholds ValidationThresholds) (*ValidationRunner, error) {
 	dataset, err := LoadValidationDataset(datasetPath)
 	if err != nil {
 		return nil, err
 	}
-	return &ValidationRunner{resolver: resolver, dataset: dataset}, nil
+	return &ValidationRunner{
+		resolver:   resolver,
+		dataset:    dataset,
+		thresholds: thresholds,
+	}, nil
 }
 
 // Run executes all validation tests and returns aggregated metrics.
@@ -127,15 +139,15 @@ func (vr *ValidationRunner) Run(ctx context.Context) (*ValidationMetrics, []Vali
 		results = append(results, result)
 	}
 
-	// Calculate metrics using pure helper (targets configured here)
+	// Calculate metrics using configured thresholds
 	targets := ValidationMetrics{
-		TargetFPR:         0.10,
-		TargetTPR:         0.80,
-		TargetPrecision:   0.85,
-		TargetF1:          0.82,
-		TargetProtocols:   20,
-		TargetVersionRate: 0.70,
-		TargetPerfMs:      50.0,
+		TargetFPR:         vr.thresholds.TargetFPR,
+		TargetTPR:         vr.thresholds.TargetTPR,
+		TargetPrecision:   vr.thresholds.TargetPrecision,
+		TargetF1:          vr.thresholds.TargetF1,
+		TargetProtocols:   vr.thresholds.TargetProtocols,
+		TargetVersionRate: vr.thresholds.TargetVersionRate,
+		TargetPerfMs:      vr.thresholds.TargetPerfMs,
 	}
 	metrics := CalculateMetrics(results, targets)
 
