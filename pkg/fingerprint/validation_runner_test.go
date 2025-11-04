@@ -53,7 +53,10 @@ func TestRunTestCase_Branches(t *testing.T) {
 func TestRun_AggregatesAndTargets(t *testing.T) {
 	// Two cases: one TP (resolver returns match), one TN (resolver returns error)
 	// Return match for http, error for ssh to produce TP and TN
-	r := &ValidationRunner{resolver: stubResolver{res: Result{Product: "nginx", Vendor: "nginx", Version: "", Confidence: 0.8}, err: fmt.Errorf("no matching rule found"), errProto: "ssh"}}
+	r := &ValidationRunner{
+		resolver:   stubResolver{res: Result{Product: "nginx", Vendor: "nginx", Version: "", Confidence: 0.8}, err: fmt.Errorf("no matching rule found"), errProto: "ssh"},
+		thresholds: DefaultThresholds(),
+	}
 	r.dataset = &ValidationDataset{
 		TruePositives: []ValidationTestCase{{Protocol: "http", Banner: "Server: nginx", ExpectedProduct: "nginx"}},
 		TrueNegatives: []ValidationTestCase{{Protocol: "ssh", Banner: "HTTP/1.1 200 OK", ExpectedMatch: func() *bool { b := false; return &b }()}},
