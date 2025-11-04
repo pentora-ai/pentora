@@ -156,3 +156,43 @@ func TestCalculateMetrics_MixedCountsAndConfidence(t *testing.T) {
 		t.Fatalf("expected protocols, version rate and perf to pass: %+v", m)
 	}
 }
+
+func TestCalculateMetrics_PerProtocolBreakdown(t *testing.T) {
+	ptrue := true
+	pfalse := false
+	results := []ValidationResult{
+		{TestCase: ValidationTestCase{Protocol: "http", ExpectedMatch: &ptrue}, Matched: true, IsCorrect: true, ActualConfidence: 0.9, DurationMicros: 100}, // TP
+		{TestCase: ValidationTestCase{Protocol: "http", ExpectedMatch: &ptrue}, Matched: true, IsCorrect: false, DurationMicros: 200},                       // FP
+		{TestCase: ValidationTestCase{Protocol: "http", ExpectedMatch: &ptrue}, Matched: false, IsCorrect: false, DurationMicros: 300},                      // FN
+		{TestCase: ValidationTestCase{Protocol: "ssh", ExpectedMatch: &pfalse}, Matched: false, IsCorrect: true, DurationMicros: 400},                       // TN
+		{TestCase: ValidationTestCase{Protocol: "ssh", ExpectedMatch: &pfalse}, Matched: true, IsCorrect: false, DurationMicros: 500},                       // FP
+		{TestCase: ValidationTestCase{Protocol: "ssh", ExpectedMatch: &ptrue}, Matched: true, IsCorrect: true, ActualConfidence: 0.8, DurationMicros: 600},  // TP
+	}
+	targets := ValidationMetrics{}
+	m := CalculateMetrics(results, targets)
+
+	if len(m.PerProtocol) != 2 {
+		t.Fatalf("expected 2 protocols, got %d", len(m.PerProtocol))
+	}
+	http := m.PerProtocol["http"]
+	if http.TruePositives != 1 || http.FalsePositives != 1 || http.FalseNegatives != 1 || http.TrueNegatives != 0 {
+		t.Fatalf("unexpected http counts: %+v", http)
+	}
+	if http.TestCases != 3 {
+		t.Fatalf("expected 3 http cases, got %d", http.TestCases)
+	}
+	if http.AvgConfidence < 0.89 || http.AvgConfidence > 0.91 {
+		t.Fatalf("unexpected http avg confidence: %v", http.AvgConfidence)
+	}
+
+	ssh := m.PerProtocol["ssh"]
+	if ssh.TruePositives != 1 || ssh.FalsePositives != 1 || ssh.FalseNegatives != 0 || ssh.TrueNegatives != 1 {
+		t.Fatalf("unexpected ssh counts: %+v", ssh)
+	}
+	if ssh.TestCases != 3 {
+		t.Fatalf("expected 3 ssh cases, got %d", ssh.TestCases)
+	}
+	if ssh.AvgConfidence < 0.79 || ssh.AvgConfidence > 0.81 {
+		t.Fatalf("unexpected ssh avg confidence: %v", ssh.AvgConfidence)
+	}
+}

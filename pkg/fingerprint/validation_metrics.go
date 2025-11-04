@@ -58,6 +58,7 @@ func CalculateMetrics(results []ValidationResult, targets ValidationMetrics) *Va
 		TargetProtocols:   targets.TargetProtocols,
 		TargetVersionRate: targets.TargetVersionRate,
 		TargetPerfMs:      targets.TargetPerfMs,
+		PerProtocol:       make(map[string]ProtocolMetrics),
 	}
 	// 1) Aggregate basic counts and collections
 	tp, tn, fp, fn, verEx, verAttempt, confidence, totalMicros, protocols := aggregate(results)
@@ -67,9 +68,85 @@ func CalculateMetrics(results []ValidationResult, targets ValidationMetrics) *Va
 	metrics.ProtocolsCovered = len(protocols)
 	computeConfidence(metrics, confidence)
 	computePerformance(metrics, totalMicros, len(results))
-	// 3) Evaluate pass/fail
+	// 3) Per-protocol metrics
+	metrics.PerProtocol = calculateProtocolMetrics(results)
+	// 4) Evaluate pass/fail
 	evaluateTargets(metrics)
 	return metrics
+}
+
+// calculateProtocolMetrics computes metrics per protocol key.
+func calculateProtocolMetrics(results []ValidationResult) map[string]ProtocolMetrics {
+	// First aggregate per protocol
+	type acc struct {
+		tp, tn, fp, fn int
+		confSum        float64
+		confN          int
+		timeSum        int64
+		total          int
+	}
+	agg := map[string]*acc{}
+	for _, r := range results {
+		proto := r.TestCase.Protocol
+		a, ok := agg[proto]
+		if !ok {
+			a = &acc{}
+			agg[proto] = a
+		}
+		a.total++
+		a.timeSum += r.DurationMicros
+
+		shouldMatch := r.TestCase.ExpectedMatch == nil || *r.TestCase.ExpectedMatch
+		if shouldMatch {
+			switch {
+			case r.Matched && r.IsCorrect:
+				a.tp++
+				a.confSum += r.ActualConfidence
+				a.confN++
+			case r.Matched && !r.IsCorrect:
+				a.fp++
+			case !r.Matched:
+				a.fn++
+			}
+		} else {
+			if !r.Matched {
+				a.tn++
+			} else {
+				a.fp++
+			}
+		}
+	}
+	// Build metrics
+	out := make(map[string]ProtocolMetrics, len(agg))
+	for proto, a := range agg {
+		prec := CalculatePrecision(a.tp, a.fp)
+		tpr := CalculateTPR(a.tp, a.fn)
+		fpr := CalculateFPR(a.fp, a.tn)
+		f1 := CalculateF1Score(prec, tpr)
+		avgConf := 0.0
+		if a.confN > 0 {
+			avgConf = a.confSum / float64(a.confN)
+		}
+		avgUs := int64(0)
+		if a.total > 0 {
+			avgUs = a.timeSum / int64(a.total)
+		}
+		out[proto] = ProtocolMetrics{
+			Protocol:          proto,
+			TruePositives:     a.tp,
+			FalsePositives:    a.fp,
+			FalseNegatives:    a.fn,
+			TrueNegatives:     a.tn,
+			FalsePositiveRate: fpr,
+			TruePositiveRate:  tpr,
+			Precision:         prec,
+			F1Score:           f1,
+			TestCases:         a.total,
+			AvgConfidence:     avgConf,
+			AvgDetectTimeUs:   avgUs,
+		}
+	}
+	return out
 }
 
 func aggregate(results []ValidationResult) (tp, tn, fp, fn, verEx, verAttempt int, confidence []float64, totalMicros int64, protocols map[string]bool) {
