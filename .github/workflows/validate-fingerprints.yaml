@@ -36,6 +36,7 @@ jobs:
 
       - name: Compare metrics
         run: |
+          set -e
           bash scripts/compare-validation-metrics.sh baseline.log validation.log > metrics_diff.md
 
       - name: Post metrics diff comment
