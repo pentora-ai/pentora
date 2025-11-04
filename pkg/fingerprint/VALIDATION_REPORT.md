@@ -201,6 +201,60 @@ jq -r '.per_protocol | to_entries | sort_by(.value.false_positive_rate) | revers
 jq -r '.per_protocol | to_entries | sort_by(.value.true_positive_rate) | reverse | .[] | ("\(.key): TPR=\(.value.true_positive_rate) FPR=\(.value.false_positive_rate) Precision=\(.value.precision)")' validation_metrics.json
 ```
 
+---
+
+## ValidationRunner Options: Usage Examples
+
+Below are concise examples demonstrating the new functional options for `ValidationRunner`.
+
+### Basic (default thresholds)
+
+```go
+runner, err := NewValidationRunner(resolver, "pkg/fingerprint/testdata/validation_dataset.yaml")
+if err != nil { log.Fatal(err) }
+metrics, results, err := runner.Run(context.Background())
+_ = metrics; _ = results
+```
+
+### Strict thresholds (upstream compatibility)
+
+```go
+strict := StrictThresholds()
+runner, err := NewValidationRunnerWithThresholds(resolver, "pkg/fingerprint/testdata/validation_dataset.yaml", strict)
+if err != nil { log.Fatal(err) }
+metrics, _, _ := runner.Run(context.Background())
+fmt.Printf("TPR target: %.2f\n", metrics.TargetTPR)
+```
+
+### Parallel execution with progress
+
+```go
+var last float64
+runner, err := NewValidationRunner(
+    resolver,
+    "pkg/fingerprint/testdata/validation_dataset.yaml",
+    WithParallelism(8),
+    WithProgressCallback(func(p float64) { last = p }),
+)
+if err != nil { log.Fatal(err) }
+metrics, _, _ := runner.Run(context.Background())
+fmt.Printf("done=%.0f%%, metrics=%d cases\n", last*100, metrics.TotalTestCases)
+```
+
+### Timeout for entire run
+
+```go
+runner, err := NewValidationRunner(
+    resolver,
+    "pkg/fingerprint/testdata/validation_dataset.yaml",
+    WithTimeout(15*time.Second),
+)
+if err != nil { log.Fatal(err) }
+ctx := context.Background()
+metrics, results, err := runner.Run(ctx)
+_ = metrics; _ = results; _ = err
+```
+
 #### Interpretation Guide
 - High FPR → add anti-patterns; tighten generic regexes (avoid matching generic banners).
 - Low TPR → strengthen positive patterns; broaden version extraction regex coverage.

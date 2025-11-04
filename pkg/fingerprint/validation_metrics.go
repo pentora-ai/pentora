@@ -75,6 +75,26 @@ func CalculateMetrics(results []ValidationResult, targets ValidationMetrics) *Va
 	return metrics
 }
 
+// defaultThresholds returns runner thresholds if set, otherwise sensible defaults.
+func (vr *ValidationRunner) defaultThresholds() ValidationMetrics {
+	if vr.thresholds.TargetFPR != 0 || vr.thresholds.TargetTPR != 0 || vr.thresholds.TargetPrecision != 0 ||
+		vr.thresholds.TargetF1 != 0 || vr.thresholds.TargetProtocols != 0 || vr.thresholds.TargetVersionRate != 0 ||
+		vr.thresholds.TargetPerfMs != 0 {
+		return vr.thresholds
+	}
+	return ValidationMetrics{
+		TargetFPR:         0.10,
+		TargetTPR:         0.80,
+		TargetPrecision:   0.85,
+		TargetF1:          0.82,
+		TargetProtocols:   20,
+		TargetVersionRate: 0.70,
+		TargetPerfMs:      50.0,
+	}
+}
+
+// duplicate removed
+
 // calculateProtocolMetrics computes metrics per protocol key.
 func calculateProtocolMetrics(results []ValidationResult) map[string]ProtocolMetrics {
 	// First aggregate per protocol

@@ -445,3 +445,44 @@ Licensed under the Apache License, Version 2.0. See [LICENSE.md](LICENSE.md) for
 ---
 
 **Note**: Pentora is under active development. Star the repository to stay updated on releases and new features!
+## ValidationRunner Options (Fingerprint)
+
+Pentora's fingerprint validation supports functional options to configure thresholds, parallelism, timeouts, and progress callbacks.
+
+Basic usage (defaults):
+
+```go
+runner, err := NewValidationRunner(resolver, "pkg/fingerprint/testdata/validation_dataset.yaml")
+metrics, results, err := runner.Run(context.Background())
+```
+
+Custom thresholds (upstream-compatible):
+
+```go
+strict := StrictThresholds()
+runner, err := NewValidationRunnerWithThresholds(resolver, "pkg/fingerprint/testdata/validation_dataset.yaml", strict)
+metrics, _, _ := runner.Run(context.Background())
+```
+
+Parallel execution with progress:
+
+```go
+runner, err := NewValidationRunner(
+  resolver,
+  "pkg/fingerprint/testdata/validation_dataset.yaml",
+  WithParallelism(4),
+  WithProgressCallback(func(p float64){ fmt.Printf("%.0f%%\n", p*100) }),
+)
+metrics, _, _ := runner.Run(context.Background())
+```
+
+Timeout for entire run:
+
+```go
+runner, _ := NewValidationRunner(
+  resolver,
+  "pkg/fingerprint/testdata/validation_dataset.yaml",
+  WithTimeout(30*time.Second),
+)
+metrics, _, _ := runner.Run(context.Background())
+```
