@@ -349,3 +349,9 @@ For questions about validation dataset:
 **Last Updated**: 2025-11-04
 **Total Test Cases**: 130 (90 TP, 40 TN, 10 edge)
 **Protocols Covered**: 16 (http, ssh, ftp, mysql, postgresql, redis, mongodb, memcached, elasticsearch, smtp, rdp, vnc, telnet, snmp, smb, dns)
+
+---
+
+## CI/CD Integration
+
+The fingerprint validation workflow automatically runs on every PR that touches `pkg/fingerprint/**`. It compares validation metrics between the PR branch and main baseline, posting results as a PR comment.
