@@ -73,6 +73,25 @@ type ValidationMetrics struct {
 	PassPerformance bool `json:"pass_performance"`
 
 	MetricsPassed int `json:"metrics_passed"` // Count of passed metrics (out of 10)
+
+	// Per-protocol breakdown
+	PerProtocol map[string]ProtocolMetrics `json:"per_protocol"`
+}
+
+// ProtocolMetrics represents metrics for a single protocol
+type ProtocolMetrics struct {
+	Protocol          string  `json:"protocol"`
+	TruePositives     int     `json:"true_positives"`
+	FalsePositives    int     `json:"false_positives"`
+	FalseNegatives    int     `json:"false_negatives"`
+	TrueNegatives     int     `json:"true_negatives"`
+	FalsePositiveRate float64 `json:"false_positive_rate"`
+	TruePositiveRate  float64 `json:"true_positive_rate"`
+	Precision         float64 `json:"precision"`
+	F1Score           float64 `json:"f1_score"`
+	TestCases         int     `json:"test_cases"`
+	AvgConfidence     float64 `json:"avg_confidence"`
+	AvgDetectTimeUs   int64   `json:"avg_detection_time_us"`
 }
 
 // ValidationRunner executes validation tests and computes metrics.
