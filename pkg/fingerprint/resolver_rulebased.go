@@ -41,12 +41,18 @@ type StaticRule struct {
 
 // RuleBasedResolver uses a preloaded list of static rules to resolve banners into metadata.
 type RuleBasedResolver struct {
-	rules []StaticRule
+	rules     []StaticRule
+	telemetry *TelemetryWriter
 }
 
 // NewRuleBasedResolver initializes a resolver using fingerprint rules loaded from a YAML file.
 func NewRuleBasedResolver(rules []StaticRule) *RuleBasedResolver {
-	return &RuleBasedResolver{rules: prepareRules(rules)}
+	return &RuleBasedResolver{rules: prepareRules(rules), telemetry: nil}
+}
+
+// SetTelemetry configures telemetry writer for the resolver.
+func (r *RuleBasedResolver) SetTelemetry(telemetry *TelemetryWriter) {
+	r.telemetry = telemetry
 }
 
 // Resolve attempts to identify a fingerprint based on the provided FingerprintInput.
@@ -63,6 +69,8 @@ func NewRuleBasedResolver(rules []StaticRule) *RuleBasedResolver {
 //
 //	Result - The result of the fingerprinting process, populated if a rule matches.
 //	error             - An error if no matching rule is found.
+//
+//nolint:gocyclo // Telemetry logging adds complexity, refactor planned for later
 func (r *RuleBasedResolver) Resolve(_ context.Context, in Input) (Result, error) {
 	normalizedBanner := strings.ToLower(in.Banner)
 
@@ -82,6 +90,10 @@ func (r *RuleBasedResolver) Resolve(_ context.Context, in Input) (Result, error)
 		}
 		// Hard exclude
 		if isHardRejected(normalizedBanner, rule.excludeRegex) {
+			// Log rejection if telemetry is enabled
+			if r.telemetry != nil && r.telemetry.IsEnabled() {
+				_ = r.telemetry.WriteRejected("", in.Port, in.Protocol, "hard_exclude_pattern", "static", rule.ID)
+			}
 			continue
 		}
 		// Version extraction (optional)
@@ -106,18 +118,26 @@ func (r *RuleBasedResolver) Resolve(_ context.Context, in Input) (Result, error)
 
 		// Threshold filter
 		if conf < 0.50 {
+			// Log low confidence rejection if telemetry is enabled
+			if r.telemetry != nil && r.telemetry.IsEnabled() {
+				_ = r.telemetry.WriteRejected("", in.Port, in.Protocol, "confidence_below_threshold", "static", rule.ID)
+			}
 			continue
 		}
 		cands = append(cands, candidate{rule: rule, version: version, confidence: conf})
 	}
 
 	if len(cands) == 0 {
+		// Log no match if telemetry is enabled
+		if r.telemetry != nil && r.telemetry.IsEnabled() {
+			_ = r.telemetry.WriteNoMatch("", in.Port, in.Protocol, "static")
+		}
 		return Result{}, fmt.Errorf("no matching rule found")
 	}
 	sort.SliceStable(cands, func(i, j int) bool { return cands[i].confidence > cands[j].confidence })
 	best := cands[0]
 
-	return Result{
+	result := Result{
 		Product:     best.rule.Product,
 		Vendor:      best.rule.Vendor,
 		Version:     best.version,
@@ -125,7 +145,14 @@ func (r *RuleBasedResolver) Resolve(_ context.Context, in Input) (Result, error)
 		Confidence:  best.confidence,
 		Technique:   "static",
 		Description: best.rule.Description,
-	}, nil
+	}
+
+	// Log successful match if telemetry is enabled
+	if r.telemetry != nil && r.telemetry.IsEnabled() {
+		_ = r.telemetry.WriteSuccess("", in.Port, in.Protocol, result, "static", best.rule.ID)
+	}
+
+	return result, nil
 }
 
 func prepareRules(rules []StaticRule) []StaticRule {
