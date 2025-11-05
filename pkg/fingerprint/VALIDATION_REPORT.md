@@ -266,12 +266,25 @@ grep -A 100 "Validation Metrics:" validation_output.log
 | **Precision**           | >85%   | 100.00% | ✅     | Perfect precision                    |
 | **F1 Score**            | >0.82  | 0.9259 | ✅     | Excellent balance                    |
 
-**Confusion Matrix:**
+**Confusion Matrix:** *(From actual test execution: `go test -v -run TestValidationRunner`)*
 
 ```
                     Predicted Positive    Predicted Negative
-Actual Positive     125 (TP)             20 (FN)
-Actual Negative     0 (FP)               0 (TN)
+Actual Positive     100 (TP)             16 (FN)
+Actual Negative     0 (FP)               29 (TN)
+```
+
+**Test Execution Evidence:**
+```
+Total Test Cases: 145
+True Positives: 100
+True Negatives: 29
+False Positives: 0
+False Negatives: 16
+False Positive Rate: 0.00%
+True Positive Rate: 86.21%
+Precision: 100.00%
+F1 Score: 0.9259
 ```
 
 **Analysis:**
@@ -281,11 +294,12 @@ Actual Negative     0 (FP)               0 (TN)
   - Phase 8.1 eliminated all 2 remaining FP cases from Phase 7
   - Added "coyote" anti-pattern to prevent Apache-Coyote (Tomcat) being matched as Apache HTTP Server
   - Impact: Zero risk of incorrect service identification - production ready
+  - **29 true negatives correctly rejected** (expected_match: false cases)
 
-- **Strong True Positive Rate**: 125 out of 145 expected detections matched (86.21%)
+- **Strong True Positive Rate**: 100 out of 116 expected detections matched (86.21%)
 
   - Improved from 83.84% in Phase 7 by adding 5 new protocols
-  - Remaining 20 misses (13.79%) are edge cases or unusual banner formats
+  - Remaining 16 misses (13.79%) are edge cases or unusual banner formats
   - Impact: Excellent - detecting vast majority of real services
 
 - **Perfect Precision**: 100.00% of positive detections are correct
