@@ -744,6 +744,131 @@ true_positives:
     expected_version: ""
     description: "Microsoft Terminal Services"
 
+  # ========== LDAP (3 cases) ==========
+  - protocol: ldap
+    port: 389
+    banner: "OpenLDAP 2.4.57"
+    expected_product: "OpenLDAP"
+    expected_vendor: "OpenLDAP Foundation"
+    expected_version: "2.4.57"
+    description: "OpenLDAP directory server"
+
+  - protocol: ldap
+    port: 636
+    banner: "LDAP Directory Service 3.0"
+    expected_product: "OpenLDAP"
+    expected_vendor: "OpenLDAP Foundation"
+    expected_version: "3.0"
+    description: "LDAP over TLS"
+
+  - protocol: ldap
+    port: 3268
+    banner: "directory service running"
+    expected_product: "OpenLDAP"
+    expected_vendor: "OpenLDAP Foundation"
+    expected_version: ""
+    description: "Generic LDAP directory"
+
+  # ========== Kafka (3 cases) ==========
+  - protocol: kafka
+    port: 9092
+    banner: "Kafka 3.2.1"
+    expected_product: "Kafka"
+    expected_vendor: "Apache"
+    expected_version: "3.2.1"
+    description: "Apache Kafka message broker"
+
+  - protocol: kafka
+    port: 9093
+    banner: "Apache Kafka version 2.8.0"
+    expected_product: "Kafka"
+    expected_vendor: "Apache"
+    expected_version: "2.8.0"
+    description: "Kafka with full version info"
+
+  - protocol: kafka
+    port: 9092
+    banner: "kafka-server"
+    expected_product: "Kafka"
+    expected_vendor: "Apache"
+    expected_version: ""
+    description: "Kafka minimal banner"
+
+  # ========== RabbitMQ (3 cases) ==========
+  - protocol: amqp
+    port: 5672
+    banner: "AMQP\x00\x00\x09\x01 RabbitMQ 3.10.5"
+    expected_product: "RabbitMQ"
+    expected_vendor: "RabbitMQ"
+    expected_version: "3.10.5"
+    description: "RabbitMQ AMQP broker"
+
+  - protocol: amqp
+    port: 5671
+    banner: "rabbitmq-server 3.9.13"
+    expected_product: "RabbitMQ"
+    expected_vendor: "RabbitMQ"
+    expected_version: "3.9.13"
+    description: "RabbitMQ over TLS"
+
+  - protocol: amqp
+    port: 5672
+    banner: "AMQP 0.9.1"
+    expected_product: "RabbitMQ"
+    expected_vendor: "RabbitMQ"
+    expected_version: ""
+    description: "Generic AMQP banner"
+
+  # ========== Elasticsearch (3 cases) ==========
+  - protocol: http
+    port: 9200
+    banner: '{"version":{"number":"7.17.3","build_flavor":"default"}} elasticsearch'
+    expected_product: "Elasticsearch"
+    expected_vendor: "Elastic"
+    expected_version: "7.17.3"
+    description: "Elasticsearch JSON response"
+
+  - protocol: http
+    port: 9300
+    banner: "Elastic Search 8.5.0"
+    expected_product: "Elasticsearch"
+    expected_vendor: "Elastic"
+    expected_version: "8.5.0"
+    description: "Elasticsearch node transport"
+
+  - protocol: http
+    port: 9200
+    banner: "elasticsearch cluster"
+    expected_product: "Elasticsearch"
+    expected_vendor: "Elastic"
+    expected_version: ""
+    description: "Generic Elasticsearch banner"
+
+  # ========== DNS (3 cases) ==========
+  - protocol: dns
+    port: 53
+    banner: "BIND 9.16.23"
+    expected_product: "BIND"
+    expected_vendor: "ISC"
+    expected_version: "9.16.23"
+    description: "BIND DNS server"
+
+  - protocol: dns
+    port: 53
+    banner: "named version 9.18.4"
+    expected_product: "BIND"
+    expected_vendor: "ISC"
+    expected_version: "9.18.4"
+    description: "Named DNS daemon"
+
+  - protocol: dns
+    port: 53
+    banner: "DNS service running"
+    expected_product: "BIND"
+    expected_vendor: "ISC"
+    expected_version: ""
+    description: "Generic DNS banner"
+
 # ============================================================================
 # TRUE NEGATIVES: Banners that should NOT match (wrong protocol, malformed)
 # ============================================================================
