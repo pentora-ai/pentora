@@ -14,6 +14,7 @@ rules:
       - "nginx"
       - "iis"
       - "litespeed"
+      - "coyote"
 
     soft_exclude_patterns:
       - "error"
@@ -597,3 +598,120 @@ rules:
     vendor: 'Microsoft'
     cpe: 'cpe:2.3:a:microsoft:winrm:*:*:*:*:*:*:*:*'
     match: 'microsoft-httpapi/2\.0'
+
+    exclude_patterns:
+      - "apache"
+      - "nginx"
+
+    pattern_strength: 0.90
+    port_bonuses: [5985, 5986]
+
+  # Directory Services
+  - id: 'ldap.openldap'
+    protocol: 'ldap'
+    description: 'OpenLDAP directory service'
+    product: 'OpenLDAP'
+    vendor: 'OpenLDAP Foundation'
+    cpe: 'cpe:2.3:a:openldap:openldap:*:*:*:*:*:*:*:*'
+    match: 'ldap|openldap|directory'
+    version_extraction: "(?:openldap|ldap)\\s+([\\d\\.]+)"
+
+    exclude_patterns:
+      - "http"
+      - "smtp"
+      - "ftp"
+
+    soft_exclude_patterns:
+      - "error"
+      - "denied"
+      - "unavailable"
+
+    pattern_strength: 0.85
+    port_bonuses: [389, 636, 3268, 3269]
+
+  # Message Brokers
+  - id: 'kafka.apache'
+    protocol: 'kafka'
+    description: 'Apache Kafka message broker'
+    product: 'Kafka'
+    vendor: 'Apache'
+    cpe: 'cpe:2.3:a:apache:kafka:*:*:*:*:*:*:*:*'
+    match: 'kafka'
+    version_extraction: "kafka[\\s/_-]+([\\d\\.]+)"
+
+    exclude_patterns:
+      - "redis"
+      - "rabbitmq"
+      - "activemq"
+
+    soft_exclude_patterns:
+      - "error"
+      - "connection refused"
+
+    pattern_strength: 0.88
+    port_bonuses: [9092, 9093]
+
+  - id: 'rabbitmq.server'
+    protocol: 'amqp'
+    description: 'RabbitMQ AMQP message broker'
+    product: 'RabbitMQ'
+    vendor: 'RabbitMQ'
+    cpe: 'cpe:2.3:a:rabbitmq:rabbitmq:*:*:*:*:*:*:*:*'
+    match: 'amqp|rabbitmq'
+    version_extraction: "rabbitmq[\\s/_-]+([\\d\\.]+)"
+
+    exclude_patterns:
+      - "kafka"
+      - "redis"
+      - "activemq"
+
+    soft_exclude_patterns:
+      - "error"
+      - "connection closed"
+
+    pattern_strength: 0.88
+    port_bonuses: [5672, 5671]
+
+  # Search Engines
+  - id: 'search.elasticsearch'
+    protocol: 'http'
+    description: 'Elasticsearch search and analytics engine'
+    product: 'Elasticsearch'
+    vendor: 'Elastic'
+    cpe: 'cpe:2.3:a:elasticsearch:elasticsearch:*:*:*:*:*:*:*:*'
+    match: 'elasticsearch|elastic'
+    version_extraction: "(?:elasticsearch|elastic)[\\s/:\"]+([\\d\\.]+)"
+
+    exclude_patterns:
+      - "apache"
+      - "nginx"
+      - "kibana"
+
+    soft_exclude_patterns:
+      - "error"
+      - "unavailable"
+
+    pattern_strength: 0.90
+    port_bonuses: [9200, 9300]
+
+  # DNS Services
+  - id: 'dns.bind'
+    protocol: 'dns'
+    description: 'BIND DNS server'
+    product: 'BIND'
+    vendor: 'ISC'
+    cpe: 'cpe:2.3:a:isc:bind:*:*:*:*:*:*:*:*'
+    match: 'bind|named|dns'
+    version_extraction: "(?:bind|named)[\\s/_-]+([\\d\\.]+)"
+
+    exclude_patterns:
+      - "http"
+      - "smtp"
+      - "ftp"
+
+    soft_exclude_patterns:
+      - "error"
+      - "refused"
+
+    pattern_strength: 0.85
+    port_bonuses: [53]
