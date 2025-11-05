@@ -2,7 +2,10 @@ package fingerprint
 
 import (
 	"context"
+	"os"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 // BenchmarkResolverSingleMatch benchmarks resolver performance with a single rule match.
@@ -242,3 +245,141 @@ func BenchmarkRulePreparation(b *testing.B) {
 		_ = prepareRules(rules)
 	}
 }
+
+// Memory-focused benchmarks
+func BenchmarkResolverMemory(b *testing.B) {
+	b.ReportAllocs()
+	rules, err := LoadRulesFromFile("data/fingerprint_db.yaml")
+	if err != nil {
+		b.Fatalf("failed to load rules: %v", err)
+	}
+	resolver := NewRuleBasedResolver(rules)
+	input := Input{Port: 80, Protocol: "http", Banner: "Server: Apache/2.4.41 (Ubuntu)"}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = resolver.Resolve(context.Background(), input)
+	}
+}
+
+func BenchmarkValidationRunnerMemory(b *testing.B) {
+	b.ReportAllocs()
+	rules, err := LoadRulesFromFile("data/fingerprint_db.yaml")
+	if err != nil {
+		b.Fatalf("failed to load rules: %v", err)
+	}
+	resolver := NewRuleBasedResolver(rules)
+	runner, err := NewValidationRunner(resolver, "testdata/validation_dataset.yaml")
+	if err != nil {
+		b.Fatalf("failed to create runner: %v", err)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _, _ = runner.Run(context.Background())
+	}
+}
+
+// Large dataset helpers and benchmarks
+func generateLargeDataset(n int) []ValidationTestCase {
+	cases := make([]ValidationTestCase, 0, n)
+	protos := []struct{ proto, banner string }{
+		{"http", "Server: Apache/2.4.41 (Ubuntu)"},
+		{"http", "Server: nginx/1.21.6"},
+		{"ssh", "SSH-2.0-OpenSSH_8.2p1 Ubuntu-4ubuntu0.5"},
+		{"mysql", "5.7.31-log"},
+		{"redis", "+PONG"},
+	}
+	for i := 0; i < n; i++ {
+		p := protos[i%len(protos)]
+		cases = append(cases, ValidationTestCase{
+			Protocol:        p.proto,
+			Port:            80,
+			Banner:          p.banner,
+			ExpectedProduct: "",
+			Description:     "auto-" + itoa(i),
+		})
+	}
+	return cases
+}
+
+func BenchmarkValidationRunnerLargeDataset(b *testing.B) {
+	b.ReportAllocs()
+	rules, err := LoadRulesFromFile("data/fingerprint_db.yaml")
+	if err != nil {
+		b.Fatalf("failed to load rules: %v", err)
+	}
+	resolver := NewRuleBasedResolver(rules)
+	ds := generateLargeDataset(1000)
+	tmp := b.TempDir() + "/large_ds_1k.yaml"
+	if err := saveValidationDatasetCompat(tmp, ds); err != nil {
+		b.Fatalf("save dataset: %v", err)
+	}
+	runner, err := NewValidationRunner(resolver, tmp)
+	if err != nil {
+		b.Fatalf("runner: %v", err)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _, _ = runner.Run(context.Background())
+	}
+}
+
+func BenchmarkValidationRunnerLargeDataset5k(b *testing.B) {
+	b.ReportAllocs()
+	rules, err := LoadRulesFromFile("data/fingerprint_db.yaml")
+	if err != nil {
+		b.Fatalf("failed to load rules: %v", err)
+	}
+	resolver := NewRuleBasedResolver(rules)
+	ds := generateLargeDataset(5000)
+	tmp := b.TempDir() + "/large_ds_5k.yaml"
+	if err := saveValidationDatasetCompat(tmp, ds); err != nil {
+		b.Fatalf("save dataset: %v", err)
+	}
+	runner, err := NewValidationRunner(resolver, tmp)
+	if err != nil {
+		b.Fatalf("runner: %v", err)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _, _ = runner.Run(context.Background())
+	}
+}
+
+func BenchmarkValidationRunnerLargeDataset10k(b *testing.B) {
+	b.ReportAllocs()
+	rules, err := LoadRulesFromFile("data/fingerprint_db.yaml")
+	if err != nil {
+		b.Fatalf("failed to load rules: %v", err)
+	}
+	resolver := NewRuleBasedResolver(rules)
+	ds := generateLargeDataset(10000)
+	tmp := b.TempDir() + "/large_ds_10k.yaml"
+	if err := saveValidationDatasetCompat(tmp, ds); err != nil {
+		b.Fatalf("save dataset: %v", err)
+	}
+	runner, err := NewValidationRunner(resolver, tmp)
+	if err != nil {
+		b.Fatalf("runner: %v", err)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _, _ = runner.Run(context.Background())
+	}
+}
+
+// saveValidationDatasetCompat writes a minimal dataset YAML with true_positives only.
+func saveValidationDatasetCompat(path string, cases []ValidationTestCase) error {
+	// Minimal YAML serialization using gopkg.in/yaml.v3
+	type ds struct {
+		TruePositives []ValidationTestCase `yaml:"true_positives"`
+	}
+	d := ds{TruePositives: cases}
+	data, err := yaml.Marshal(&d)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0o644)
+}
+
+// Small int to string helper without fmt
+// reuse itoa from validation_runner_test.go to avoid redeclaration
