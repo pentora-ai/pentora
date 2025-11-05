@@ -13,20 +13,27 @@ extract() {
   local file="$1" key="$2"
   # Expect lines like: "    validation_test.go:86: False Positive Rate: 23.68%"
   # Allow leading whitespace and validation_test.go prefix
-  grep -E "${key}:" "$file" | head -n1 | sed 's/.*'"${key}"': *//' | tr -d '%' || true
+  grep -E "${key}:" "$file" | head -n1 | sed 's/.*'"${key}"': *//' | tr -d ' %' || true
 }
 
 percent_change() {
   local base="$1" new="$2"
-  if [[ "$base" == "0" ]]; then echo "0"; return; fi
+  # Guard division by zero
+  if awk -v b="$base" 'BEGIN{exit !(b==0)}'; then
+    if awk -v n="$new" 'BEGIN{exit !(n==0)}'; then
+      echo "0"; return
+    else
+      echo "inf"; return
+    fi
+  fi
   awk -v b="$base" -v n="$new" 'BEGIN { printf("%.2f", ((n-b)/b)*100) }'
 }
 
 metrics=("False Positive Rate" "True Positive Rate" "Precision" "F1 Score")
 # Use name-mangled variables instead of associative arrays for macOS bash 3.2 compatibility
 for k in "${metrics[@]}"; do
-  vbase=$(extract "$baseline" "$k" | tr -d ' ' | sed 's/%$//' || true)
-  vcand=$(extract "$candidate" "$k" | tr -d ' ' | sed 's/%$//' || true)
+  vbase=$(extract "$baseline" "$k" || true)
+  vcand=$(extract "$candidate" "$k" || true)
   var_b=${k// /_}_BASE
   var_n=${k// /_}_NEW
   # shellcheck disable=SC2140
@@ -62,16 +69,28 @@ for k in "${metrics[@]}"; do
   # For FPR lower is better; for others higher is better
   change=$(percent_change "$b" "$n")
   arrow="↑"; color="✅ Improved"; regressed=0
+  # Neutral case: baseline==0 and pr==0
+  if [[ "$change" == "0" ]]; then
+    arrow="→"; color="OK"; regressed=0
+  fi
   if [[ "$k" == "False Positive Rate" ]]; then
     # Lower is better
-    if awk -v c="$change" 'BEGIN{exit !(c<0)}'; then
+    if [[ "$change" == "0" ]]; then
+      arrow="→"; color="OK"; regressed=0
+    elif [[ "$change" == "inf" ]]; then
+      arrow="↑"; color="❌ Regressed"; regressed=1
+    elif awk -v c="$change" 'BEGIN{exit !(c<0)}'; then
       arrow="↓"; color="✅ Improved"; regressed=0
     else
       arrow="↑"; color="❌ Regressed"; regressed=1
     fi
   else
     # Higher is better
-    if awk -v c="$change" 'BEGIN{exit !(c>0)}'; then
+    if [[ "$change" == "0" ]]; then
+      arrow="→"; color="OK"; regressed=0
+    elif [[ "$change" == "inf" ]]; then
+      arrow="↑"; color="✅ Improved"; regressed=0
+    elif awk -v c="$change" 'BEGIN{exit !(c>0)}'; then
       arrow="↑"; color="✅ Improved"; regressed=0
     else
       arrow="↓"; color="❌ Regressed"; regressed=1
@@ -80,12 +99,22 @@ for k in "${metrics[@]}"; do
 
   # Hard fail on >$threshold% relative regression (directionally)
   if [[ $regressed -eq 1 ]]; then
-    if awk -v c="$change" -v t="$threshold" 'BEGIN{c=(c<0)?-c:c; exit !(c>t)}'; then
+    if [[ "$change" == "inf" ]]; then
       status=1
+    else
+      if awk -v c="$change" -v t="$threshold" 'BEGIN{c=(c<0)?-c:c; exit !(c>t)}'; then
+        status=1
+      fi
     fi
   fi
 
-  printf "| %s | %s | %s | %s%% %s | %s |\n" "$k" "$b" "$n" "$change" "$arrow" "$color"
+  if [[ "$change" == "inf" ]]; then
+    change_disp="+∞"
+  else
+    change_disp="${change}%"
+  fi
+
+  printf "| %s | %s | %s | %s %s | %s |\n" "$k" "$b" "$n" "$change_disp" "$arrow" "$color"
 done
 
 echo ""

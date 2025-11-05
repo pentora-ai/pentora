@@ -447,3 +447,456 @@ func TestPlanner_logUnprocessedModules(t *testing.T) {
 	}
 	planner.logUnprocessedModules(candidateModules, allAddedModules, availableDataKeys)
 }
+
+func TestScanIntent_Profile_or_Level_or_Default(t *testing.T) {
+	tests := []struct {
+		name   string
+		intent ScanIntent
+		want   string
+	}{
+		{
+			name:   "Profile set",
+			intent: ScanIntent{Profile: "quick_discovery", Level: "light"},
+			want:   "quick_discovery",
+		},
+		{
+			name:   "Level set, Profile empty",
+			intent: ScanIntent{Profile: "", Level: "comprehensive"},
+			want:   "comprehensive",
+		},
+		{
+			name:   "Neither Profile nor Level set",
+			intent: ScanIntent{Profile: "", Level: ""},
+			want:   "default_scan",
+		},
+		{
+			name:   "Profile set, Level empty",
+			intent: ScanIntent{Profile: "full_scan", Level: ""},
+			want:   "full_scan",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.intent.Profile_or_Level_or_Default()
+			if got != tt.want {
+				t.Errorf("Profile_or_Level_or_Default() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDAGPlanner_PlanDAG_NoModulesSelected(t *testing.T) {
+	// Planner with empty registry
+	planner, err := NewDAGPlanner(map[string]ModuleFactory{})
+	if err != nil {
+		t.Fatalf("NewDAGPlanner error: %v", err)
+	}
+	intent := ScanIntent{Targets: []string{"127.0.0.1"}}
+	dag, err := planner.PlanDAG(intent)
+	if err == nil {
+		t.Fatalf("expected error when no modules are selected, got nil")
+	}
+	if dag != nil {
+		t.Fatalf("expected nil DAG when no modules are selected, got %+v", dag)
+	}
+}
+
+func TestDAGPlanner_PlanDAG_FailsWhenNoNodesPlanned(t *testing.T) {
+	// Registry with a module that has unmet dependencies
+	meta := ModuleMetadata{
+		Name:     "mod1",
+		Type:     ScanModuleType,
+		Consumes: []DataContractEntry{{Key: "nonexistent.key"}},
+		Produces: []DataContractEntry{{Key: "output.key"}},
+	}
+	registry := map[string]ModuleFactory{
+		"mod1": fakeFactory(meta),
+	}
+	planner, err := NewDAGPlanner(registry)
+	if err != nil {
+		t.Fatalf("NewDAGPlanner error: %v", err)
+	}
+	intent := ScanIntent{Targets: []string{"127.0.0.1"}}
+	dag, err := planner.PlanDAG(intent)
+	if err == nil {
+		t.Fatalf("expected error when no nodes are planned, got nil")
+	}
+	if dag != nil {
+		t.Fatalf("expected nil DAG when no nodes are planned, got %+v", dag)
+	}
+}
+
+func TestDAGPlanner_PlanDAG_SuccessfulPlanning(t *testing.T) {
+	// Registry with a simple chain: discovery -> scan -> report
+	discoveryMeta := ModuleMetadata{
+		Name: "tcp-port-discovery", Type: DiscoveryModuleType,
+		Produces:     []DataContractEntry{{Key: "discovery.open_tcp_ports"}},
+		ConfigSchema: map[string]ParameterDefinition{},
+	}
+	scanMeta := ModuleMetadata{
+		Name: "banner-grabber", Type: ScanModuleType,
+		Consumes:     []DataContractEntry{{Key: "discovery.open_tcp_ports"}},
+		Produces:     []DataContractEntry{{Key: "service.banner.tcp"}},
+		ConfigSchema: map[string]ParameterDefinition{},
+	}
+	reporterMeta := ModuleMetadata{
+		Name: "json-reporter", Type: ReportingModuleType,
+		ConfigSchema: map[string]ParameterDefinition{},
+	}
+	registry := map[string]ModuleFactory{
+		discoveryMeta.Name: fakeFactory(discoveryMeta),
+		scanMeta.Name:      fakeFactory(scanMeta),
+		reporterMeta.Name:  fakeFactory(reporterMeta),
+	}
+	planner, err := NewDAGPlanner(registry)
+	if err != nil {
+		t.Fatalf("NewDAGPlanner error: %v", err)
+	}
+	intent := ScanIntent{Targets: []string{"127.0.0.1"}}
+	dag, err := planner.PlanDAG(intent)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if dag == nil {
+		t.Fatalf("expected DAG, got nil")
+	}
+	if len(dag.Nodes) != 3 {
+		t.Fatalf("expected 3 nodes in DAG, got %d", len(dag.Nodes))
+	}
+	// Check node types
+	found := map[string]bool{}
+	for _, n := range dag.Nodes {
+		found[n.ModuleType] = true
+	}
+	if !found["tcp-port-discovery"] || !found["banner-grabber"] || !found["json-reporter"] {
+		t.Fatalf("expected all modules in DAG, got %+v", found)
+	}
+}
+
+func TestDAGPlanner_selectDefaultModules(t *testing.T) {
+	// Setup fake modules
+	discoveryMeta := ModuleMetadata{
+		Name: "tcp-port-discovery",
+		Type: DiscoveryModuleType,
+		Tags: []string{"safe"},
+	}
+	scanMeta := ModuleMetadata{
+		Name: "banner-grabber",
+		Type: ScanModuleType,
+		Tags: []string{"scan"},
+	}
+	intrusiveScanMeta := ModuleMetadata{
+		Name: "intrusive-scanner",
+		Type: ScanModuleType,
+		Tags: []string{"intrusive"},
+	}
+	evalMeta := ModuleMetadata{
+		Name: "vuln-evaluator",
+		Type: EvaluationModuleType,
+		Tags: []string{"eval"},
+	}
+	otherMeta := ModuleMetadata{
+		Name: "other-module",
+		Type: ParseModuleType,
+		Tags: []string{"parse"},
+	}
+
+	registry := map[string]ModuleFactory{
+		discoveryMeta.Name:     fakeFactory(discoveryMeta),
+		scanMeta.Name:          fakeFactory(scanMeta),
+		intrusiveScanMeta.Name: fakeFactory(intrusiveScanMeta),
+		evalMeta.Name:          fakeFactory(evalMeta),
+		otherMeta.Name:         fakeFactory(otherMeta),
+	}
+
+	planner, err := NewDAGPlanner(registry)
+	if err != nil {
+		t.Fatalf("NewDAGPlanner error: %v", err)
+	}
+
+	t.Run("default profile excludes intrusive and includes discovery/scan", func(t *testing.T) {
+		intent := ScanIntent{}
+		selected := planner.selectDefaultModules(intent)
+		found := map[string]bool{}
+		for _, factory := range selected {
+			found[factory().Metadata().Name] = true
+		}
+		if !found["tcp-port-discovery"] {
+			t.Error("expected tcp-port-discovery in default modules")
+		}
+		if !found["banner-grabber"] {
+			t.Error("expected banner-grabber in default modules")
+		}
+		if found["intrusive-scanner"] {
+			t.Error("did not expect intrusive-scanner in default modules")
+		}
+		if found["vuln-evaluator"] {
+			t.Error("did not expect vuln-evaluator unless EnableVulnChecks is true")
+		}
+		if found["other-module"] {
+			t.Error("did not expect other-module (parse) in default modules")
+		}
+	})
+
+	t.Run("default profile with EnableVulnChecks includes evaluation modules", func(t *testing.T) {
+		intent := ScanIntent{EnableVulnChecks: true}
+		selected := planner.selectDefaultModules(intent)
+		found := map[string]bool{}
+		for _, factory := range selected {
+			found[factory().Metadata().Name] = true
+		}
+		if !found["vuln-evaluator"] {
+			t.Error("expected vuln-evaluator in default modules when EnableVulnChecks is true")
+		}
+	})
+
+	t.Run("default profile with includeTags filters modules", func(t *testing.T) {
+		intent := ScanIntent{IncludeTags: []string{"scan"}}
+		selected := planner.selectDefaultModules(intent)
+		found := map[string]bool{}
+		for _, factory := range selected {
+			found[factory().Metadata().Name] = true
+		}
+		if !found["banner-grabber"] {
+			t.Error("expected banner-grabber due to includeTags")
+		}
+		if found["tcp-port-discovery"] {
+			t.Error("did not expect tcp-port-discovery (missing 'scan' tag)")
+		}
+	})
+
+	t.Run("default profile with excludeTags filters modules", func(t *testing.T) {
+		intent := ScanIntent{ExcludeTags: []string{"scan"}}
+		selected := planner.selectDefaultModules(intent)
+		found := map[string]bool{}
+		for _, factory := range selected {
+			found[factory().Metadata().Name] = true
+		}
+		if found["banner-grabber"] {
+			t.Error("did not expect banner-grabber due to excludeTags")
+		}
+		if !found["tcp-port-discovery"] {
+			t.Error("expected tcp-port-discovery (does not have 'scan' tag)")
+		}
+	})
+}
+
+func TestDAGPlanner_ensureReporter(t *testing.T) {
+	// Setup fake modules
+	reporterMeta := ModuleMetadata{
+		Name: "json-reporter",
+		Type: ReportingModuleType,
+		Tags: []string{"report"},
+	}
+	otherMeta := ModuleMetadata{
+		Name: "banner-grabber",
+		Type: ScanModuleType,
+		Tags: []string{"scan"},
+	}
+	anotherReporterMeta := ModuleMetadata{
+		Name: "xml-reporter",
+		Type: ReportingModuleType,
+		Tags: []string{"report", "xml"},
+	}
+
+	t.Run("returns unchanged if reporter present", func(t *testing.T) {
+		registry := map[string]ModuleFactory{
+			reporterMeta.Name: fakeFactory(reporterMeta),
+			otherMeta.Name:    fakeFactory(otherMeta),
+		}
+		planner, _ := NewDAGPlanner(registry)
+		selected := []ModuleFactory{fakeFactory(otherMeta), fakeFactory(reporterMeta)}
+		intent := ScanIntent{}
+		result := planner.ensureReporter(selected, intent)
+		foundReporter := false
+		for _, f := range result {
+			if f().Metadata().Type == ReportingModuleType {
+				foundReporter = true
+			}
+		}
+		if !foundReporter {
+			t.Error("expected reporter to be present")
+		}
+		if len(result) != len(selected) {
+			t.Errorf("expected unchanged selected, got %d, want %d", len(result), len(selected))
+		}
+	})
+
+	t.Run("adds reporter if missing", func(t *testing.T) {
+		registry := map[string]ModuleFactory{
+			reporterMeta.Name: fakeFactory(reporterMeta),
+			otherMeta.Name:    fakeFactory(otherMeta),
+		}
+		planner, _ := NewDAGPlanner(registry)
+		selected := []ModuleFactory{fakeFactory(otherMeta)}
+		intent := ScanIntent{}
+		result := planner.ensureReporter(selected, intent)
+		foundReporter := false
+		for _, f := range result {
+			if f().Metadata().Type == ReportingModuleType {
+				foundReporter = true
+			}
+		}
+		if !foundReporter {
+			t.Error("expected reporter to be added")
+		}
+		if len(result) != 2 {
+			t.Errorf("expected 2 modules after adding reporter, got %d", len(result))
+		}
+	})
+
+	t.Run("does not add reporter if none matches tags", func(t *testing.T) {
+		registry := map[string]ModuleFactory{
+			reporterMeta.Name:        fakeFactory(reporterMeta),
+			anotherReporterMeta.Name: fakeFactory(anotherReporterMeta),
+			otherMeta.Name:           fakeFactory(otherMeta),
+		}
+		planner, _ := NewDAGPlanner(registry)
+		selected := []ModuleFactory{fakeFactory(otherMeta)}
+		intent := ScanIntent{IncludeTags: []string{"nonexistent"}}
+		result := planner.ensureReporter(selected, intent)
+		foundReporter := false
+		for _, f := range result {
+			if f().Metadata().Type == ReportingModuleType {
+				foundReporter = true
+			}
+		}
+		if foundReporter {
+			t.Error("did not expect reporter to be added due to unmatched tags")
+		}
+		if len(result) != 1 {
+			t.Errorf("expected 1 module, got %d", len(result))
+		}
+	})
+
+	t.Run("returns empty if selected is empty", func(t *testing.T) {
+		registry := map[string]ModuleFactory{
+			reporterMeta.Name: fakeFactory(reporterMeta),
+		}
+		planner, _ := NewDAGPlanner(registry)
+		selected := []ModuleFactory{}
+		intent := ScanIntent{}
+		result := planner.ensureReporter(selected, intent)
+		if len(result) != 0 {
+			t.Errorf("expected empty slice, got %d", len(result))
+		}
+	})
+}
+
+func TestDAGPlanner_addParseModules(t *testing.T) {
+	// Setup fake modules
+	parseMeta1 := ModuleMetadata{
+		Name: "http-parser",
+		Type: ParseModuleType,
+		Tags: []string{"parse", "http"},
+	}
+	parseMeta2 := ModuleMetadata{
+		Name: "dns-parser",
+		Type: ParseModuleType,
+		Tags: []string{"parse", "dns"},
+	}
+	nonParseMeta := ModuleMetadata{
+		Name: "banner-grabber",
+		Type: ScanModuleType,
+		Tags: []string{"scan"},
+	}
+
+	registry := map[string]ModuleFactory{
+		parseMeta1.Name:   fakeFactory(parseMeta1),
+		parseMeta2.Name:   fakeFactory(parseMeta2),
+		nonParseMeta.Name: fakeFactory(nonParseMeta),
+	}
+
+	planner, err := NewDAGPlanner(registry)
+	if err != nil {
+		t.Fatalf("NewDAGPlanner error: %v", err)
+	}
+
+	t.Run("adds all parse modules when no tag filters", func(t *testing.T) {
+		selected := []ModuleFactory{}
+		intent := ScanIntent{}
+		result := planner.addParseModules(selected, registry, intent)
+		found := map[string]bool{}
+		for _, f := range result {
+			meta := f().Metadata()
+			if meta.Type == ParseModuleType {
+				found[meta.Name] = true
+			}
+		}
+		if !found["http-parser"] || !found["dns-parser"] {
+			t.Errorf("expected both parse modules, got %+v", found)
+		}
+	})
+
+	t.Run("filters parse modules by includeTags", func(t *testing.T) {
+		selected := []ModuleFactory{}
+		intent := ScanIntent{IncludeTags: []string{"dns"}}
+		result := planner.addParseModules(selected, registry, intent)
+		found := map[string]bool{}
+		for _, f := range result {
+			meta := f().Metadata()
+			if meta.Type == ParseModuleType {
+				found[meta.Name] = true
+			}
+		}
+		if !found["dns-parser"] {
+			t.Error("expected dns-parser due to includeTags")
+		}
+		if found["http-parser"] {
+			t.Error("did not expect http-parser due to missing includeTags")
+		}
+	})
+
+	t.Run("filters parse modules by excludeTags", func(t *testing.T) {
+		selected := []ModuleFactory{}
+		intent := ScanIntent{ExcludeTags: []string{"http"}}
+		result := planner.addParseModules(selected, registry, intent)
+		found := map[string]bool{}
+		for _, f := range result {
+			meta := f().Metadata()
+			if meta.Type == ParseModuleType {
+				found[meta.Name] = true
+			}
+		}
+		if found["http-parser"] {
+			t.Error("did not expect http-parser due to excludeTags")
+		}
+		if !found["dns-parser"] {
+			t.Error("expected dns-parser to be present")
+		}
+	})
+
+	t.Run("does not add non-parse modules", func(t *testing.T) {
+		selected := []ModuleFactory{}
+		intent := ScanIntent{}
+		result := planner.addParseModules(selected, registry, intent)
+		for _, f := range result {
+			if f().Metadata().Type != ParseModuleType {
+				t.Error("did not expect non-parse module in result")
+			}
+		}
+	})
+
+	t.Run("appends to existing selected slice", func(t *testing.T) {
+		// Start with one selected module
+		selected := []ModuleFactory{fakeFactory(nonParseMeta)}
+		intent := ScanIntent{}
+		result := planner.addParseModules(selected, registry, intent)
+		foundParse := 0
+		foundNonParse := 0
+		for _, f := range result {
+			if f().Metadata().Type == ParseModuleType {
+				foundParse++
+			} else {
+				foundNonParse++
+			}
+		}
+		if foundNonParse != 1 {
+			t.Errorf("expected 1 non-parse module, got %d", foundNonParse)
+		}
+		if foundParse != 2 {
+			t.Errorf("expected 2 parse modules, got %d", foundParse)
+		}
+	})
+}
