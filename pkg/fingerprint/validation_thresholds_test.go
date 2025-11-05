@@ -287,3 +287,43 @@ func TestValidationRunnerWithCustomThresholds(t *testing.T) {
 		require.Equal(t, 0.90, runner.thresholds.TargetTPR)
 	})
 }
+
+func TestLoadPositiveFloatEnv(t *testing.T) {
+	defaultVal := 42.5
+	const key = "TEST_LOAD_POS_FLOAT"
+
+	t.Run("missing env returns default", func(t *testing.T) {
+		os.Unsetenv(key)
+		require.Equal(t, defaultVal, loadPositiveFloatEnv(key, defaultVal))
+	})
+
+	t.Run("valid positive float", func(t *testing.T) {
+		os.Setenv(key, "3.14")
+		defer os.Unsetenv(key)
+		require.Equal(t, 3.14, loadPositiveFloatEnv(key, defaultVal))
+	})
+
+	t.Run("zero returns default", func(t *testing.T) {
+		os.Setenv(key, "0")
+		defer os.Unsetenv(key)
+		require.Equal(t, defaultVal, loadPositiveFloatEnv(key, defaultVal))
+	})
+
+	t.Run("negative returns default", func(t *testing.T) {
+		os.Setenv(key, "-1.23")
+		defer os.Unsetenv(key)
+		require.Equal(t, defaultVal, loadPositiveFloatEnv(key, defaultVal))
+	})
+
+	t.Run("invalid returns default", func(t *testing.T) {
+		os.Setenv(key, "not_a_number")
+		defer os.Unsetenv(key)
+		require.Equal(t, defaultVal, loadPositiveFloatEnv(key, defaultVal))
+	})
+
+	t.Run("large positive float", func(t *testing.T) {
+		os.Setenv(key, "12345.6789")
+		defer os.Unsetenv(key)
+		require.Equal(t, 12345.6789, loadPositiveFloatEnv(key, defaultVal))
+	})
+}

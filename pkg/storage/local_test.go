@@ -661,3 +661,91 @@ func TestLocalScanStore_LoadFilteredScans_Cases(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, scans, 1)
 }
+
+func TestLocalScanStore_List_BasicFilteringAndPagination(t *testing.T) {
+	ctx := context.Background()
+	backend := setupTestBackend(t)
+	scanStore := backend.Scans()
+
+	// Create scans with different targets and statuses
+	scans := []*ScanMetadata{
+		{ID: "scan-1", Target: "10.0.0.1", Status: string(StatusPending)},
+		{ID: "scan-2", Target: "10.0.0.2", Status: string(StatusRunning)},
+		{ID: "scan-3", Target: "10.0.0.3", Status: string(StatusCompleted)},
+		{ID: "scan-4", Target: "10.0.0.1", Status: string(StatusCompleted)},
+	}
+
+	for _, scan := range scans {
+		require.NoError(t, scanStore.Create(ctx, "org1", scan))
+	}
+
+	t.Run("list all scans", func(t *testing.T) {
+		results, err := scanStore.List(ctx, "org1", ScanFilter{})
+		require.NoError(t, err)
+		require.Len(t, results, 4)
+	})
+
+	t.Run("filter by status", func(t *testing.T) {
+		results, err := scanStore.List(ctx, "org1", ScanFilter{Status: string(StatusCompleted)})
+		require.NoError(t, err)
+		require.Len(t, results, 2)
+		for _, s := range results {
+			require.Equal(t, string(StatusCompleted), s.Status)
+		}
+	})
+
+	t.Run("filter by target substring", func(t *testing.T) {
+		results, err := scanStore.List(ctx, "org1", ScanFilter{Target: "10.0.0.1"})
+		require.NoError(t, err)
+		require.Len(t, results, 2)
+		for _, s := range results {
+			require.Contains(t, s.Target, "10.0.0.1")
+		}
+	})
+
+	t.Run("limit results", func(t *testing.T) {
+		results, err := scanStore.List(ctx, "org1", ScanFilter{Limit: 2})
+		require.NoError(t, err)
+		require.Len(t, results, 2)
+	})
+
+	t.Run("offset results", func(t *testing.T) {
+		results, err := scanStore.List(ctx, "org1", ScanFilter{Offset: 3})
+		require.NoError(t, err)
+		require.Len(t, results, 1)
+	})
+
+	t.Run("offset exceeds results", func(t *testing.T) {
+		results, err := scanStore.List(ctx, "org1", ScanFilter{Offset: 10})
+		require.NoError(t, err)
+		require.Empty(t, results)
+	})
+
+	t.Run("limit less than available", func(t *testing.T) {
+		results, err := scanStore.List(ctx, "org1", ScanFilter{Limit: 1})
+		require.NoError(t, err)
+		require.Len(t, results, 1)
+	})
+
+	t.Run("limit greater than available", func(t *testing.T) {
+		results, err := scanStore.List(ctx, "org1", ScanFilter{Limit: 10})
+		require.NoError(t, err)
+		require.Len(t, results, 4)
+	})
+
+	t.Run("non-existent org returns empty", func(t *testing.T) {
+		results, err := scanStore.List(ctx, "no-org", ScanFilter{})
+		require.NoError(t, err)
+		require.Empty(t, results)
+	})
+
+	t.Run("scan with invalid metadata is skipped", func(t *testing.T) {
+		// Create a directory with no metadata.json
+		scanDir := filepath.Join(backend.Scans().(*LocalScanStore).root, "org1", "badscan")
+		require.NoError(t, os.MkdirAll(scanDir, 0o755))
+		results, err := scanStore.List(ctx, "org1", ScanFilter{})
+		require.NoError(t, err)
+		// Should still only return the 4 valid scans
+		require.Len(t, results, 4)
+	})
+}

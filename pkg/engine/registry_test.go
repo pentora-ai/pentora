@@ -150,3 +150,142 @@ func TestGetModuleInstance_InitFailure(t *testing.T) {
 		t.Errorf("Expected error message '%s', got '%s'", expectedErrorMsgPart, err.Error())
 	}
 }
+
+func TestGetRegisteredModuleFactories(t *testing.T) {
+	resetRegistry()
+
+	// Test with empty registry
+	factories := GetRegisteredModuleFactories()
+	if len(factories) != 0 {
+		t.Errorf("Expected empty registry, got %d entries", len(factories))
+	}
+
+	// Register some test modules
+	module1 := "test-module-1"
+	module2 := "test-module-2"
+	RegisterModuleFactory(module1, NewMockTestModule)
+	RegisterModuleFactory(module2, NewMockTestModule)
+
+	// Get copy of registry
+	factories = GetRegisteredModuleFactories()
+
+	// Verify correct number of entries
+	if len(factories) != 2 {
+		t.Errorf("Expected 2 factories, got %d", len(factories))
+	}
+
+	// Verify expected modules exist
+	if _, exists := factories[module1]; !exists {
+		t.Errorf("Expected factory '%s' not found in registry copy", module1)
+	}
+	if _, exists := factories[module2]; !exists {
+		t.Errorf("Expected factory '%s' not found in registry copy", module2)
+	}
+
+	// Verify copy is independent - modify copy should not affect original
+	delete(factories, module1)
+	originalFactories := GetRegisteredModuleFactories()
+	if len(originalFactories) != 2 {
+		t.Error("Original registry was modified when modifying copy")
+	}
+}
+
+func TestGetAllModuleMetadata_EmptyRegistry(t *testing.T) {
+	resetRegistry()
+	metadata, err := GetAllModuleMetadata()
+	if err != nil {
+		t.Fatalf("Expected no error for empty registry, got: %v", err)
+	}
+	if len(metadata) != 0 {
+		t.Errorf("Expected empty metadata slice, got %d entries", len(metadata))
+	}
+}
+
+func TestGetAllModuleMetadata_SingleModule(t *testing.T) {
+	resetRegistry()
+	moduleName := "mock-test-module"
+	RegisterModuleFactory(moduleName, NewMockTestModule)
+
+	metadata, err := GetAllModuleMetadata()
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if len(metadata) != 1 {
+		t.Fatalf("Expected 1 metadata entry, got %d", len(metadata))
+	}
+	meta := metadata[0]
+	if meta.Name != moduleName {
+		t.Errorf("Expected metadata Name '%s', got '%s'", moduleName, meta.Name)
+	}
+	if meta.Description != "A mock module for testing." {
+		t.Errorf("Unexpected Description: %s", meta.Description)
+	}
+}
+
+func TestGetAllModuleMetadata_MultipleModules(t *testing.T) {
+	resetRegistry()
+	module1 := "mock-module-1"
+	module2 := "mock-module-2"
+	RegisterModuleFactory(module1, NewMockTestModule)
+	RegisterModuleFactory(module2, NewMockTestModule)
+
+	metadata, err := GetAllModuleMetadata()
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if len(metadata) != 2 {
+		t.Fatalf("Expected 2 metadata entries, got %d", len(metadata))
+	}
+	names := map[string]bool{}
+	for _, meta := range metadata {
+		names[meta.Name] = true
+	}
+	if !names[module1] || !names[module2] {
+		t.Errorf("Expected metadata for both modules, got: %v", names)
+	}
+}
+
+func TestGetAllModuleMetadata_FactoryReturnsNil(t *testing.T) {
+	resetRegistry()
+	badFactory := func() Module { return nil }
+	RegisterModuleFactory("bad-module", badFactory)
+
+	_, err := GetAllModuleMetadata()
+	if err == nil {
+		t.Fatal("Expected error when factory returns nil, got nil")
+	}
+	expected := "module factory for 'bad-module' returned a nil instance"
+	if err.Error() != expected {
+		t.Errorf("Expected error '%s', got '%s'", expected, err.Error())
+	}
+}
+
+func TestGetAllModuleMetadata_MetadataNameMismatch(t *testing.T) {
+	resetRegistry()
+	// Factory returns module with empty Name
+	mismatchFactory := func() Module {
+		return &MockTestModule{
+			meta: ModuleMetadata{
+				ID:          "instance-id",
+				Name:        "",
+				Version:     "1.0",
+				Description: "Mismatch name",
+				Type:        "test",
+				Produces:    []DataContractEntry{{Key: "output"}},
+			},
+		}
+	}
+	moduleName := "mismatch-module"
+	RegisterModuleFactory(moduleName, mismatchFactory)
+
+	metadata, err := GetAllModuleMetadata()
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if len(metadata) != 1 {
+		t.Fatalf("Expected 1 metadata entry, got %d", len(metadata))
+	}
+	if metadata[0].Name != moduleName {
+		t.Errorf("Expected metadata Name to be set to registered name '%s', got '%s'", moduleName, metadata[0].Name)
+	}
+}

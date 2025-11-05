@@ -34,10 +34,14 @@ jobs:
           git checkout -f FETCH_HEAD
           go test -v ./pkg/fingerprint -run TestValidationRunner 2>&1 | tee baseline.log
 
+      - name: Restore PR head
+        run: |
+          set -e
+          git checkout -f "$GITHUB_SHA"
+
       - name: Compare metrics and validate
         run: |
           set -e
           bash scripts/compare-validation-metrics.sh baseline.log validation.log
           # Script exits with error status if regressions >5% detected
           # Metrics output is visible in workflow logs
-
