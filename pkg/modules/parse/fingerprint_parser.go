@@ -87,6 +87,7 @@ func (m *FingerprintParserModule) Init(instanceID string, _ map[string]interface
 
 func (m *FingerprintParserModule) Execute(ctx context.Context, inputs map[string]interface{}, outputChan chan<- engine.ModuleOutput) error {
 	logger := log.With().Str("module", m.meta.Name).Str("instance_id", m.meta.ID).Logger()
+
 	raw, ok := inputs["service.banner.tcp"]
 	if !ok {
 		return nil
@@ -94,7 +95,6 @@ func (m *FingerprintParserModule) Execute(ctx context.Context, inputs map[string
 
 	bannerList, listOk := raw.([]interface{})
 	if !listOk {
-		logger.Warn().Type("input_type", raw).Msg("'service.banner.tcp' not a list, skipping fingerprint parser")
 		return nil
 	}
 
@@ -113,69 +113,83 @@ func (m *FingerprintParserModule) Execute(ctx context.Context, inputs map[string
 			continue
 		}
 
-		seenResponses := make(map[string]struct{})
-		seenMatches := make(map[string]struct{})
-
-		for _, candidate := range gatherBannerCandidates(banner) {
-			response := strings.TrimSpace(candidate.Response)
-			if response == "" {
-				continue
-			}
-			if _, exists := seenResponses[response]; exists {
-				continue
-			}
-			seenResponses[response] = struct{}{}
-
-			protocolHint := strings.ToLower(candidate.Protocol)
-			if protocolHint == "" {
-				protocolHint = strings.ToLower(banner.Protocol)
-			}
-			if protocolHint == "" {
-				protocolHint = fingerprintProtocolHint(banner.Port, response)
-			}
-
-			result, err := resolver.Resolve(ctx, fingerprint.Input{
-				Protocol:    protocolHint,
-				Banner:      response,
-				Port:        banner.Port,
-				ServiceHint: "",
-			})
-			if err != nil || result.Product == "" {
-				continue
-			}
-
-			matchKey := fmt.Sprintf("%s|%s|%s", result.Product, result.Version, protocolHint)
-			if _, exists := seenMatches[matchKey]; exists {
-				continue
-			}
-			seenMatches[matchKey] = struct{}{}
-
-			parsed := FingerprintParsedInfo{
-				Target:      banner.IP,
-				Port:        banner.Port,
-				Protocol:    protocolHint,
-				Product:     result.Product,
-				Vendor:      result.Vendor,
-				Version:     result.Version,
-				CPE:         result.CPE,
-				Confidence:  result.Confidence,
-				Description: result.Description,
-				SourceProbe: candidate.ProbeID,
-			}
-
-			outputChan <- engine.ModuleOutput{
-				FromModuleName: m.meta.ID,
-				DataKey:        m.meta.Produces[0].Key,
-				Data:           parsed,
-				Timestamp:      time.Now(),
-				Target:         banner.IP,
-			}
-			matches++
-		}
+		matches += m.processBannerCandidates(ctx, banner, resolver, outputChan)
 	}
 
 	logger.Info().Int("matches", matches).Msg("Fingerprint parsing completed")
 	return nil
+}
+
+func (m *FingerprintParserModule) processBannerCandidates(ctx context.Context, banner scan.BannerGrabResult, resolver fingerprint.Resolver, outputChan chan<- engine.ModuleOutput) int {
+	seenResponses := make(map[string]struct{})
+	seenMatches := make(map[string]struct{})
+	matches := 0
+
+	for _, candidate := range gatherBannerCandidates(banner) {
+		response := strings.TrimSpace(candidate.Response)
+		if response == "" {
+			continue
+		}
+		if _, exists := seenResponses[response]; exists {
+			continue
+		}
+		seenResponses[response] = struct{}{}
+
+		protocolHint := strings.ToLower(candidate.Protocol)
+		if protocolHint == "" || protocolHint == "tcp" || protocolHint == "udp" {
+			protocolHint = strings.ToLower(banner.Protocol)
+		}
+		if protocolHint == "" || protocolHint == "tcp" || protocolHint == "udp" {
+			detectedHint := fingerprintProtocolHint(banner.Port, response)
+			if detectedHint != "" {
+				protocolHint = detectedHint
+			} else {
+				// Phase 1: If no hint found, leave as generic to trigger fallback in resolver
+				// This enables detection on non-standard ports (e.g., MySQL on 3210, HTTP on 2096)
+				protocolHint = "" // Empty triggers fallback mode
+			}
+		}
+
+		result, err := resolver.Resolve(ctx, fingerprint.Input{
+			Protocol:    protocolHint,
+			Banner:      response,
+			Port:        banner.Port,
+			ServiceHint: "",
+		})
+		if err != nil || result.Product == "" {
+			continue
+		}
+
+		matchKey := fmt.Sprintf("%s|%s|%s", result.Product, result.Version, protocolHint)
+		if _, exists := seenMatches[matchKey]; exists {
+			continue
+		}
+		seenMatches[matchKey] = struct{}{}
+
+		parsed := FingerprintParsedInfo{
+			Target:      banner.IP,
+			Port:        banner.Port,
+			Protocol:    protocolHint,
+			Product:     result.Product,
+			Vendor:      result.Vendor,
+			Version:     result.Version,
+			CPE:         result.CPE,
+			Confidence:  result.Confidence,
+			Description: result.Description,
+			SourceProbe: candidate.ProbeID,
+		}
+
+		outputChan <- engine.ModuleOutput{
+			FromModuleName: m.meta.ID,
+			DataKey:        m.meta.Produces[0].Key,
+			Data:           parsed,
+			Timestamp:      time.Now(),
+			Target:         banner.IP,
+		}
+		matches++
+	}
+
+	return matches
 }
 
 type bannerCandidate struct {
@@ -214,8 +228,10 @@ func gatherBannerCandidates(banner scan.BannerGrabResult) []bannerCandidate {
 	return candidates
 }
 
-func fingerprintProtocolHint(_ int, banner string) string {
+func fingerprintProtocolHint(port int, banner string) string {
 	banner = strings.ToLower(banner)
+
+	// First, try banner content matching
 	switch {
 	case strings.HasPrefix(banner, "ssh-"):
 		return "ssh"
@@ -225,9 +241,28 @@ func fingerprintProtocolHint(_ int, banner string) string {
 		return "smtp"
 	case strings.Contains(banner, "ftp"):
 		return "ftp"
-	case strings.Contains(banner, "mysql"):
+	case strings.Contains(banner, "mysql"), strings.Contains(banner, "mariadb"):
 		return "mysql"
 	}
+
+	// Fallback to common port numbers if banner doesn't contain protocol name
+	switch port {
+	case 3306:
+		return "mysql"
+	case 5432:
+		return "postgresql"
+	case 6379:
+		return "redis"
+	case 27017:
+		return "mongodb"
+	case 22:
+		return "ssh"
+	case 21:
+		return "ftp"
+	case 25, 587:
+		return "smtp"
+	}
+
 	return ""
 }
 

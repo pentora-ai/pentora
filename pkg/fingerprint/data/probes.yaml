@@ -1,4 +1,12 @@
 # Built-in probe catalog for banner grabbing.
+# Phase 1.5: Fallback probes for non-standard ports (e.g., HTTP on 2096, MySQL on 3210)
+# These probes are tried when no port-specific probes match AND passive banner is empty/timeout.
+fallback_probes:
+  - http-get      # Most common: web services on unusual ports (cPanel, proxies, etc.)
+  - https-get     # HTTPS fallback
+  - redis-ping    # Database fallback (Redis, Memcached on custom ports)
+  - ftp-feat      # FTP fallback
+
 groups:
   - id: http
     description: Standard HTTP and HTTPS probes
