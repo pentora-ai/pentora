@@ -316,6 +316,19 @@ func (m *BannerGrabModule) runProbes(ctx context.Context, target string, port in
 
 	if m.config.SendProbes && ctx.Err() == nil && catalogErr == nil {
 		candidateProbes := catalog.ProbesFor(port, hintAcc.slice())
+
+		// Phase 1.5: Probe Fallback for non-standard ports
+		// If no port-specific probes matched AND passive banner is empty, try fallback probes
+		if len(candidateProbes) == 0 && bestBanner == "" {
+			candidateProbes = catalog.FallbackProbes()
+			if len(candidateProbes) > 0 {
+				m.logger.Debug().
+					Int("port", port).
+					Int("fallback_probes", len(candidateProbes)).
+					Msg("No port-specific probes found, trying fallback probes for non-standard port")
+			}
+		}
+
 		seen := make(map[string]struct{}, len(candidateProbes))
 
 		for _, spec := range candidateProbes {

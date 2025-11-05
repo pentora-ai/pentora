@@ -60,6 +60,9 @@ func (r *RuleBasedResolver) SetTelemetry(telemetry *TelemetryWriter) {
 // If a rule matches, it extracts the version (if available) using the rule's versionRegex, and returns a FingerprintResult
 // populated with the rule's metadata and a high confidence score. If no rule matches, it returns an error.
 //
+// Phase 1: If in.Protocol is empty, "tcp", or "udp" (generic transport), this method will try ALL rules
+// as a fallback mechanism. This enables detection on non-standard ports (e.g., MySQL on 3210, HTTP on 2096).
+//
 // Parameters:
 //
 //	ctx - The context for cancellation and deadlines.
@@ -81,9 +84,14 @@ func (r *RuleBasedResolver) Resolve(_ context.Context, in Input) (Result, error)
 	}
 	cands := make([]candidate, 0, 8)
 
+	// Phase 1: Determine if we should try all rules (fallback mode)
+	// Fallback activates when protocol hint is generic (tcp/udp) or unknown
+	useFallback := in.Protocol == "" || in.Protocol == "tcp" || in.Protocol == "udp"
+
 	for _, rule := range r.rules {
-		if rule.Protocol != in.Protocol {
-			continue // skip unrelated protocol
+		// Phase 1: Skip protocol check if fallback mode is active
+		if !useFallback && rule.Protocol != in.Protocol {
+			continue // skip unrelated protocol (fast path)
 		}
 		if !rule.matchRegex.MatchString(normalizedBanner) {
 			continue

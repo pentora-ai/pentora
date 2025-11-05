@@ -8,8 +8,10 @@ import (
 // ProbeCatalog represents the set of active probe groups that the scanner can execute.
 // Groups can map to protocol families (HTTP, SMTP, etc.) and expose one or more probe
 // definitions that should be attempted when their match conditions are satisfied.
+// FallbackProbeIDs lists probe IDs to try when no port-specific probes match (Phase 1.5).
 type ProbeCatalog struct {
-	Groups []ProbeGroup `yaml:"groups" json:"groups"`
+	Groups           []ProbeGroup `yaml:"groups" json:"groups"`
+	FallbackProbeIDs []string     `yaml:"fallback_probes,omitempty" json:"fallback_probes,omitempty"`
 }
 
 // ProbeGroup describes a family of probes sharing similar trigger conditions.
@@ -62,6 +64,36 @@ func (c *ProbeCatalog) ProbesFor(port int, hints []string) []ProbeSpec {
 	}
 
 	return out
+}
+
+// FallbackProbes returns probes to try when no port-specific probes match.
+// This implements Phase 1.5: Probe Fallback for non-standard ports.
+// It searches all probe groups for probes matching the fallback IDs.
+func (c *ProbeCatalog) FallbackProbes() []ProbeSpec {
+	if c == nil || len(c.FallbackProbeIDs) == 0 {
+		return nil
+	}
+
+	out := make([]ProbeSpec, 0, len(c.FallbackProbeIDs))
+	for _, id := range c.FallbackProbeIDs {
+		probe := c.findProbeByID(id)
+		if probe != nil {
+			out = append(out, *probe)
+		}
+	}
+	return out
+}
+
+// findProbeByID searches all groups for a probe with the given ID.
+func (c *ProbeCatalog) findProbeByID(id string) *ProbeSpec {
+	for _, group := range c.Groups {
+		for i := range group.Probes {
+			if group.Probes[i].ID == id {
+				return &group.Probes[i]
+			}
+		}
+	}
+	return nil
 }
 
 func (g ProbeGroup) matches(port int, hints map[string]struct{}) bool {
