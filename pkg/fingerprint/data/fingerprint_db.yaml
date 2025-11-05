@@ -4,10 +4,10 @@ rules:
   - id: 'http.apache'
     protocol: 'http'
     description: 'Apache HTTP Server banner'
-    product: 'Apache HTTP Server'
-    vendor: 'Apache Software Foundation'
+    product: 'Apache'
+    vendor: 'Apache'
     cpe: 'cpe:2.3:a:apache:http_server:*:*:*:*:*:*:*:*'
-    match: 'server:\\s*apache'
+    match: 'server:\s*apache'
     version_extraction: "apache/([\\d\\.]+)"
 
     exclude_patterns:
@@ -29,7 +29,7 @@ rules:
     product: 'nginx'
     vendor: 'F5 Networks'
     cpe: 'cpe:2.3:a:f5:nginx:*:*:*:*:*:*:*:*'
-    match: 'server:\\s*nginx'
+    match: 'server:\s*nginx'
     version_extraction: "nginx/([\\d\\.]+)"
 
     exclude_patterns:
@@ -51,7 +51,7 @@ rules:
     product: 'IIS'
     vendor: 'Microsoft'
     cpe: 'cpe:2.3:a:microsoft:iis:*:*:*:*:*:*:*:*'
-    match: 'server:\\s*microsoft-iis'
+    match: 'server:\s*microsoft-iis'
     version_extraction: "microsoft-iis/([\\d\\.]+)"
 
     exclude_patterns:
@@ -70,10 +70,10 @@ rules:
   - id: 'http.litespeed'
     protocol: 'http'
     description: 'LiteSpeed Web Server HTTP banner'
-    product: 'LiteSpeed Web Server'
-    vendor: 'LiteSpeed Technologies'
+    product: 'LiteSpeed'
+    vendor: 'LiteSpeed'
     cpe: 'cpe:2.3:a:litespeedtech:litespeed_web_server:*:*:*:*:*:*:*:*'
-    match: 'server:\\s*litespeed'
+    match: 'server:\s*litespeed'
     version_extraction: "litespeed(?:\\s|/)([\\w\\.-]+)"
 
     exclude_patterns:
@@ -92,10 +92,10 @@ rules:
   - id: 'http.tomcat'
     protocol: 'http'
     description: 'Apache Tomcat application server banner'
-    product: 'Apache Tomcat'
-    vendor: 'Apache Software Foundation'
+    product: 'Tomcat'
+    vendor: 'Apache'
     cpe: 'cpe:2.3:a:apache:tomcat:*:*:*:*:*:*:*:*'
-    match: 'server:\\s*(?:apache-coyote|tomcat)'
+    match: 'server:\s*(?:apache-coyote|tomcat)'
     version_extraction: "(?:tomcat|apache-coyote)/([\\d\\.]+)"
 
     exclude_patterns:
@@ -182,7 +182,7 @@ rules:
     product: 'OpenSSH'
     vendor: 'OpenBSD'
     cpe: 'cpe:2.3:a:openbsd:openssh:*:*:*:*:*:*:*:*'
-    match: "ssh-\\d\\.\\d+-openssh_"
+    match: 'ssh-\d\.\d+-openssh_'
     version_extraction: "openssh_([\\d\\.p]+)"
 
     exclude_patterns:
@@ -352,8 +352,8 @@ rules:
     product: 'Memcached'
     vendor: 'Memcached'
     cpe: 'cpe:2.3:a:memcached:memcached:*:*:*:*:*:*:*:*'
-    match: "version\\s+[\\d\\.]+"
-    version_extraction: "version\\s+([\\d\\.]+)"
+    match: 'version\s+[\d\.]+'
+    version_extraction: 'version\s+([\d\.]+)'
 
     exclude_patterns:
       - "mysql"
@@ -487,10 +487,10 @@ rules:
   - id: 'rdp.microsoft'
     protocol: 'rdp'
     description: 'Microsoft Remote Desktop Protocol'
-    product: 'Microsoft RDP'
+    product: 'RDP'
     vendor: 'Microsoft'
     cpe: 'cpe:2.3:a:microsoft:remote_desktop_protocol:*:*:*:*:*:*:*:*'
-    match: 'rdp|remote desktop'
+    match: 'rdp|remote desktop|terminal services'
     version_extraction: "(?:protocol|rdp)\\s+([\\d\\.]+)"
 
     exclude_patterns:
@@ -596,4 +596,4 @@ rules:
     product: 'WinRM'
     vendor: 'Microsoft'
     cpe: 'cpe:2.3:a:microsoft:winrm:*:*:*:*:*:*:*:*'
-    match: "microsoft-httpapi/2\\.0"
+    match: 'microsoft-httpapi/2\.0'
