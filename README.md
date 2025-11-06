@@ -71,8 +71,8 @@ pentora scan --targets 192.168.1.1
 # Scan a CIDR range with custom ports
 pentora scan --targets 192.168.1.0/24 --ports 21,22,80,443,8080
 
-# Perform port discovery (scan ports 1-1000)
-pentora scan --targets 192.168.1.1 --discover
+# Perform discovery only (skip port scanning)
+pentora scan --targets 192.168.1.1 --only-discover
 
 # Enable vulnerability detection
 pentora scan --targets 192.168.1.1 --vuln
