@@ -262,6 +262,7 @@ func (m *AssetProfileBuilderModule) Execute(ctx context.Context, inputs map[stri
 						if banner.IP == targetIP && banner.Port == portNum {
 							portProfile.Service.RawBanner = banner.Banner
 							portProfile.Service.IsTLS = banner.IsTLS
+							portProfile.Service.Evidence = banner.Evidence // Issue #199: Include probe evidence in JSON output
 							break
 						}
 					}

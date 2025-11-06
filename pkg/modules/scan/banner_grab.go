@@ -42,43 +42,13 @@ type BannerGrabConfig struct {
 // BannerGrabResult holds the banner information for a specific port.
 // This will be the 'Data' in ModuleOutput with DataKey "service.banner.raw".
 type BannerGrabResult struct {
-	IP       string             `json:"ip"`
-	Port     int                `json:"port"`
-	Protocol string             `json:"protocol"`
-	Banner   string             `json:"banner"`
-	IsTLS    bool               `json:"is_tls"`
-	Error    string             `json:"error,omitempty"`
-	Evidence []ProbeObservation `json:"evidence,omitempty"`
-}
-
-// ProbeObservation captures the outcome of a single probe execution in the layered banner grabbing flow.
-type ProbeObservation struct {
-	ProbeID     string          `json:"probe_id"`
-	Description string          `json:"description,omitempty"`
-	Protocol    string          `json:"protocol,omitempty"`
-	IsTLS       bool            `json:"is_tls,omitempty"`
-	Duration    time.Duration   `json:"duration_ns,omitempty"`
-	Response    string          `json:"response,omitempty"`
-	Error       string          `json:"error,omitempty"`
-	TLS         *TLSObservation `json:"tls,omitempty"`
-}
-
-// TLSObservation holds key facts collected during a TLS handshake so downstream modules
-// can reason about certificate metadata without re-dialing the host.
-// Phase 1.7: Extended with certificate validity and security indicators for TLS plugin evaluation.
-type TLSObservation struct {
-	Version        string   `json:"version,omitempty"`          // TLS version (e.g., "TLS 1.2", "TLS 1.3")
-	CipherSuite    string   `json:"cipher_suite,omitempty"`     // Cipher suite name
-	ServerName     string   `json:"server_name,omitempty"`      // SNI server name
-	PeerCommonName string   `json:"peer_common_name,omitempty"` // Certificate CN
-	PeerDNSNames   []string `json:"peer_dns_names,omitempty"`   // SAN DNS names
-
-	// Phase 1.7: Certificate validity fields for TLS vulnerability detection
-	Issuer       string    `json:"issuer,omitempty"`     // Certificate issuer DN
-	NotBefore    time.Time `json:"not_before,omitempty"` // Certificate valid from
-	NotAfter     time.Time `json:"not_after,omitempty"`  // Certificate valid until
-	IsExpired    bool      `json:"is_expired"`           // Computed: cert expired?
-	IsSelfSigned bool      `json:"is_self_signed"`       // Computed: self-signed cert?
+	IP       string                    `json:"ip"`
+	Port     int                       `json:"port"`
+	Protocol string                    `json:"protocol"`
+	Banner   string                    `json:"banner"`
+	IsTLS    bool                      `json:"is_tls"`
+	Error    string                    `json:"error,omitempty"`
+	Evidence []engine.ProbeObservation `json:"evidence,omitempty"`
 }
 
 type commandProbeSpec struct {
@@ -301,7 +271,7 @@ endLoop:
 }
 
 func (m *BannerGrabModule) runProbes(ctx context.Context, target string, port int) BannerGrabResult {
-	observations := make([]ProbeObservation, 0, 8)
+	observations := make([]engine.ProbeObservation, 0, 8)
 	bestBanner := ""
 	bestIsTLS := false
 	var lastError string
@@ -372,7 +342,7 @@ func (m *BannerGrabModule) runProbes(ctx context.Context, target string, port in
 	return result
 }
 
-func (m *BannerGrabModule) collectObservation(observations *[]ProbeObservation, obs ProbeObservation, bestBanner *string, bestIsTLS *bool, lastError *string) {
+func (m *BannerGrabModule) collectObservation(observations *[]engine.ProbeObservation, obs engine.ProbeObservation, bestBanner *string, bestIsTLS *bool, lastError *string) {
 	if obs.ProbeID == "" {
 		return
 	}
@@ -398,8 +368,8 @@ func (m *BannerGrabModule) collectObservation(observations *[]ProbeObservation, 
 	*observations = append(*observations, obs)
 }
 
-func (m *BannerGrabModule) runPassiveProbe(ctx context.Context, target string, port int) ProbeObservation {
-	obs := ProbeObservation{
+func (m *BannerGrabModule) runPassiveProbe(ctx context.Context, target string, port int) engine.ProbeObservation {
+	obs := engine.ProbeObservation{
 		ProbeID:     "tcp-passive",
 		Description: "Initial TCP banner read",
 		Protocol:    "tcp",
@@ -415,7 +385,7 @@ func (m *BannerGrabModule) runPassiveProbe(ctx context.Context, target string, p
 	return obs
 }
 
-func (m *BannerGrabModule) executeProbeSpec(ctx context.Context, host string, port int, spec fingerprint.ProbeSpec) ProbeObservation {
+func (m *BannerGrabModule) executeProbeSpec(ctx context.Context, host string, port int, spec fingerprint.ProbeSpec) engine.ProbeObservation {
 	commands := prepareProbeCommands(spec, host, port)
 	cmdSpec := commandProbeSpec{
 		ProbeID:         spec.ID,
@@ -428,8 +398,8 @@ func (m *BannerGrabModule) executeProbeSpec(ctx context.Context, host string, po
 	return m.runCommandProbe(ctx, host, port, cmdSpec)
 }
 
-func (m *BannerGrabModule) runCommandProbe(ctx context.Context, host string, port int, spec commandProbeSpec) ProbeObservation {
-	obs := ProbeObservation{
+func (m *BannerGrabModule) runCommandProbe(ctx context.Context, host string, port int, spec commandProbeSpec) engine.ProbeObservation {
+	obs := engine.ProbeObservation{
 		ProbeID:     spec.ProbeID,
 		Description: spec.Description,
 		Protocol:    spec.Protocol,
@@ -443,7 +413,7 @@ func (m *BannerGrabModule) runCommandProbe(ctx context.Context, host string, por
 	var (
 		conn    net.Conn
 		err     error
-		tlsInfo *TLSObservation
+		tlsInfo *engine.TLSObservation
 	)
 
 	if spec.UseTLS {
@@ -700,12 +670,12 @@ func (h hintAccumulator) slice() []string {
 	return out
 }
 
-func extractTLSObservation(state tls.ConnectionState) *TLSObservation {
+func extractTLSObservation(state tls.ConnectionState) *engine.TLSObservation {
 	if !state.HandshakeComplete {
 		return nil
 	}
 
-	obs := &TLSObservation{
+	obs := &engine.TLSObservation{
 		Version:     tlsVersionString(state.Version),
 		CipherSuite: tls.CipherSuiteName(state.CipherSuite),
 		ServerName:  state.ServerName,
