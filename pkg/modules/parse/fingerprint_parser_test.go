@@ -225,3 +225,141 @@ func TestFingerprintParserModule_fingerprintParserModuleFactory(t *testing.T) {
 		t.Errorf("unexpected factory module name: %s", meta.Name)
 	}
 }
+
+func TestDetectProtocolFromPort(t *testing.T) {
+	tests := []struct {
+		name     string
+		port     int
+		expected string
+	}{
+		// Databases
+		{"MySQL standard port", 3306, "mysql"},
+		{"PostgreSQL standard port", 5432, "postgresql"},
+		{"Redis standard port", 6379, "redis"},
+		{"MongoDB standard port", 27017, "mongodb"},
+
+		// Network Services
+		{"SSH standard port", 22, "ssh"},
+		{"FTP standard port", 21, "ftp"},
+		{"SMTP standard port", 25, "smtp"},
+		{"SMTP submission port", 587, "smtp"},
+
+		// Mail Protocols (Phase 1.6)
+		{"POP3 standard port", 110, "pop3"},
+		{"POP3S secure port", 995, "pop3"},
+		{"IMAP standard port", 143, "imap"},
+		{"IMAPS secure port", 993, "imap"},
+
+		// Enterprise/Messaging (Phase 1.6)
+		{"DNS standard port", 53, "dns"},
+		{"LDAP standard port", 389, "ldap"},
+		{"LDAPS secure port", 636, "ldap"},
+		{"LDAP global catalog", 3268, "ldap"},
+		{"LDAP global catalog SSL", 3269, "ldap"},
+		{"RabbitMQ standard port", 5672, "rabbitmq"},
+		{"RabbitMQ secure port", 5671, "rabbitmq"},
+		{"Kafka standard port", 9092, "kafka"},
+		{"Kafka secure port", 9093, "kafka"},
+		{"Elasticsearch HTTP port", 9200, "elasticsearch"},
+		{"Elasticsearch transport port", 9300, "elasticsearch"},
+		{"SNMP standard port", 161, "snmp"},
+		{"SNMP trap port", 162, "snmp"},
+
+		// Unknown ports
+		{"Unknown port 1234", 1234, ""},
+		{"Unknown port 8080", 8080, ""},
+		{"Unknown port 12345", 12345, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := detectProtocolFromPort(tt.port)
+			if result != tt.expected {
+				t.Errorf("detectProtocolFromPort(%d) = %q, want %q", tt.port, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestDetectProtocolFromBanner(t *testing.T) {
+	tests := []struct {
+		name     string
+		banner   string
+		expected string
+	}{
+		// SSH - expects lowercase (called after ToLower in fingerprintProtocolHint)
+		{"SSH banner", "ssh-2.0-openssh_8.9", "ssh"},
+		{"SSH banner lowercase", "ssh-2.0-openssh", "ssh"},
+
+		// HTTP
+		{"HTTP version", "http/1.1 200 ok", "http"},
+		{"HTTP server header", "server: nginx/1.18.0", "http"},
+		{"HTTP lowercase", "http/2.0 404 not found", "http"},
+
+		// SMTP
+		{"SMTP greeting", "220 smtp.gmail.com esmtp", "smtp"},
+		{"SMTP command", "smtp ready", "smtp"},
+
+		// FTP
+		{"FTP banner", "220 ftp server ready", "ftp"},
+		{"FTP welcome", "welcome to ftp service", "ftp"},
+
+		// MySQL/MariaDB
+		{"MySQL banner", "mysql server 8.0.43", "mysql"},
+		{"MariaDB banner", "mariadb 10.5.8", "mysql"},
+		{"MySQL lowercase", "5.7.33-mysql community server", "mysql"},
+
+		// Unknown
+		{"Empty banner", "", ""},
+		{"Unknown protocol", "unknown service banner", ""},
+		{"Random text", "hello world", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := detectProtocolFromBanner(tt.banner)
+			if result != tt.expected {
+				t.Errorf("detectProtocolFromBanner(%q) = %q, want %q", tt.banner, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestFingerprintProtocolHint_Integration(t *testing.T) {
+	tests := []struct {
+		name     string
+		port     int
+		banner   string
+		expected string
+	}{
+		// Banner detection takes priority
+		{"SSH banner on non-standard port", 2222, "SSH-2.0-OpenSSH_8.9", "ssh"},
+		{"HTTP banner on non-standard port", 8080, "HTTP/1.1 200 OK", "http"},
+		{"MySQL banner on non-standard port", 3210, "MySQL Server 8.0.43", "mysql"},
+
+		// Port fallback when banner doesn't match
+		{"Standard MySQL port with unknown banner", 3306, "unknown banner", "mysql"},
+		{"Standard SSH port with unknown banner", 22, "welcome", "ssh"},
+		{"Standard IMAP port with unknown banner", 143, "ready", "imap"},
+
+		// Phase 1.6 protocols
+		{"IMAPS port detection", 993, "unknown", "imap"},
+		{"POP3S port detection", 995, "unknown", "pop3"},
+		{"LDAP port detection", 389, "unknown", "ldap"},
+		{"Kafka port detection", 9092, "unknown", "kafka"},
+
+		// Unknown combinations
+		{"Unknown port unknown banner", 12345, "unknown service", ""},
+		{"Non-standard port no match", 8888, "random text", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := fingerprintProtocolHint(tt.port, tt.banner)
+			if result != tt.expected {
+				t.Errorf("fingerprintProtocolHint(%d, %q) = %q, want %q",
+					tt.port, tt.banner, result, tt.expected)
+			}
+		})
+	}
+}
