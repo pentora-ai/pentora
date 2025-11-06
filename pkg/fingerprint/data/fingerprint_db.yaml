@@ -484,6 +484,47 @@ rules:
     pattern_strength: 0.88
     port_bonuses: [143, 993, 110, 995]
 
+  # IMAP Servers
+  - id: 'imap.generic'
+    protocol: 'imap'
+    description: 'Generic IMAP server (Dovecot, Courier, Cyrus, Gmail, etc.)'
+    product: 'IMAP'
+    vendor: 'Various'
+    cpe: 'cpe:2.3:a:*:imap:*:*:*:*:*:*:*:*'
+    match: '\\*\\s+ok\\s+.*imap|capability.*imap4'
+    version_extraction: ''
+
+    soft_exclude_patterns:
+      - "error"
+      - "denied"
+      - "unavailable"
+      - "connection closed"
+
+    pattern_strength: 0.85
+    port_bonuses: [143, 993]
+
+  - id: 'imap.dovecot'
+    protocol: 'imap'
+    description: 'Dovecot IMAP server'
+    product: 'Dovecot'
+    vendor: 'Dovecot Project'
+    cpe: 'cpe:2.3:a:dovecot:dovecot:*:*:*:*:*:*:*:*'
+    match: 'dovecot'
+    version_extraction: "dovecot\\s+(?:ready\\.?\\s+)?([\\d\\.]+)"
+
+    exclude_patterns:
+      - "postfix"
+      - "exim"
+      - "sendmail"
+
+    soft_exclude_patterns:
+      - "error"
+      - "denied"
+      - "unavailable"
+
+    pattern_strength: 0.90
+    port_bonuses: [143, 993, 110, 995]
+
   # Other Services
   - id: 'rdp.microsoft'
     protocol: 'rdp'
