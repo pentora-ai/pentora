@@ -36,6 +36,9 @@ type FingerprintParsedInfo struct {
 	Confidence  float64 `json:"confidence"`
 	Description string  `json:"description,omitempty"`
 	SourceProbe string  `json:"source_probe,omitempty"`
+
+	// Phase 1.7: TLS metadata (certificate validity and security indicators)
+	TLS *scan.TLSObservation `json:"tls,omitempty"`
 }
 
 // FingerprintParserModule consumes banner results and produces fingerprint matches.
@@ -177,6 +180,7 @@ func (m *FingerprintParserModule) processBannerCandidates(ctx context.Context, b
 			Confidence:  result.Confidence,
 			Description: result.Description,
 			SourceProbe: candidate.ProbeID,
+			TLS:         candidate.TLS, // Phase 1.7: Include TLS metadata in output
 		}
 
 		outputChan <- engine.ModuleOutput{
@@ -196,6 +200,7 @@ type bannerCandidate struct {
 	Response string
 	Protocol string
 	ProbeID  string
+	TLS      *scan.TLSObservation // Phase 1.7: TLS metadata from probe
 }
 
 func gatherBannerCandidates(banner scan.BannerGrabResult) []bannerCandidate {
@@ -206,6 +211,7 @@ func gatherBannerCandidates(banner scan.BannerGrabResult) []bannerCandidate {
 			Response: trimmed,
 			Protocol: banner.Protocol,
 			ProbeID:  "tcp-passive",
+			TLS:      nil, // Passive banner doesn't have TLS metadata
 		})
 	}
 
@@ -222,6 +228,7 @@ func gatherBannerCandidates(banner scan.BannerGrabResult) []bannerCandidate {
 			Response: resp,
 			Protocol: protocol,
 			ProbeID:  obs.ProbeID,
+			TLS:      obs.TLS, // Phase 1.7: Include TLS metadata from probe
 		})
 	}
 

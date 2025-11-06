@@ -65,12 +65,20 @@ type ProbeObservation struct {
 
 // TLSObservation holds key facts collected during a TLS handshake so downstream modules
 // can reason about certificate metadata without re-dialing the host.
+// Phase 1.7: Extended with certificate validity and security indicators for TLS plugin evaluation.
 type TLSObservation struct {
-	Version        string   `json:"version,omitempty"`
-	CipherSuite    string   `json:"cipher_suite,omitempty"`
-	ServerName     string   `json:"server_name,omitempty"`
-	PeerCommonName string   `json:"peer_common_name,omitempty"`
-	PeerDNSNames   []string `json:"peer_dns_names,omitempty"`
+	Version        string   `json:"version,omitempty"`          // TLS version (e.g., "TLS 1.2", "TLS 1.3")
+	CipherSuite    string   `json:"cipher_suite,omitempty"`     // Cipher suite name
+	ServerName     string   `json:"server_name,omitempty"`      // SNI server name
+	PeerCommonName string   `json:"peer_common_name,omitempty"` // Certificate CN
+	PeerDNSNames   []string `json:"peer_dns_names,omitempty"`   // SAN DNS names
+
+	// Phase 1.7: Certificate validity fields for TLS vulnerability detection
+	Issuer       string    `json:"issuer,omitempty"`     // Certificate issuer DN
+	NotBefore    time.Time `json:"not_before,omitempty"` // Certificate valid from
+	NotAfter     time.Time `json:"not_after,omitempty"`  // Certificate valid until
+	IsExpired    bool      `json:"is_expired"`           // Computed: cert expired?
+	IsSelfSigned bool      `json:"is_self_signed"`       // Computed: self-signed cert?
 }
 
 type commandProbeSpec struct {
@@ -709,6 +717,13 @@ func extractTLSObservation(state tls.ConnectionState) *TLSObservation {
 		if len(cert.DNSNames) > 0 {
 			obs.PeerDNSNames = append([]string(nil), cert.DNSNames...)
 		}
+
+		// Phase 1.7: Extract certificate validity and security indicators
+		obs.Issuer = cert.Issuer.String()
+		obs.NotBefore = cert.NotBefore
+		obs.NotAfter = cert.NotAfter
+		obs.IsExpired = time.Now().After(cert.NotAfter)
+		obs.IsSelfSigned = cert.Subject.String() == cert.Issuer.String()
 	}
 
 	return obs
