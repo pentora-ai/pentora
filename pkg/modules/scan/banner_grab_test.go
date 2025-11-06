@@ -100,7 +100,7 @@ func TestBannerGrabModule_Init(t *testing.T) {
 				BufferSize:            2048,
 				Concurrency:           50,
 				SendProbes:            true,
-				TLSInsecureSkipVerify: false,
+				TLSInsecureSkipVerify: true, // Phase 1.6: Default to true for service detection
 			},
 			expectError: false,
 		},
@@ -116,7 +116,7 @@ func TestBannerGrabModule_Init(t *testing.T) {
 				BufferSize:            4096,
 				Concurrency:           100,
 				SendProbes:            true,
-				TLSInsecureSkipVerify: false,
+				TLSInsecureSkipVerify: true, // Phase 1.6: Default to true for service detection
 			},
 		},
 		{
@@ -130,7 +130,7 @@ func TestBannerGrabModule_Init(t *testing.T) {
 				BufferSize:            2048,
 				Concurrency:           50,
 				SendProbes:            false,
-				TLSInsecureSkipVerify: false,
+				TLSInsecureSkipVerify: true, // Phase 1.6: Default to true for service detection
 			},
 		},
 		{
@@ -142,11 +142,12 @@ func TestBannerGrabModule_Init(t *testing.T) {
 				"concurrency":     -1,
 			},
 			expected: BannerGrabConfig{
-				ReadTimeout:    10 * time.Second,
-				ConnectTimeout: 5 * time.Second,
-				BufferSize:     2048,
-				Concurrency:    1,
-				SendProbes:     true,
+				ReadTimeout:           10 * time.Second,
+				ConnectTimeout:        5 * time.Second,
+				BufferSize:            2048,
+				Concurrency:           1,
+				SendProbes:            true,
+				TLSInsecureSkipVerify: true, // Phase 1.6: Default to true for service detection
 			},
 		},
 	}

@@ -101,7 +101,7 @@ func newBannerGrabModule() *BannerGrabModule {
 		BufferSize:            2048,
 		Concurrency:           50,
 		SendProbes:            true,
-		TLSInsecureSkipVerify: false,
+		TLSInsecureSkipVerify: true, // Default to skip cert validation for service detection (Phase 1.6)
 	}
 
 	return &BannerGrabModule{
