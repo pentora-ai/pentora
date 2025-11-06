@@ -38,7 +38,7 @@ type FingerprintParsedInfo struct {
 	SourceProbe string  `json:"source_probe,omitempty"`
 
 	// Phase 1.7: TLS metadata (certificate validity and security indicators)
-	TLS *scan.TLSObservation `json:"tls,omitempty"`
+	TLS *engine.TLSObservation `json:"tls,omitempty"`
 }
 
 // FingerprintParserModule consumes banner results and produces fingerprint matches.
@@ -200,7 +200,7 @@ type bannerCandidate struct {
 	Response string
 	Protocol string
 	ProbeID  string
-	TLS      *scan.TLSObservation // Phase 1.7: TLS metadata from probe
+	TLS      *engine.TLSObservation // Phase 1.7: TLS metadata from probe
 }
 
 func gatherBannerCandidates(banner scan.BannerGrabResult) []bannerCandidate {

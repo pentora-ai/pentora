@@ -63,7 +63,7 @@ func TestFingerprintParserModule_Execute_FullCoverage(t *testing.T) {
 		Port:     22,
 		Protocol: "tcp",
 		Banner:   "SSH-2.0-OpenSSH_8.9",
-		Evidence: []scan.ProbeObservation{
+		Evidence: []engine.ProbeObservation{
 			{Response: "HTTP/1.1 200 OK\r\nServer: nginx", Protocol: "http", ProbeID: "probe1"},
 			{Response: "error-banner", Protocol: "http", ProbeID: "probe2"},
 			{Response: "unknown-banner", Protocol: "ftp", ProbeID: "probe3"},
@@ -170,7 +170,7 @@ func TestFingerprintParserModule_gatherBannerCandidates(t *testing.T) {
 	banner := scan.BannerGrabResult{
 		Banner:   "HTTP/1.1 200 OK",
 		Protocol: "tcp",
-		Evidence: []scan.ProbeObservation{
+		Evidence: []engine.ProbeObservation{
 			{Response: "SSH-2.0-OpenSSH_8.9", Protocol: "", ProbeID: "probe1"},
 			{Response: "   ", Protocol: "http", ProbeID: "probe2"}, // boş response skip
 		},

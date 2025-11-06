@@ -5,6 +5,35 @@ import (
 	"time"
 )
 
+// ProbeObservation captures the result of an active probe execution.
+// This struct is used in banner grabbing to record individual probe attempts
+// and their responses, including TLS metadata when applicable.
+type ProbeObservation struct {
+	ProbeID     string          `json:"probe_id" yaml:"probe_id"`
+	Description string          `json:"description,omitempty" yaml:"description,omitempty"`
+	Protocol    string          `json:"protocol,omitempty" yaml:"protocol,omitempty"`
+	IsTLS       bool            `json:"is_tls,omitempty" yaml:"is_tls,omitempty"`
+	Duration    time.Duration   `json:"duration_ns,omitempty" yaml:"duration_ns,omitempty"`
+	Response    string          `json:"response,omitempty" yaml:"response,omitempty"`
+	Error       string          `json:"error,omitempty" yaml:"error,omitempty"`
+	TLS         *TLSObservation `json:"tls,omitempty" yaml:"tls,omitempty"` // Phase 1.7
+}
+
+// TLSObservation captures TLS handshake metadata including certificate validity.
+// Phase 1.7: Added certificate expiry and self-signed detection for security assessment.
+type TLSObservation struct {
+	Version        string    `json:"version,omitempty" yaml:"version,omitempty"`
+	CipherSuite    string    `json:"cipher_suite,omitempty" yaml:"cipher_suite,omitempty"`
+	ServerName     string    `json:"server_name,omitempty" yaml:"server_name,omitempty"`
+	PeerCommonName string    `json:"peer_common_name,omitempty" yaml:"peer_common_name,omitempty"`
+	PeerDNSNames   []string  `json:"peer_dns_names,omitempty" yaml:"peer_dns_names,omitempty"`
+	Issuer         string    `json:"issuer,omitempty" yaml:"issuer,omitempty"`         // Phase 1.7: Certificate issuer DN
+	NotBefore      time.Time `json:"not_before,omitempty" yaml:"not_before,omitempty"` // Phase 1.7: Certificate validity start
+	NotAfter       time.Time `json:"not_after,omitempty" yaml:"not_after,omitempty"`   // Phase 1.7: Certificate validity end
+	IsExpired      bool      `json:"is_expired" yaml:"is_expired"`                     // Phase 1.7: True if cert expired
+	IsSelfSigned   bool      `json:"is_self_signed" yaml:"is_self_signed"`             // Phase 1.7: True if Subject == Issuer
+}
+
 // FindingSeverity defines the severity of a finding.
 type FindingSeverity string
 
@@ -37,6 +66,7 @@ type ServiceDetails struct {
 	RawBanner        string                 `json:"raw_banner,omitempty" yaml:"raw_banner,omitempty"` // Raw banner captured
 	IsTLS            bool                   `json:"is_tls,omitempty" yaml:"is_tls,omitempty"`
 	ParsedAttributes map[string]interface{} `json:"parsed_attributes,omitempty" yaml:"parsed_attributes,omitempty"` // HTTP headers, SSH specific details, etc.
+	Evidence         []ProbeObservation     `json:"evidence,omitempty" yaml:"evidence,omitempty"`                   // Active probe results from Phase 1.5 (Probe Fallback)
 }
 
 // PortProfile details information about a specific open port on a target.
