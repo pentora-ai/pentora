@@ -114,7 +114,6 @@ func NewCommand() *cobra.Command {
 	cmd.AddCommand(pluginCmd.NewCommand())
 	cmd.AddCommand(serverCmd.NewCommand())
 	cmd.AddCommand(storageCmd.NewStorageCommand())
-	cmd.AddCommand(cli.DiscoverCmd)
 	cmd.AddCommand(cli.NewVersionCommand(cliExecutable))
 	cmd.AddCommand(ScanCmd)
 	cmd.AddCommand(NewFingerprintCommand())
