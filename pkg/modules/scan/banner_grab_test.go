@@ -3,6 +3,9 @@ package scan
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"fmt"
 	"net"
 	"net/http"
@@ -429,5 +432,176 @@ func TestBannerGrabModule_Metadata(t *testing.T) {
 	}
 	if meta.ConfigSchema == nil {
 		t.Error("Expected non-nil ConfigSchema")
+	}
+}
+
+// TestExtractTLSObservation_Phase17 tests the new Phase 1.7 certificate validity fields
+func TestExtractTLSObservation_Phase17(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		state          func() tls.ConnectionState
+		wantVersion    string
+		wantIssuer     string
+		wantExpired    bool
+		wantSelfSigned bool
+	}{
+		{
+			name: "valid certificate with future expiry",
+			state: func() tls.ConnectionState {
+				cert := &x509.Certificate{
+					Subject: pkix.Name{
+						CommonName: "example.com",
+					},
+					Issuer: pkix.Name{
+						CommonName: "Let's Encrypt Authority X3",
+					},
+					NotBefore: time.Now().Add(-24 * time.Hour),
+					NotAfter:  time.Now().Add(90 * 24 * time.Hour), // 90 days in future
+					DNSNames:  []string{"example.com", "www.example.com"},
+				}
+				return tls.ConnectionState{
+					HandshakeComplete: true,
+					Version:           tls.VersionTLS13,
+					CipherSuite:       tls.TLS_AES_128_GCM_SHA256,
+					ServerName:        "example.com",
+					PeerCertificates:  []*x509.Certificate{cert},
+				}
+			},
+			wantVersion:    "TLS1.3",
+			wantIssuer:     "CN=Let's Encrypt Authority X3",
+			wantExpired:    false,
+			wantSelfSigned: false,
+		},
+		{
+			name: "expired certificate",
+			state: func() tls.ConnectionState {
+				cert := &x509.Certificate{
+					Subject: pkix.Name{
+						CommonName: "expired.example.com",
+					},
+					Issuer: pkix.Name{
+						CommonName: "CA Authority",
+					},
+					NotBefore: time.Now().Add(-365 * 24 * time.Hour), // 1 year ago
+					NotAfter:  time.Now().Add(-1 * time.Hour),        // 1 hour ago (expired)
+				}
+				return tls.ConnectionState{
+					HandshakeComplete: true,
+					Version:           tls.VersionTLS12,
+					CipherSuite:       tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+					ServerName:        "expired.example.com",
+					PeerCertificates:  []*x509.Certificate{cert},
+				}
+			},
+			wantVersion:    "TLS1.2",
+			wantIssuer:     "CN=CA Authority",
+			wantExpired:    true,
+			wantSelfSigned: false,
+		},
+		{
+			name: "self-signed certificate",
+			state: func() tls.ConnectionState {
+				cert := &x509.Certificate{
+					Subject: pkix.Name{
+						CommonName:   "localhost",
+						Organization: []string{"Self-Signed"},
+					},
+					Issuer: pkix.Name{
+						CommonName:   "localhost",
+						Organization: []string{"Self-Signed"},
+					},
+					NotBefore: time.Now().Add(-24 * time.Hour),
+					NotAfter:  time.Now().Add(365 * 24 * time.Hour),
+				}
+				return tls.ConnectionState{
+					HandshakeComplete: true,
+					Version:           tls.VersionTLS12,
+					CipherSuite:       tls.TLS_RSA_WITH_AES_128_CBC_SHA,
+					ServerName:        "localhost",
+					PeerCertificates:  []*x509.Certificate{cert},
+				}
+			},
+			wantVersion:    "TLS1.2",
+			wantIssuer:     "CN=localhost,O=Self-Signed",
+			wantExpired:    false,
+			wantSelfSigned: true,
+		},
+		{
+			name: "handshake not complete",
+			state: func() tls.ConnectionState {
+				return tls.ConnectionState{
+					HandshakeComplete: false,
+				}
+			},
+			wantVersion:    "",
+			wantIssuer:     "",
+			wantExpired:    false,
+			wantSelfSigned: false,
+		},
+		{
+			name: "no peer certificates",
+			state: func() tls.ConnectionState {
+				return tls.ConnectionState{
+					HandshakeComplete: true,
+					Version:           tls.VersionTLS13,
+					CipherSuite:       tls.TLS_AES_256_GCM_SHA384,
+					PeerCertificates:  nil,
+				}
+			},
+			wantVersion:    "TLS1.3",
+			wantIssuer:     "",
+			wantExpired:    false,
+			wantSelfSigned: false,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			state := tt.state()
+			obs := extractTLSObservation(state)
+
+			// If handshake not complete, expect nil
+			if !state.HandshakeComplete {
+				if obs != nil {
+					t.Errorf("Expected nil observation for incomplete handshake, got %+v", obs)
+				}
+				return
+			}
+
+			if obs == nil {
+				t.Fatal("Expected non-nil observation, got nil")
+			}
+
+			if obs.Version != tt.wantVersion {
+				t.Errorf("Version: got %q, want %q", obs.Version, tt.wantVersion)
+			}
+
+			if obs.Issuer != tt.wantIssuer {
+				t.Errorf("Issuer: got %q, want %q", obs.Issuer, tt.wantIssuer)
+			}
+
+			if obs.IsExpired != tt.wantExpired {
+				t.Errorf("IsExpired: got %v, want %v", obs.IsExpired, tt.wantExpired)
+			}
+
+			if obs.IsSelfSigned != tt.wantSelfSigned {
+				t.Errorf("IsSelfSigned: got %v, want %v", obs.IsSelfSigned, tt.wantSelfSigned)
+			}
+
+			// Verify NotBefore and NotAfter are populated when cert exists
+			if len(state.PeerCertificates) > 0 {
+				if obs.NotBefore.IsZero() {
+					t.Error("Expected non-zero NotBefore")
+				}
+				if obs.NotAfter.IsZero() {
+					t.Error("Expected non-zero NotAfter")
+				}
+			}
+		})
 	}
 }
