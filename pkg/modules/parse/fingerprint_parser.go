@@ -232,6 +232,15 @@ func fingerprintProtocolHint(port int, banner string) string {
 	banner = strings.ToLower(banner)
 
 	// First, try banner content matching
+	if hint := detectProtocolFromBanner(banner); hint != "" {
+		return hint
+	}
+
+	// Fallback to port number detection
+	return detectProtocolFromPort(port)
+}
+
+func detectProtocolFromBanner(banner string) string {
 	switch {
 	case strings.HasPrefix(banner, "ssh-"):
 		return "ssh"
@@ -244,9 +253,13 @@ func fingerprintProtocolHint(port int, banner string) string {
 	case strings.Contains(banner, "mysql"), strings.Contains(banner, "mariadb"):
 		return "mysql"
 	}
+	return ""
+}
 
-	// Fallback to common port numbers if banner doesn't contain protocol name
+//nolint:gocyclo // Port mapping switch is intentionally comprehensive for protocol detection
+func detectProtocolFromPort(port int) string {
 	switch port {
+	// Databases
 	case 3306:
 		return "mysql"
 	case 5432:
@@ -255,14 +268,32 @@ func fingerprintProtocolHint(port int, banner string) string {
 		return "redis"
 	case 27017:
 		return "mongodb"
+	// Network Services
 	case 22:
 		return "ssh"
 	case 21:
 		return "ftp"
 	case 25, 587:
 		return "smtp"
+	// Mail Protocols (Phase 1.6)
+	case 110, 995:
+		return "pop3"
+	case 143, 993:
+		return "imap"
+	// Enterprise/Messaging (Phase 1.6)
+	case 53:
+		return "dns"
+	case 389, 636, 3268, 3269:
+		return "ldap"
+	case 5672, 5671:
+		return "rabbitmq"
+	case 9092, 9093:
+		return "kafka"
+	case 9200, 9300:
+		return "elasticsearch"
+	case 161, 162:
+		return "snmp"
 	}
-
 	return ""
 }
 
