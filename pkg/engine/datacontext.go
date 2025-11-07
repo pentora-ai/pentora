@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
+	"time"
 )
 
 // Cardinality mirrors DataCardinality but as an internal enum for schema storage.
@@ -60,9 +61,9 @@ func RegisterCommonSchema(dc *DataContext) {
 	// Phase 1.8: TLS certificate-level keys (CardinalityList)
 	_ = dc.RegisterType("tls.certificate.issuer", reflect.TypeOf([]string{}), CardinalityList)
 	_ = dc.RegisterType("tls.certificate.common_name", reflect.TypeOf([]string{}), CardinalityList)
-	_ = dc.RegisterType("tls.certificate.dns_names", reflect.TypeOf([][]string{}), CardinalityList)
-	_ = dc.RegisterType("tls.certificate.not_before", reflect.TypeOf([]interface{}{}), CardinalityList) // time.Time
-	_ = dc.RegisterType("tls.certificate.not_after", reflect.TypeOf([]interface{}{}), CardinalityList)  // time.Time
+	_ = dc.RegisterType("tls.certificate.dns_names", reflect.TypeOf([]string{}), CardinalityList)
+	_ = dc.RegisterType("tls.certificate.not_before", reflect.TypeOf([]time.Time{}), CardinalityList)
+	_ = dc.RegisterType("tls.certificate.not_after", reflect.TypeOf([]time.Time{}), CardinalityList)
 	_ = dc.RegisterType("tls.certificate.is_expired", reflect.TypeOf([]bool{}), CardinalityList)
 	_ = dc.RegisterType("tls.certificate.is_self_signed", reflect.TypeOf([]bool{}), CardinalityList)
 
