@@ -28,7 +28,7 @@ func NewVerifier() *Verifier {
 
 // VerifyFile verifies a plugin file against its expected checksum.
 // Returns true if the checksum matches, false otherwise.
-func (v *Verifier) VerifyFile(filePath string, expectedChecksum string) (bool, error) {
+func (v *Verifier) VerifyFile(filePath, expectedChecksum string) (bool, error) {
 	if filePath == "" {
 		return false, fmt.Errorf("file path cannot be empty")
 	}
@@ -146,7 +146,7 @@ func (v *Verifier) normalizeChecksum(checksum string) string {
 // Examples:
 //   - "sha256:abc123" -> ("sha256", "abc123", nil)
 //   - "abc123" -> ("sha256", "abc123", nil) // default algorithm
-func ParseChecksum(checksum string) (algorithm string, hexValue string, err error) {
+func ParseChecksum(checksum string) (algorithm, hexValue string, err error) {
 	if checksum == "" {
 		return "", "", fmt.Errorf("checksum cannot be empty")
 	}
@@ -166,6 +166,6 @@ func ParseChecksum(checksum string) (algorithm string, hexValue string, err erro
 
 // FormatChecksum formats a checksum with algorithm prefix.
 // Example: FormatChecksum("sha256", "abc123") -> "sha256:abc123"
-func FormatChecksum(algorithm string, hexValue string) string {
+func FormatChecksum(algorithm, hexValue string) string {
 	return fmt.Sprintf("%s:%s", algorithm, hexValue)
 }

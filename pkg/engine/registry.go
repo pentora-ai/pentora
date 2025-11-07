@@ -25,7 +25,7 @@ func RegisterModuleFactory(name string, factory ModuleFactory) {
 
 // GetModuleInstance creates a new instance of a module given its registered name
 // and initializes it with the provided configuration.
-func GetModuleInstance(instanceID string, name string, config map[string]interface{}) (Module, error) {
+func GetModuleInstance(instanceID, name string, config map[string]interface{}) (Module, error) {
 	factory, ok := moduleRegistry[name]
 	if !ok {
 		return nil, fmt.Errorf("no module factory registered for name: %s", name)

@@ -260,7 +260,7 @@ func init() {
 // extractSSHSoftwareAndVersion attempts to get a more granular software and version.
 // Example: "OpenSSH_8.9p1" -> "OpenSSH", "8.9p1"
 // Example: "dropbear_2020.78" -> "dropbear", "2020.78"
-func extractSSHSoftwareAndVersion(versionInfo string) (software string, swVersion string) {
+func extractSSHSoftwareAndVersion(versionInfo string) (software, swVersion string) {
 	if versionInfo == "" {
 		return "", ""
 	}

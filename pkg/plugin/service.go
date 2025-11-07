@@ -32,7 +32,7 @@ type CacheInterface interface {
 	GetEntry(ctx context.Context, name, version string) (*CacheEntry, error)
 	Size(ctx context.Context) (int64, error)
 	Prune(ctx context.Context, olderThan time.Duration) (int, error)
-	Remove(ctx context.Context, id string, version string) error
+	Remove(ctx context.Context, id, version string) error
 }
 
 // ManifestInterface defines the manifest operations needed by Service

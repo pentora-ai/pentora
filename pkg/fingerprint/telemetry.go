@@ -71,7 +71,7 @@ func (w *TelemetryWriter) Write(event DetectionEvent) error {
 }
 
 // WriteSuccess writes a successful detection event.
-func (w *TelemetryWriter) WriteSuccess(target string, port int, protocol string, result Result, resolverName string, ruleID string) error {
+func (w *TelemetryWriter) WriteSuccess(target string, port int, protocol string, result Result, resolverName, ruleID string) error {
 	event := DetectionEvent{
 		Timestamp:    time.Now(),
 		Target:       target,
@@ -89,7 +89,7 @@ func (w *TelemetryWriter) WriteSuccess(target string, port int, protocol string,
 }
 
 // WriteNoMatch writes a no-match event when no rule matched the banner.
-func (w *TelemetryWriter) WriteNoMatch(target string, port int, protocol string, resolverName string) error {
+func (w *TelemetryWriter) WriteNoMatch(target string, port int, protocol, resolverName string) error {
 	event := DetectionEvent{
 		Timestamp:    time.Now(),
 		Target:       target,
@@ -103,7 +103,7 @@ func (w *TelemetryWriter) WriteNoMatch(target string, port int, protocol string,
 }
 
 // WriteRejected writes a rejection event when anti-patterns triggered.
-func (w *TelemetryWriter) WriteRejected(target string, port int, protocol string, reason string, resolverName string, ruleID string) error {
+func (w *TelemetryWriter) WriteRejected(target string, port int, protocol, reason, resolverName, ruleID string) error {
 	event := DetectionEvent{
 		Timestamp:       time.Now(),
 		Target:          target,
