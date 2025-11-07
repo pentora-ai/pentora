@@ -7,6 +7,10 @@ fallback_probes:
   - redis-ping    # Database fallback (Redis, Memcached on custom ports)
   - ftp-feat      # FTP fallback
 
+# TODO: Adaptive timeouts (future work)
+# Protocol-specific timeouts could further optimize scanning performance
+# Implementation requires: catalog.go parsing + banner_grab.go timeout override
+
 groups:
   - id: http
     description: Standard HTTP and HTTPS probes
@@ -102,3 +106,62 @@ groups:
         payload: "PING\r\n"
         use_tls: true
         port_include: [6380]
+  - id: smb
+    description: SMB/NetBIOS session probes for Windows file sharing
+    # Operational note: Binary protocols with skip_initial_read strategy.
+    # These probes send binary packets and expect short binary responses (or silence).
+    # Recommended: 256-512 byte read cap, 250-500ms timeout to avoid stalls.
+    port_hints: [139, 445]
+    protocol_hints: ["smb", "netbios", "cifs"]
+    probes:
+      - id: netbios-session
+        protocol: netbios
+        payload: "\x81\x00\x00\x44\x20\x43\x4b\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x00\x20\x45\x4f\x45\x4e\x45\x42\x46\x41\x43\x41\x43\x41\x43\x41\x43\x41\x43\x41\x43\x41\x43\x41\x43\x41\x43\x41\x41\x41\x00"
+        use_tls: false
+        skip_initial_read: true
+        port_include: [139]
+      - id: smb-negotiate
+        protocol: smb
+        payload: "\x00\x00\x00\x85\xff\x53\x4d\x42\x72\x00\x00\x00\x00\x18\x53\xc8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xfe\x00\x00\x00\x00\x00\x62\x00\x02\x50\x43\x20\x4e\x45\x54\x57\x4f\x52\x4b\x20\x50\x52\x4f\x47\x52\x41\x4d\x20\x31\x2e\x30\x00\x02\x4c\x41\x4e\x4d\x41\x4e\x31\x2e\x30\x00\x02\x57\x69\x6e\x64\x6f\x77\x73\x20\x66\x6f\x72\x20\x57\x6f\x72\x6b\x67\x72\x6f\x75\x70\x73\x20\x33\x2e\x31\x61\x00\x02\x4c\x4d\x31\x2e\x32\x58\x30\x30\x32\x00\x02\x4c\x41\x4e\x4d\x41\x4e\x32\x2e\x31\x00\x02\x4e\x54\x20\x4c\x4d\x20\x30\x2e\x31\x32\x00"
+        use_tls: false
+        skip_initial_read: true
+        port_include: [445]
+  - id: msrpc
+    description: Microsoft RPC Endpoint Mapper probe
+    # Operational note: Binary DCE/RPC protocol with skip_initial_read.
+    # Sends RPC bind request, expects bind_ack or bind_nak response.
+    # Recommended: 512 byte read cap, 500ms timeout.
+    port_hints: [135]
+    protocol_hints: ["msrpc", "rpc", "dce-rpc"]
+    probes:
+      - id: rpc-bind
+        protocol: msrpc
+        payload: "\x05\x00\x0b\x03\x10\x00\x00\x00\x48\x00\x00\x00\x01\x00\x00\x00\xb8\x10\xb8\x10\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x01\x00\x6a\x28\x19\x39\x0c\xb1\xd0\x11\x9b\xa8\x00\xc0\x4f\xd9\x2e\xf5\x00\x00\x00\x00\x04\x5d\x88\x8a\xeb\x1c\xc9\x11\x9f\xe8\x08\x00\x2b\x10\x48\x60\x02\x00\x00\x00"
+        use_tls: false
+        skip_initial_read: true
+        port_include: [135]
+  - id: dns
+    description: DNS server query probe for version detection
+    port_hints: [53]
+    protocol_hints: ["dns", "domain"]
+    probes:
+      - id: dns-version-bind
+        protocol: dns
+        payload: "\x00\x1e\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x07version\x04bind\x00\x00\x10\x00\x03"
+        use_tls: false
+        skip_initial_read: true
+        port_include: [53]
+  - id: rpcbind
+    description: ONC RPC Portmapper probe for service enumeration
+    # Operational note: Binary ONC RPC protocol with skip_initial_read.
+    # Sends RPC null call (procedure 0), expects accepted/denied response.
+    # Recommended: 256 byte read cap, 250ms timeout.
+    port_hints: [111]
+    protocol_hints: ["rpc", "portmap", "rpcbind"]
+    probes:
+      - id: rpc-null-call
+        protocol: rpc
+        payload: "\x80\x00\x00\x28\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x01\x86\xa0\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+        use_tls: false
+        skip_initial_read: true
+        port_include: [111]

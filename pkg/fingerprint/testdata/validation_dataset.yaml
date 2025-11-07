@@ -21,853 +21,853 @@ true_positives:
   # HTTP Servers (20 cases)
   - protocol: http
     port: 80
-    banner: "Server: Apache/2.4.41 (Ubuntu)"
-    expected_product: "Apache"
-    expected_vendor: "Apache"
-    expected_version: "2.4.41"
-    description: "Apache HTTP server on Ubuntu"
+    banner: 'Server: Apache/2.4.41 (Ubuntu)'
+    expected_product: 'Apache'
+    expected_vendor: 'Apache'
+    expected_version: '2.4.41'
+    description: 'Apache HTTP server on Ubuntu'
 
   - protocol: http
     port: 80
-    banner: "Server: nginx/1.18.0"
-    expected_product: "nginx"
-    expected_vendor: "nginx"
-    expected_version: "1.18.0"
-    description: "nginx web server"
+    banner: 'Server: nginx/1.18.0'
+    expected_product: 'nginx'
+    expected_vendor: 'nginx'
+    expected_version: '1.18.0'
+    description: 'nginx web server'
 
   - protocol: http
     port: 80
-    banner: "Server: Microsoft-IIS/10.0"
-    expected_product: "IIS"
-    expected_vendor: "Microsoft"
-    expected_version: "10.0"
-    description: "Microsoft IIS server"
+    banner: 'Server: Microsoft-IIS/10.0'
+    expected_product: 'IIS'
+    expected_vendor: 'Microsoft'
+    expected_version: '10.0'
+    description: 'Microsoft IIS server'
 
   - protocol: http
     port: 80
-    banner: "Server: LiteSpeed"
-    expected_product: "LiteSpeed"
-    expected_vendor: "LiteSpeed Technologies"
-    expected_version: ""
-    description: "LiteSpeed web server (no version)"
+    banner: 'Server: LiteSpeed'
+    expected_product: 'LiteSpeed'
+    expected_vendor: 'LiteSpeed Technologies'
+    expected_version: ''
+    description: 'LiteSpeed web server (no version)'
 
   - protocol: http
     port: 8080
-    banner: "Server: Apache-Coyote/1.1"
-    expected_product: "Tomcat"
-    expected_vendor: "Apache"
-    expected_version: ""
-    description: "Apache Tomcat (Coyote connector)"
+    banner: 'Server: Apache-Coyote/1.1'
+    expected_product: 'Tomcat'
+    expected_vendor: 'Apache'
+    expected_version: ''
+    description: 'Apache Tomcat (Coyote connector)'
 
   - protocol: http
     port: 443
-    banner: "Server: Apache/2.4.29 (Unix) OpenSSL/1.1.1"
-    expected_product: "Apache"
-    expected_vendor: "Apache"
-    expected_version: "2.4.29"
-    description: "Apache with OpenSSL on Unix"
+    banner: 'Server: Apache/2.4.29 (Unix) OpenSSL/1.1.1'
+    expected_product: 'Apache'
+    expected_vendor: 'Apache'
+    expected_version: '2.4.29'
+    description: 'Apache with OpenSSL on Unix'
 
   - protocol: http
     port: 80
-    banner: "Server: nginx/1.20.2 (Ubuntu)"
-    expected_product: "nginx"
-    expected_vendor: "nginx"
-    expected_version: "1.20.2"
-    description: "nginx on Ubuntu"
+    banner: 'Server: nginx/1.20.2 (Ubuntu)'
+    expected_product: 'nginx'
+    expected_vendor: 'nginx'
+    expected_version: '1.20.2'
+    description: 'nginx on Ubuntu'
 
   - protocol: http
     port: 80
-    banner: "Server: Apache/2.2.34 (Win32) mod_ssl/2.2.34 OpenSSL/1.0.2"
-    expected_product: "Apache"
-    expected_vendor: "Apache"
-    expected_version: "2.2.34"
-    description: "Apache on Windows with SSL"
+    banner: 'Server: Apache/2.2.34 (Win32) mod_ssl/2.2.34 OpenSSL/1.0.2'
+    expected_product: 'Apache'
+    expected_vendor: 'Apache'
+    expected_version: '2.2.34'
+    description: 'Apache on Windows with SSL'
 
   - protocol: http
     port: 80
-    banner: "Server: Microsoft-IIS/8.5"
-    expected_product: "IIS"
-    expected_vendor: "Microsoft"
-    expected_version: "8.5"
-    description: "IIS 8.5"
+    banner: 'Server: Microsoft-IIS/8.5'
+    expected_product: 'IIS'
+    expected_vendor: 'Microsoft'
+    expected_version: '8.5'
+    description: 'IIS 8.5'
 
   - protocol: http
     port: 80
-    banner: "Server: nginx"
-    expected_product: "nginx"
-    expected_vendor: "nginx"
-    expected_version: ""
-    description: "nginx without version"
+    banner: 'Server: nginx'
+    expected_product: 'nginx'
+    expected_vendor: 'nginx'
+    expected_version: ''
+    description: 'nginx without version'
 
   - protocol: http
     port: 80
-    banner: "Server: Apache"
-    expected_product: "Apache"
-    expected_vendor: "Apache"
-    expected_version: ""
-    description: "Apache without version"
+    banner: 'Server: Apache'
+    expected_product: 'Apache'
+    expected_vendor: 'Apache'
+    expected_version: ''
+    description: 'Apache without version'
 
   - protocol: http
     port: 8080
     banner: "HTTP/1.1 200 OK\r\nServer: Apache-Coyote/1.1\r\nContent-Type: text/html"
-    expected_product: "Tomcat"
-    expected_vendor: "Apache"
-    expected_version: ""
-    description: "Tomcat full HTTP response"
+    expected_product: 'Tomcat'
+    expected_vendor: 'Apache'
+    expected_version: ''
+    description: 'Tomcat full HTTP response'
 
   - protocol: http
     port: 80
-    banner: "Server: LiteSpeed/5.4.12"
-    expected_product: "LiteSpeed"
-    expected_vendor: "LiteSpeed Technologies"
-    expected_version: "5.4.12"
-    description: "LiteSpeed with version"
+    banner: 'Server: LiteSpeed/5.4.12'
+    expected_product: 'LiteSpeed'
+    expected_vendor: 'LiteSpeed Technologies'
+    expected_version: '5.4.12'
+    description: 'LiteSpeed with version'
 
   - protocol: http
     port: 80
-    banner: "Server: Microsoft-IIS/7.5"
-    expected_product: "IIS"
-    expected_vendor: "Microsoft"
-    expected_version: "7.5"
-    description: "IIS 7.5"
+    banner: 'Server: Microsoft-IIS/7.5'
+    expected_product: 'IIS'
+    expected_vendor: 'Microsoft'
+    expected_version: '7.5'
+    description: 'IIS 7.5'
 
   - protocol: http
     port: 443
-    banner: "Server: nginx/1.19.0"
-    expected_product: "nginx"
-    expected_vendor: "nginx"
-    expected_version: "1.19.0"
-    description: "nginx on HTTPS port"
+    banner: 'Server: nginx/1.19.0'
+    expected_product: 'nginx'
+    expected_vendor: 'nginx'
+    expected_version: '1.19.0'
+    description: 'nginx on HTTPS port'
 
   - protocol: http
     port: 80
-    banner: "Server: Apache/2.4.52 (Debian)"
-    expected_product: "Apache"
-    expected_vendor: "Apache"
-    expected_version: "2.4.52"
-    description: "Apache on Debian"
+    banner: 'Server: Apache/2.4.52 (Debian)'
+    expected_product: 'Apache'
+    expected_vendor: 'Apache'
+    expected_version: '2.4.52'
+    description: 'Apache on Debian'
 
   - protocol: http
     port: 80
-    banner: "Server: nginx/1.21.6"
-    expected_product: "nginx"
-    expected_vendor: "nginx"
-    expected_version: "1.21.6"
-    description: "nginx 1.21.6"
+    banner: 'Server: nginx/1.21.6'
+    expected_product: 'nginx'
+    expected_vendor: 'nginx'
+    expected_version: '1.21.6'
+    description: 'nginx 1.21.6'
 
   - protocol: http
     port: 80
-    banner: "Server: Apache/2.4.46 (Red Hat)"
-    expected_product: "Apache"
-    expected_vendor: "Apache"
-    expected_version: "2.4.46"
-    description: "Apache on Red Hat"
+    banner: 'Server: Apache/2.4.46 (Red Hat)'
+    expected_product: 'Apache'
+    expected_vendor: 'Apache'
+    expected_version: '2.4.46'
+    description: 'Apache on Red Hat'
 
   - protocol: http
     port: 80
-    banner: "Server: Microsoft-IIS/6.0"
-    expected_product: "IIS"
-    expected_vendor: "Microsoft"
-    expected_version: "6.0"
-    description: "IIS 6.0 (legacy)"
+    banner: 'Server: Microsoft-IIS/6.0'
+    expected_product: 'IIS'
+    expected_vendor: 'Microsoft'
+    expected_version: '6.0'
+    description: 'IIS 6.0 (legacy)'
 
   - protocol: http
     port: 5985
-    banner: "Server: Microsoft-HTTPAPI/2.0"
-    expected_product: "WinRM"
-    expected_vendor: "Microsoft"
-    expected_version: "2.0"
-    description: "Windows Remote Management"
+    banner: 'Server: Microsoft-HTTPAPI/2.0'
+    expected_product: 'WinRM'
+    expected_vendor: 'Microsoft'
+    expected_version: '2.0'
+    description: 'Windows Remote Management'
 
   # SSH Servers (15 cases)
   - protocol: ssh
     port: 22
-    banner: "SSH-2.0-OpenSSH_8.2p1 Ubuntu-4ubuntu0.5"
-    expected_product: "OpenSSH"
-    expected_vendor: "OpenBSD"
-    expected_version: "8.2p1"
-    description: "OpenSSH on Ubuntu"
+    banner: 'SSH-2.0-OpenSSH_8.2p1 Ubuntu-4ubuntu0.5'
+    expected_product: 'OpenSSH'
+    expected_vendor: 'OpenBSD'
+    expected_version: '8.2p1'
+    description: 'OpenSSH on Ubuntu'
 
   - protocol: ssh
     port: 22
-    banner: "SSH-2.0-OpenSSH_7.4"
-    expected_product: "OpenSSH"
-    expected_vendor: "OpenBSD"
-    expected_version: "7.4"
-    description: "OpenSSH 7.4"
+    banner: 'SSH-2.0-OpenSSH_7.4'
+    expected_product: 'OpenSSH'
+    expected_vendor: 'OpenBSD'
+    expected_version: '7.4'
+    description: 'OpenSSH 7.4'
 
   - protocol: ssh
     port: 22
-    banner: "SSH-2.0-dropbear_2020.81"
-    expected_product: "Dropbear SSH"
-    expected_vendor: "Dropbear"
-    expected_version: "2020.81"
-    description: "Dropbear SSH"
+    banner: 'SSH-2.0-dropbear_2020.81'
+    expected_product: 'Dropbear SSH'
+    expected_vendor: 'Dropbear'
+    expected_version: '2020.81'
+    description: 'Dropbear SSH'
 
   - protocol: ssh
     port: 22
-    banner: "SSH-2.0-libssh_0.9.6"
-    expected_product: "libssh"
-    expected_vendor: "libssh"
-    expected_version: "0.9.6"
-    description: "libssh library"
+    banner: 'SSH-2.0-libssh_0.9.6'
+    expected_product: 'libssh'
+    expected_vendor: 'libssh'
+    expected_version: '0.9.6'
+    description: 'libssh library'
 
   - protocol: ssh
     port: 22
-    banner: "SSH-2.0-OpenSSH_9.0"
-    expected_product: "OpenSSH"
-    expected_vendor: "OpenBSD"
-    expected_version: "9.0"
-    description: "OpenSSH 9.0"
+    banner: 'SSH-2.0-OpenSSH_9.0'
+    expected_product: 'OpenSSH'
+    expected_vendor: 'OpenBSD'
+    expected_version: '9.0'
+    description: 'OpenSSH 9.0'
 
   - protocol: ssh
     port: 22
-    banner: "SSH-2.0-OpenSSH_8.9p1 Debian-1ubuntu1"
-    expected_product: "OpenSSH"
-    expected_vendor: "OpenBSD"
-    expected_version: "8.9p1"
-    description: "OpenSSH on Debian"
+    banner: 'SSH-2.0-OpenSSH_8.9p1 Debian-1ubuntu1'
+    expected_product: 'OpenSSH'
+    expected_vendor: 'OpenBSD'
+    expected_version: '8.9p1'
+    description: 'OpenSSH on Debian'
 
   - protocol: ssh
     port: 22
-    banner: "SSH-2.0-OpenSSH_7.9p1 Raspbian-10+deb10u2"
-    expected_product: "OpenSSH"
-    expected_vendor: "OpenBSD"
-    expected_version: "7.9p1"
-    description: "OpenSSH on Raspberry Pi"
+    banner: 'SSH-2.0-OpenSSH_7.9p1 Raspbian-10+deb10u2'
+    expected_product: 'OpenSSH'
+    expected_vendor: 'OpenBSD'
+    expected_version: '7.9p1'
+    description: 'OpenSSH on Raspberry Pi'
 
   - protocol: ssh
     port: 22
-    banner: "SSH-2.0-dropbear_2019.78"
-    expected_product: "Dropbear SSH"
-    expected_vendor: "Dropbear"
-    expected_version: "2019.78"
-    description: "Dropbear 2019"
+    banner: 'SSH-2.0-dropbear_2019.78'
+    expected_product: 'Dropbear SSH'
+    expected_vendor: 'Dropbear'
+    expected_version: '2019.78'
+    description: 'Dropbear 2019'
 
   - protocol: ssh
     port: 22
-    banner: "SSH-2.0-OpenSSH_6.7p1"
-    expected_product: "OpenSSH"
-    expected_vendor: "OpenBSD"
-    expected_version: "6.7p1"
-    description: "OpenSSH 6.7 (legacy)"
+    banner: 'SSH-2.0-OpenSSH_6.7p1'
+    expected_product: 'OpenSSH'
+    expected_vendor: 'OpenBSD'
+    expected_version: '6.7p1'
+    description: 'OpenSSH 6.7 (legacy)'
 
   - protocol: ssh
     port: 22
-    banner: "SSH-2.0-OpenSSH_8.4p1"
-    expected_product: "OpenSSH"
-    expected_vendor: "OpenBSD"
-    expected_version: "8.4p1"
-    description: "OpenSSH 8.4"
+    banner: 'SSH-2.0-OpenSSH_8.4p1'
+    expected_product: 'OpenSSH'
+    expected_vendor: 'OpenBSD'
+    expected_version: '8.4p1'
+    description: 'OpenSSH 8.4'
 
   - protocol: ssh
     port: 22
-    banner: "SSH-2.0-libssh-0.8.9"
-    expected_product: "libssh"
-    expected_vendor: "libssh"
-    expected_version: "0.8.9"
-    description: "libssh 0.8.9"
+    banner: 'SSH-2.0-libssh-0.8.9'
+    expected_product: 'libssh'
+    expected_vendor: 'libssh'
+    expected_version: '0.8.9'
+    description: 'libssh 0.8.9'
 
   - protocol: ssh
     port: 2222
-    banner: "SSH-2.0-OpenSSH_8.0"
-    expected_product: "OpenSSH"
-    expected_vendor: "OpenBSD"
-    expected_version: "8.0"
-    description: "OpenSSH on non-standard port"
+    banner: 'SSH-2.0-OpenSSH_8.0'
+    expected_product: 'OpenSSH'
+    expected_vendor: 'OpenBSD'
+    expected_version: '8.0'
+    description: 'OpenSSH on non-standard port'
 
   - protocol: ssh
     port: 22
-    banner: "SSH-2.0-dropbear"
-    expected_product: "Dropbear SSH"
-    expected_vendor: "Dropbear"
-    expected_version: ""
-    description: "Dropbear without version"
+    banner: 'SSH-2.0-dropbear'
+    expected_product: 'Dropbear SSH'
+    expected_vendor: 'Dropbear'
+    expected_version: ''
+    description: 'Dropbear without version'
 
   - protocol: ssh
     port: 22
-    banner: "SSH-2.0-OpenSSH_7.2p2 Ubuntu-4ubuntu2.10"
-    expected_product: "OpenSSH"
-    expected_vendor: "OpenBSD"
-    expected_version: "7.2p2"
-    description: "OpenSSH 7.2 on Ubuntu"
+    banner: 'SSH-2.0-OpenSSH_7.2p2 Ubuntu-4ubuntu2.10'
+    expected_product: 'OpenSSH'
+    expected_vendor: 'OpenBSD'
+    expected_version: '7.2p2'
+    description: 'OpenSSH 7.2 on Ubuntu'
 
   - protocol: ssh
     port: 22
-    banner: "SSH-2.0-OpenSSH_8.1"
-    expected_product: "OpenSSH"
-    expected_vendor: "OpenBSD"
-    expected_version: "8.1"
-    description: "OpenSSH 8.1"
+    banner: 'SSH-2.0-OpenSSH_8.1'
+    expected_product: 'OpenSSH'
+    expected_vendor: 'OpenBSD'
+    expected_version: '8.1'
+    description: 'OpenSSH 8.1'
 
   # FTP Servers (10 cases)
   - protocol: ftp
     port: 21
-    banner: "220 ProFTPD 1.3.6 Server"
-    expected_product: "ProFTPD"
-    expected_vendor: "ProFTPD Project"
-    expected_version: "1.3.6"
-    description: "ProFTPD server"
+    banner: '220 ProFTPD 1.3.6 Server'
+    expected_product: 'ProFTPD'
+    expected_vendor: 'ProFTPD Project'
+    expected_version: '1.3.6'
+    description: 'ProFTPD server'
 
   - protocol: ftp
     port: 21
-    banner: "220 (vsFTPd 3.0.3)"
-    expected_product: "vsftpd"
-    expected_vendor: "vsftpd"
-    expected_version: "3.0.3"
-    description: "vsftpd server"
+    banner: '220 (vsFTPd 3.0.3)'
+    expected_product: 'vsftpd'
+    expected_vendor: 'vsftpd'
+    expected_version: '3.0.3'
+    description: 'vsftpd server'
 
   - protocol: ftp
     port: 21
-    banner: "220---------- Welcome to Pure-FTPd [privsep] [TLS] ----------"
-    expected_product: "Pure-FTPd"
-    expected_vendor: "Pure-FTPd"
-    expected_version: ""
-    description: "Pure-FTPd with TLS"
+    banner: '220---------- Welcome to Pure-FTPd [privsep] [TLS] ----------'
+    expected_product: 'Pure-FTPd'
+    expected_vendor: 'Pure-FTPd'
+    expected_version: ''
+    description: 'Pure-FTPd with TLS'
 
   - protocol: ftp
     port: 21
-    banner: "220 ProFTPD Server (Debian)"
-    expected_product: "ProFTPD"
-    expected_vendor: "ProFTPD Project"
-    expected_version: ""
-    description: "ProFTPD on Debian (no version)"
+    banner: '220 ProFTPD Server (Debian)'
+    expected_product: 'ProFTPD'
+    expected_vendor: 'ProFTPD Project'
+    expected_version: ''
+    description: 'ProFTPD on Debian (no version)'
 
   - protocol: ftp
     port: 21
-    banner: "220 (vsFTPd 2.3.5)"
-    expected_product: "vsftpd"
-    expected_vendor: "vsftpd"
-    expected_version: "2.3.5"
-    description: "vsftpd 2.3.5"
+    banner: '220 (vsFTPd 2.3.5)'
+    expected_product: 'vsftpd'
+    expected_vendor: 'vsftpd'
+    expected_version: '2.3.5'
+    description: 'vsftpd 2.3.5'
 
   - protocol: ftp
     port: 21
-    banner: "220 Pure-FTPd"
-    expected_product: "Pure-FTPd"
-    expected_vendor: "Pure-FTPd"
-    expected_version: ""
-    description: "Pure-FTPd without version"
+    banner: '220 Pure-FTPd'
+    expected_product: 'Pure-FTPd'
+    expected_vendor: 'Pure-FTPd'
+    expected_version: ''
+    description: 'Pure-FTPd without version'
 
   - protocol: ftp
     port: 21
-    banner: "220 ProFTPD 1.3.7a Server"
-    expected_product: "ProFTPD"
-    expected_vendor: "ProFTPD Project"
-    expected_version: "1.3.7a"
-    description: "ProFTPD 1.3.7a"
+    banner: '220 ProFTPD 1.3.7a Server'
+    expected_product: 'ProFTPD'
+    expected_vendor: 'ProFTPD Project'
+    expected_version: '1.3.7a'
+    description: 'ProFTPD 1.3.7a'
 
   - protocol: ftp
     port: 21
-    banner: "220 (vsFTPd 3.0.5)"
-    expected_product: "vsftpd"
-    expected_vendor: "vsftpd"
-    expected_version: "3.0.5"
-    description: "vsftpd 3.0.5"
+    banner: '220 (vsFTPd 3.0.5)'
+    expected_product: 'vsftpd'
+    expected_vendor: 'vsftpd'
+    expected_version: '3.0.5'
+    description: 'vsftpd 3.0.5'
 
   - protocol: ftp
     port: 2121
-    banner: "220 ProFTPD 1.3.5 Server"
-    expected_product: "ProFTPD"
-    expected_vendor: "ProFTPD Project"
-    expected_version: "1.3.5"
-    description: "ProFTPD on non-standard port"
+    banner: '220 ProFTPD 1.3.5 Server'
+    expected_product: 'ProFTPD'
+    expected_vendor: 'ProFTPD Project'
+    expected_version: '1.3.5'
+    description: 'ProFTPD on non-standard port'
 
   - protocol: ftp
     port: 21
-    banner: "220---------- Welcome to Pure-FTPd ----------"
-    expected_product: "Pure-FTPd"
-    expected_vendor: "Pure-FTPd"
-    expected_version: ""
-    description: "Pure-FTPd welcome message"
+    banner: '220---------- Welcome to Pure-FTPd ----------'
+    expected_product: 'Pure-FTPd'
+    expected_vendor: 'Pure-FTPd'
+    expected_version: ''
+    description: 'Pure-FTPd welcome message'
 
   # Database Servers (15 cases)
   - protocol: mysql
     port: 3306
-    banner: "5.7.42-0ubuntu0.18.04.1"
-    expected_product: "MySQL"
-    expected_vendor: "Oracle"
-    expected_version: "5.7.42"
-    description: "MySQL 5.7 on Ubuntu"
+    banner: '5.7.42-0ubuntu0.18.04.1'
+    expected_product: 'MySQL'
+    expected_vendor: 'Oracle'
+    expected_version: '5.7.42'
+    description: 'MySQL 5.7 on Ubuntu'
 
   - protocol: mysql
     port: 3306
-    banner: "8.0.33-0ubuntu0.22.04.2"
-    expected_product: "MySQL"
-    expected_vendor: "Oracle"
-    expected_version: "8.0.33"
-    description: "MySQL 8.0 on Ubuntu"
+    banner: '8.0.33-0ubuntu0.22.04.2'
+    expected_product: 'MySQL'
+    expected_vendor: 'Oracle'
+    expected_version: '8.0.33'
+    description: 'MySQL 8.0 on Ubuntu'
 
   - protocol: mysql
     port: 3306
-    banner: "5.5.62-0ubuntu0.14.04.1"
-    expected_product: "MySQL"
-    expected_vendor: "Oracle"
-    expected_version: "5.5.62"
-    description: "MySQL 5.5 (legacy)"
+    banner: '5.5.62-0ubuntu0.14.04.1'
+    expected_product: 'MySQL'
+    expected_vendor: 'Oracle'
+    expected_version: '5.5.62'
+    description: 'MySQL 5.5 (legacy)'
 
   - protocol: mysql
     port: 3306
-    banner: "10.3.38-MariaDB-0ubuntu0.20.04.1"
-    expected_product: "MySQL"
-    expected_vendor: "Oracle"
-    expected_version: "10.3.38"
-    description: "MariaDB (detected as MySQL)"
+    banner: '10.3.38-MariaDB-0ubuntu0.20.04.1'
+    expected_product: 'MySQL'
+    expected_vendor: 'Oracle'
+    expected_version: '10.3.38'
+    description: 'MariaDB (detected as MySQL)'
 
   - protocol: mysql
     port: 3306
-    banner: "8.0.32"
-    expected_product: "MySQL"
-    expected_vendor: "Oracle"
-    expected_version: "8.0.32"
-    description: "MySQL 8.0.32"
+    banner: '8.0.32'
+    expected_product: 'MySQL'
+    expected_vendor: 'Oracle'
+    expected_version: '8.0.32'
+    description: 'MySQL 8.0.32'
 
   - protocol: postgresql
     port: 5432
-    banner: "PostgreSQL 14.7"
-    expected_product: "PostgreSQL"
-    expected_vendor: "PostgreSQL"
-    expected_version: "14.7"
-    description: "PostgreSQL 14.7"
+    banner: 'PostgreSQL 14.7'
+    expected_product: 'PostgreSQL'
+    expected_vendor: 'PostgreSQL'
+    expected_version: '14.7'
+    description: 'PostgreSQL 14.7'
 
   - protocol: postgresql
     port: 5432
-    banner: "PostgreSQL 13.10"
-    expected_product: "PostgreSQL"
-    expected_vendor: "PostgreSQL"
-    expected_version: "13.10"
-    description: "PostgreSQL 13.10"
+    banner: 'PostgreSQL 13.10'
+    expected_product: 'PostgreSQL'
+    expected_vendor: 'PostgreSQL'
+    expected_version: '13.10'
+    description: 'PostgreSQL 13.10'
 
   - protocol: postgresql
     port: 5432
-    banner: "PostgreSQL 12.14"
-    expected_product: "PostgreSQL"
-    expected_vendor: "PostgreSQL"
-    expected_version: "12.14"
-    description: "PostgreSQL 12.14"
+    banner: 'PostgreSQL 12.14'
+    expected_product: 'PostgreSQL'
+    expected_vendor: 'PostgreSQL'
+    expected_version: '12.14'
+    description: 'PostgreSQL 12.14'
 
   - protocol: redis
     port: 6379
-    banner: "+OK Redis 6.2.12"
-    expected_product: "Redis"
-    expected_vendor: "Redis"
-    expected_version: "6.2.12"
-    description: "Redis 6.2"
+    banner: '+OK Redis 6.2.12'
+    expected_product: 'Redis'
+    expected_vendor: 'Redis'
+    expected_version: '6.2.12'
+    description: 'Redis 6.2'
 
   - protocol: redis
     port: 6379
-    banner: "+OK Redis 7.0.11"
-    expected_product: "Redis"
-    expected_vendor: "Redis"
-    expected_version: "7.0.11"
-    description: "Redis 7.0"
+    banner: '+OK Redis 7.0.11'
+    expected_product: 'Redis'
+    expected_vendor: 'Redis'
+    expected_version: '7.0.11'
+    description: 'Redis 7.0'
 
   - protocol: mongodb
     port: 27017
-    banner: "MongoDB 5.0.15"
-    expected_product: "MongoDB"
-    expected_vendor: "MongoDB"
-    expected_version: "5.0.15"
-    description: "MongoDB 5.0"
+    banner: 'MongoDB 5.0.15'
+    expected_product: 'MongoDB'
+    expected_vendor: 'MongoDB'
+    expected_version: '5.0.15'
+    description: 'MongoDB 5.0'
 
   - protocol: mongodb
     port: 27017
-    banner: "MongoDB 6.0.5"
-    expected_product: "MongoDB"
-    expected_vendor: "MongoDB"
-    expected_version: "6.0.5"
-    description: "MongoDB 6.0"
+    banner: 'MongoDB 6.0.5'
+    expected_product: 'MongoDB'
+    expected_vendor: 'MongoDB'
+    expected_version: '6.0.5'
+    description: 'MongoDB 6.0'
 
   - protocol: memcached
     port: 11211
-    banner: "VERSION 1.6.19"
-    expected_product: "Memcached"
-    expected_vendor: "Memcached"
-    expected_version: "1.6.19"
-    description: "Memcached 1.6"
+    banner: 'VERSION 1.6.19'
+    expected_product: 'Memcached'
+    expected_vendor: 'Memcached'
+    expected_version: '1.6.19'
+    description: 'Memcached 1.6'
 
   - protocol: elasticsearch
     port: 9200
-    banner: "Elasticsearch 7.17.9"
-    expected_product: "Elasticsearch"
-    expected_vendor: "Elastic"
-    expected_version: "7.17.9"
-    description: "Elasticsearch 7.17"
+    banner: 'Elasticsearch 7.17.9'
+    expected_product: 'Elasticsearch'
+    expected_vendor: 'Elastic'
+    expected_version: '7.17.9'
+    description: 'Elasticsearch 7.17'
 
   - protocol: elasticsearch
     port: 9200
-    banner: "Elasticsearch 8.7.1"
-    expected_product: "Elasticsearch"
-    expected_vendor: "Elastic"
-    expected_version: "8.7.1"
-    description: "Elasticsearch 8.7"
+    banner: 'Elasticsearch 8.7.1'
+    expected_product: 'Elasticsearch'
+    expected_vendor: 'Elastic'
+    expected_version: '8.7.1'
+    description: 'Elasticsearch 8.7'
 
   # SMTP Servers (10 cases)
   - protocol: smtp
     port: 25
-    banner: "220 mail.example.com ESMTP Postfix"
-    expected_product: "Postfix"
-    expected_vendor: "Postfix"
-    expected_version: ""
-    description: "Postfix SMTP server"
+    banner: '220 mail.example.com ESMTP Postfix'
+    expected_product: 'Postfix'
+    expected_vendor: 'Postfix'
+    expected_version: ''
+    description: 'Postfix SMTP server'
 
   - protocol: smtp
     port: 25
-    banner: "220 mail.example.com ESMTP Exim 4.96 Ubuntu"
-    expected_product: "Exim"
-    expected_vendor: "Exim"
-    expected_version: "4.96"
-    description: "Exim on Ubuntu"
+    banner: '220 mail.example.com ESMTP Exim 4.96 Ubuntu'
+    expected_product: 'Exim'
+    expected_vendor: 'Exim'
+    expected_version: '4.96'
+    description: 'Exim on Ubuntu'
 
   - protocol: smtp
     port: 25
-    banner: "220 mail.example.com Sendmail 8.17.1/8.17.1; Mon, 1 Jan 2024 12:00:00 GMT"
-    expected_product: "Sendmail"
-    expected_vendor: "Sendmail"
-    expected_version: "8.17.1"
-    description: "Sendmail 8.17"
+    banner: '220 mail.example.com Sendmail 8.17.1/8.17.1; Mon, 1 Jan 2024 12:00:00 GMT'
+    expected_product: 'Sendmail'
+    expected_vendor: 'Sendmail'
+    expected_version: '8.17.1'
+    description: 'Sendmail 8.17'
 
   - protocol: smtp
     port: 993
-    banner: "* OK [CAPABILITY IMAP4rev1] Dovecot ready."
-    expected_product: "Dovecot"
-    expected_vendor: "Dovecot"
-    expected_version: ""
-    description: "Dovecot IMAP server"
+    banner: '* OK [CAPABILITY IMAP4rev1] Dovecot ready.'
+    expected_product: 'Dovecot'
+    expected_vendor: 'Dovecot'
+    expected_version: ''
+    description: 'Dovecot IMAP server'
 
   - protocol: smtp
     port: 25
-    banner: "220 ESMTP Postfix (Ubuntu)"
-    expected_product: "Postfix"
-    expected_vendor: "Postfix"
-    expected_version: ""
-    description: "Postfix on Ubuntu"
+    banner: '220 ESMTP Postfix (Ubuntu)'
+    expected_product: 'Postfix'
+    expected_vendor: 'Postfix'
+    expected_version: ''
+    description: 'Postfix on Ubuntu'
 
   - protocol: smtp
     port: 25
-    banner: "220 mail.example.com ESMTP Exim 4.94"
-    expected_product: "Exim"
-    expected_vendor: "Exim"
-    expected_version: "4.94"
-    description: "Exim 4.94"
+    banner: '220 mail.example.com ESMTP Exim 4.94'
+    expected_product: 'Exim'
+    expected_vendor: 'Exim'
+    expected_version: '4.94'
+    description: 'Exim 4.94'
 
   - protocol: smtp
     port: 25
-    banner: "220 Postfix ESMTP"
-    expected_product: "Postfix"
-    expected_vendor: "Postfix"
-    expected_version: ""
-    description: "Postfix without hostname"
+    banner: '220 Postfix ESMTP'
+    expected_product: 'Postfix'
+    expected_vendor: 'Postfix'
+    expected_version: ''
+    description: 'Postfix without hostname'
 
   - protocol: smtp
     port: 25
-    banner: "220 Sendmail 8.16.1 ready"
-    expected_product: "Sendmail"
-    expected_vendor: "Sendmail"
-    expected_version: "8.16.1"
-    description: "Sendmail 8.16"
+    banner: '220 Sendmail 8.16.1 ready'
+    expected_product: 'Sendmail'
+    expected_vendor: 'Sendmail'
+    expected_version: '8.16.1'
+    description: 'Sendmail 8.16'
 
   - protocol: smtp
     port: 587
-    banner: "220 ESMTP Postfix"
-    expected_product: "Postfix"
-    expected_vendor: "Postfix"
-    expected_version: ""
-    description: "Postfix on submission port"
+    banner: '220 ESMTP Postfix'
+    expected_product: 'Postfix'
+    expected_vendor: 'Postfix'
+    expected_version: ''
+    description: 'Postfix on submission port'
 
   - protocol: smtp
     port: 25
-    banner: "220 mail ESMTP Exim 4.95"
-    expected_product: "Exim"
-    expected_vendor: "Exim"
-    expected_version: "4.95"
-    description: "Exim 4.95"
+    banner: '220 mail ESMTP Exim 4.95'
+    expected_product: 'Exim'
+    expected_vendor: 'Exim'
+    expected_version: '4.95'
+    description: 'Exim 4.95'
 
   # Other Services (20 cases)
   - protocol: rdp
     port: 3389
-    banner: "Microsoft Terminal Services"
-    expected_product: "RDP"
-    expected_vendor: "Microsoft"
-    expected_version: ""
-    description: "Microsoft RDP"
+    banner: 'Microsoft Terminal Services'
+    expected_product: 'RDP'
+    expected_vendor: 'Microsoft'
+    expected_version: ''
+    description: 'Microsoft RDP'
 
   - protocol: vnc
     port: 5900
-    banner: "RFB 003.008"
-    expected_product: "VNC"
-    expected_vendor: "RealVNC"
-    expected_version: "3.8"
-    description: "VNC protocol 3.8"
+    banner: 'RFB 003.008'
+    expected_product: 'VNC'
+    expected_vendor: 'RealVNC'
+    expected_version: '3.8'
+    description: 'VNC protocol 3.8'
 
   - protocol: vnc
     port: 5900
-    banner: "RFB 003.007"
-    expected_product: "VNC"
-    expected_vendor: "RealVNC"
-    expected_version: "3.7"
-    description: "VNC protocol 3.7"
+    banner: 'RFB 003.007'
+    expected_product: 'VNC'
+    expected_vendor: 'RealVNC'
+    expected_version: '3.7'
+    description: 'VNC protocol 3.7'
 
   - protocol: telnet
     port: 23
     banner: "Ubuntu 20.04.5 LTS\r\nlogin:"
-    expected_product: "Telnet"
-    expected_vendor: ""
-    expected_version: ""
-    description: "Generic telnet service"
+    expected_product: 'Telnet'
+    expected_vendor: ''
+    expected_version: ''
+    description: 'Generic telnet service'
 
   - protocol: telnet
     port: 23
-    banner: "Welcome to Debian GNU/Linux"
-    expected_product: "Telnet"
-    expected_vendor: ""
-    expected_version: ""
-    description: "Telnet on Debian"
+    banner: 'Welcome to Debian GNU/Linux'
+    expected_product: 'Telnet'
+    expected_vendor: ''
+    expected_version: ''
+    description: 'Telnet on Debian'
 
   - protocol: snmp
     port: 161
-    banner: "NET-SNMP version: 5.9.1"
-    expected_product: "Net-SNMP"
-    expected_vendor: "Net-SNMP"
-    expected_version: "5.9.1"
-    description: "NET-SNMP 5.9"
+    banner: 'NET-SNMP version: 5.9.1'
+    expected_product: 'Net-SNMP'
+    expected_vendor: 'Net-SNMP'
+    expected_version: '5.9.1'
+    description: 'NET-SNMP 5.9'
 
   - protocol: snmp
     port: 161
-    banner: "NET-SNMP version: 5.7.3"
-    expected_product: "Net-SNMP"
-    expected_vendor: "Net-SNMP"
-    expected_version: "5.7.3"
-    description: "NET-SNMP 5.7"
+    banner: 'NET-SNMP version: 5.7.3'
+    expected_product: 'Net-SNMP'
+    expected_vendor: 'Net-SNMP'
+    expected_version: '5.7.3'
+    description: 'NET-SNMP 5.7'
 
   - protocol: smb
     port: 445
-    banner: "Samba 4.15.7-Ubuntu"
-    expected_product: "Samba"
-    expected_vendor: "Samba"
-    expected_version: "4.15.7"
-    description: "Samba on Ubuntu"
+    banner: 'Samba 4.15.7-Ubuntu'
+    expected_product: 'Samba'
+    expected_vendor: 'Samba'
+    expected_version: '4.15.7'
+    description: 'Samba on Ubuntu'
 
   - protocol: smb
     port: 445
-    banner: "Samba 4.13.14"
-    expected_product: "Samba"
-    expected_vendor: "Samba"
-    expected_version: "4.13.14"
-    description: "Samba 4.13"
+    banner: 'Samba 4.13.14'
+    expected_product: 'Samba'
+    expected_vendor: 'Samba'
+    expected_version: '4.13.14'
+    description: 'Samba 4.13'
 
   - protocol: rdp
     port: 3389
-    banner: "RDP Microsoft Windows"
-    expected_product: "RDP"
-    expected_vendor: "Microsoft"
-    expected_version: ""
-    description: "Windows RDP"
+    banner: 'RDP Microsoft Windows'
+    expected_product: 'RDP'
+    expected_vendor: 'Microsoft'
+    expected_version: ''
+    description: 'Windows RDP'
 
   - protocol: vnc
     port: 5901
-    banner: "RFB 003.008"
-    expected_product: "VNC"
-    expected_vendor: "RealVNC"
-    expected_version: "3.8"
-    description: "VNC on display :1"
+    banner: 'RFB 003.008'
+    expected_product: 'VNC'
+    expected_vendor: 'RealVNC'
+    expected_version: '3.8'
+    description: 'VNC on display :1'
 
   - protocol: telnet
     port: 2323
-    banner: "CentOS Linux 7"
-    expected_product: "Telnet"
-    expected_vendor: ""
-    expected_version: ""
-    description: "Telnet on CentOS (non-standard port)"
+    banner: 'CentOS Linux 7'
+    expected_product: 'Telnet'
+    expected_vendor: ''
+    expected_version: ''
+    description: 'Telnet on CentOS (non-standard port)'
 
   - protocol: snmp
     port: 161
-    banner: "NET-SNMP 5.8"
-    expected_product: "Net-SNMP"
-    expected_vendor: "Net-SNMP"
-    expected_version: "5.8"
-    description: "NET-SNMP 5.8"
+    banner: 'NET-SNMP 5.8'
+    expected_product: 'Net-SNMP'
+    expected_vendor: 'Net-SNMP'
+    expected_version: '5.8'
+    description: 'NET-SNMP 5.8'
 
   - protocol: smb
     port: 445
-    banner: "Samba 4.17.5"
-    expected_product: "Samba"
-    expected_vendor: "Samba"
-    expected_version: "4.17.5"
-    description: "Samba 4.17"
+    banner: 'Samba 4.17.5'
+    expected_product: 'Samba'
+    expected_vendor: 'Samba'
+    expected_version: '4.17.5'
+    description: 'Samba 4.17'
 
   - protocol: rdp
     port: 3389
-    banner: "Microsoft RDP"
-    expected_product: "RDP"
-    expected_vendor: "Microsoft"
-    expected_version: ""
-    description: "Generic Microsoft RDP"
+    banner: 'Microsoft RDP'
+    expected_product: 'RDP'
+    expected_vendor: 'Microsoft'
+    expected_version: ''
+    description: 'Generic Microsoft RDP'
 
   - protocol: vnc
     port: 5900
-    banner: "RFB 003.003"
-    expected_product: "VNC"
-    expected_vendor: "RealVNC"
-    expected_version: "3.3"
-    description: "VNC protocol 3.3 (old)"
+    banner: 'RFB 003.003'
+    expected_product: 'VNC'
+    expected_vendor: 'RealVNC'
+    expected_version: '3.3'
+    description: 'VNC protocol 3.3 (old)'
 
   - protocol: telnet
     port: 23
-    banner: "Red Hat Enterprise Linux 8"
-    expected_product: "Telnet"
-    expected_vendor: ""
-    expected_version: ""
-    description: "Telnet on RHEL"
+    banner: 'Red Hat Enterprise Linux 8'
+    expected_product: 'Telnet'
+    expected_vendor: ''
+    expected_version: ''
+    description: 'Telnet on RHEL'
 
   - protocol: snmp
     port: 161
-    banner: "NET-SNMP version: 5.9"
-    expected_product: "Net-SNMP"
-    expected_vendor: "Net-SNMP"
-    expected_version: "5.9"
-    description: "NET-SNMP 5.9"
+    banner: 'NET-SNMP version: 5.9'
+    expected_product: 'Net-SNMP'
+    expected_vendor: 'Net-SNMP'
+    expected_version: '5.9'
+    description: 'NET-SNMP 5.9'
 
   - protocol: smb
     port: 445
-    banner: "Samba 4.16.10"
-    expected_product: "Samba"
-    expected_vendor: "Samba"
-    expected_version: "4.16.10"
-    description: "Samba 4.16"
+    banner: 'Samba 4.16.10'
+    expected_product: 'Samba'
+    expected_vendor: 'Samba'
+    expected_version: '4.16.10'
+    description: 'Samba 4.16'
 
   - protocol: rdp
     port: 3389
-    banner: "Terminal Services"
-    expected_product: "RDP"
-    expected_vendor: "Microsoft"
-    expected_version: ""
-    description: "Microsoft Terminal Services"
+    banner: 'Terminal Services'
+    expected_product: 'RDP'
+    expected_vendor: 'Microsoft'
+    expected_version: ''
+    description: 'Microsoft Terminal Services'
 
   # ========== LDAP (3 cases) ==========
   - protocol: ldap
     port: 389
-    banner: "OpenLDAP 2.4.57"
-    expected_product: "OpenLDAP"
-    expected_vendor: "OpenLDAP Foundation"
-    expected_version: "2.4.57"
-    description: "OpenLDAP directory server"
+    banner: 'OpenLDAP 2.4.57'
+    expected_product: 'OpenLDAP'
+    expected_vendor: 'OpenLDAP Foundation'
+    expected_version: '2.4.57'
+    description: 'OpenLDAP directory server'
 
   - protocol: ldap
     port: 636
-    banner: "LDAP Directory Service 3.0"
-    expected_product: "OpenLDAP"
-    expected_vendor: "OpenLDAP Foundation"
-    expected_version: "3.0"
-    description: "LDAP over TLS"
+    banner: 'LDAP Directory Service 3.0'
+    expected_product: 'OpenLDAP'
+    expected_vendor: 'OpenLDAP Foundation'
+    expected_version: '3.0'
+    description: 'LDAP over TLS'
 
   - protocol: ldap
     port: 3268
-    banner: "directory service running"
-    expected_product: "OpenLDAP"
-    expected_vendor: "OpenLDAP Foundation"
-    expected_version: ""
-    description: "Generic LDAP directory"
+    banner: 'directory service running'
+    expected_product: 'OpenLDAP'
+    expected_vendor: 'OpenLDAP Foundation'
+    expected_version: ''
+    description: 'Generic LDAP directory'
 
   # ========== Kafka (3 cases) ==========
   - protocol: kafka
     port: 9092
-    banner: "Kafka 3.2.1"
-    expected_product: "Kafka"
-    expected_vendor: "Apache"
-    expected_version: "3.2.1"
-    description: "Apache Kafka message broker"
+    banner: 'Kafka 3.2.1'
+    expected_product: 'Kafka'
+    expected_vendor: 'Apache'
+    expected_version: '3.2.1'
+    description: 'Apache Kafka message broker'
 
   - protocol: kafka
     port: 9093
-    banner: "Apache Kafka version 2.8.0"
-    expected_product: "Kafka"
-    expected_vendor: "Apache"
-    expected_version: "2.8.0"
-    description: "Kafka with full version info"
+    banner: 'Apache Kafka version 2.8.0'
+    expected_product: 'Kafka'
+    expected_vendor: 'Apache'
+    expected_version: '2.8.0'
+    description: 'Kafka with full version info'
 
   - protocol: kafka
     port: 9092
-    banner: "kafka-server"
-    expected_product: "Kafka"
-    expected_vendor: "Apache"
-    expected_version: ""
-    description: "Kafka minimal banner"
+    banner: 'kafka-server'
+    expected_product: 'Kafka'
+    expected_vendor: 'Apache'
+    expected_version: ''
+    description: 'Kafka minimal banner'
 
   # ========== RabbitMQ (3 cases) ==========
   - protocol: amqp
     port: 5672
     banner: "AMQP\x00\x00\x09\x01 RabbitMQ 3.10.5"
-    expected_product: "RabbitMQ"
-    expected_vendor: "RabbitMQ"
-    expected_version: "3.10.5"
-    description: "RabbitMQ AMQP broker"
+    expected_product: 'RabbitMQ'
+    expected_vendor: 'RabbitMQ'
+    expected_version: '3.10.5'
+    description: 'RabbitMQ AMQP broker'
 
   - protocol: amqp
     port: 5671
-    banner: "rabbitmq-server 3.9.13"
-    expected_product: "RabbitMQ"
-    expected_vendor: "RabbitMQ"
-    expected_version: "3.9.13"
-    description: "RabbitMQ over TLS"
+    banner: 'rabbitmq-server 3.9.13'
+    expected_product: 'RabbitMQ'
+    expected_vendor: 'RabbitMQ'
+    expected_version: '3.9.13'
+    description: 'RabbitMQ over TLS'
 
   - protocol: amqp
     port: 5672
-    banner: "AMQP 0.9.1"
-    expected_product: "RabbitMQ"
-    expected_vendor: "RabbitMQ"
-    expected_version: ""
-    description: "Generic AMQP banner"
+    banner: 'AMQP 0.9.1'
+    expected_product: 'RabbitMQ'
+    expected_vendor: 'RabbitMQ'
+    expected_version: ''
+    description: 'Generic AMQP banner'
 
   # ========== Elasticsearch (3 cases) ==========
   - protocol: http
     port: 9200
     banner: '{"version":{"number":"7.17.3","build_flavor":"default"}} elasticsearch'
-    expected_product: "Elasticsearch"
-    expected_vendor: "Elastic"
-    expected_version: "7.17.3"
-    description: "Elasticsearch JSON response"
+    expected_product: 'Elasticsearch'
+    expected_vendor: 'Elastic'
+    expected_version: '7.17.3'
+    description: 'Elasticsearch JSON response'
 
   - protocol: http
     port: 9300
-    banner: "Elastic Search 8.5.0"
-    expected_product: "Elasticsearch"
-    expected_vendor: "Elastic"
-    expected_version: "8.5.0"
-    description: "Elasticsearch node transport"
+    banner: 'Elastic Search 8.5.0'
+    expected_product: 'Elasticsearch'
+    expected_vendor: 'Elastic'
+    expected_version: '8.5.0'
+    description: 'Elasticsearch node transport'
 
   - protocol: http
     port: 9200
-    banner: "elasticsearch cluster"
-    expected_product: "Elasticsearch"
-    expected_vendor: "Elastic"
-    expected_version: ""
-    description: "Generic Elasticsearch banner"
+    banner: 'elasticsearch cluster'
+    expected_product: 'Elasticsearch'
+    expected_vendor: 'Elastic'
+    expected_version: ''
+    description: 'Generic Elasticsearch banner'
 
   # ========== DNS (3 cases) ==========
   - protocol: dns
     port: 53
-    banner: "BIND 9.16.23"
-    expected_product: "BIND"
-    expected_vendor: "ISC"
-    expected_version: "9.16.23"
-    description: "BIND DNS server"
+    banner: 'BIND 9.16.23'
+    expected_product: 'BIND'
+    expected_vendor: 'ISC'
+    expected_version: '9.16.23'
+    description: 'BIND DNS server'
 
   - protocol: dns
     port: 53
-    banner: "named version 9.18.4"
-    expected_product: "BIND"
-    expected_vendor: "ISC"
-    expected_version: "9.18.4"
-    description: "Named DNS daemon"
+    banner: 'named version 9.18.4'
+    expected_product: 'BIND'
+    expected_vendor: 'ISC'
+    expected_version: '9.18.4'
+    description: 'Named DNS daemon'
 
   - protocol: dns
     port: 53
-    banner: "DNS service running"
-    expected_product: "BIND"
-    expected_vendor: "ISC"
-    expected_version: ""
-    description: "Generic DNS banner"
+    banner: 'DNS service running'
+    expected_product: 'BIND'
+    expected_vendor: 'ISC'
+    expected_version: ''
+    description: 'Generic DNS banner'
 
 # ============================================================================
 # TRUE NEGATIVES: Banners that should NOT match (wrong protocol, malformed)
@@ -877,271 +877,361 @@ true_negatives:
   # Anti-Pattern: HTTP on MySQL port (10 cases)
   - protocol: mysql
     port: 3306
-    banner: "Server: Apache/2.4.41"
+    banner: 'Server: Apache/2.4.41'
     expected_match: false
-    description: "HTTP banner on MySQL port (anti-pattern should reject)"
+    description: 'HTTP banner on MySQL port (anti-pattern should reject)'
 
   - protocol: mysql
     port: 3306
-    banner: "Server: nginx/1.18.0"
+    banner: 'Server: nginx/1.18.0'
     expected_match: false
-    description: "nginx banner on MySQL port"
+    description: 'nginx banner on MySQL port'
 
   - protocol: mysql
     port: 3306
-    banner: "HTTP/1.1 200 OK"
+    banner: 'HTTP/1.1 200 OK'
     expected_match: false
-    description: "HTTP response on MySQL port"
+    description: 'HTTP response on MySQL port'
 
   - protocol: mysql
     port: 3306
-    banner: "Server: Microsoft-IIS/10.0"
+    banner: 'Server: Microsoft-IIS/10.0'
     expected_match: false
-    description: "IIS banner on MySQL port"
+    description: 'IIS banner on MySQL port'
 
   - protocol: mysql
     port: 3306
-    banner: "Server: LiteSpeed"
+    banner: 'Server: LiteSpeed'
     expected_match: false
-    description: "LiteSpeed banner on MySQL port"
+    description: 'LiteSpeed banner on MySQL port'
 
   # Anti-Pattern: SSH on HTTP port
   - protocol: http
     port: 80
-    banner: "SSH-2.0-OpenSSH_8.2p1"
+    banner: 'SSH-2.0-OpenSSH_8.2p1'
     expected_match: false
-    description: "SSH banner on HTTP port"
+    description: 'SSH banner on HTTP port'
 
   - protocol: http
     port: 80
-    banner: "SSH-2.0-dropbear"
+    banner: 'SSH-2.0-dropbear'
     expected_match: false
-    description: "Dropbear banner on HTTP port"
+    description: 'Dropbear banner on HTTP port'
 
   # Anti-Pattern: MySQL on HTTP port
   - protocol: http
     port: 80
-    banner: "5.7.42-0ubuntu0.18.04.1"
+    banner: '5.7.42-0ubuntu0.18.04.1'
     expected_match: false
-    description: "MySQL version string on HTTP port"
+    description: 'MySQL version string on HTTP port'
 
   - protocol: http
     port: 80
-    banner: "8.0.33-0ubuntu0.22.04.2"
+    banner: '8.0.33-0ubuntu0.22.04.2'
     expected_match: false
-    description: "MySQL 8.0 banner on HTTP port"
+    description: 'MySQL 8.0 banner on HTTP port'
 
   # Malformed banners (10 cases)
   - protocol: http
     port: 80
-    banner: ""
+    banner: ''
     expected_match: false
-    description: "Empty banner"
+    description: 'Empty banner'
 
   - protocol: ssh
     port: 22
-    banner: ""
+    banner: ''
     expected_match: false
-    description: "Empty SSH banner"
+    description: 'Empty SSH banner'
 
   - protocol: http
     port: 80
     banner: "\x00\x00\x00\x00"
     expected_match: false
-    description: "Binary garbage"
+    description: 'Binary garbage'
 
   - protocol: http
     port: 80
-    banner: "JUNK DATA 12345 !@#$%"
+    banner: 'JUNK DATA 12345 !@#$%'
     expected_match: false
-    description: "Random junk data"
+    description: 'Random junk data'
 
   - protocol: ssh
     port: 22
-    banner: "INVALID SSH BANNER"
+    banner: 'INVALID SSH BANNER'
     expected_match: false
-    description: "Invalid SSH format"
+    description: 'Invalid SSH format'
 
   - protocol: mysql
     port: 3306
-    banner: "GARBAGE"
+    banner: 'GARBAGE'
     expected_match: false
-    description: "Garbage on MySQL port"
+    description: 'Garbage on MySQL port'
 
   - protocol: http
     port: 80
-    banner: "<!DOCTYPE html>"
+    banner: '<!DOCTYPE html>'
     expected_match: false
-    description: "HTML content instead of Server header"
+    description: 'HTML content instead of Server header'
 
   - protocol: ftp
     port: 21
-    banner: "INVALID FTP"
+    banner: 'INVALID FTP'
     expected_match: false
-    description: "Invalid FTP banner"
+    description: 'Invalid FTP banner'
 
   - protocol: smtp
     port: 25
-    banner: "INVALID SMTP"
+    banner: 'INVALID SMTP'
     expected_match: false
-    description: "Invalid SMTP banner"
+    description: 'Invalid SMTP banner'
 
   - protocol: http
     port: 80
-    banner: "ERROR"
+    banner: 'ERROR'
     expected_match: false
-    description: "Error message instead of banner"
+    description: 'Error message instead of banner'
 
   # Unknown/unsupported protocols (10 cases)
   - protocol: unknown
     port: 9999
-    banner: "Custom Protocol v1.0"
+    banner: 'Custom Protocol v1.0'
     expected_match: false
-    description: "Unknown protocol"
+    description: 'Unknown protocol'
 
   - protocol: unknown
     port: 8888
-    banner: "Proprietary Service"
+    banner: 'Proprietary Service'
     expected_match: false
-    description: "Proprietary service"
+    description: 'Proprietary service'
 
   - protocol: unknown
     port: 7777
-    banner: "Custom App Server"
+    banner: 'Custom App Server'
     expected_match: false
-    description: "Custom application"
+    description: 'Custom application'
 
   - protocol: unknown
     port: 6666
-    banner: "Service XYZ"
+    banner: 'Service XYZ'
     expected_match: false
-    description: "Unknown service XYZ"
+    description: 'Unknown service XYZ'
 
   - protocol: unknown
     port: 5555
-    banner: "App v2.0"
+    banner: 'App v2.0'
     expected_match: false
-    description: "Generic app banner"
+    description: 'Generic app banner'
 
   - protocol: unknown
     port: 4444
-    banner: "Server ABC"
+    banner: 'Server ABC'
     expected_match: false
-    description: "Unknown server ABC"
+    description: 'Unknown server ABC'
 
   - protocol: unknown
     port: 3333
-    banner: "Daemon v1.5"
+    banner: 'Daemon v1.5'
     expected_match: false
-    description: "Unknown daemon"
+    description: 'Unknown daemon'
 
   - protocol: unknown
     port: 2222
-    banner: "Service DEF"
+    banner: 'Service DEF'
     expected_match: false
-    description: "Unknown service on port 2222"
+    description: 'Unknown service on port 2222'
 
   - protocol: unknown
     port: 1111
-    banner: "Custom Protocol"
+    banner: 'Custom Protocol'
     expected_match: false
-    description: "Custom protocol on port 1111"
+    description: 'Custom protocol on port 1111'
 
   - protocol: unknown
     port: 9876
-    banner: "Test Service"
+    banner: 'Test Service'
     expected_match: false
-    description: "Test service"
+    description: 'Test service'
 
 # ============================================================================
 # EDGE CASES: Unusual but valid banners
 # ============================================================================
 
+  # Anti-Pattern: SMB/NetBIOS protocol with non-SMB banners (false positive prevention)
+  # These are on SMB/NetBIOS ports but should NOT match SMB/NetBIOS rules
+  - protocol: smb
+    port: 445
+    banner: 'HTTP/1.1 200 OK\r\nServer: Apache'
+    expected_match: false
+    description: 'HTTP service on SMB port 445 (port misconfig)'
+
+  - protocol: smb
+    port: 139
+    banner: 'SSH-2.0-OpenSSH_8.2p1'
+    expected_match: false
+    description: 'SSH service on NetBIOS-SSN port 139 (port misconfig)'
+
+  - protocol: netbios
+    port: 139
+    banner: '220 ProFTPD Server ready'
+    expected_match: false
+    description: 'FTP service on NetBIOS port 139 (false positive prevention)'
+
 edge_cases:
   # Version-less banners (should match product, but no version)
   - protocol: http
     port: 80
-    banner: "Server: Apache"
-    expected_product: "Apache"
-    expected_version: ""
-    description: "Apache without version (should still match)"
+    banner: 'Server: Apache'
+    expected_product: 'Apache'
+    expected_version: ''
+    description: 'Apache without version (should still match)'
 
   - protocol: http
     port: 80
-    banner: "Server: nginx"
-    expected_product: "nginx"
-    expected_version: ""
-    description: "nginx without version"
+    banner: 'Server: nginx'
+    expected_product: 'nginx'
+    expected_version: ''
+    description: 'nginx without version'
 
   - protocol: ssh
     port: 22
-    banner: "SSH-2.0-OpenSSH"
-    expected_product: "OpenSSH"
-    expected_version: ""
-    description: "OpenSSH without version"
+    banner: 'SSH-2.0-OpenSSH'
+    expected_product: 'OpenSSH'
+    expected_version: ''
+    description: 'OpenSSH without version'
 
   # Very long banners
   - protocol: http
     port: 80
-    banner: "Server: Apache/2.4.41 (Ubuntu) OpenSSL/1.1.1f mod_fcgid/2.3.9 mod_wsgi/4.6.8 Python/3.8.10 mod_perl/2.0.11 Perl/v5.30.0"
-    expected_product: "Apache"
-    expected_version: "2.4.41"
-    description: "Apache with many modules"
+    banner: 'Server: Apache/2.4.41 (Ubuntu) OpenSSL/1.1.1f mod_fcgid/2.3.9 mod_wsgi/4.6.8 Python/3.8.10 mod_perl/2.0.11 Perl/v5.30.0'
+    expected_product: 'Apache'
+    expected_version: '2.4.41'
+    description: 'Apache with many modules'
 
   # Case sensitivity
   - protocol: http
     port: 80
-    banner: "server: APACHE/2.4.41"
-    expected_product: "Apache"
-    expected_version: "2.4.41"
+    banner: 'server: APACHE/2.4.41'
+    expected_product: 'Apache'
+    expected_version: '2.4.41'
     description: "Lowercase 'server' header"
 
   - protocol: http
     port: 80
-    banner: "SERVER: NGINX/1.18.0"
-    expected_product: "nginx"
-    expected_version: "1.18.0"
-    description: "Uppercase header"
+    banner: 'SERVER: NGINX/1.18.0'
+    expected_product: 'nginx'
+    expected_version: '1.18.0'
+    description: 'Uppercase header'
 
   # Whitespace variations
   - protocol: http
     port: 80
-    banner: "  Server: Apache/2.4.41  "
-    expected_product: "Apache"
-    expected_version: "2.4.41"
-    description: "Banner with leading/trailing whitespace"
+    banner: '  Server: Apache/2.4.41  '
+    expected_product: 'Apache'
+    expected_version: '2.4.41'
+    description: 'Banner with leading/trailing whitespace'
 
   # Special characters
   - protocol: http
     port: 80
     banner: "Server: Apache/2.4.41 (Ubuntu)\r\n"
-    expected_product: "Apache"
-    expected_version: "2.4.41"
-    description: "Banner with CRLF"
+    expected_product: 'Apache'
+    expected_version: '2.4.41'
+    description: 'Banner with CRLF'
+
+  # SMB / NetBIOS (Windows File Sharing)
+  - protocol: smb
+    port: 445
+    banner: "SMBr\x00\x00\x00\x00\x98\x00\x02\xc8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00Windows"
+    expected_product: 'Windows SMB'
+    expected_version: ''
+    description: 'Windows SMB on port 445'
+
+  - protocol: smb
+    port: 139
+    banner: "\x82\x00\x00\x00 NetBIOS Session"
+    expected_product: 'NetBIOS Session Service'
+    expected_version: ''
+    description: 'NetBIOS Session Service on port 139'
+
+  # NetBIOS-specific probe coverage (port 139)
+  - protocol: netbios
+    port: 139
+    banner: "\x82\x00\x00\x00"
+    expected_match: false
+    description: 'NetBIOS positive session response (binary protocol, no banner fingerprinting)'
+
+  - protocol: smb
+    port: 445
+    banner: 'SAMBA Server 4.13.3-Ubuntu'
+    expected_product: 'Samba'
+    expected_version: '4.13.3'
+    description: 'Samba SMB server'
+
+  # Microsoft RPC (Windows RPC Endpoint Mapper)
+  - protocol: msrpc
+    port: 135
+    banner: "\x05\x00\x0c\x03\x10\x00\x00\x00\x44\x00\x00\x00\x01\x00\x00\x00"
+    expected_product: 'Microsoft RPC Endpoint Mapper'
+    expected_version: ''
+    description: 'Microsoft RPC endpoint mapper on port 135'
+
+  - protocol: msrpc
+    port: 135
+    banner: "\x05\x00\x0c\x03\x10\x00\x00\x00\x48\x00\x00\x00\x02\x00\x00\x00\xb8\x10"
+    expected_product: 'Microsoft RPC Endpoint Mapper'
+    expected_version: ''
+    description: 'MSRPC bind response'
+
+  # POP3 Servers
+  - protocol: pop3
+    port: 110
+    banner: '+OK Dovecot ready.'
+    expected_product: 'Dovecot POP3'
+    expected_version: ''
+    description: 'Dovecot POP3 server'
+
+  - protocol: pop3
+    port: 995
+    banner: '+OK Dovecot (2.3.16) ready.'
+    expected_product: 'Dovecot POP3'
+    expected_version: '2.3.16'
+    description: 'Dovecot POP3 with version'
+
+  # DNS Servers
+  - protocol: dns
+    port: 53
+    banner: 'BIND 9.16.1-Ubuntu'
+    expected_product: 'BIND'
+    expected_version: '9.16.1'
+    description: 'ISC BIND DNS server'
+
+  # RPC Portmapper
+  # Note: RPC fingerprinting removed due to high false positive rate with binary protocols
+  # RPC detection relies on port-based hints (111) and active probing instead
 
   # Non-standard ports
   - protocol: http
     port: 8080
-    banner: "Server: Apache/2.4.41"
-    expected_product: "Apache"
-    expected_version: "2.4.41"
-    description: "HTTP on port 8080"
+    banner: 'Server: Apache/2.4.41'
+    expected_product: 'Apache'
+    expected_version: '2.4.41'
+    description: 'HTTP on port 8080'
 
   - protocol: ssh
     port: 2222
-    banner: "SSH-2.0-OpenSSH_8.2p1"
-    expected_product: "OpenSSH"
-    expected_version: "8.2p1"
-    description: "SSH on non-standard port"
+    banner: 'SSH-2.0-OpenSSH_8.2p1'
+    expected_product: 'OpenSSH'
+    expected_version: '8.2p1'
+    description: 'SSH on non-standard port'
 
   # Partial banners
   - protocol: http
     port: 80
-    banner: "Apache/2.4"
-    expected_product: "Apache"
-    expected_version: "2.4"
-    description: "Incomplete version (should still match)"
-
+    banner: 'Apache/2.4'
+    expected_product: 'Apache'
+    expected_version: '2.4'
+    description: 'Incomplete version (should still match)'
 # ============================================================================
 # SUMMARY STATISTICS
 # ============================================================================

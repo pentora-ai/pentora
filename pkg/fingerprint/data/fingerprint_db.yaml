@@ -525,6 +525,29 @@ rules:
     pattern_strength: 0.90
     port_bonuses: [143, 993, 110, 995]
 
+  # POP3 Servers
+  - id: 'pop3.dovecot'
+    protocol: 'pop3'
+    description: 'Dovecot POP3 server'
+    product: 'Dovecot POP3'
+    vendor: 'Dovecot Project'
+    cpe: 'cpe:2.3:a:dovecot:dovecot:*:*:*:*:*:*:*:*'
+    match: '\+ok.*dovecot|dovecot.*ready'
+    version_extraction: "dovecot\\s+(?:\\(|ready\\.?\\s+)?([\\d\\.]+)"
+
+    exclude_patterns:
+      - "postfix"
+      - "exim"
+      - "imap"
+
+    soft_exclude_patterns:
+      - "error"
+      - "denied"
+      - "unavailable"
+
+    pattern_strength: 0.95
+    port_bonuses: [110, 995]
+
   # Other Services
   - id: 'rdp.microsoft'
     protocol: 'rdp'
@@ -611,26 +634,8 @@ rules:
     pattern_strength: 0.88
     port_bonuses: [161, 162]
 
-  - id: 'smb.samba'
-    protocol: 'smb'
-    description: 'Samba SMB/CIFS file sharing'
-    product: 'Samba'
-    vendor: 'Samba Project'
-    cpe: 'cpe:2.3:a:samba:samba:*:*:*:*:*:*:*:*'
-    match: 'samba|smb'
-    version_extraction: "(?:samba|smb)\\s+([\\d\\.]+)"
-
-    exclude_patterns:
-      - "http"
-      - "ftp"
-
-    soft_exclude_patterns:
-      - "error"
-      - "denied"
-      - "unavailable"
-
-    pattern_strength: 0.88
-    port_bonuses: [445, 139]
+  # SMB/Samba rule moved to dedicated SMB section below (line ~784)
+  # Removed duplicate generic 'smb.samba' rule with overly broad pattern 'samba|smb'
 
   - id: 'http.winrm'
     protocol: 'http'
@@ -756,3 +761,80 @@ rules:
 
     pattern_strength: 0.85
     port_bonuses: [53]
+
+  # File Sharing / Windows Services
+  - id: 'smb.samba'
+    protocol: 'smb'
+    description: 'Samba SMB/CIFS file server'
+    product: 'Samba'
+    vendor: 'Samba Team'
+    cpe: 'cpe:2.3:a:samba:samba:*:*:*:*:*:*:*:*'
+    match: 'samba|smb.*unix|cifs.*unix'
+    version_extraction: "samba[\\s/_-]+([\\d\\.]+)"
+
+    exclude_patterns:
+      - "windows"
+      - "microsoft"
+      - "netbios"
+
+    soft_exclude_patterns:
+      - "error"
+      - "denied"
+      - "refused"
+
+    pattern_strength: 0.90
+    port_bonuses: [139, 445]
+
+  - id: 'smb.windows'
+    protocol: 'smb'
+    description: 'Microsoft Windows SMB file sharing'
+    product: 'Windows SMB'
+    vendor: 'Microsoft'
+    cpe: 'cpe:2.3:o:microsoft:windows:*:*:*:*:*:*:*:*'
+    match: 'smb.*windows|microsoft.*smb|windows.*netbios'
+    version_extraction: "windows[\\s/_-]+([\\w\\.]+)"
+
+    exclude_patterns:
+      - "samba"
+      - "unix"
+      - "linux"
+
+    soft_exclude_patterns:
+      - "error"
+      - "denied"
+      - "refused"
+
+    pattern_strength: 0.88
+    port_bonuses: [139, 445]
+
+  # NetBIOS and MSRPC Services
+  # Note: NetBIOS (port 139) and MSRPC (port 135) are binary protocols that are difficult to
+  # fingerprint reliably via banner matching. Detection relies on port-based hints and active probes
+  # (netbios-session and rpc-bind probes in probes.yaml) rather than pattern matching to avoid false positives.
+
+  # DNS Servers
+  - id: 'dns.bind'
+    protocol: 'dns'
+    description: 'ISC BIND DNS server'
+    product: 'BIND'
+    vendor: 'ISC'
+    cpe: 'cpe:2.3:a:isc:bind:*:*:*:*:*:*:*:*'
+    match: 'BIND|named'
+    version_extraction: "BIND\\s+([0-9.]+)"
+
+    exclude_patterns:
+      - "http"
+      - "smtp"
+      - "ftp"
+
+    soft_exclude_patterns:
+      - "error"
+      - "refused"
+
+    pattern_strength: 0.90
+    port_bonuses: [53]
+
+  # RPC Services
+  # Note: RPC responses are binary protocol that's difficult to fingerprint reliably.
+  # RPC portmapper detection relies on port-based hints (port 111) and active probes
+  # rather than banner pattern matching to avoid false positives.
