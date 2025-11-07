@@ -1119,6 +1119,28 @@ edge_cases:
     expected_version: "2.4.41"
     description: "Banner with CRLF"
 
+  # SMB / NetBIOS (Windows File Sharing)
+  - protocol: smb
+    port: 445
+    banner: "SMBr\x00\x00\x00\x00\x98\x00\x02\xc8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00Windows"
+    expected_product: "Windows SMB"
+    expected_version: ""
+    description: "Windows SMB on port 445"
+
+  - protocol: smb
+    port: 139
+    banner: "\x82\x00\x00\x00 NetBIOS Session"
+    expected_product: "NetBIOS Session Service"
+    expected_version: ""
+    description: "NetBIOS Session Service on port 139"
+
+  - protocol: smb
+    port: 445
+    banner: "SAMBA Server 4.13.3-Ubuntu"
+    expected_product: "Samba"
+    expected_version: "4.13.3"
+    description: "Samba SMB server"
+
   # Non-standard ports
   - protocol: http
     port: 8080
