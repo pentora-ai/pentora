@@ -822,3 +822,25 @@ rules:
 
     pattern_strength: 0.70
     port_bonuses: [139]
+
+  - id: 'msrpc.endpoint-mapper'
+    protocol: 'msrpc'
+    description: 'Microsoft RPC Endpoint Mapper'
+    product: 'Microsoft RPC Endpoint Mapper'
+    vendor: 'Microsoft'
+    cpe: 'cpe:2.3:a:microsoft:rpc:*:*:*:*:*:*:*:*'
+    match: '.'
+    version_extraction: ""
+
+    exclude_patterns:
+      - "http"
+      - "ftp"
+      - "smtp"
+      - "ssh"
+
+    soft_exclude_patterns:
+      - "error"
+      - "refused"
+
+    pattern_strength: 0.72
+    port_bonuses: [135]

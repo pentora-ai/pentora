@@ -496,6 +496,8 @@ func detectProtocolFromPort(port int) string {
 	case 161, 162:
 		return "snmp"
 	// File Sharing / Windows Services
+	case 135:
+		return "msrpc"
 	case 139:
 		return "netbios"
 	case 445:

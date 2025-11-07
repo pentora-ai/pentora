@@ -1141,6 +1141,21 @@ edge_cases:
     expected_version: "4.13.3"
     description: "Samba SMB server"
 
+  # Microsoft RPC (Windows RPC Endpoint Mapper)
+  - protocol: msrpc
+    port: 135
+    banner: "\x05\x00\x0c\x03\x10\x00\x00\x00\x44\x00\x00\x00\x01\x00\x00\x00"
+    expected_product: "Microsoft RPC Endpoint Mapper"
+    expected_version: ""
+    description: "Microsoft RPC endpoint mapper on port 135"
+
+  - protocol: msrpc
+    port: 135
+    banner: "\x05\x00\x0c\x03\x10\x00\x00\x00\x48\x00\x00\x00\x02\x00\x00\x00\xb8\x10"
+    expected_product: "Microsoft RPC Endpoint Mapper"
+    expected_version: ""
+    description: "MSRPC bind response"
+
   # Non-standard ports
   - protocol: http
     port: 8080
