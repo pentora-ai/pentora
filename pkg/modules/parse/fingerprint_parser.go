@@ -191,9 +191,116 @@ func (m *FingerprintParserModule) processBannerCandidates(ctx context.Context, b
 			Target:         banner.IP,
 		}
 		matches++
+
+		// Phase 1.8: Emit TLS metadata as individual data keys for plugin consumption
+		if candidate.TLS != nil {
+			m.emitTLSMetadata(candidate.TLS, banner.IP, outputChan)
+		}
 	}
 
 	return matches
+}
+
+// emitTLSMetadata emits TLS observation data as individual data keys to DataContext.
+// Phase 1.8: This enables TLS plugins to trigger and match on TLS metadata.
+//
+// Emitted keys follow hierarchical structure:
+// - Protocol-level: tls.version, tls.cipher_suite, tls.server_name
+// - Certificate-level: tls.certificate.* (issuer, common_name, not_after, is_expired, is_self_signed, etc.)
+func (m *FingerprintParserModule) emitTLSMetadata(tls *engine.TLSObservation, target string, outputChan chan<- engine.ModuleOutput) {
+	timestamp := time.Now()
+
+	// Protocol-level keys
+	if tls.Version != "" {
+		outputChan <- engine.ModuleOutput{
+			FromModuleName: m.meta.ID,
+			DataKey:        "tls.version",
+			Data:           tls.Version,
+			Timestamp:      timestamp,
+			Target:         target,
+		}
+	}
+	if tls.CipherSuite != "" {
+		outputChan <- engine.ModuleOutput{
+			FromModuleName: m.meta.ID,
+			DataKey:        "tls.cipher_suite",
+			Data:           tls.CipherSuite,
+			Timestamp:      timestamp,
+			Target:         target,
+		}
+	}
+	if tls.ServerName != "" {
+		outputChan <- engine.ModuleOutput{
+			FromModuleName: m.meta.ID,
+			DataKey:        "tls.server_name",
+			Data:           tls.ServerName,
+			Timestamp:      timestamp,
+			Target:         target,
+		}
+	}
+
+	// Certificate-level keys
+	if tls.Issuer != "" {
+		outputChan <- engine.ModuleOutput{
+			FromModuleName: m.meta.ID,
+			DataKey:        "tls.certificate.issuer",
+			Data:           tls.Issuer,
+			Timestamp:      timestamp,
+			Target:         target,
+		}
+	}
+	if tls.PeerCommonName != "" {
+		outputChan <- engine.ModuleOutput{
+			FromModuleName: m.meta.ID,
+			DataKey:        "tls.certificate.common_name",
+			Data:           tls.PeerCommonName,
+			Timestamp:      timestamp,
+			Target:         target,
+		}
+	}
+	if len(tls.PeerDNSNames) > 0 {
+		outputChan <- engine.ModuleOutput{
+			FromModuleName: m.meta.ID,
+			DataKey:        "tls.certificate.dns_names",
+			Data:           tls.PeerDNSNames,
+			Timestamp:      timestamp,
+			Target:         target,
+		}
+	}
+	if !tls.NotBefore.IsZero() {
+		outputChan <- engine.ModuleOutput{
+			FromModuleName: m.meta.ID,
+			DataKey:        "tls.certificate.not_before",
+			Data:           tls.NotBefore,
+			Timestamp:      timestamp,
+			Target:         target,
+		}
+	}
+	if !tls.NotAfter.IsZero() {
+		outputChan <- engine.ModuleOutput{
+			FromModuleName: m.meta.ID,
+			DataKey:        "tls.certificate.not_after",
+			Data:           tls.NotAfter,
+			Timestamp:      timestamp,
+			Target:         target,
+		}
+	}
+
+	// Boolean flags (always emit, even if false, for plugin matching)
+	outputChan <- engine.ModuleOutput{
+		FromModuleName: m.meta.ID,
+		DataKey:        "tls.certificate.is_expired",
+		Data:           tls.IsExpired,
+		Timestamp:      timestamp,
+		Target:         target,
+	}
+	outputChan <- engine.ModuleOutput{
+		FromModuleName: m.meta.ID,
+		DataKey:        "tls.certificate.is_self_signed",
+		Data:           tls.IsSelfSigned,
+		Timestamp:      timestamp,
+		Target:         target,
+	}
 }
 
 type bannerCandidate struct {

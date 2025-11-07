@@ -50,8 +50,21 @@ func RegisterCommonSchema(dc *DataContext) {
 	_ = dc.RegisterType("ssh.banner", reflect.TypeOf([]string{}), CardinalityList)
 	_ = dc.RegisterType("ssh.version", reflect.TypeOf([]string{}), CardinalityList)
 	_ = dc.RegisterType("http.server", reflect.TypeOf([]string{}), CardinalityList)
-	_ = dc.RegisterType("tls.version", reflect.TypeOf([]string{}), CardinalityList)
 	_ = dc.RegisterType("service.port", reflect.TypeOf([]int{}), CardinalityList)
+
+	// Phase 1.8: TLS protocol-level keys (CardinalityList)
+	_ = dc.RegisterType("tls.version", reflect.TypeOf([]string{}), CardinalityList)
+	_ = dc.RegisterType("tls.cipher_suite", reflect.TypeOf([]string{}), CardinalityList)
+	_ = dc.RegisterType("tls.server_name", reflect.TypeOf([]string{}), CardinalityList)
+
+	// Phase 1.8: TLS certificate-level keys (CardinalityList)
+	_ = dc.RegisterType("tls.certificate.issuer", reflect.TypeOf([]string{}), CardinalityList)
+	_ = dc.RegisterType("tls.certificate.common_name", reflect.TypeOf([]string{}), CardinalityList)
+	_ = dc.RegisterType("tls.certificate.dns_names", reflect.TypeOf([][]string{}), CardinalityList)
+	_ = dc.RegisterType("tls.certificate.not_before", reflect.TypeOf([]interface{}{}), CardinalityList) // time.Time
+	_ = dc.RegisterType("tls.certificate.not_after", reflect.TypeOf([]interface{}{}), CardinalityList)  // time.Time
+	_ = dc.RegisterType("tls.certificate.is_expired", reflect.TypeOf([]bool{}), CardinalityList)
+	_ = dc.RegisterType("tls.certificate.is_self_signed", reflect.TypeOf([]bool{}), CardinalityList)
 
 	// Complex types deferred to modules to avoid import cycles:
 	// - discovery.live_hosts (discovery.ICMPPingDiscoveryResult)
