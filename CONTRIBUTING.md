@@ -200,6 +200,21 @@ make test      # Run unit tests - MUST PASS
 make validate  # Lint + format + spell + shell checks - MUST PASS
 ```
 
+### Formatter installation (gofumpt)
+
+The project uses `gofumpt` (stricter `gofmt`) via `make fmt`:
+
+```bash
+# Install gofumpt if it's not already in your PATH
+go install mvdan.cc/gofumpt@latest
+
+# Ensure GOPATH/bin is on your PATH
+export PATH="$(go env GOPATH)/bin:$PATH"
+
+# Run formatting locally
+make fmt
+```
+
 **Integration tests** (optional, recommended before PR):
 ```bash
 make test-integration  # Run with -tags=integration
@@ -221,4 +236,3 @@ Interfaces in `pkg/api` and `pkg/server` are evolving. Treat them as experimenta
 - If a review task was interrupted in the CLI, re-initiate with `/review` and wait for it to complete.
 
 Thanks for contributing and keeping Pentora healthy and reliable!
-

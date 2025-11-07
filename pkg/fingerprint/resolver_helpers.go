@@ -41,7 +41,7 @@ func softExcludePenalty(banner string, soft []*regexp.Regexp, perMatchPenalty fl
 
 // calculateConfidence computes a confidence score based on pattern strength,
 // soft-exclude penalties, and optional port bonuses.
-func calculateConfidence(base float64, softPenalty float64, portBonus float64) float64 {
+func calculateConfidence(base, softPenalty, portBonus float64) float64 {
 	conf := base - softPenalty + portBonus
 	if conf < 0 {
 		conf = 0

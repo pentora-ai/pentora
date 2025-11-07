@@ -9,11 +9,12 @@
 package proto
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -752,21 +753,24 @@ func file_pkg_engine_proto_module_api_proto_rawDescGZIP() []byte {
 	return file_pkg_engine_proto_module_api_proto_rawDescData
 }
 
-var file_pkg_engine_proto_module_api_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_pkg_engine_proto_module_api_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
-var file_pkg_engine_proto_module_api_proto_goTypes = []any{
-	(HostControlSignal_SignalType)(0), // 0: engine.HostControlSignal.SignalType
-	(*ModuleMessage)(nil),             // 1: engine.ModuleMessage
-	(*HostMessage)(nil),               // 2: engine.HostMessage
-	(*ModuleRegistration)(nil),        // 3: engine.ModuleRegistration
-	(*RegistrationAck)(nil),           // 4: engine.RegistrationAck
-	(*ExecuteNewTask)(nil),            // 5: engine.ExecuteNewTask
-	(*TaskOutputResult)(nil),          // 6: engine.TaskOutputResult
-	(*ModuleHeartbeat)(nil),           // 7: engine.ModuleHeartbeat
-	(*HostControlSignal)(nil),         // 8: engine.HostControlSignal
-	nil,                               // 9: engine.ExecuteNewTask.InputsEntry
-	nil,                               // 10: engine.ExecuteNewTask.ModuleConfigEntry
-}
+var (
+	file_pkg_engine_proto_module_api_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+	file_pkg_engine_proto_module_api_proto_msgTypes  = make([]protoimpl.MessageInfo, 10)
+	file_pkg_engine_proto_module_api_proto_goTypes   = []any{
+		(HostControlSignal_SignalType)(0), // 0: engine.HostControlSignal.SignalType
+		(*ModuleMessage)(nil),             // 1: engine.ModuleMessage
+		(*HostMessage)(nil),               // 2: engine.HostMessage
+		(*ModuleRegistration)(nil),        // 3: engine.ModuleRegistration
+		(*RegistrationAck)(nil),           // 4: engine.RegistrationAck
+		(*ExecuteNewTask)(nil),            // 5: engine.ExecuteNewTask
+		(*TaskOutputResult)(nil),          // 6: engine.TaskOutputResult
+		(*ModuleHeartbeat)(nil),           // 7: engine.ModuleHeartbeat
+		(*HostControlSignal)(nil),         // 8: engine.HostControlSignal
+		nil,                               // 9: engine.ExecuteNewTask.InputsEntry
+		nil,                               // 10: engine.ExecuteNewTask.ModuleConfigEntry
+	}
+)
+
 var file_pkg_engine_proto_module_api_proto_depIdxs = []int32{
 	3,  // 0: engine.ModuleMessage.registration:type_name -> engine.ModuleRegistration
 	6,  // 1: engine.ModuleMessage.output_result:type_name -> engine.TaskOutputResult

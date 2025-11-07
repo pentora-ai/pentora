@@ -65,7 +65,7 @@ type CacheEntry struct {
 // Returns the cache entry for the plugin.
 // If rawData is provided, it will be written as-is to preserve checksums.
 // If rawData is nil, the plugin will be marshaled to YAML.
-func (c *CacheManager) Add(ctx context.Context, plugin *YAMLPlugin, checksum string, downloadURL string, rawData ...[]byte) (*CacheEntry, error) {
+func (c *CacheManager) Add(ctx context.Context, plugin *YAMLPlugin, checksum, downloadURL string, rawData ...[]byte) (*CacheEntry, error) {
 	// Check context cancellation
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -177,7 +177,7 @@ func (c *CacheManager) GetEntry(ctx context.Context, id, version string) (*Cache
 }
 
 // Remove removes a plugin from the cache.
-func (c *CacheManager) Remove(ctx context.Context, id string, version string) error {
+func (c *CacheManager) Remove(ctx context.Context, id, version string) error {
 	// Check context cancellation
 	if err := ctx.Err(); err != nil {
 		return err

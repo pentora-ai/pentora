@@ -59,8 +59,8 @@ test-all: test-unit test-integration
 fmt:
 	@echo "🔧 Running gci (import organization)..."
 	@gci write --skip-generated -s standard -s default -s "prefix(github.com/pentora-ai/pentora)" $(SRCS)
-	@echo "🔧 Running gofmt (code formatting)..."
-	@gofmt -s -l -w $(SRCS)
+	@echo "🔧 Running gofumpt (code formatting)..."
+	@gofumpt -l -w -extra $(SRCS)
 	@echo "✅ Code formatted"	
 
 #? dist: Create the "dist" directory

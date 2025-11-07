@@ -431,7 +431,7 @@ func init() {
 }
 
 // GetSuggestions returns actionable hints based on error code and operation.
-func GetSuggestions(errorCode string, operation string) []string {
+func GetSuggestions(errorCode, operation string) []string {
 	if generator, ok := suggestionGenerators[errorCode]; ok {
 		return generator(operation)
 	}

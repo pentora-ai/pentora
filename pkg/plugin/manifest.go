@@ -294,7 +294,7 @@ func (m *ManifestManager) GetRegistryURL() (string, error) {
 }
 
 // NewManifestEntryFromPlugin creates a ManifestEntry from a YAMLPlugin.
-func NewManifestEntryFromPlugin(plugin *YAMLPlugin, checksum string, downloadURL string) *ManifestEntry {
+func NewManifestEntryFromPlugin(plugin *YAMLPlugin, checksum, downloadURL string) *ManifestEntry {
 	return &ManifestEntry{
 		Name:        plugin.Name,
 		Version:     plugin.Version,
