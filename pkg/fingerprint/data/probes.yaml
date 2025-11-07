@@ -7,6 +7,10 @@ fallback_probes:
   - redis-ping    # Database fallback (Redis, Memcached on custom ports)
   - ftp-feat      # FTP fallback
 
+# TODO: Adaptive timeouts (future work)
+# Protocol-specific timeouts could further optimize scanning performance
+# Implementation requires: catalog.go parsing + banner_grab.go timeout override
+
 groups:
   - id: http
     description: Standard HTTP and HTTPS probes
@@ -104,6 +108,9 @@ groups:
         port_include: [6380]
   - id: smb
     description: SMB/NetBIOS session probes for Windows file sharing
+    # Operational note: Binary protocols with skip_initial_read strategy.
+    # These probes send binary packets and expect short binary responses (or silence).
+    # Recommended: 256-512 byte read cap, 250-500ms timeout to avoid stalls.
     port_hints: [139, 445]
     protocol_hints: ["smb", "netbios", "cifs"]
     probes:
@@ -121,6 +128,9 @@ groups:
         port_include: [445]
   - id: msrpc
     description: Microsoft RPC Endpoint Mapper probe
+    # Operational note: Binary DCE/RPC protocol with skip_initial_read.
+    # Sends RPC bind request, expects bind_ack or bind_nak response.
+    # Recommended: 512 byte read cap, 500ms timeout.
     port_hints: [135]
     protocol_hints: ["msrpc", "rpc", "dce-rpc"]
     probes:
@@ -130,3 +140,28 @@ groups:
         use_tls: false
         skip_initial_read: true
         port_include: [135]
+  - id: dns
+    description: DNS server query probe for version detection
+    port_hints: [53]
+    protocol_hints: ["dns", "domain"]
+    probes:
+      - id: dns-version-bind
+        protocol: dns
+        payload: "\x00\x1e\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x07version\x04bind\x00\x00\x10\x00\x03"
+        use_tls: false
+        skip_initial_read: true
+        port_include: [53]
+  - id: rpcbind
+    description: ONC RPC Portmapper probe for service enumeration
+    # Operational note: Binary ONC RPC protocol with skip_initial_read.
+    # Sends RPC null call (procedure 0), expects accepted/denied response.
+    # Recommended: 256 byte read cap, 250ms timeout.
+    port_hints: [111]
+    protocol_hints: ["rpc", "portmap", "rpcbind"]
+    probes:
+      - id: rpc-null-call
+        protocol: rpc
+        payload: "\x80\x00\x00\x28\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x01\x86\xa0\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+        use_tls: false
+        skip_initial_read: true
+        port_include: [111]

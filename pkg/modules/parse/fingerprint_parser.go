@@ -502,6 +502,9 @@ func detectProtocolFromPort(port int) string {
 		return "netbios"
 	case 445:
 		return "smb"
+	// Infrastructure Services
+	case 111:
+		return "rpc"
 	}
 	return ""
 }

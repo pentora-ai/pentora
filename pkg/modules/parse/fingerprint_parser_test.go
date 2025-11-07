@@ -264,6 +264,10 @@ func TestDetectProtocolFromPort(t *testing.T) {
 		{"Elasticsearch transport port", 9300, "elasticsearch"},
 		{"SNMP standard port", 161, "snmp"},
 		{"SNMP trap port", 162, "snmp"},
+		{"msrpc", 135, "msrpc"},
+		{"netbios", 139, "netbios"},
+		{"smb", 445, "smb"},
+		{"rpc", 111, "rpc"},
 
 		// Unknown ports
 		{"Unknown port 1234", 1234, ""},

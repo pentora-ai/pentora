@@ -76,7 +76,7 @@ func newBannerGrabModule() *BannerGrabModule {
 	defaultConfig := BannerGrabConfig{
 		ReadTimeout:           10 * time.Second,
 		ConnectTimeout:        5 * time.Second,
-		BufferSize:            2048,
+		BufferSize:            2048, // Sufficient for binary protocols (SMB/RPC: 256-512 bytes typical)
 		Concurrency:           50,
 		SendProbes:            true,
 		TLSInsecureSkipVerify: true, // Default to skip cert validation for service detection (Phase 1.6)
@@ -270,6 +270,63 @@ endLoop:
 	return nil
 }
 
+// runActiveProbes executes active probes against the target port.
+// Extracted from runProbes to reduce cyclomatic complexity.
+func (m *BannerGrabModule) runActiveProbes(
+	ctx context.Context,
+	target string,
+	port int,
+	catalog *fingerprint.ProbeCatalog,
+	observations *[]engine.ProbeObservation,
+	bestBanner *string,
+	bestIsTLS *bool,
+	lastError *string,
+	hintAcc *hintAccumulator,
+) {
+	candidateProbes := catalog.ProbesFor(port, hintAcc.slice())
+
+	// Phase 1.5: Probe Fallback for non-standard ports
+	// If no port-specific probes matched AND passive banner is empty, try fallback probes
+	if len(candidateProbes) == 0 && *bestBanner == "" {
+		candidateProbes = catalog.FallbackProbes()
+		if len(candidateProbes) > 0 {
+			m.logger.Debug().
+				Int("port", port).
+				Int("fallback_probes", len(candidateProbes)).
+				Msg("No port-specific probes found, trying fallback probes for non-standard port")
+		}
+	}
+
+	seen := make(map[string]struct{}, len(candidateProbes))
+
+	for _, spec := range candidateProbes {
+		if ctx.Err() != nil {
+			break
+		}
+		if _, exists := seen[spec.ID]; exists {
+			continue
+		}
+		seen[spec.ID] = struct{}{}
+
+		obs := m.executeProbeSpec(ctx, target, port, spec)
+		if respHint := protocolHintFromBanner(obs.Response); respHint != "" {
+			hintAcc.add(respHint)
+		}
+		m.collectObservation(observations, obs, bestBanner, bestIsTLS, lastError)
+
+		// Phase 1.9: Early exit optimization
+		// If we got a usable banner with no error, stop probing
+		if *bestBanner != "" && *lastError == "" {
+			m.logger.Debug().
+				Str("probe_id", obs.ProbeID).
+				Int("port", port).
+				Int("remaining_probes", len(candidateProbes)-len(seen)).
+				Msg("Early exit: usable banner found, skipping remaining probes")
+			break
+		}
+	}
+}
+
 func (m *BannerGrabModule) runProbes(ctx context.Context, target string, port int) BannerGrabResult {
 	observations := make([]engine.ProbeObservation, 0, 8)
 	bestBanner := ""
@@ -293,37 +350,7 @@ func (m *BannerGrabModule) runProbes(ctx context.Context, target string, port in
 	m.collectObservation(&observations, passive, &bestBanner, &bestIsTLS, &lastError)
 
 	if m.config.SendProbes && ctx.Err() == nil && catalogErr == nil {
-		candidateProbes := catalog.ProbesFor(port, hintAcc.slice())
-
-		// Phase 1.5: Probe Fallback for non-standard ports
-		// If no port-specific probes matched AND passive banner is empty, try fallback probes
-		if len(candidateProbes) == 0 && bestBanner == "" {
-			candidateProbes = catalog.FallbackProbes()
-			if len(candidateProbes) > 0 {
-				m.logger.Debug().
-					Int("port", port).
-					Int("fallback_probes", len(candidateProbes)).
-					Msg("No port-specific probes found, trying fallback probes for non-standard port")
-			}
-		}
-
-		seen := make(map[string]struct{}, len(candidateProbes))
-
-		for _, spec := range candidateProbes {
-			if ctx.Err() != nil {
-				break
-			}
-			if _, exists := seen[spec.ID]; exists {
-				continue
-			}
-			seen[spec.ID] = struct{}{}
-
-			obs := m.executeProbeSpec(ctx, target, port, spec)
-			if respHint := protocolHintFromBanner(obs.Response); respHint != "" {
-				hintAcc.add(respHint)
-			}
-			m.collectObservation(&observations, obs, &bestBanner, &bestIsTLS, &lastError)
-		}
+		m.runActiveProbes(ctx, target, port, catalog, &observations, &bestBanner, &bestIsTLS, &lastError, &hintAcc)
 	}
 
 	result := BannerGrabResult{
