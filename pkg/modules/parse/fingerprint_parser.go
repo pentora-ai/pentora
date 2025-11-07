@@ -72,6 +72,78 @@ func newFingerprintParserModule() *FingerprintParserModule {
 					Cardinality:  engine.CardinalityList,
 					Description:  "Fingerprint matches derived from service banners.",
 				},
+				// Phase 1.8: TLS metadata keys (protocol-level)
+				{
+					Key:          "tls.version",
+					DataTypeName: "string",
+					Cardinality:  engine.CardinalitySingle,
+					IsOptional:   true,
+					Description:  "TLS protocol version (e.g., TLS1.3, TLS1.2)",
+				},
+				{
+					Key:          "tls.cipher_suite",
+					DataTypeName: "string",
+					Cardinality:  engine.CardinalitySingle,
+					IsOptional:   true,
+					Description:  "TLS cipher suite name",
+				},
+				{
+					Key:          "tls.server_name",
+					DataTypeName: "string",
+					Cardinality:  engine.CardinalitySingle,
+					IsOptional:   true,
+					Description:  "TLS SNI server name",
+				},
+				// Phase 1.8: TLS certificate metadata keys
+				{
+					Key:          "tls.certificate.issuer",
+					DataTypeName: "string",
+					Cardinality:  engine.CardinalitySingle,
+					IsOptional:   true,
+					Description:  "TLS certificate issuer DN",
+				},
+				{
+					Key:          "tls.certificate.common_name",
+					DataTypeName: "string",
+					Cardinality:  engine.CardinalitySingle,
+					IsOptional:   true,
+					Description:  "TLS certificate common name (CN)",
+				},
+				{
+					Key:          "tls.certificate.dns_names",
+					DataTypeName: "[]string",
+					Cardinality:  engine.CardinalityList,
+					IsOptional:   true,
+					Description:  "TLS certificate Subject Alternative Names (DNS names)",
+				},
+				{
+					Key:          "tls.certificate.not_before",
+					DataTypeName: "time.Time",
+					Cardinality:  engine.CardinalitySingle,
+					IsOptional:   true,
+					Description:  "TLS certificate validity start time",
+				},
+				{
+					Key:          "tls.certificate.not_after",
+					DataTypeName: "time.Time",
+					Cardinality:  engine.CardinalitySingle,
+					IsOptional:   true,
+					Description:  "TLS certificate validity end time (expiration)",
+				},
+				{
+					Key:          "tls.certificate.is_expired",
+					DataTypeName: "bool",
+					Cardinality:  engine.CardinalitySingle,
+					IsOptional:   true,
+					Description:  "Whether the TLS certificate is expired",
+				},
+				{
+					Key:          "tls.certificate.is_self_signed",
+					DataTypeName: "bool",
+					Cardinality:  engine.CardinalitySingle,
+					IsOptional:   true,
+					Description:  "Whether the TLS certificate is self-signed",
+				},
 			},
 		},
 	}
@@ -124,7 +196,8 @@ func (m *FingerprintParserModule) Execute(ctx context.Context, inputs map[string
 }
 
 func (m *FingerprintParserModule) processBannerCandidates(ctx context.Context, banner scan.BannerGrabResult, resolver fingerprint.Resolver, outputChan chan<- engine.ModuleOutput) int {
-	seenResponses := make(map[string]struct{})
+	logger := log.With().Str("module", m.meta.Name).Str("instance_id", m.meta.ID).Logger()
+	seenCandidates := make(map[string]struct{}) // Changed: track (response, probeID) to allow TLS and non-TLS versions
 	seenMatches := make(map[string]struct{})
 	matches := 0
 
@@ -133,10 +206,19 @@ func (m *FingerprintParserModule) processBannerCandidates(ctx context.Context, b
 		if response == "" {
 			continue
 		}
-		if _, exists := seenResponses[response]; exists {
+		// Phase 1.8 Fix: Deduplicate by (response, probeID) instead of just response
+		// This allows both tcp-passive and imap-capability-tls (with TLS metadata) to be processed
+		candidateKey := fmt.Sprintf("%s|%s", response, candidate.ProbeID)
+		if _, exists := seenCandidates[candidateKey]; exists {
 			continue
 		}
-		seenResponses[response] = struct{}{}
+		seenCandidates[candidateKey] = struct{}{}
+
+		logger.Debug().
+			Str("probe_id", candidate.ProbeID).
+			Bool("has_tls", candidate.TLS != nil).
+			Str("response_preview", response[:min(len(response), 50)]).
+			Msg("Processing banner candidate")
 
 		protocolHint := strings.ToLower(candidate.Protocol)
 		if protocolHint == "" || protocolHint == "tcp" || protocolHint == "udp" {
@@ -161,6 +243,17 @@ func (m *FingerprintParserModule) processBannerCandidates(ctx context.Context, b
 		})
 		if err != nil || result.Product == "" {
 			continue
+		}
+
+		// Phase 1.8: Emit TLS metadata BEFORE deduplication
+		// This ensures TLS metadata is emitted even if the fingerprint match is duplicate
+		if candidate.TLS != nil {
+			logger.Debug().
+				Str("target", banner.IP).
+				Int("port", banner.Port).
+				Str("probe_id", candidate.ProbeID).
+				Msg("Emitting TLS metadata to DataContext")
+			m.emitTLSMetadata(candidate.TLS, banner.IP, outputChan)
 		}
 
 		matchKey := fmt.Sprintf("%s|%s|%s", result.Product, result.Version, protocolHint)
@@ -194,6 +287,108 @@ func (m *FingerprintParserModule) processBannerCandidates(ctx context.Context, b
 	}
 
 	return matches
+}
+
+// emitTLSMetadata emits TLS observation data as individual data keys to DataContext.
+// Phase 1.8: This enables TLS plugins to trigger and match on TLS metadata.
+//
+// Emitted keys follow hierarchical structure:
+// - Protocol-level: tls.version, tls.cipher_suite, tls.server_name
+// - Certificate-level: tls.certificate.* (issuer, common_name, not_after, is_expired, is_self_signed, etc.)
+func (m *FingerprintParserModule) emitTLSMetadata(tls *engine.TLSObservation, target string, outputChan chan<- engine.ModuleOutput) {
+	timestamp := time.Now()
+
+	// Protocol-level keys
+	if tls.Version != "" {
+		outputChan <- engine.ModuleOutput{
+			FromModuleName: m.meta.ID,
+			DataKey:        "tls.version",
+			Data:           tls.Version,
+			Timestamp:      timestamp,
+			Target:         target,
+		}
+	}
+	if tls.CipherSuite != "" {
+		outputChan <- engine.ModuleOutput{
+			FromModuleName: m.meta.ID,
+			DataKey:        "tls.cipher_suite",
+			Data:           tls.CipherSuite,
+			Timestamp:      timestamp,
+			Target:         target,
+		}
+	}
+	if tls.ServerName != "" {
+		outputChan <- engine.ModuleOutput{
+			FromModuleName: m.meta.ID,
+			DataKey:        "tls.server_name",
+			Data:           tls.ServerName,
+			Timestamp:      timestamp,
+			Target:         target,
+		}
+	}
+
+	// Certificate-level keys
+	if tls.Issuer != "" {
+		outputChan <- engine.ModuleOutput{
+			FromModuleName: m.meta.ID,
+			DataKey:        "tls.certificate.issuer",
+			Data:           tls.Issuer,
+			Timestamp:      timestamp,
+			Target:         target,
+		}
+	}
+	if tls.PeerCommonName != "" {
+		outputChan <- engine.ModuleOutput{
+			FromModuleName: m.meta.ID,
+			DataKey:        "tls.certificate.common_name",
+			Data:           tls.PeerCommonName,
+			Timestamp:      timestamp,
+			Target:         target,
+		}
+	}
+	if len(tls.PeerDNSNames) > 0 {
+		outputChan <- engine.ModuleOutput{
+			FromModuleName: m.meta.ID,
+			DataKey:        "tls.certificate.dns_names",
+			Data:           tls.PeerDNSNames,
+			Timestamp:      timestamp,
+			Target:         target,
+		}
+	}
+	if !tls.NotBefore.IsZero() {
+		outputChan <- engine.ModuleOutput{
+			FromModuleName: m.meta.ID,
+			DataKey:        "tls.certificate.not_before",
+			Data:           tls.NotBefore,
+			Timestamp:      timestamp,
+			Target:         target,
+		}
+	}
+	if !tls.NotAfter.IsZero() {
+		outputChan <- engine.ModuleOutput{
+			FromModuleName: m.meta.ID,
+			DataKey:        "tls.certificate.not_after",
+			Data:           tls.NotAfter,
+			Timestamp:      timestamp,
+			Target:         target,
+		}
+	}
+
+	// Boolean flags (always emit, even if false, for plugin matching)
+	outputChan <- engine.ModuleOutput{
+		FromModuleName: m.meta.ID,
+		DataKey:        "tls.certificate.is_expired",
+		Data:           tls.IsExpired,
+		Timestamp:      timestamp,
+		Target:         target,
+	}
+	outputChan <- engine.ModuleOutput{
+		FromModuleName: m.meta.ID,
+		DataKey:        "tls.certificate.is_self_signed",
+		Data:           tls.IsSelfSigned,
+		Timestamp:      timestamp,
+		Target:         target,
+	}
 }
 
 type bannerCandidate struct {

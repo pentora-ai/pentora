@@ -9,6 +9,7 @@ import (
 
 	"github.com/pentora-ai/pentora/pkg/engine"
 	"github.com/pentora-ai/pentora/pkg/modules/parse"
+	"github.com/pentora-ai/pentora/pkg/modules/scan"
 	"github.com/pentora-ai/pentora/pkg/plugin"
 )
 
@@ -102,6 +103,63 @@ func NewPluginEvaluationModule() *PluginEvaluationModule {
 					Cardinality:  engine.CardinalitySingle,
 					IsOptional:   true,
 					Description:  "TLS protocol version",
+				},
+				// Phase 1.8: TLS certificate metadata keys
+				{
+					Key:          "tls.cipher_suite",
+					DataTypeName: "string",
+					Cardinality:  engine.CardinalitySingle,
+					IsOptional:   true,
+					Description:  "TLS cipher suite name",
+				},
+				{
+					Key:          "tls.server_name",
+					DataTypeName: "string",
+					Cardinality:  engine.CardinalitySingle,
+					IsOptional:   true,
+					Description:  "TLS SNI server name",
+				},
+				{
+					Key:          "tls.certificate.issuer",
+					DataTypeName: "string",
+					Cardinality:  engine.CardinalitySingle,
+					IsOptional:   true,
+					Description:  "TLS certificate issuer DN",
+				},
+				{
+					Key:          "tls.certificate.common_name",
+					DataTypeName: "string",
+					Cardinality:  engine.CardinalitySingle,
+					IsOptional:   true,
+					Description:  "TLS certificate common name",
+				},
+				{
+					Key:          "tls.certificate.not_before",
+					DataTypeName: "time.Time",
+					Cardinality:  engine.CardinalitySingle,
+					IsOptional:   true,
+					Description:  "TLS certificate validity start",
+				},
+				{
+					Key:          "tls.certificate.not_after",
+					DataTypeName: "time.Time",
+					Cardinality:  engine.CardinalitySingle,
+					IsOptional:   true,
+					Description:  "TLS certificate validity end",
+				},
+				{
+					Key:          "tls.certificate.is_expired",
+					DataTypeName: "bool",
+					Cardinality:  engine.CardinalitySingle,
+					IsOptional:   true,
+					Description:  "Whether TLS certificate is expired",
+				},
+				{
+					Key:          "tls.certificate.is_self_signed",
+					DataTypeName: "bool",
+					Cardinality:  engine.CardinalitySingle,
+					IsOptional:   true,
+					Description:  "Whether TLS certificate is self-signed",
 				},
 			},
 			Produces: []engine.DataContractEntry{
@@ -262,6 +320,15 @@ func (m *PluginEvaluationModule) buildEvaluationContext(inputs map[string]interf
 		"tls.cipher_suites",
 		"tls.cert_expired",
 		"tls.cert_self_signed",
+		// Phase 1.8: TLS metadata keys
+		"tls.cipher_suite",
+		"tls.server_name",
+		"tls.certificate.issuer",
+		"tls.certificate.common_name",
+		"tls.certificate.not_before",
+		"tls.certificate.not_after",
+		"tls.certificate.is_expired",
+		"tls.certificate.is_self_signed",
 	}
 
 	logger := log.With().Str("module", m.meta.Name).Str("instance_id", m.meta.ID).Logger()
@@ -303,7 +370,12 @@ func (m *PluginEvaluationModule) buildEvaluationContext(inputs map[string]interf
 	// Extract target from banner grab results if not found in service details
 	if _, hasTarget := context["target"]; !hasTarget {
 		if banners, ok := inputs["service.banner.tcp"].([]interface{}); ok && len(banners) > 0 {
-			if banner, ok := banners[0].(map[string]interface{}); ok {
+			// Try scan.BannerGrabResult struct first (direct type)
+			if banner, ok := banners[0].(scan.BannerGrabResult); ok {
+				context["target"] = banner.IP
+				context["service.port"] = banner.Port
+			} else if banner, ok := banners[0].(map[string]interface{}); ok {
+				// Fallback to map (in case of JSON unmarshaling)
 				if ip, ok := banner["ip"].(string); ok {
 					context["target"] = ip
 				}

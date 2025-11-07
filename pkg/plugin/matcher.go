@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/rs/zerolog/log"
 )
 
 // MatcherEngine evaluates matching rules against a data context.
@@ -79,6 +80,9 @@ func (m *MatcherEngine) evaluateRule(rule MatchRule, context map[string]any) (bo
 	actual, ok := context[rule.Field]
 	if !ok {
 		// Field doesn't exist in context
+		log.Debug().
+			Str("field", rule.Field).
+			Msg("Rule field not found in context")
 		return false, nil
 	}
 
@@ -88,8 +92,26 @@ func (m *MatcherEngine) evaluateRule(rule MatchRule, context map[string]any) (bo
 		return false, fmt.Errorf("unknown operator: %s", rule.Operator)
 	}
 
+	// Debug log the comparison
+	log.Debug().
+		Str("field", rule.Field).
+		Str("operator", rule.Operator).
+		Interface("actual", actual).
+		Interface("expected", rule.Value).
+		Str("actual_type", fmt.Sprintf("%T", actual)).
+		Str("expected_type", fmt.Sprintf("%T", rule.Value)).
+		Msg("Evaluating rule")
+
 	// Execute operator
-	return opFunc(actual, rule.Value)
+	result, err := opFunc(actual, rule.Value)
+
+	log.Debug().
+		Str("field", rule.Field).
+		Bool("result", result).
+		Err(err).
+		Msg("Rule evaluation result")
+
+	return result, err
 }
 
 // registerBuiltinOperators registers all built-in operators.

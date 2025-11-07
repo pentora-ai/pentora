@@ -363,3 +363,230 @@ func TestFingerprintProtocolHint_Integration(t *testing.T) {
 		})
 	}
 }
+
+// TestFingerprintParserModule_TLSMetadataEmission tests that TLS metadata
+// is properly emitted as individual data keys to DataContext.
+// Phase 1.8: Verify TLS plugins can consume TLS metadata.
+func TestFingerprintParserModule_TLSMetadataEmission(t *testing.T) {
+	// Arrange
+	originalGetResolver := getResolver
+	defer func() { getResolver = originalGetResolver }()
+
+	getResolver = func() fingerprint.Resolver {
+		return mockResolver{
+			resolveFn: func(ctx context.Context, input fingerprint.Input) (fingerprint.Result, error) {
+				return fingerprint.Result{
+					Product:    "nginx",
+					Version:    "1.18.0",
+					Confidence: 0.95,
+				}, nil
+			},
+		}
+	}
+
+	m := newFingerprintParserModule()
+	_ = m.Init("test-tls", nil)
+
+	// Create banner with TLS metadata
+	notBefore := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	notAfter := time.Date(2024, 12, 31, 23, 59, 59, 0, time.UTC)
+
+	banner := scan.BannerGrabResult{
+		IP:       "192.168.1.100",
+		Port:     443,
+		Protocol: "tcp",
+		Banner:   "HTTP/1.1 200 OK",
+		Evidence: []engine.ProbeObservation{
+			{
+				Response: "HTTP/1.1 200 OK\r\nServer: nginx/1.18.0",
+				Protocol: "https",
+				ProbeID:  "https-probe",
+				IsTLS:    true,
+				TLS: &engine.TLSObservation{
+					Version:        "TLS1.3",
+					CipherSuite:    "TLS_AES_128_GCM_SHA256",
+					ServerName:     "example.com",
+					PeerCommonName: "example.com",
+					PeerDNSNames:   []string{"example.com", "www.example.com"},
+					Issuer:         "CN=Let's Encrypt Authority X3",
+					NotBefore:      notBefore,
+					NotAfter:       notAfter,
+					IsExpired:      false,
+					IsSelfSigned:   false,
+				},
+			},
+		},
+	}
+
+	inputs := map[string]interface{}{
+		"service.banner.tcp": []interface{}{banner},
+	}
+	outputChan := make(chan engine.ModuleOutput, 20)
+	ctx := context.Background()
+
+	// Act
+	err := m.Execute(ctx, inputs, outputChan)
+	close(outputChan)
+
+	// Assert
+	if err != nil {
+		t.Fatalf("Execute failed: %v", err)
+	}
+
+	// Collect all outputs
+	outputs := make(map[string][]engine.ModuleOutput)
+	for out := range outputChan {
+		outputs[out.DataKey] = append(outputs[out.DataKey], out)
+	}
+
+	// Verify TLS protocol-level keys are emitted
+	if len(outputs["tls.version"]) == 0 {
+		t.Error("Expected tls.version to be emitted")
+	} else if outputs["tls.version"][0].Data != "TLS1.3" {
+		t.Errorf("tls.version = %v, want TLS1.3", outputs["tls.version"][0].Data)
+	}
+
+	if len(outputs["tls.cipher_suite"]) == 0 {
+		t.Error("Expected tls.cipher_suite to be emitted")
+	} else if outputs["tls.cipher_suite"][0].Data != "TLS_AES_128_GCM_SHA256" {
+		t.Errorf("tls.cipher_suite = %v, want TLS_AES_128_GCM_SHA256", outputs["tls.cipher_suite"][0].Data)
+	}
+
+	if len(outputs["tls.server_name"]) == 0 {
+		t.Error("Expected tls.server_name to be emitted")
+	} else if outputs["tls.server_name"][0].Data != "example.com" {
+		t.Errorf("tls.server_name = %v, want example.com", outputs["tls.server_name"][0].Data)
+	}
+
+	// Verify TLS certificate-level keys are emitted
+	if len(outputs["tls.certificate.issuer"]) == 0 {
+		t.Error("Expected tls.certificate.issuer to be emitted")
+	} else if outputs["tls.certificate.issuer"][0].Data != "CN=Let's Encrypt Authority X3" {
+		t.Errorf("tls.certificate.issuer = %v, want CN=Let's Encrypt Authority X3", outputs["tls.certificate.issuer"][0].Data)
+	}
+
+	if len(outputs["tls.certificate.common_name"]) == 0 {
+		t.Error("Expected tls.certificate.common_name to be emitted")
+	} else if outputs["tls.certificate.common_name"][0].Data != "example.com" {
+		t.Errorf("tls.certificate.common_name = %v, want example.com", outputs["tls.certificate.common_name"][0].Data)
+	}
+
+	if len(outputs["tls.certificate.dns_names"]) == 0 {
+		t.Error("Expected tls.certificate.dns_names to be emitted")
+	}
+
+	if len(outputs["tls.certificate.not_before"]) == 0 {
+		t.Error("Expected tls.certificate.not_before to be emitted")
+	} else if !outputs["tls.certificate.not_before"][0].Data.(time.Time).Equal(notBefore) {
+		t.Errorf("tls.certificate.not_before = %v, want %v", outputs["tls.certificate.not_before"][0].Data, notBefore)
+	}
+
+	if len(outputs["tls.certificate.not_after"]) == 0 {
+		t.Error("Expected tls.certificate.not_after to be emitted")
+	} else if !outputs["tls.certificate.not_after"][0].Data.(time.Time).Equal(notAfter) {
+		t.Errorf("tls.certificate.not_after = %v, want %v", outputs["tls.certificate.not_after"][0].Data, notAfter)
+	}
+
+	// Verify boolean flags (always emitted)
+	if len(outputs["tls.certificate.is_expired"]) == 0 {
+		t.Error("Expected tls.certificate.is_expired to be emitted")
+	} else if outputs["tls.certificate.is_expired"][0].Data != false {
+		t.Errorf("tls.certificate.is_expired = %v, want false", outputs["tls.certificate.is_expired"][0].Data)
+	}
+
+	if len(outputs["tls.certificate.is_self_signed"]) == 0 {
+		t.Error("Expected tls.certificate.is_self_signed to be emitted")
+	} else if outputs["tls.certificate.is_self_signed"][0].Data != false {
+		t.Errorf("tls.certificate.is_self_signed = %v, want false", outputs["tls.certificate.is_self_signed"][0].Data)
+	}
+
+	// Verify target is set correctly for all TLS keys
+	for key, outs := range outputs {
+		if strings.HasPrefix(key, "tls.") {
+			if len(outs) > 0 && outs[0].Target != "192.168.1.100" {
+				t.Errorf("TLS key %s has wrong target: %v, want 192.168.1.100", key, outs[0].Target)
+			}
+		}
+	}
+}
+
+// TestFingerprintParserModule_NoTLSMetadata tests that no TLS keys are emitted
+// when TLS metadata is not present.
+func TestFingerprintParserModule_NoTLSMetadata(t *testing.T) {
+	// Arrange
+	originalGetResolver := getResolver
+	defer func() { getResolver = originalGetResolver }()
+
+	getResolver = func() fingerprint.Resolver {
+		return mockResolver{
+			resolveFn: func(ctx context.Context, input fingerprint.Input) (fingerprint.Result, error) {
+				return fingerprint.Result{
+					Product:    "OpenSSH",
+					Version:    "8.9",
+					Confidence: 0.95,
+				}, nil
+			},
+		}
+	}
+
+	m := newFingerprintParserModule()
+	_ = m.Init("test-no-tls", nil)
+
+	// Create banner WITHOUT TLS metadata
+	banner := scan.BannerGrabResult{
+		IP:       "192.168.1.200",
+		Port:     22,
+		Protocol: "tcp",
+		Banner:   "SSH-2.0-OpenSSH_8.9",
+		Evidence: []engine.ProbeObservation{
+			{
+				Response: "SSH-2.0-OpenSSH_8.9p1",
+				Protocol: "ssh",
+				ProbeID:  "ssh-probe",
+				IsTLS:    false,
+				TLS:      nil, // No TLS metadata
+			},
+		},
+	}
+
+	inputs := map[string]interface{}{
+		"service.banner.tcp": []interface{}{banner},
+	}
+	outputChan := make(chan engine.ModuleOutput, 20)
+	ctx := context.Background()
+
+	// Act
+	err := m.Execute(ctx, inputs, outputChan)
+	close(outputChan)
+
+	// Assert
+	if err != nil {
+		t.Fatalf("Execute failed: %v", err)
+	}
+
+	// Collect all outputs
+	outputs := make(map[string][]engine.ModuleOutput)
+	for out := range outputChan {
+		outputs[out.DataKey] = append(outputs[out.DataKey], out)
+	}
+
+	// Verify NO TLS keys are emitted
+	tlsKeys := []string{
+		"tls.version", "tls.cipher_suite", "tls.server_name",
+		"tls.certificate.issuer", "tls.certificate.common_name",
+		"tls.certificate.dns_names", "tls.certificate.not_before",
+		"tls.certificate.not_after", "tls.certificate.is_expired",
+		"tls.certificate.is_self_signed",
+	}
+
+	for _, key := range tlsKeys {
+		if len(outputs[key]) > 0 {
+			t.Errorf("TLS key %s should not be emitted when TLS metadata is nil", key)
+		}
+	}
+
+	// Verify fingerprint data is still emitted
+	if len(outputs["service.fingerprint.details"]) == 0 {
+		t.Error("Expected service.fingerprint.details to be emitted")
+	}
+}
