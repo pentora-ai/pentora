@@ -1,3 +1,4 @@
+id: tls-self-signed-certificate
 name: TLS Self-Signed Certificate
 version: 1.0.0
 type: evaluation
@@ -20,15 +21,12 @@ triggers:
 match:
   logic: OR
   rules:
-    - field: tls.certificate.self_signed
+    - field: tls.certificate.is_self_signed
       operator: equals
       value: true
     - field: tls.certificate.issuer
       operator: equals
-      value: "{{tls.certificate.subject}}"
-    - field: tls.certificate.verified
-      operator: equals
-      value: false
+      value: "{{tls.certificate.common_name}}"
 
 output:
   vulnerability: true

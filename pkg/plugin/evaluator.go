@@ -7,6 +7,8 @@ package plugin
 import (
 	"fmt"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 // Evaluator evaluates plugins against a data context.
@@ -40,22 +42,42 @@ func (e *Evaluator) Evaluate(plugin *YAMLPlugin, context map[string]any) (*YAMLM
 		return nil, fmt.Errorf("trigger evaluation failed: %w", err)
 	}
 
+	log.Debug().
+		Str("plugin", plugin.Name).
+		Bool("should_trigger", shouldTrigger).
+		Msg("Plugin trigger evaluation result")
+
 	if !shouldTrigger {
 		// Plugin not triggered, skip evaluation
+		log.Debug().
+			Str("plugin", plugin.Name).
+			Msg("Plugin not triggered, skipping match evaluation")
 		result.ExecutionTime = time.Since(start)
 		return result, nil
 	}
 
 	// Evaluate match block if present
 	if plugin.Match != nil {
+		log.Debug().
+			Str("plugin", plugin.Name).
+			Msg("Evaluating match block")
+
 		matched, err := e.matcher.Evaluate(plugin.Match, context)
 		if err != nil {
 			return nil, fmt.Errorf("match evaluation failed: %w", err)
 		}
 
+		log.Debug().
+			Str("plugin", plugin.Name).
+			Bool("matched", matched).
+			Msg("Match evaluation result")
+
 		result.Matched = matched
 	} else {
 		// No match block means always match if triggered
+		log.Debug().
+			Str("plugin", plugin.Name).
+			Msg("No match block, always match when triggered")
 		result.Matched = true
 	}
 
@@ -67,6 +89,12 @@ func (e *Evaluator) Evaluate(plugin *YAMLPlugin, context map[string]any) (*YAMLM
 		if result.Output.Severity == "" {
 			result.Output.Severity = plugin.Metadata.Severity
 		}
+
+		log.Debug().
+			Str("plugin", plugin.Name).
+			Str("severity", string(result.Output.Severity)).
+			Str("message", result.Output.Message).
+			Msg("Plugin matched - vulnerability detected")
 	}
 
 	result.ExecutionTime = time.Since(start)

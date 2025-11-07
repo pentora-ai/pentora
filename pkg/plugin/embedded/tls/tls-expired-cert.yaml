@@ -1,3 +1,4 @@
+id: tls-expired-certificate
 name: TLS Expired Certificate
 version: 1.0.0
 type: evaluation
@@ -20,15 +21,9 @@ triggers:
 match:
   logic: OR
   rules:
-    - field: tls.certificate.expired
+    - field: tls.certificate.is_expired
       operator: equals
       value: true
-    - field: tls.certificate.not_after
-      operator: lt
-      value: "{{now}}"
-    - field: tls.certificate.days_until_expiry
-      operator: lte
-      value: 0
 
 output:
   vulnerability: true
