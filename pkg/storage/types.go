@@ -64,6 +64,14 @@ type ScanMetadata struct {
 
 	// UpdatedAt is when the scan metadata was last updated (UTC).
 	UpdatedAt time.Time `json:"updated_at"`
+
+	// Extensions is an opaque field for EE-specific metadata (org-scoped data, audit fields, etc.).
+	// CE: Ignored during serialization (json:"-"), never persisted to disk.
+	// EE: Persisted in PostgreSQL JSONB column for org-scoped queries.
+	//
+	// This field maintains CE/EE boundary: CE code never reads/writes it,
+	// EE can inject metadata without modifying CE types.
+	Extensions map[string]any `json:"-"`
 }
 
 // VulnCounts contains vulnerability counts by severity level.
@@ -101,6 +109,13 @@ type ScanFilter struct {
 	// SortOrder specifies sort direction.
 	// Valid values: "desc" (default), "asc"
 	SortOrder string
+
+	// Extensions is an opaque field for EE-specific filter criteria.
+	// CE: Ignored (field is unused in CE logic).
+	// EE: Used for extended filtering (e.g., license tier, audit metadata).
+	//
+	// This allows EE to extend filtering without modifying CE filter logic.
+	Extensions map[string]any `json:"-"`
 }
 
 // ScanUpdates specifies fields to update in a scan.
@@ -108,14 +123,15 @@ type ScanFilter struct {
 // Only non-zero fields are applied (partial update).
 // Use pointers for optional fields to distinguish zero value from "not set".
 type ScanUpdates struct {
-	Status          *string     `json:"status,omitempty"`
-	CompletedAt     *time.Time  `json:"completed_at,omitempty"`
-	Duration        *int        `json:"duration_seconds,omitempty"`
-	HostCount       *int        `json:"host_count,omitempty"`
-	ServiceCount    *int        `json:"service_count,omitempty"`
-	VulnCount       *VulnCounts `json:"vuln_count,omitempty"`
-	ErrorMessage    *string     `json:"error_message,omitempty"`
-	StorageLocation *string     `json:"storage_location,omitempty"`
+	Status          *string         `json:"status,omitempty"`
+	CompletedAt     *time.Time      `json:"completed_at,omitempty"`
+	Duration        *int            `json:"duration_seconds,omitempty"`
+	HostCount       *int            `json:"host_count,omitempty"`
+	ServiceCount    *int            `json:"service_count,omitempty"`
+	VulnCount       *VulnCounts     `json:"vuln_count,omitempty"`
+	ErrorMessage    *string         `json:"error_message,omitempty"`
+	StorageLocation *string         `json:"storage_location,omitempty"`
+	Extensions      *map[string]any `json:"-"`
 }
 
 // DataType represents the type of scan data file.
