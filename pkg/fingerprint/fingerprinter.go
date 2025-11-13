@@ -37,9 +37,28 @@ type ProbeExecutor interface {
 	Execute(ctx context.Context, probe Probe) ([]byte, error)
 }
 
+// Priority represents the selection priority of a fingerprinter.
+// Higher priority fingerprinters are preferred when multiple implementations exist.
+type Priority int
+
+const (
+	// PriorityBuiltin is the lowest priority for core built-in fingerprinters.
+	PriorityBuiltin Priority = 100
+
+	// PriorityExtended is for advanced fingerprinters with enhanced capabilities.
+	PriorityExtended Priority = 200
+
+	// PriorityCustom is for user-defined fingerprinters that override defaults.
+	PriorityCustom Priority = 300
+
+	// PriorityPlugin is the highest priority for plugin-provided fingerprinters.
+	PriorityPlugin Priority = 400
+)
+
 // Fingerprinter defines the behavior required for active/passive service identification modules.
 type Fingerprinter interface {
 	ID() string
+	Priority() Priority
 	SupportedProtocols() []string
 
 	// AnalyzePassive inspects the passive observation and may return a candidate. The boolean indicates

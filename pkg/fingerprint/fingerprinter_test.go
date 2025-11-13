@@ -12,6 +12,7 @@ func (m mockExecutor) Execute(ctx context.Context, probe Probe) ([]byte, error) 
 
 type fpMock struct {
 	id          string
+	priority    Priority
 	passiveCand *ServiceCandidate
 	passiveDone bool
 	passiveErr  error
@@ -26,6 +27,7 @@ type fpMock struct {
 }
 
 func (f *fpMock) ID() string                   { return f.id }
+func (f *fpMock) Priority() Priority           { return f.priority }
 func (f *fpMock) SupportedProtocols() []string { return nil }
 func (f *fpMock) AnalyzePassive(ctx context.Context, obs PassiveObservation) (*ServiceCandidate, bool, error) {
 	return f.passiveCand, f.passiveDone, f.passiveErr
