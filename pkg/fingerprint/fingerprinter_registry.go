@@ -1,3 +1,55 @@
+// Package fingerprint provides a secure, priority-based registry for service
+// fingerprinters with namespace validation and core protocol protection.
+//
+// # Registry Architecture
+//
+// The registry uses a map-based architecture with protocol indexing for O(1) lookups
+// and priority-based selection. All registration occurs at init time with fail-fast
+// panic semantics to catch configuration errors early.
+//
+// # Concurrency
+//
+// Registration occurs during init time only. Runtime access is read-only and protected
+// by sync.RWMutex. If dynamic registration is ever introduced, synchronization will
+// need to be re-evaluated.
+//
+// # Priority System
+//
+// Fingerprinters are selected by priority (highest first):
+//   - PriorityPlugin (400)   - Plugin-provided fingerprinters (highest)
+//   - PriorityCustom (300)   - User-defined fingerprinters
+//   - PriorityExtended (200) - Advanced fingerprinters with enhanced features
+//   - PriorityBuiltin (100)  - Core built-in fingerprinters (lowest)
+//
+// This allows safe extensibility: users and plugins can override default behavior
+// without modifying core code. Extended implementations cannot shadow core protocols
+// (ssh, http, https, smtp, ftp, dns) to prevent accidental security degradation.
+//
+// # Fail-Fast Semantics
+//
+// RegisterFingerprinter panics on configuration errors (invalid namespace, duplicate ID,
+// or extended override of core protocol). This is intentional: all registration is
+// deterministic and under our control during init(). Panics surface misconfigurations
+// immediately at startup rather than causing runtime failures.
+//
+// If third-party dynamic registration is ever needed, a graceful error path should
+// be introduced instead of panics.
+//
+// # Core Protocol Extensibility
+//
+// Core protocols (ssh, http, https, smtp, ftp, dns) are protected from extended overrides.
+// To add a new core protocol:
+//  1. Add the protocol to coreProtocols map
+//  2. Implement builtin.<protocol> fingerprinter
+//  3. Add test case to TestRegisterFingerprinter_CoreProtocolProtection
+//  4. Document the rationale in a code comment
+//
+// Example:
+//
+//	coreProtocols = map[string]bool{
+//	    "ssh": true,
+//	    "mqtt": true,  // Added: critical IoT protocol requiring protection
+//	}
 package fingerprint
 
 import (
@@ -191,22 +243,33 @@ func ListFingerprinters() []Fingerprinter {
 }
 
 // RegistryStats contains statistics about registered fingerprinters.
+//
+// This struct is stable and governed by SemVer. Adding fields is allowed
+// (non-breaking), but removing or renaming fields is a breaking change.
+// External tooling may consume this for monitoring and debugging.
 type RegistryStats struct {
-	Total          int
-	ByNamespace    map[string]int
-	ByProtocol     map[string]int
-	Fingerprinters []FingerprinterMeta
+	Total          int                 // Total number of registered fingerprinters
+	ByNamespace    map[string]int      // Count by namespace (builtin, extended, custom, plugin)
+	ByProtocol     map[string]int      // Count by protocol (ssh, http, etc.)
+	Fingerprinters []FingerprinterMeta // Metadata for each fingerprinter, sorted by priority
 }
 
 // FingerprinterMeta contains metadata about a registered fingerprinter.
+//
+// This struct is stable and governed by SemVer. Changes must maintain
+// backward compatibility for external tooling.
 type FingerprinterMeta struct {
-	ID        string   `json:"id"`
-	Namespace string   `json:"namespace"`
-	Protocol  string   `json:"protocol"`
-	Priority  Priority `json:"priority"`
+	ID        string   `json:"id"`        // Fully qualified ID (e.g., "builtin.ssh")
+	Namespace string   `json:"namespace"` // Namespace (builtin, extended, custom, plugin)
+	Protocol  string   `json:"protocol"`  // Protocol name (ssh, http, etc.)
+	Priority  Priority `json:"priority"`  // Priority level (100-400)
 }
 
 // GetRegistryStats returns statistics about registered fingerprinters.
+//
+// This function is safe to call concurrently and returns a snapshot of
+// the current registry state. The returned data is sorted by priority
+// (highest first) then by ID for deterministic output.
 func GetRegistryStats() RegistryStats {
 	registryMu.RLock()
 	defer registryMu.RUnlock()

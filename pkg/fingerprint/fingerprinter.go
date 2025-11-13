@@ -57,8 +57,23 @@ const (
 
 // Fingerprinter defines the behavior required for active/passive service identification modules.
 type Fingerprinter interface {
+	// ID returns the fully qualified fingerprinter identifier.
+	// Must use namespace prefix: builtin.*, extended.*, custom.*, or plugin.*
+	// Example: "builtin.ssh", "plugin.vendor-scanner"
 	ID() string
+
+	// Priority returns the selection priority for this fingerprinter.
+	// Expected values:
+	//   - PriorityBuiltin (100)  - Core built-in fingerprinters
+	//   - PriorityExtended (200) - Advanced fingerprinters
+	//   - PriorityCustom (300)   - User-defined fingerprinters
+	//   - PriorityPlugin (400)   - Plugin-provided fingerprinters
+	//
+	// When multiple fingerprinters are registered for the same protocol,
+	// the one with the highest priority is selected by GetFingerprinter().
 	Priority() Priority
+
+	// SupportedProtocols returns the list of protocols this fingerprinter can identify.
 	SupportedProtocols() []string
 
 	// AnalyzePassive inspects the passive observation and may return a candidate. The boolean indicates

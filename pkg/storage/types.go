@@ -65,12 +65,20 @@ type ScanMetadata struct {
 	// UpdatedAt is when the scan metadata was last updated (UTC).
 	UpdatedAt time.Time `json:"updated_at"`
 
-	// Extensions is an opaque field for EE-specific metadata (org-scoped data, audit fields, etc.).
-	// CE: Ignored during serialization (json:"-"), never persisted to disk.
-	// EE: Persisted in PostgreSQL JSONB column for org-scoped queries.
+	// Extensions is an opaque field for backend-specific metadata (org-scoped data, audit fields, etc.).
 	//
-	// This field maintains CE/EE boundary: CE code never reads/writes it,
-	// EE can inject metadata without modifying CE types.
+	// LocalBackend (single-tenant, file-based):
+	//   - Intentionally does not persist this field (json:"-" tag)
+	//   - Field is ignored during serialization to metadata.json
+	//   - Remains simple and single-tenant
+	//
+	// Multi-tenant backends (PostgreSQL + S3):
+	//   - Persisted in database JSONB column for org-scoped queries
+	//   - Enables multi-tenancy: filtering by organization, license tier, audit metadata
+	//   - Backend must persist and filter by Extensions to support multi-tenancy
+	//
+	// This maintains backend isolation: LocalBackend never reads/writes Extensions,
+	// multi-tenant backends can inject metadata without modifying core types.
 	Extensions map[string]any `json:"-"`
 }
 
@@ -110,11 +118,12 @@ type ScanFilter struct {
 	// Valid values: "desc" (default), "asc"
 	SortOrder string
 
-	// Extensions is an opaque field for EE-specific filter criteria.
-	// CE: Ignored (field is unused in CE logic).
-	// EE: Used for extended filtering (e.g., license tier, audit metadata).
+	// Extensions is an opaque field for backend-specific filter criteria.
 	//
-	// This allows EE to extend filtering without modifying CE filter logic.
+	// LocalBackend: Ignored (field is unused in single-tenant logic).
+	// Multi-tenant backends: Used for extended filtering (e.g., organization ID, license tier, audit metadata).
+	//
+	// This allows multi-tenant backends to extend filtering without modifying core filter logic.
 	Extensions map[string]any `json:"-"`
 }
 
