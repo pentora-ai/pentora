@@ -47,7 +47,7 @@ vulntor version
 
 ```bash
 # Download latest release
-curl -LO https://github.com/vulntor-ai/vulntor/releases/latest/download/vulntor-linux-amd64.tar.gz
+curl -LO https://github.com/vulntor/vulntor/releases/latest/download/vulntor-linux-amd64.tar.gz
 
 # Extract
 tar -xzf vulntor-linux-amd64.tar.gz
@@ -66,7 +66,7 @@ vulntor version
 
 ```bash
 # Download
-curl -LO https://github.com/vulntor-ai/vulntor/releases/latest/download/vulntor-darwin-amd64.tar.gz
+curl -LO https://github.com/vulntor/vulntor/releases/latest/download/vulntor-darwin-amd64.tar.gz
 
 # Extract and install
 tar -xzf vulntor-darwin-amd64.tar.gz
@@ -84,7 +84,7 @@ vulntor version
 
 ```bash
 # Download ARM64 version
-curl -LO https://github.com/vulntor-ai/vulntor/releases/latest/download/vulntor-darwin-arm64.tar.gz
+curl -LO https://github.com/vulntor/vulntor/releases/latest/download/vulntor-darwin-arm64.tar.gz
 
 # Extract and install
 tar -xzf vulntor-darwin-arm64.tar.gz
@@ -100,7 +100,7 @@ vulntor version
 
 ```powershell
 # Download
-Invoke-WebRequest -Uri https://github.com/vulntor-ai/vulntor/releases/latest/download/vulntor-windows-amd64.zip -OutFile vulntor.zip
+Invoke-WebRequest -Uri https://github.com/vulntor/vulntor/releases/latest/download/vulntor-windows-amd64.zip -OutFile vulntor.zip
 
 # Extract
 Expand-Archive vulntor.zip -DestinationPath "C:\Program Files\Vulntor"

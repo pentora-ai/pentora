@@ -36,6 +36,7 @@ Thank you for your interest in contributing to Vulntor! This guide explains how 
 ## Branching and PR Workflow
 
 1. **Sync with upstream**
+
    ```bash
    git checkout main
    git fetch upstream main
@@ -44,36 +45,43 @@ Thank you for your interest in contributing to Vulntor! This guide explains how 
    ```
 
 2. **Create a feature branch**
+
    ```bash
    git checkout -b feat/<short-name>
    # Or: fix/, test/, refactor/, docs/, chore/
    ```
 
 3. **Develop incrementally**
+
    - Commit in small, meaningful slices using Conventional Commits (see below)
    - Write tests for all new/modified code
    - Keep your branch up to date with main
 
 4. **MANDATORY: Run quality checks before commit**
+
    ```bash
    make test      # MUST PASS
    make validate  # MUST PASS (lint + format + spell check + shell scripts)
    ```
+
    **Never skip these checks!** CI will fail if they don't pass locally first.
 
 5. **Push and create PR**
+
    ```bash
    git push origin feat/<short-name>
-   gh pr create --repo vulntor-ai/vulntor --web
+   gh pr create --repo vulntor/vulntor --web
    ```
 
    **PR description should include**:
+
    - **Problem**: What's broken or missing
    - **Changes**: Key changes (not file-by-file diffs)
    - **Testing**: What tests added, how verified
    - **Related**: `Resolves #<issue-number>`
 
 6. **Review cycle**
+
    - Wait for review from maintainers (weissarc, jonaserflow)
    - Address feedback
    - Push updates (PR updates automatically)
@@ -99,6 +107,7 @@ Use Conventional Commit prefixes to keep history consistent and searchable:
 - `chore:` tooling, build, or maintenance
 
 Examples:
+
 - `feat: add TCP banner capture module`
 - `fix(scanner): handle empty target list`
 - `refactor(engine): simplify DAG node scheduling`
@@ -135,6 +144,7 @@ return formatter.PrintTotalFailureSummary(operation, err, plugin.ErrorCode(err))
 ### Examples
 
 ❌ **BAD** (inconsistent, no error code):
+
 ```go
 if err != nil {
     return formatter.PrintError(err)
@@ -142,6 +152,7 @@ if err != nil {
 ```
 
 ✅ **GOOD** (standardized, includes error code and summary):
+
 ```go
 if err != nil {
     return formatter.PrintTotalFailureSummary("install", err, plugin.ErrorCode(err))
@@ -183,17 +194,20 @@ When adding new command families:
 ## Build, Lint, and Validate
 
 **Preferred**: Run without building (faster development):
+
 ```bash
 go run ./cmd <command>
 # Example: go run ./cmd scan --targets 192.168.1.1
 ```
 
 **Build to dist/** (if needed):
+
 ```bash
 make binary  # Outputs to dist/<GOOS>/<GOARCH>/vulntor
 ```
 
 **Quality checks** (MANDATORY before commit):
+
 ```bash
 make fmt       # Auto-format code
 make test      # Run unit tests - MUST PASS
@@ -216,6 +230,7 @@ make fmt
 ```
 
 **Integration tests** (optional, recommended before PR):
+
 ```bash
 make test-integration  # Run with -tags=integration
 make test-all          # Run both unit + integration tests

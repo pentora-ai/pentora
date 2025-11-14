@@ -794,7 +794,7 @@ vulntor version > /tmp/vulntor-version-pre-upgrade.txt
 sudo systemctl stop vulntor
 
 # Download new version
-curl -LO https://github.com/vulntor-ai/vulntor/releases/latest/download/vulntor-linux-amd64.tar.gz
+curl -LO https://github.com/vulntor/vulntor/releases/latest/download/vulntor-linux-amd64.tar.gz
 
 # Extract and install
 tar -xzf vulntor-linux-amd64.tar.gz
