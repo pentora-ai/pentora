@@ -189,11 +189,11 @@ func defaultSources() []PluginSource {
 	return []PluginSource{
 		{
 			Name:     "official",
-			URL:      "https://plugins.vulntor.ai/manifest.yaml",
+			URL:      "https://plugins.pentora.ai/manifest.yaml",
 			Enabled:  true,
 			Priority: 1,
 			Mirrors: []string{
-				"https://raw.githubusercontent.com/vulntor-ai/vulntor-plugins/main/manifest.yaml",
+				"https://raw.githubusercontent.com/pentora-ai/pentora-plugins/main/manifest.yaml",
 			},
 		},
 	}

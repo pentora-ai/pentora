@@ -79,7 +79,7 @@ func TestDefaultSources(t *testing.T) {
 
 		require.Len(t, sources, 1)
 		require.Equal(t, "official", sources[0].Name)
-		require.Equal(t, "https://plugins.vulntor.ai/manifest.yaml", sources[0].URL)
+		require.Equal(t, "https://plugins.pentora.ai/manifest.yaml", sources[0].URL)
 		require.True(t, sources[0].Enabled)
 		require.Equal(t, 1, sources[0].Priority)
 	})

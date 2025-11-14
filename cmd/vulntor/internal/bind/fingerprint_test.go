@@ -43,12 +43,12 @@ func TestBindFingerprintOptions(t *testing.T) {
 			name: "only url set",
 			flags: map[string]interface{}{
 				"file":      "",
-				"url":       "https://probes.vulntor.ai/catalog.yaml",
+				"url":       "https://probes.pentora.ai/catalog.yaml",
 				"cache-dir": "",
 			},
 			want: FingerprintOptions{
 				FilePath: "",
-				URL:      "https://probes.vulntor.ai/catalog.yaml",
+				URL:      "https://probes.pentora.ai/catalog.yaml",
 				CacheDir: "",
 			},
 			wantErr: false,

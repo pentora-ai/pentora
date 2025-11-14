@@ -10,7 +10,7 @@ package plugin
 // ValidSources defines the allowed plugin source names.
 // These are the officially supported plugin repositories.
 var ValidSources = []string{
-	"official", // Official Vulntor plugin repository (plugins.vulntor.ai)
+	"official", // Official Pentora plugin repository (plugins.pentora.ai) - TODO: Update to Vulntor after migration
 	"github",   // GitHub mirror fallback
 }
 
