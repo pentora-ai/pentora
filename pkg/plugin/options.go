@@ -1,4 +1,4 @@
-// Copyright 2025 Pentora Authors
+// Copyright 2025 Vulntor Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 
@@ -7,7 +7,7 @@ package plugin
 import (
 	"github.com/rs/zerolog"
 
-	"github.com/pentora-ai/pentora/pkg/storage"
+	"github.com/vulntor/vulntor/pkg/storage"
 )
 
 // ServiceOption is a functional option for configuring Service.
@@ -36,12 +36,12 @@ type serviceOptions struct {
 
 // WithCacheDir sets the plugin cache directory.
 //
-// Default: ~/.pentora/plugins/cache (Linux) or ~/Library/Application Support/Pentora/plugins/cache (macOS)
+// Default: ~/.vulntor/plugins/cache (Linux) or ~/Library/Application Support/Vulntor/plugins/cache (macOS)
 //
 // Example:
 //
 //	svc, err := plugin.NewService(
-//	    plugin.WithCacheDir("/var/cache/pentora/plugins"),
+//	    plugin.WithCacheDir("/var/cache/vulntor/plugins"),
 //	)
 func WithCacheDir(dir string) ServiceOption {
 	return func(opts *serviceOptions) {
@@ -108,7 +108,7 @@ func WithStorage(backend storage.Backend) ServiceOption {
 //
 // This allows using alternative plugin repositories or mirrors.
 //
-// Default: Official Pentora plugin repository
+// Default: Official Vulntor plugin repository
 //
 // Note: This is different from downloader.WithSources() which configures
 // the downloader component. This option configures the service-level sources.

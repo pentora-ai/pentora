@@ -1,4 +1,4 @@
-// Copyright 2025 Pentora Authors
+// Copyright 2025 Vulntor Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 
@@ -15,7 +15,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"github.com/pentora-ai/pentora/pkg/storage"
+	"github.com/vulntor/vulntor/pkg/storage"
 )
 
 const (
@@ -92,7 +92,7 @@ type Service struct {
 // All options are optional - sensible defaults are used when not specified.
 //
 // Returns a fully configured service with defaults:
-//   - CacheManager for managing cached plugins (~/.pentora/plugins/cache)
+//   - CacheManager for managing cached plugins (~/.vulntor/plugins/cache)
 //   - ManifestManager for tracking installed plugins
 //   - Default plugin sources (official repository)
 //   - Default logger (zerolog)
@@ -136,7 +136,7 @@ func NewService(opts ...ServiceOption) (*Service, error) {
 		if err != nil {
 			return nil, fmt.Errorf("get home directory: %w", err)
 		}
-		config.cacheDir = filepath.Join(homeDir, ".pentora", "plugins", "cache")
+		config.cacheDir = filepath.Join(homeDir, ".vulntor", "plugins", "cache")
 	}
 
 	if config.logger == nil {
@@ -184,16 +184,16 @@ func NewService(opts ...ServiceOption) (*Service, error) {
 
 // defaultSources returns the default plugin sources.
 //
-// By default, we use the official Pentora plugin repository with a GitHub mirror.
+// By default, we use the official Vulntor plugin repository with a GitHub mirror.
 func defaultSources() []PluginSource {
 	return []PluginSource{
 		{
 			Name:     "official",
-			URL:      "https://plugins.pentora.ai/manifest.yaml",
+			URL:      "https://plugins.vulntor.ai/manifest.yaml",
 			Enabled:  true,
 			Priority: 1,
 			Mirrors: []string{
-				"https://raw.githubusercontent.com/pentora-ai/pentora-plugins/main/manifest.yaml",
+				"https://raw.githubusercontent.com/vulntor-ai/vulntor-plugins/main/manifest.yaml",
 			},
 		},
 	}

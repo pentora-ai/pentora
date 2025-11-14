@@ -47,7 +47,7 @@ func WithErrorCode(err error, code string) error {
 	return &codedError{error: err, code: code}
 }
 
-// ErrorCode resolves a pentora scan error into a CLI error code.
+// ErrorCode resolves a vulntor scan error into a CLI error code.
 func ErrorCode(err error) string {
 	if err == nil {
 		return ""
@@ -109,18 +109,18 @@ func Suggestions(err error) []string {
 	switch ErrorCode(err) {
 	case errorCodeInvalidTarget:
 		return []string{
-			"Provide a target:           pentora scan 192.168.1.0/24",
-			"Scan multiple hosts:        pentora scan 10.0.0.1 10.0.0.2",
+			"Provide a target:           vulntor scan 192.168.1.0/24",
+			"Scan multiple hosts:        vulntor scan 10.0.0.1 10.0.0.2",
 		}
 	case errorCodeConflictingDiscovery:
 		return []string{
 			"Remove either --only-discover or --no-discover",
-			"Run help for options:       pentora scan --help",
+			"Run help for options:       vulntor scan --help",
 		}
 	default:
 		return []string{
-			"Retry with verbose logs:    pentora scan <target> --verbose",
-			"Enable progress output:     pentora scan <target> --progress",
+			"Retry with verbose logs:    vulntor scan <target> --verbose",
+			"Enable progress output:     vulntor scan <target> --progress",
 		}
 	}
 }

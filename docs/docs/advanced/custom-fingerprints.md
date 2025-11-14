@@ -51,8 +51,8 @@ fingerprints:
 ## Testing Rules
 
 ```bash
-pentora fingerprint validate custom-rules.yaml
-pentora fingerprint test custom-rules.yaml sample-banner.txt
+vulntor fingerprint validate custom-rules.yaml
+vulntor fingerprint test custom-rules.yaml sample-banner.txt
 ```
 
 See [Fingerprint Command](/cli/fingerprint) for management tools.

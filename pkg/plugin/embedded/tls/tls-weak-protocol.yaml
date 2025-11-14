@@ -1,7 +1,7 @@
 name: TLS Weak Protocol Version
 version: 1.0.0
 type: evaluation
-author: pentora-security
+author: vulntor-security
 
 metadata:
   severity: critical

@@ -1,12 +1,12 @@
 # Your First Scan
 
-This guide walks you through running your first scan with Pentora, from installation to viewing results.
+This guide walks you through running your first scan with Vulntor, from installation to viewing results.
 
 ## Prerequisites
 
 Before starting your first scan, ensure you have:
 
-- Pentora installed on your system
+- Vulntor installed on your system
 - Appropriate network permissions to scan target systems
 - Authorization to scan the target networks (never scan without permission)
 
@@ -14,10 +14,10 @@ Before starting your first scan, ensure you have:
 
 ### Step 1: Verify Installation
 
-First, verify that Pentora is correctly installed:
+First, verify that Vulntor is correctly installed:
 
 ```bash
-pentora version
+vulntor version
 ```
 
 You should see version information and build details.
@@ -27,7 +27,7 @@ You should see version information and build details.
 Start with a basic discovery scan to identify live hosts:
 
 ```bash
-pentora scan --targets 192.168.1.0/24 --only-discover
+vulntor scan --targets 192.168.1.0/24 --only-discover
 ```
 
 This command will:
@@ -40,7 +40,7 @@ This command will:
 ```
 [INFO] Starting discovery scan for 192.168.1.0/24
 [INFO] Found 15 live hosts
-[INFO] Results saved to storage: ~/.local/share/pentora/scans/<scan-id>/
+[INFO] Results saved to storage: ~/.local/share/vulntor/scans/<scan-id>/
 ```
 
 ### Step 3: Run a Full Port Scan
@@ -48,7 +48,7 @@ This command will:
 Once you've identified live hosts, run a comprehensive scan:
 
 ```bash
-pentora scan --targets 192.168.1.100
+vulntor scan --targets 192.168.1.100
 ```
 
 This performs the complete scan pipeline:
@@ -62,7 +62,7 @@ This performs the complete scan pipeline:
 
 ### Step 4: Understanding Results
 
-Scan results are stored in your storage directory (default: `~/.local/share/pentora/scans/<scan-id>/`):
+Scan results are stored in your storage directory (default: `~/.local/share/vulntor/scans/<scan-id>/`):
 
 ```
 scans/
@@ -76,7 +76,7 @@ scans/
 View results directly:
 
 ```bash
-cat ~/.local/share/pentora/scans/<scan-id>/results.jsonl | jq
+cat ~/.local/share/vulntor/scans/<scan-id>/results.jsonl | jq
 ```
 
 ### Step 5: Run Vulnerability Assessment
@@ -84,7 +84,7 @@ cat ~/.local/share/pentora/scans/<scan-id>/results.jsonl | jq
 Enable vulnerability checks to identify security issues:
 
 ```bash
-pentora scan --targets 192.168.1.100 --vuln
+vulntor scan --targets 192.168.1.100 --vuln
 ```
 
 The `--vuln` flag activates vulnerability evaluation modules that:
@@ -101,22 +101,22 @@ Multiple formats are supported:
 
 ```bash
 # Single IP
-pentora scan --targets 192.168.1.100
+vulntor scan --targets 192.168.1.100
 
 # CIDR notation
-pentora scan --targets 192.168.1.0/24
+vulntor scan --targets 192.168.1.0/24
 
 # IP range
-pentora scan --targets 192.168.1.1-192.168.1.254
+vulntor scan --targets 192.168.1.1-192.168.1.254
 
 # Hostname
-pentora scan --targets example.com
+vulntor scan --targets example.com
 
 # Multiple targets (comma-separated)
-pentora scan --targets "192.168.1.100,192.168.1.200,10.0.0.1/24"
+vulntor scan --targets "192.168.1.100,192.168.1.200,10.0.0.1/24"
 
 # From file
-pentora scan --target-file targets.txt
+vulntor scan --target-file targets.txt
 ```
 
 ### Controlling Scan Phases
@@ -125,13 +125,13 @@ Control which phases execute:
 
 ```bash
 # Discovery only (identify live hosts)
-pentora scan --targets 192.168.1.0/24 --only-discover
+vulntor scan --targets 192.168.1.0/24 --only-discover
 
 # Skip discovery (targets known to be live)
-pentora scan --targets 192.168.1.100 --no-discover
+vulntor scan --targets 192.168.1.100 --no-discover
 
 # Full scan with vulnerability checks
-pentora scan --targets 192.168.1.100 --vuln
+vulntor scan --targets 192.168.1.100 --vuln
 ```
 
 ### Scan Profiles
@@ -140,16 +140,16 @@ Use predefined profiles for common scenarios:
 
 ```bash
 # Quick scan (top 100 ports)
-pentora scan --targets 192.168.1.100 --profile quick
+vulntor scan --targets 192.168.1.100 --profile quick
 
 # Standard scan (top 1000 ports)
-pentora scan --targets 192.168.1.100 --profile standard
+vulntor scan --targets 192.168.1.100 --profile standard
 
 # Deep scan (all 65535 ports)
-pentora scan --targets 192.168.1.100 --profile deep
+vulntor scan --targets 192.168.1.100 --profile deep
 
 # Web application focus
-pentora scan --targets example.com --profile webapp
+vulntor scan --targets example.com --profile webapp
 ```
 
 ### Storage Control
@@ -158,20 +158,20 @@ Manage where scan data is stored:
 
 ```bash
 # Use custom storage directory
-pentora scan --targets 192.168.1.100 --storage-dir /path/to/storage
+vulntor scan --targets 192.168.1.100 --storage-dir /path/to/storage
 
 # Disable storage (stateless mode, no persistence)
-pentora scan --targets 192.168.1.100 --no-storage
+vulntor scan --targets 192.168.1.100 --no-storage
 
 # Clean old scans
-pentora storage gc --older-than 30d
+vulntor storage gc --older-than 30d
 ```
 
 ## Understanding Output
 
 ### Terminal Output
 
-During execution, Pentora displays:
+During execution, Vulntor displays:
 
 ```
 [INFO] Scan started: scan-20231006-143022
@@ -181,7 +181,7 @@ During execution, Pentora displays:
 [INFO] Fingerprinting: 5 services identified
 [INFO] Vulnerability checks: 2 issues found
 [INFO] Scan complete in 45s
-[INFO] Results: ~/.local/share/pentora/scans/20231006-143022-a1b2c3/
+[INFO] Results: ~/.local/share/vulntor/scans/20231006-143022-a1b2c3/
 ```
 
 ### JSON Results
@@ -228,7 +228,7 @@ If you encounter permission errors:
 
 ```bash
 # Run with sudo for raw socket access (required for ICMP)
-sudo pentora scan --targets 192.168.1.0/24
+sudo vulntor scan --targets 192.168.1.0/24
 ```
 
 ### No Hosts Found

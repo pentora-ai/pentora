@@ -6,9 +6,9 @@ package engine
 import (
 	"context"
 
-	"github.com/pentora-ai/pentora/pkg/config"
-	"github.com/pentora-ai/pentora/pkg/event"
-	"github.com/pentora-ai/pentora/pkg/hook"
+	"github.com/vulntor/vulntor/pkg/config"
+	"github.com/vulntor/vulntor/pkg/event"
+	"github.com/vulntor/vulntor/pkg/hook"
 )
 
 // Manager exposes core application services and lifecycle control.

@@ -1,10 +1,10 @@
 # Core Concepts Overview
 
-Pentora is a modular, high-performance security scanner that rapidly discovers network services, captures banners, and maps findings into vulnerability intelligence. This page introduces the fundamental concepts that power Pentora.
+Vulntor is a modular, high-performance security scanner that rapidly discovers network services, captures banners, and maps findings into vulnerability intelligence. This page introduces the fundamental concepts that power Vulntor.
 
-## What is Pentora?
+## What is Vulntor?
 
-Pentora provides a structured approach to security scanning through:
+Vulntor provides a structured approach to security scanning through:
 
 - **Modular architecture**: Composable scan modules organized in a directed acyclic graph (DAG)
 - **Layered fingerprinting**: Multi-stage protocol detection with confidence scoring
@@ -42,15 +42,15 @@ The storage directory is a shared directory structure that stores:
 - **Cache**: Fingerprint databases, temporary data
 
 Default locations:
-- **Linux**: `~/.local/share/pentora` (follows XDG Base Directory spec)
-- **macOS**: `~/Library/Application Support/Pentora`
-- **Windows**: `%AppData%\Pentora`
+- **Linux**: `~/.local/share/vulntor` (follows XDG Base Directory spec)
+- **macOS**: `~/Library/Application Support/Vulntor`
+- **Windows**: `%AppData%\Vulntor`
 
 See [Storage Concept](/concepts/storage) for structure details.
 
 ### 3. DAG Engine
 
-Pentora's execution engine uses a directed acyclic graph (DAG) to:
+Vulntor's execution engine uses a directed acyclic graph (DAG) to:
 
 - Define module dependencies
 - Enable parallel execution where possible
@@ -87,14 +87,14 @@ Modules are the building blocks of scans:
 - **Reporter modules**: Output generation
 
 Modules can be:
-- **Embedded**: Compiled into Pentora binary (Go code)
+- **Embedded**: Compiled into Vulntor binary (Go code)
 - **External**: Isolated plugins (gRPC/WASM) with signature verification
 
 See [Module System](/concepts/modules) for details.
 
 ### 5. Fingerprinting System
 
-Pentora uses a layered approach to service identification:
+Vulntor uses a layered approach to service identification:
 
 1. **Initial heuristics**: Port number, initial banner
 2. **Protocol-specific probes**: HTTP requests, TLS handshakes, IMAP CAPABILITY
@@ -130,7 +130,7 @@ See [Fingerprinting System](/concepts/fingerprinting) for probe details.
 Direct execution for immediate results:
 
 ```bash
-pentora scan --targets 192.168.1.0/24
+vulntor scan --targets 192.168.1.0/24
 ```
 
 - No daemon required
@@ -143,7 +143,7 @@ pentora scan --targets 192.168.1.0/24
 Long-running daemon for automated scanning:
 
 ```bash
-pentora server start
+vulntor server start
 ```
 
 - REST API for scan submission
@@ -186,12 +186,12 @@ See [Data Flow](/architecture/data-flow) for implementation.
 
 ## Configuration Model
 
-Pentora uses a hierarchical configuration system:
+Vulntor uses a hierarchical configuration system:
 
 1. **Default values**: Compiled-in defaults
-2. **System config**: `/etc/pentora/config.yaml` (Linux) or OS equivalent
-3. **User config**: `~/.config/pentora/config.yaml`
-4. **Storage config**: `<storage>/config/pentora.yaml`
+2. **System config**: `/etc/vulntor/config.yaml` (Linux) or OS equivalent
+3. **User config**: `~/.config/vulntor/config.yaml`
+4. **Storage config**: `<storage>/config/vulntor.yaml`
 5. **CLI flags**: Override all file-based settings
 
 Configuration sections:
@@ -253,8 +253,8 @@ See [Enterprise Overview](/enterprise/overview) for feature matrix.
 Identify all live hosts and services on a network segment:
 
 ```bash
-pentora scan --targets 10.0.0.0/16 --only-discover
-pentora scan --targets @discovered --profile standard
+vulntor scan --targets 10.0.0.0/16 --only-discover
+vulntor scan --targets @discovered --profile standard
 ```
 
 ### Vulnerability Assessment
@@ -262,7 +262,7 @@ pentora scan --targets @discovered --profile standard
 Find CVEs and misconfigurations:
 
 ```bash
-pentora scan --targets critical-servers.txt --vuln --profile deep
+vulntor scan --targets critical-servers.txt --vuln --profile deep
 ```
 
 ### Compliance Auditing
@@ -270,7 +270,7 @@ pentora scan --targets critical-servers.txt --vuln --profile deep
 Check against regulatory frameworks (Enterprise):
 
 ```bash
-pentora scan --targets dmz.txt --compliance cis-level1
+vulntor scan --targets dmz.txt --compliance cis-level1
 ```
 
 ### Continuous Monitoring

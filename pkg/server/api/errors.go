@@ -7,8 +7,8 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/pentora-ai/pentora/pkg/plugin"
-	"github.com/pentora-ai/pentora/pkg/storage"
+	"github.com/vulntor/vulntor/pkg/plugin"
+	"github.com/vulntor/vulntor/pkg/storage"
 )
 
 // Note on API Error DTOs and Evolution Policy

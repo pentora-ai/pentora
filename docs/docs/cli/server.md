@@ -1,16 +1,16 @@
-# pentora server
+# vulntor server
 
-Control Pentora server daemon for centralized scan orchestration.
+Control Vulntor server daemon for centralized scan orchestration.
 
 ## Synopsis
 
 ```bash
-pentora server <subcommand> [flags]
+vulntor server <subcommand> [flags]
 ```
 
 ## Description
 
-The `server` command manages the Pentora server daemon, which provides:
+The `server` command manages the Vulntor server daemon, which provides:
 - REST API for scan submission
 - Job queue and scheduler
 - Worker pools for distributed scanning (Enterprise)
@@ -21,10 +21,10 @@ The `server` command manages the Pentora server daemon, which provides:
 
 ### start
 
-Start Pentora server.
+Start Vulntor server.
 
 ```bash
-pentora server start [flags]
+vulntor server start [flags]
 ```
 
 **Flags**:
@@ -36,24 +36,24 @@ pentora server start [flags]
 **Examples**:
 ```bash
 # Start server on default port
-pentora server start
+vulntor server start
 
 # Custom bind address
-pentora server start --bind 127.0.0.1:9090
+vulntor server start --bind 127.0.0.1:9090
 
 # Run as daemon
-pentora server start --daemon --pid-file /var/run/pentora.pid
+vulntor server start --daemon --pid-file /var/run/vulntor.pid
 
 # With custom workers
-pentora server start --workers 8
+vulntor server start --workers 8
 ```
 
 ### stop
 
-Stop running Pentora server.
+Stop running Vulntor server.
 
 ```bash
-pentora server stop
+vulntor server stop
 ```
 
 **Flags**:
@@ -63,13 +63,13 @@ pentora server stop
 **Examples**:
 ```bash
 # Graceful stop
-pentora server stop
+vulntor server stop
 
 # Force stop
-pentora server stop --force
+vulntor server stop --force
 
 # Custom timeout
-pentora server stop --timeout 60s
+vulntor server stop --timeout 60s
 ```
 
 ### status
@@ -77,12 +77,12 @@ pentora server stop --timeout 60s
 Check server status.
 
 ```bash
-pentora server status
+vulntor server status
 ```
 
 **Output**:
 ```
-Pentora Server Status
+Vulntor Server Status
 ---------------------
 Status: running
 Uptime: 5 days, 3 hours
@@ -100,10 +100,10 @@ Total scans: 1,234
 **Examples**:
 ```bash
 # Text status
-pentora server status
+vulntor server status
 
 # JSON status
-pentora server status --format json
+vulntor server status --format json
 ```
 
 ### restart
@@ -111,7 +111,7 @@ pentora server status --format json
 Restart server (stop then start).
 
 ```bash
-pentora server restart
+vulntor server restart
 ```
 
 **Flags**:
@@ -120,10 +120,10 @@ pentora server restart
 **Examples**:
 ```bash
 # Graceful restart
-pentora server restart
+vulntor server restart
 
 # Force restart
-pentora server restart --force
+vulntor server restart --force
 ```
 
 ### logs
@@ -131,7 +131,7 @@ pentora server restart --force
 Display server logs.
 
 ```bash
-pentora server logs [flags]
+vulntor server logs [flags]
 ```
 
 **Flags**:
@@ -143,19 +143,19 @@ pentora server logs [flags]
 **Examples**:
 ```bash
 # Show last 100 lines
-pentora server logs
+vulntor server logs
 
 # Follow logs
-pentora server logs --follow
+vulntor server logs --follow
 
 # Last 1000 lines
-pentora server logs --tail 1000
+vulntor server logs --tail 1000
 
 # Since 1 hour ago
-pentora server logs --since 1h
+vulntor server logs --since 1h
 
 # Errors only
-pentora server logs --level error
+vulntor server logs --level error
 ```
 
 ### reload
@@ -163,7 +163,7 @@ pentora server logs --level error
 Reload server configuration without restart.
 
 ```bash
-pentora server reload
+vulntor server reload
 ```
 
 Reloads:
@@ -178,7 +178,7 @@ Does not reload:
 **Examples**:
 ```bash
 # Reload config
-pentora server reload
+vulntor server reload
 ```
 
 ## Configuration
@@ -186,7 +186,7 @@ pentora server reload
 Server configuration via YAML:
 
 ```yaml
-# ~/.config/pentora/config.yaml
+# ~/.config/vulntor/config.yaml
 server:
   bind: 0.0.0.0:8080
   workers: 4
@@ -197,14 +197,14 @@ server:
   ui:
     enabled: true
     path: /ui
-    static_dir: /usr/share/pentora/ui
+    static_dir: /usr/share/vulntor/ui
   tls:
     enabled: false
-    cert_file: /etc/pentora/tls/cert.pem
-    key_file: /etc/pentora/tls/key.pem
+    cert_file: /etc/vulntor/tls/cert.pem
+    key_file: /etc/vulntor/tls/key.pem
   cors:
     enabled: true
-    origins: ["https://pentora.company.com"]
+    origins: ["https://vulntor.company.com"]
   queue:
     max_jobs: 1000
     retention: 7d
@@ -218,20 +218,20 @@ server:
 
 ### Service File
 
-`/etc/systemd/system/pentora.service`:
+`/etc/systemd/system/vulntor.service`:
 
 ```ini
 [Unit]
-Description=Pentora Security Scanner Server
+Description=Vulntor Security Scanner Server
 After=network.target
 
 [Service]
 Type=simple
-User=pentora
-Group=pentora
-WorkingDirectory=/var/lib/pentora
-ExecStart=/usr/local/bin/pentora server start --bind 0.0.0.0:8080
-ExecStop=/usr/local/bin/pentora server stop
+User=vulntor
+Group=vulntor
+WorkingDirectory=/var/lib/vulntor
+ExecStart=/usr/local/bin/vulntor server start --bind 0.0.0.0:8080
+ExecStop=/usr/local/bin/vulntor server stop
 Restart=on-failure
 RestartSec=5s
 
@@ -240,7 +240,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/var/lib/pentora /var/log/pentora
+ReadWritePaths=/var/lib/vulntor /var/log/vulntor
 
 # Resources
 LimitNOFILE=65536
@@ -254,22 +254,22 @@ WantedBy=multi-user.target
 
 ```bash
 # Enable service
-sudo systemctl enable pentora
+sudo systemctl enable vulntor
 
 # Start service
-sudo systemctl start pentora
+sudo systemctl start vulntor
 
 # Check status
-sudo systemctl status pentora
+sudo systemctl status vulntor
 
 # View logs
-sudo journalctl -u pentora -f
+sudo journalctl -u vulntor -f
 
 # Restart service
-sudo systemctl restart pentora
+sudo systemctl restart vulntor
 
 # Stop service
-sudo systemctl stop pentora
+sudo systemctl stop vulntor
 ```
 
 ## API Endpoints
@@ -305,11 +305,11 @@ Enable HTTPS:
 server:
   tls:
     enabled: true
-    cert_file: /etc/pentora/tls/cert.pem
-    key_file: /etc/pentora/tls/key.pem
+    cert_file: /etc/vulntor/tls/cert.pem
+    key_file: /etc/vulntor/tls/key.pem
     # Optional: Client certificate authentication
     client_auth: false
-    client_ca_file: /etc/pentora/tls/ca.pem
+    client_ca_file: /etc/vulntor/tls/ca.pem
 ```
 
 Generate self-signed certificate:
@@ -325,13 +325,13 @@ openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -node
 Generate API token:
 
 ```bash
-pentora server token create --name "CI Pipeline" --scopes scan:read,scan:write
+vulntor server token create --name "CI Pipeline" --scopes scan:read,scan:write
 ```
 
 Use token:
 
 ```bash
-curl -H "Authorization: Bearer <token>" https://pentora.company.com/api/v1/scans
+curl -H "Authorization: Bearer <token>" https://vulntor.company.com/api/v1/scans
 ```
 
 ### SSO Integration (Enterprise)
@@ -344,9 +344,9 @@ server:
     provider: oidc
     oidc:
       issuer: https://auth.company.com
-      client_id: pentora
+      client_id: vulntor
       client_secret: ${OIDC_SECRET}
-      redirect_url: https://pentora.company.com/auth/callback
+      redirect_url: https://vulntor.company.com/auth/callback
 ```
 
 ## Monitoring
@@ -389,10 +389,10 @@ curl http://localhost:8080/metrics
 ```
 
 Metrics include:
-- `pentora_scans_total` - Total scans
-- `pentora_scan_duration_seconds` - Scan duration histogram
-- `pentora_queue_length` - Queue length gauge
-- `pentora_worker_utilization` - Worker utilization
+- `vulntor_scans_total` - Total scans
+- `vulntor_scan_duration_seconds` - Scan duration histogram
+- `vulntor_queue_length` - Queue length gauge
+- `vulntor_worker_utilization` - Worker utilization
 
 ## Troubleshooting
 
@@ -400,13 +400,13 @@ Metrics include:
 
 Check logs:
 ```bash
-pentora server start --log-level debug
+vulntor server start --log-level debug
 ```
 
 Common issues:
 - Port already in use: Change `--bind` address
 - Permission denied: Run with sufficient privileges or `sudo`
-- Config error: Validate config with `pentora config validate`
+- Config error: Validate config with `vulntor config validate`
 
 ### High Memory Usage
 

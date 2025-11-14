@@ -8,7 +8,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for suggesting a plugin! This will help expand Pentora's vulnerability detection capabilities.
+        Thanks for suggesting a plugin! This will help expand Vulntor's vulnerability detection capabilities.
 
   - type: input
     id: plugin-name
@@ -80,7 +80,7 @@ body:
     id: detection-method
     attributes:
       label: Detection Method
-      description: How can Pentora detect this vulnerability?
+      description: How can Vulntor detect this vulnerability?
       placeholder: |
         1. Parse SSH banner to extract version: `SSH-2.0-OpenSSH_9.3p1`
         2. Check if version is in vulnerable range (8.5p1 - 9.7p1)
@@ -189,7 +189,7 @@ body:
         name: OpenSSH CVE-2024-6387 (regreSSHion)
         version: 1.0.0
         type: evaluation
-        author: pentora-security
+        author: vulntor-security
 
         metadata:
           severity: critical

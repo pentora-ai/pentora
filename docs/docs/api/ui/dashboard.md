@@ -1,6 +1,6 @@
 # Dashboard Features
 
-The Pentora dashboard provides at-a-glance visibility into security posture.
+The Vulntor dashboard provides at-a-glance visibility into security posture.
 
 ## Widgets
 
@@ -17,7 +17,7 @@ Time-series visualization:
 - Completed scans (last week/month)
 
 ### System Health
-- Pentora server uptime
+- Vulntor server uptime
 - License expiry countdown
 - Worker status (active/idle)
 - Recent errors/warnings

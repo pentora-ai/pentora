@@ -9,11 +9,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/pentora-ai/pentora/pkg/appctx"
-	"github.com/pentora-ai/pentora/pkg/engine"
-	_ "github.com/pentora-ai/pentora/pkg/modules/discovery"
-	_ "github.com/pentora-ai/pentora/pkg/modules/scan"
-	"github.com/pentora-ai/pentora/pkg/storage"
+	"github.com/vulntor/vulntor/pkg/appctx"
+	"github.com/vulntor/vulntor/pkg/engine"
+	_ "github.com/vulntor/vulntor/pkg/modules/discovery"
+	_ "github.com/vulntor/vulntor/pkg/modules/scan"
+	"github.com/vulntor/vulntor/pkg/storage"
 )
 
 // TestRun_HermeticLocal validates minimal execution path using an ephemeral

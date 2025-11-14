@@ -1,4 +1,4 @@
-// Copyright 2025 Pentora Authors
+// Copyright 2025 Vulntor Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 
@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/pentora-ai/pentora/pkg/plugin"
+	"github.com/vulntor/vulntor/pkg/plugin"
 )
 
 func TestDefaultConfig(t *testing.T) {

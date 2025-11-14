@@ -3,7 +3,7 @@ package api
 import (
 	"sync/atomic"
 
-	"github.com/pentora-ai/pentora/pkg/storage"
+	"github.com/vulntor/vulntor/pkg/storage"
 )
 
 // Deps holds dependencies for API handlers.

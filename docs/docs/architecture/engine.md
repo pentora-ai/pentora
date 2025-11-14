@@ -1,6 +1,6 @@
 # Engine Internals
 
-The Pentora engine consists of three primary components: Planner, Orchestrator, and Runtime.
+The Vulntor engine consists of three primary components: Planner, Orchestrator, and Runtime.
 
 ## Components
 

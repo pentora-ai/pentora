@@ -3,10 +3,10 @@ slug: /
 sidebar_position: 1
 ---
 
-# Introduction to Pentora
+# Introduction to Vulntor
 
 <div style={{textAlign: 'center', margin: '2rem 0'}}>
-  <img src="/img/pentora-banner.svg" alt="Pentora Banner" style={{maxWidth: '600px', width: '100%'}} />
+  <img src="/img/vulntor-banner.svg" alt="Vulntor Banner" style={{maxWidth: '600px', width: '100%'}} />
 </div>
 
 <div className="card" style={{
@@ -16,13 +16,13 @@ sidebar_position: 1
   padding: '1.5rem',
   marginBottom: '2rem'
 }}>
-  <h3 style={{color: '#00d9ff', marginTop: 0}}>What is Pentora?</h3>
+  <h3 style={{color: '#00d9ff', marginTop: 0}}>What is Vulntor?</h3>
   <span>
-    <strong>Pentora</strong> is a modular, high-performance security scanner that rapidly discovers network services, captures banners, and maps findings into vulnerability intelligence. Built with a powerful DAG-based execution engine, Pentora enables security teams to perform comprehensive network assessments with precision and efficiency.
+    <strong>Vulntor</strong> is a modular, high-performance security scanner that rapidly discovers network services, captures banners, and maps findings into vulnerability intelligence. Built with a powerful DAG-based execution engine, Vulntor enables security teams to perform comprehensive network assessments with precision and efficiency.
   </span>
 </div>
 
-## What Makes Pentora Special?
+## What Makes Vulntor Special?
 
 <div className="row equal-height-row" style={{marginTop: '1.5rem'}}>
   <div className="col col--4">
@@ -143,7 +143,7 @@ sidebar_position: 1
   </div>
 </div>
 
-## Who Should Use Pentora?
+## Who Should Use Vulntor?
 
 <div className="row" style={{marginTop: '1.5rem', marginBottom: '2rem'}}>
   <div className="col col--6" style={{marginBottom: '1rem'}}>
@@ -190,7 +190,7 @@ sidebar_position: 1
 
 ## Core Philosophy
 
-**Design Principles** - Pentora is built on five core principles:
+**Design Principles** - Vulntor is built on five core principles:
 
 1. 🧩 **Modularity**: Every scan phase is a composable module in a directed acyclic graph (DAG)
 2. ⚡ **Performance**: Concurrent execution with intelligent rate limiting
@@ -302,29 +302,29 @@ sidebar_position: 1
 
 ## Quick Start
 
-```bash title="Install Pentora"
-curl -sSL https://pentora.io/install.sh | bash
+```bash title="Install Vulntor"
+curl -sSL https://vulntor.io/install.sh | bash
 ```
 
 ```bash title="Run a basic scan"
-pentora scan 192.168.1.0/24
+vulntor scan 192.168.1.0/24
 ```
 
 ```bash title="Scan with vulnerability assessment"
-pentora scan 192.168.1.100 --vuln
+vulntor scan 192.168.1.100 --vuln
 ```
 
 ```bash title="Discovery-only mode"
-pentora scan 192.168.1.0/24 --only-discover
+vulntor scan 192.168.1.0/24 --only-discover
 ```
 
 ```bash title="View storage scans"
-pentora storage list
+vulntor storage list
 ```
 
 ## Architecture Overview
 
-Pentora uses a **DAG-based execution engine** where each scan phase is represented as a node:
+Vulntor uses a **DAG-based execution engine** where each scan phase is represented as a node:
 
 <div style={{display: 'flex', justifyContent: 'center', margin: '2rem 0'}}>
   <img src="/img/dag-sketch.svg" alt="DAG Pipeline Sketch" style={{maxWidth: '800px', width: '100%', borderRadius: '8px'}} />
@@ -422,14 +422,14 @@ Pentora uses a **DAG-based execution engine** where each scan phase is represent
 
 ## Getting Started
 
-**Ready to dive in?** Head over to the [Installation Guide](./getting-started/installation.md) to install Pentora, or jump to the [Quick Start Guide](./getting-started/quick-start.md) to run your first scan.
+**Ready to dive in?** Head over to the [Installation Guide](./getting-started/installation.md) to install Vulntor, or jump to the [Quick Start Guide](./getting-started/quick-start.md) to run your first scan.
 
 <div className="row" style={{marginTop: '2rem'}}>
   <div className="col col--4">
     <div className="card" style={{textAlign: 'center', height: '100%'}}>
       <div className="card__body">
         <h3>📥 Install</h3>
-        <p>Get Pentora up and running</p>
+        <p>Get Vulntor up and running</p>
         <a href="getting-started/installation" className="button button--primary">Install Now</a>
       </div>
     </div>
@@ -458,7 +458,7 @@ Pentora uses a **DAG-based execution engine** where each scan phase is represent
 
 <div className="row equal-height-row" style={{marginTop: '1.5rem'}}>
   <div className="col col--3">
-    <a href="https://docs.pentora.io" className="card" style={{textDecoration: 'none', height: '100%'}}>
+    <a href="https://docs.vulntor.io" className="card" style={{textDecoration: 'none', height: '100%'}}>
       <div className="card__body" style={{textAlign: 'center'}}>
         <div style={{fontSize: '2rem'}}>📖</div>
         <h4>Documentation</h4>
@@ -466,7 +466,7 @@ Pentora uses a **DAG-based execution engine** where each scan phase is represent
     </a>
   </div>
   <div className="col col--3">
-    <a href="https://github.com/pentora-ai/pentora/discussions" className="card" style={{textDecoration: 'none', height: '100%'}}>
+    <a href="https://github.com/vulntor-ai/vulntor/discussions" className="card" style={{textDecoration: 'none', height: '100%'}}>
       <div className="card__body" style={{textAlign: 'center'}}>
         <div style={{fontSize: '2rem'}}>💬</div>
         <h4>Discussions</h4>
@@ -474,7 +474,7 @@ Pentora uses a **DAG-based execution engine** where each scan phase is represent
     </a>
   </div>
   <div className="col col--3">
-    <a href="https://github.com/pentora-ai/pentora/issues" className="card" style={{textDecoration: 'none', height: '100%'}}>
+    <a href="https://github.com/vulntor-ai/vulntor/issues" className="card" style={{textDecoration: 'none', height: '100%'}}>
       <div className="card__body" style={{textAlign: 'center'}}>
         <div style={{fontSize: '2rem'}}>🐛</div>
         <h4>Issue Tracker</h4>
@@ -482,7 +482,7 @@ Pentora uses a **DAG-based execution engine** where each scan phase is represent
     </a>
   </div>
   <div className="col col--3">
-    <a href="https://github.com/pentora-ai/pentora/security/policy" className="card" style={{textDecoration: 'none', height: '100%'}}>
+    <a href="https://github.com/vulntor-ai/vulntor/security/policy" className="card" style={{textDecoration: 'none', height: '100%'}}>
       <div className="card__body" style={{textAlign: 'center'}}>
         <div style={{fontSize: '2rem'}}>🔒</div>
         <h4>Security Policy</h4>
@@ -493,4 +493,4 @@ Pentora uses a **DAG-based execution engine** where each scan phase is represent
 
 ---
 
-> **Note:** Pentora is actively developed. Features marked with 🔒 are available in the Enterprise Edition. Check the [Pricing Page](https://pentora.io/pricing) for licensing options.
+> **Note:** Vulntor is actively developed. Features marked with 🔒 are available in the Enterprise Edition. Check the [Pricing Page](https://vulntor.io/pricing) for licensing options.

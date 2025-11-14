@@ -20,9 +20,9 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cast"
 
-	"github.com/pentora-ai/pentora/pkg/engine" // Your engine/core package
-	"github.com/pentora-ai/pentora/pkg/fingerprint"
-	"github.com/pentora-ai/pentora/pkg/modules/discovery"
+	"github.com/vulntor/vulntor/pkg/engine" // Your engine/core package
+	"github.com/vulntor/vulntor/pkg/fingerprint"
+	"github.com/vulntor/vulntor/pkg/modules/discovery"
 )
 
 // BannerGrabConfig holds configuration for the banner grabbing module.
@@ -89,7 +89,7 @@ func newBannerGrabModule() *BannerGrabModule {
 			Version:     "0.1.0",
 			Description: "Grabs banners from open TCP ports, attempting generic and protocol-aware probes.",
 			Type:        engine.ScanModuleType,
-			Author:      "Pentora Team",
+			Author:      "Vulntor Team",
 			Tags:        []string{"scan", "banner", "fingerprint", "tcp"},
 			Consumes: []engine.DataContractEntry{
 				{

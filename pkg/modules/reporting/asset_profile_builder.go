@@ -9,12 +9,12 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/pentora-ai/pentora/pkg/engine"
-	"github.com/pentora-ai/pentora/pkg/modules/discovery"  // For ICMPPingDiscoveryResult, TCPPortDiscoveryResult
-	"github.com/pentora-ai/pentora/pkg/modules/evaluation" // For VulnerabilityResult
-	"github.com/pentora-ai/pentora/pkg/modules/parse"      // For HTTPParsedInfo, SSHParsedInfo
-	"github.com/pentora-ai/pentora/pkg/modules/scan"       // For BannerGrabResult
-	"github.com/pentora-ai/pentora/pkg/netutil"
+	"github.com/vulntor/vulntor/pkg/engine"
+	"github.com/vulntor/vulntor/pkg/modules/discovery"  // For ICMPPingDiscoveryResult, TCPPortDiscoveryResult
+	"github.com/vulntor/vulntor/pkg/modules/evaluation" // For VulnerabilityResult
+	"github.com/vulntor/vulntor/pkg/modules/parse"      // For HTTPParsedInfo, SSHParsedInfo
+	"github.com/vulntor/vulntor/pkg/modules/scan"       // For BannerGrabResult
+	"github.com/vulntor/vulntor/pkg/netutil"
 )
 
 const (
@@ -37,7 +37,7 @@ func newAssetProfileBuilderModule() *AssetProfileBuilderModule {
 			Version:     "0.1.0",
 			Description: "Aggregates all scan data into comprehensive asset profiles.",
 			Type:        engine.ReportingModuleType, // veya OrchestrationModuleType
-			Author:      "Pentora Team",
+			Author:      "Vulntor Team",
 			Tags:        []string{"reporting", "aggregation", "asset-profile"},
 			Consumes: []engine.DataContractEntry{ // Bu modül birçok şeyi tüketir
 				// Planner bu anahtarları DataContext'ten alıp bu modülün input'una verir.

@@ -1,6 +1,6 @@
 # Docker Deployment
 
-Deploy Pentora using Docker containers for portable, reproducible, and scalable deployments.
+Deploy Vulntor using Docker containers for portable, reproducible, and scalable deployments.
 
 ## Overview
 
@@ -18,31 +18,31 @@ Docker deployment is ideal for:
 
 ```bash
 # Pull official image
-docker pull pentora/pentora:latest
+docker pull vulntor/vulntor:latest
 
 # Run simple scan
-docker run --rm pentora/pentora:latest scan 192.168.1.0/24
+docker run --rm vulntor/vulntor:latest scan 192.168.1.0/24
 
 # Run with output
-docker run --rm -v $(pwd):/output pentora/pentora:latest scan 192.168.1.100 -o /output/results.json
+docker run --rm -v $(pwd):/output vulntor/vulntor:latest scan 192.168.1.100 -o /output/results.json
 ```
 
 ### Interactive Mode
 
 ```bash
 # Start interactive shell
-docker run -it --rm pentora/pentora:latest /bin/bash
+docker run -it --rm vulntor/vulntor:latest /bin/bash
 
 # Inside container
-pentora scan 192.168.1.100
-pentora storage list
+vulntor scan 192.168.1.100
+vulntor storage list
 ```
 
 ## Docker Images
 
 ### Official Images
 
-Available on Docker Hub: `pentora/pentora`
+Available on Docker Hub: `vulntor/vulntor`
 
 Tags:
 - `latest` - Latest stable release
@@ -55,13 +55,13 @@ Tags:
 
 ```bash
 # Pull specific version
-docker pull pentora/pentora:1.0.0
+docker pull vulntor/vulntor:1.0.0
 
 # Pull Alpine variant
-docker pull pentora/pentora:alpine
+docker pull vulntor/vulntor:alpine
 
 # Pull Enterprise Edition
-docker pull pentora/pentora:enterprise
+docker pull vulntor/vulntor:enterprise
 ```
 
 ### Image Variants
@@ -69,7 +69,7 @@ docker pull pentora/pentora:enterprise
 #### Standard Image (Debian-based)
 
 ```dockerfile
-FROM pentora/pentora:latest
+FROM vulntor/vulntor:latest
 # Size: ~150 MB
 # Base: debian:bookworm-slim
 # Includes: Full toolchain, debug tools
@@ -78,7 +78,7 @@ FROM pentora/pentora:latest
 #### Alpine Image (Lightweight)
 
 ```dockerfile
-FROM pentora/pentora:alpine
+FROM vulntor/vulntor:alpine
 # Size: ~50 MB
 # Base: alpine:3.18
 # Includes: Minimal runtime only
@@ -87,7 +87,7 @@ FROM pentora/pentora:alpine
 #### Enterprise Image
 
 ```dockerfile
-FROM pentora/pentora:enterprise
+FROM vulntor/vulntor:enterprise
 # Includes: Enterprise features, web UI, distributed scanning
 ```
 
@@ -97,51 +97,51 @@ FROM pentora/pentora:enterprise
 
 ```bash
 # Simple scan
-docker run --rm pentora/pentora scan 192.168.1.100
+docker run --rm vulntor/vulntor scan 192.168.1.100
 
 # Scan with vulnerability assessment
-docker run --rm pentora/pentora scan 192.168.1.100 --vuln
+docker run --rm vulntor/vulntor scan 192.168.1.100 --vuln
 
 # Scan network range
-docker run --rm pentora/pentora scan 192.168.1.0/24 --profile quick
+docker run --rm vulntor/vulntor scan 192.168.1.0/24 --profile quick
 
 # Discovery only
-docker run --rm pentora/pentora scan 10.0.0.0/16 --only-discover
+docker run --rm vulntor/vulntor scan 10.0.0.0/16 --only-discover
 ```
 
 ### Persistent Storage
 
 ```bash
 # Create storage directory
-mkdir -p ~/pentora-storage
+mkdir -p ~/vulntor-storage
 
 # Run with storage persistence
 docker run --rm \
-  -v ~/pentora-storage:/storage \
-  -e PENTORA_STORAGE_DIR=/storage \
-  pentora/pentora scan 192.168.1.0/24
+  -v ~/vulntor-storage:/storage \
+  -e VULNTOR_STORAGE_DIR=/storage \
+  vulntor/vulntor scan 192.168.1.0/24
 
 # List scans
 docker run --rm \
-  -v ~/pentora-storage:/storage \
-  -e PENTORA_STORAGE_DIR=/storage \
-  pentora/pentora storage list
+  -v ~/vulntor-storage:/storage \
+  -e VULNTOR_STORAGE_DIR=/storage \
+  vulntor/vulntor storage list
 
 # View specific scan
 docker run --rm \
-  -v ~/pentora-storage:/storage \
-  -e PENTORA_STORAGE_DIR=/storage \
-  pentora/pentora storage show <scan-id>
+  -v ~/vulntor-storage:/storage \
+  -e VULNTOR_STORAGE_DIR=/storage \
+  vulntor/vulntor storage show <scan-id>
 ```
 
 ### Configuration Files
 
 ```bash
 # Create config directory
-mkdir -p ~/pentora-config
+mkdir -p ~/vulntor-config
 
 # Create config file
-cat > ~/pentora-config/config.yaml <<EOF
+cat > ~/vulntor-config/config.yaml <<EOF
 scanner:
   default_profile: standard
   rate: 2000
@@ -154,9 +154,9 @@ EOF
 
 # Run with custom config
 docker run --rm \
-  -v ~/pentora-config:/config \
-  -e PENTORA_CONFIG=/config/config.yaml \
-  pentora/pentora scan 192.168.1.0/24
+  -v ~/vulntor-config:/config \
+  -e VULNTOR_CONFIG=/config/config.yaml \
+  vulntor/vulntor scan 192.168.1.0/24
 ```
 
 ## Docker Compose
@@ -169,16 +169,16 @@ Create `docker-compose.yml`:
 version: '3.8'
 
 services:
-  pentora:
-    image: pentora/pentora:latest
-    container_name: pentora
+  vulntor:
+    image: vulntor/vulntor:latest
+    container_name: vulntor
     volumes:
       - ./storage:/storage
       - ./config:/config
     environment:
-      - PENTORA_STORAGE_DIR=/storage
-      - PENTORA_CONFIG=/config/config.yaml
-      - PENTORA_LOG_LEVEL=info
+      - VULNTOR_STORAGE_DIR=/storage
+      - VULNTOR_CONFIG=/config/config.yaml
+      - VULNTOR_LOG_LEVEL=info
     network_mode: host
     cap_add:
       - NET_RAW
@@ -200,9 +200,9 @@ Create `docker-compose.yml`:
 version: '3.8'
 
 services:
-  pentora-server:
-    image: pentora/pentora:latest
-    container_name: pentora-server
+  vulntor-server:
+    image: vulntor/vulntor:latest
+    container_name: vulntor-server
     restart: unless-stopped
     ports:
       - "8080:8080"
@@ -211,11 +211,11 @@ services:
       - ./config:/config
       - ./logs:/logs
     environment:
-      - PENTORA_STORAGE_DIR=/storage
-      - PENTORA_CONFIG=/config/config.yaml
-      - PENTORA_LOG_LEVEL=info
+      - VULNTOR_STORAGE_DIR=/storage
+      - VULNTOR_CONFIG=/config/config.yaml
+      - VULNTOR_LOG_LEVEL=info
     networks:
-      - pentora-network
+      - vulntor-network
     cap_add:
       - NET_RAW
       - NET_ADMIN
@@ -228,7 +228,7 @@ services:
       start_period: 40s
 
 networks:
-  pentora-network:
+  vulntor-network:
     driver: bridge
 ```
 
@@ -253,7 +253,7 @@ logging:
   format: json
   file:
     enabled: true
-    path: /logs/pentora.log
+    path: /logs/vulntor.log
 ```
 
 Start services:
@@ -263,7 +263,7 @@ Start services:
 docker-compose up -d
 
 # View logs
-docker-compose logs -f pentora-server
+docker-compose logs -f vulntor-server
 
 # Check status
 docker-compose ps
@@ -282,40 +282,40 @@ version: '3.8'
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: pentora-db
+    container_name: vulntor-db
     restart: unless-stopped
     environment:
-      - POSTGRES_DB=pentora
-      - POSTGRES_USER=pentora
+      - POSTGRES_DB=vulntor
+      - POSTGRES_USER=vulntor
       - POSTGRES_PASSWORD=${DB_PASSWORD}
     volumes:
       - postgres-data:/var/lib/postgresql/data
     networks:
-      - pentora-network
+      - vulntor-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pentora"]
+      test: ["CMD-SHELL", "pg_isready -U vulntor"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7-alpine
-    container_name: pentora-redis
+    container_name: vulntor-redis
     restart: unless-stopped
     command: redis-server --appendonly yes
     volumes:
       - redis-data:/data
     networks:
-      - pentora-network
+      - vulntor-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  pentora:
-    image: pentora/pentora:enterprise
-    container_name: pentora-server
+  vulntor:
+    image: vulntor/vulntor:enterprise
+    container_name: vulntor-server
     restart: unless-stopped
     depends_on:
       postgres:
@@ -331,18 +331,18 @@ services:
       - ./logs:/logs
       - ./tls:/tls
     environment:
-      - PENTORA_STORAGE_DIR=/storage
-      - PENTORA_CONFIG=/config/config.yaml
-      - PENTORA_DB_HOST=postgres
-      - PENTORA_DB_PORT=5432
-      - PENTORA_DB_NAME=pentora
-      - PENTORA_DB_USER=pentora
-      - PENTORA_DB_PASSWORD=${DB_PASSWORD}
-      - PENTORA_REDIS_HOST=redis
-      - PENTORA_REDIS_PORT=6379
-      - PENTORA_LICENSE_FILE=/config/license.key
+      - VULNTOR_STORAGE_DIR=/storage
+      - VULNTOR_CONFIG=/config/config.yaml
+      - VULNTOR_DB_HOST=postgres
+      - VULNTOR_DB_PORT=5432
+      - VULNTOR_DB_NAME=vulntor
+      - VULNTOR_DB_USER=vulntor
+      - VULNTOR_DB_PASSWORD=${DB_PASSWORD}
+      - VULNTOR_REDIS_HOST=redis
+      - VULNTOR_REDIS_PORT=6379
+      - VULNTOR_LICENSE_FILE=/config/license.key
     networks:
-      - pentora-network
+      - vulntor-network
     cap_add:
       - NET_RAW
       - NET_ADMIN
@@ -356,10 +356,10 @@ services:
 
   nginx:
     image: nginx:alpine
-    container_name: pentora-nginx
+    container_name: vulntor-nginx
     restart: unless-stopped
     depends_on:
-      - pentora
+      - vulntor
     ports:
       - "80:80"
       - "443:443"
@@ -367,14 +367,14 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./tls:/etc/nginx/tls:ro
     networks:
-      - pentora-network
+      - vulntor-network
 
 volumes:
   postgres-data:
   redis-data:
 
 networks:
-  pentora-network:
+  vulntor-network:
     driver: bridge
 ```
 
@@ -392,25 +392,25 @@ events {
 }
 
 http {
-    upstream pentora {
-        server pentora:8080;
+    upstream vulntor {
+        server vulntor:8080;
     }
 
     server {
         listen 80;
-        server_name pentora.company.com;
+        server_name vulntor.company.com;
         return 301 https://$server_name$request_uri;
     }
 
     server {
         listen 443 ssl http2;
-        server_name pentora.company.com;
+        server_name vulntor.company.com;
 
         ssl_certificate /etc/nginx/tls/cert.pem;
         ssl_certificate_key /etc/nginx/tls/key.pem;
 
         location / {
-            proxy_pass http://pentora;
+            proxy_pass http://vulntor;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -418,7 +418,7 @@ http {
         }
 
         location /health {
-            proxy_pass http://pentora;
+            proxy_pass http://vulntor;
             access_log off;
         }
     }
@@ -435,20 +435,20 @@ docker-compose up -d
 
 ### Simple Deployment
 
-Create `pentora-deployment.yaml`:
+Create `vulntor-deployment.yaml`:
 
 ```yaml
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: pentora
+  name: vulntor
 
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: pentora-config
-  namespace: pentora
+  name: vulntor-config
+  namespace: vulntor
 data:
   config.yaml: |
     server:
@@ -465,8 +465,8 @@ data:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: pentora-storage
-  namespace: pentora
+  name: vulntor-storage
+  namespace: vulntor
 spec:
   accessModes:
     - ReadWriteOnce
@@ -478,30 +478,30 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: pentora-server
-  namespace: pentora
+  name: vulntor-server
+  namespace: vulntor
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: pentora
+      app: vulntor
   template:
     metadata:
       labels:
-        app: pentora
+        app: vulntor
     spec:
       containers:
-      - name: pentora
-        image: pentora/pentora:latest
+      - name: vulntor
+        image: vulntor/vulntor:latest
         imagePullPolicy: Always
-        command: ["pentora", "server", "start"]
+        command: ["vulntor", "server", "start"]
         ports:
         - containerPort: 8080
           name: http
         env:
-        - name: PENTORA_STORAGE_DIR
+        - name: VULNTOR_STORAGE_DIR
           value: /storage
-        - name: PENTORA_CONFIG
+        - name: VULNTOR_CONFIG
           value: /config/config.yaml
         volumeMounts:
         - name: storage
@@ -535,17 +535,17 @@ spec:
       volumes:
       - name: storage
         persistentVolumeClaim:
-          claimName: pentora-storage
+          claimName: vulntor-storage
       - name: config
         configMap:
-          name: pentora-config
+          name: vulntor-config
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: pentora-service
-  namespace: pentora
+  name: vulntor-service
+  namespace: vulntor
 spec:
   type: LoadBalancer
   ports:
@@ -554,57 +554,57 @@ spec:
     protocol: TCP
     name: http
   selector:
-    app: pentora
+    app: vulntor
 ```
 
 Deploy:
 
 ```bash
-kubectl apply -f pentora-deployment.yaml
+kubectl apply -f vulntor-deployment.yaml
 
 # Check status
-kubectl -n pentora get pods
-kubectl -n pentora get svc
+kubectl -n vulntor get pods
+kubectl -n vulntor get svc
 
 # View logs
-kubectl -n pentora logs -f deployment/pentora-server
+kubectl -n vulntor logs -f deployment/vulntor-server
 
 # Access service
-kubectl -n pentora port-forward service/pentora-service 8080:80
+kubectl -n vulntor port-forward service/vulntor-service 8080:80
 ```
 
 ### StatefulSet for HA
 
-Create `pentora-statefulset.yaml`:
+Create `vulntor-statefulset.yaml`:
 
 ```yaml
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: pentora
-  namespace: pentora
+  name: vulntor
+  namespace: vulntor
 spec:
-  serviceName: pentora
+  serviceName: vulntor
   replicas: 3
   selector:
     matchLabels:
-      app: pentora
+      app: vulntor
   template:
     metadata:
       labels:
-        app: pentora
+        app: vulntor
     spec:
       containers:
-      - name: pentora
-        image: pentora/pentora:enterprise
-        command: ["pentora", "server", "start"]
+      - name: vulntor
+        image: vulntor/vulntor:enterprise
+        command: ["vulntor", "server", "start"]
         ports:
         - containerPort: 8080
           name: http
         env:
-        - name: PENTORA_STORAGE_DIR
+        - name: VULNTOR_STORAGE_DIR
           value: /storage
-        - name: PENTORA_REDIS_HOST
+        - name: VULNTOR_REDIS_HOST
           value: redis-service
         volumeMounts:
         - name: storage
@@ -633,7 +633,7 @@ spec:
 Create custom `Dockerfile`:
 
 ```dockerfile
-FROM pentora/pentora:latest
+FROM vulntor/vulntor:latest
 
 # Install additional tools
 RUN apt-get update && apt-get install -y \
@@ -644,36 +644,36 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy custom configuration
-COPY config/config.yaml /etc/pentora/config.yaml
+COPY config/config.yaml /etc/vulntor/config.yaml
 
 # Copy custom fingerprints
-COPY fingerprints/ /usr/share/pentora/fingerprints/
+COPY fingerprints/ /usr/share/vulntor/fingerprints/
 
 # Copy custom scripts
 COPY scripts/ /usr/local/bin/
 
 # Set default environment variables
-ENV PENTORA_CONFIG=/etc/pentora/config.yaml
-ENV PENTORA_STORAGE_DIR=/storage
+ENV VULNTOR_CONFIG=/etc/vulntor/config.yaml
+ENV VULNTOR_STORAGE_DIR=/storage
 
 # Expose ports
 EXPOSE 8080
 
 # Default command
-CMD ["pentora", "server", "start"]
+CMD ["vulntor", "server", "start"]
 ```
 
 Build and push:
 
 ```bash
 # Build image
-docker build -t mycompany/pentora:custom .
+docker build -t mycompany/vulntor:custom .
 
 # Test locally
-docker run --rm mycompany/pentora:custom version
+docker run --rm mycompany/vulntor:custom version
 
 # Push to registry
-docker push mycompany/pentora:custom
+docker push mycompany/vulntor:custom
 ```
 
 ### Multi-Stage Build
@@ -690,7 +690,7 @@ WORKDIR /build
 COPY . .
 
 # Build binary
-RUN go build -o pentora -ldflags="-s -w" ./cmd/pentora
+RUN go build -o vulntor -ldflags="-s -w" ./cmd/vulntor
 
 # Runtime stage
 FROM alpine:3.18
@@ -702,31 +702,31 @@ RUN apk add --no-cache \
     && rm -rf /var/cache/apk/*
 
 # Copy binary from builder
-COPY --from=builder /build/pentora /usr/local/bin/pentora
+COPY --from=builder /build/vulntor /usr/local/bin/vulntor
 
 # Set capabilities
-RUN setcap cap_net_raw,cap_net_admin+eip /usr/local/bin/pentora
+RUN setcap cap_net_raw,cap_net_admin+eip /usr/local/bin/vulntor
 
 # Create non-root user
-RUN adduser -D -u 1000 pentora
+RUN adduser -D -u 1000 vulntor
 
 # Create directories
 RUN mkdir -p /storage /config && \
-    chown -R pentora:pentora /storage /config
+    chown -R vulntor:vulntor /storage /config
 
-USER pentora
+USER vulntor
 
 WORKDIR /storage
 
 EXPOSE 8080
 
-CMD ["pentora", "server", "start"]
+CMD ["vulntor", "server", "start"]
 ```
 
 Build:
 
 ```bash
-docker build -t mycompany/pentora:optimized .
+docker build -t mycompany/vulntor:optimized .
 ```
 
 ## Security Considerations
@@ -735,27 +735,27 @@ docker build -t mycompany/pentora:optimized .
 
 ```bash
 # Host network (full access)
-docker run --network host pentora/pentora scan 192.168.1.0/24
+docker run --network host vulntor/vulntor scan 192.168.1.0/24
 
 # Bridge network (isolated)
-docker run --network bridge pentora/pentora scan scanme.nmap.org
+docker run --network bridge vulntor/vulntor scan scanme.nmap.org
 
 # Custom network
-docker network create pentora-net
-docker run --network pentora-net pentora/pentora scan targets
+docker network create vulntor-net
+docker run --network vulntor-net vulntor/vulntor scan targets
 ```
 
 ### Capabilities
 
 ```bash
 # Add required capabilities
-docker run --cap-add NET_RAW --cap-add NET_ADMIN pentora/pentora scan 192.168.1.0/24
+docker run --cap-add NET_RAW --cap-add NET_ADMIN vulntor/vulntor scan 192.168.1.0/24
 
 # Drop unnecessary capabilities
-docker run --cap-drop ALL --cap-add NET_RAW pentora/pentora scan 192.168.1.0/24
+docker run --cap-drop ALL --cap-add NET_RAW vulntor/vulntor scan 192.168.1.0/24
 
 # Run as non-root (if capabilities set in image)
-docker run --user pentora pentora/pentora scan 192.168.1.0/24
+docker run --user vulntor vulntor/vulntor scan 192.168.1.0/24
 ```
 
 ### Read-Only Filesystem
@@ -764,20 +764,20 @@ docker run --user pentora pentora/pentora scan 192.168.1.0/24
 docker run --read-only \
   -v /tmp --tmpfs /tmp \
   -v $(pwd)/storage:/storage \
-  pentora/pentora scan 192.168.1.0/24
+  vulntor/vulntor scan 192.168.1.0/24
 ```
 
 ### Security Scanning
 
 ```bash
 # Scan image for vulnerabilities
-docker scan pentora/pentora:latest
+docker scan vulntor/vulntor:latest
 
 # Use Trivy
-trivy image pentora/pentora:latest
+trivy image vulntor/vulntor:latest
 
 # Use Snyk
-snyk container test pentora/pentora:latest
+snyk container test vulntor/vulntor:latest
 ```
 
 ## Performance Optimization
@@ -786,21 +786,21 @@ snyk container test pentora/pentora:latest
 
 ```bash
 # Set CPU and memory limits
-docker run --cpus=2 --memory=4g pentora/pentora scan 192.168.1.0/24
+docker run --cpus=2 --memory=4g vulntor/vulntor scan 192.168.1.0/24
 
 # CPU shares
-docker run --cpu-shares=512 pentora/pentora scan 192.168.1.0/24
+docker run --cpu-shares=512 vulntor/vulntor scan 192.168.1.0/24
 
 # Memory reservation
-docker run --memory=4g --memory-reservation=2g pentora/pentora scan 192.168.1.0/24
+docker run --memory=4g --memory-reservation=2g vulntor/vulntor scan 192.168.1.0/24
 ```
 
 In Docker Compose:
 
 ```yaml
 services:
-  pentora:
-    image: pentora/pentora
+  vulntor:
+    image: vulntor/vulntor
     deploy:
       resources:
         limits:
@@ -815,11 +815,11 @@ services:
 
 ```bash
 # Use tmpfs for temporary data
-docker run --tmpfs /tmp:rw,size=1g pentora/pentora scan 192.168.1.0/24
+docker run --tmpfs /tmp:rw,size=1g vulntor/vulntor scan 192.168.1.0/24
 
 # Use volumes instead of bind mounts
-docker volume create pentora-storage
-docker run -v pentora-storage:/storage pentora/pentora scan 192.168.1.0/24
+docker volume create vulntor-storage
+docker run -v vulntor-storage:/storage vulntor/vulntor scan 192.168.1.0/24
 ```
 
 ## Monitoring and Logging
@@ -828,16 +828,16 @@ docker run -v pentora-storage:/storage pentora/pentora scan 192.168.1.0/24
 
 ```bash
 # View logs
-docker logs pentora-server
+docker logs vulntor-server
 
 # Follow logs
-docker logs -f pentora-server
+docker logs -f vulntor-server
 
 # Last 100 lines
-docker logs --tail 100 pentora-server
+docker logs --tail 100 vulntor-server
 
 # Since timestamp
-docker logs --since 2024-10-06T10:00:00 pentora-server
+docker logs --since 2024-10-06T10:00:00 vulntor-server
 ```
 
 ### Log Drivers
@@ -847,17 +847,17 @@ docker logs --since 2024-10-06T10:00:00 pentora-server
 docker run --log-driver json-file \
   --log-opt max-size=10m \
   --log-opt max-file=3 \
-  pentora/pentora server start
+  vulntor/vulntor server start
 
 # Syslog
 docker run --log-driver syslog \
   --log-opt syslog-address=udp://logs.company.com:514 \
-  pentora/pentora server start
+  vulntor/vulntor server start
 
 # Fluentd
 docker run --log-driver fluentd \
   --log-opt fluentd-address=localhost:24224 \
-  pentora/pentora server start
+  vulntor/vulntor server start
 ```
 
 ### Health Checks
@@ -868,10 +868,10 @@ docker run --health-cmd="curl -f http://localhost:8080/health || exit 1" \
   --health-interval=30s \
   --health-timeout=10s \
   --health-retries=3 \
-  pentora/pentora server start
+  vulntor/vulntor server start
 
 # Check health status
-docker inspect --format='{{.State.Health.Status}}' pentora-server
+docker inspect --format='{{.State.Health.Status}}' vulntor-server
 ```
 
 ## CI/CD Integration
@@ -879,7 +879,7 @@ docker inspect --format='{{.State.Health.Status}}' pentora-server
 ### GitHub Actions
 
 ```yaml
-name: Security Scan with Pentora
+name: Security Scan with Vulntor
 
 on: [push, pull_request]
 
@@ -887,11 +887,11 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
-      - name: Run Pentora Scan
+      - name: Run Vulntor Scan
         run: |
           docker run --rm \
             -v $(pwd):/output \
-            pentora/pentora:latest \
+            vulntor/vulntor:latest \
             scan ${{ secrets.SCAN_TARGETS }} \
             -o /output/results.json
 
@@ -905,13 +905,13 @@ jobs:
 ### GitLab CI
 
 ```yaml
-pentora_scan:
+vulntor_scan:
   image: docker:latest
   services:
     - docker:dind
   script:
-    - docker pull pentora/pentora:latest
-    - docker run --rm pentora/pentora scan $SCAN_TARGETS -o results.json
+    - docker pull vulntor/vulntor:latest
+    - docker run --rm vulntor/vulntor scan $SCAN_TARGETS -o results.json
   artifacts:
     paths:
       - results.json
@@ -923,33 +923,33 @@ pentora_scan:
 
 ```bash
 # Add capabilities
-docker run --cap-add NET_RAW --cap-add NET_ADMIN pentora/pentora scan 192.168.1.0/24
+docker run --cap-add NET_RAW --cap-add NET_ADMIN vulntor/vulntor scan 192.168.1.0/24
 
 # Run as root
-docker run --user root pentora/pentora scan 192.168.1.0/24
+docker run --user root vulntor/vulntor scan 192.168.1.0/24
 ```
 
 ### Network Not Reachable
 
 ```bash
 # Use host network
-docker run --network host pentora/pentora scan 192.168.1.0/24
+docker run --network host vulntor/vulntor scan 192.168.1.0/24
 
 # Check network connectivity
-docker run --rm pentora/pentora ping 192.168.1.1
+docker run --rm vulntor/vulntor ping 192.168.1.1
 ```
 
 ### Container Crashes
 
 ```bash
 # Check logs
-docker logs pentora-server
+docker logs vulntor-server
 
 # Inspect container
-docker inspect pentora-server
+docker inspect vulntor-server
 
 # Check resource limits
-docker stats pentora-server
+docker stats vulntor-server
 ```
 
 ## Next Steps

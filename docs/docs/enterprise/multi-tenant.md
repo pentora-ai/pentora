@@ -57,7 +57,7 @@ server:
     provider: oidc
     oidc:
       issuer: https://auth.company.com
-      client_id: pentora
+      client_id: vulntor
       client_secret: ${OIDC_SECRET}
 ```
 
@@ -69,7 +69,7 @@ Via API: `X-Tenant-ID` header
 ```bash
 curl -H "X-Tenant-ID: customer-a" \
      -H "Authorization: Bearer token" \
-     https://pentora.company.com/api/v1/scans
+     https://vulntor.company.com/api/v1/scans
 ```
 
 See [Deployment Guide](/deployment/server-mode) for setup.

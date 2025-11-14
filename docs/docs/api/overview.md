@@ -1,11 +1,11 @@
 # API Overview
 
-Pentora provides REST and gRPC APIs for programmatic access and integration.
+Vulntor provides REST and gRPC APIs for programmatic access and integration.
 
 ## Base URL
 
 ```
-https://pentora.company.com/api/v1
+https://vulntor.company.com/api/v1
 ```
 
 ## Authentication
@@ -14,13 +14,13 @@ All API requests require authentication via Bearer token:
 
 ```bash
 curl -H "Authorization: Bearer <token>" \
-     https://pentora.company.com/api/v1/scans
+     https://vulntor.company.com/api/v1/scans
 ```
 
 ## Generate API Token
 
 ```bash
-pentora server token create --name "CI Pipeline" --scopes scan:read,scan:write
+vulntor server token create --name "CI Pipeline" --scopes scan:read,scan:write
 ```
 
 ## API Versioning

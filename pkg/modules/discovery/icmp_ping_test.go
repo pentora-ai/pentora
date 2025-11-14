@@ -14,8 +14,8 @@ import (
 	//nolint:staticcheck // Ignore staticcheck warning for this import
 	"github.com/go-ping/ping"
 
-	"github.com/pentora-ai/pentora/pkg/engine"
-	"github.com/pentora-ai/pentora/pkg/netutil"
+	"github.com/vulntor/vulntor/pkg/engine"
+	"github.com/vulntor/vulntor/pkg/netutil"
 )
 
 type fakePinger struct {

@@ -1,4 +1,4 @@
-// Copyright 2025 Pentora Authors
+// Copyright 2025 Vulntor Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 
@@ -10,7 +10,7 @@ package plugin
 // ValidSources defines the allowed plugin source names.
 // These are the officially supported plugin repositories.
 var ValidSources = []string{
-	"official", // Official Pentora plugin repository (plugins.pentora.ai)
+	"official", // Official Vulntor plugin repository (plugins.vulntor.ai)
 	"github",   // GitHub mirror fallback
 }
 

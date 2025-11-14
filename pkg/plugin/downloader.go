@@ -1,4 +1,4 @@
-// Copyright 2025 Pentora Authors
+// Copyright 2025 Vulntor Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 
@@ -76,11 +76,11 @@ func NewDownloader(cache *CacheManager, opts ...DownloaderOption) *Downloader {
 		sources: []PluginSource{
 			{
 				Name:     "official",
-				URL:      "https://plugins.pentora.ai/manifest.yaml",
+				URL:      "https://plugins.vulntor.ai/manifest.yaml",
 				Enabled:  true,
 				Priority: 1,
 				Mirrors: []string{
-					"https://raw.githubusercontent.com/pentora-ai/pentora-plugins/main/manifest.yaml",
+					"https://raw.githubusercontent.com/vulntor-ai/vulntor-plugins/main/manifest.yaml",
 				},
 			},
 		},

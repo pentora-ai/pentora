@@ -1,4 +1,4 @@
-// Package deps provides dependency injection for the Pentora server.
+// Package deps provides dependency injection for the Vulntor server.
 //
 // The Deps struct holds all dependencies required by server components
 // (HTTP handlers, API endpoints, job managers, etc.) and enables easy
@@ -10,8 +10,8 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/pentora-ai/pentora/pkg/engine"
-	"github.com/pentora-ai/pentora/pkg/storage"
+	"github.com/vulntor/vulntor/pkg/engine"
+	"github.com/vulntor/vulntor/pkg/storage"
 )
 
 // Deps holds all dependencies required by server components.

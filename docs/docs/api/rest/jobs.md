@@ -7,7 +7,7 @@ Manage distributed job queue and scheduling.
 **POST** `/api/v1/jobs`
 
 ```bash
-curl -X POST https://pentora.company.com/api/v1/jobs \
+curl -X POST https://vulntor.company.com/api/v1/jobs \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -26,7 +26,7 @@ curl -X POST https://pentora.company.com/api/v1/jobs \
 **GET** `/api/v1/jobs`
 
 ```bash
-curl https://pentora.company.com/api/v1/jobs?status=running \
+curl https://vulntor.company.com/api/v1/jobs?status=running \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -35,7 +35,7 @@ curl https://pentora.company.com/api/v1/jobs?status=running \
 **GET** `/api/v1/jobs/{job_id}`
 
 ```bash
-curl https://pentora.company.com/api/v1/jobs/job-123 \
+curl https://vulntor.company.com/api/v1/jobs/job-123 \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -44,7 +44,7 @@ curl https://pentora.company.com/api/v1/jobs/job-123 \
 **POST** `/api/v1/jobs/{job_id}/cancel`
 
 ```bash
-curl -X POST https://pentora.company.com/api/v1/jobs/job-123/cancel \
+curl -X POST https://vulntor.company.com/api/v1/jobs/job-123/cancel \
   -H "Authorization: Bearer $TOKEN"
 ```
 

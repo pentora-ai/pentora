@@ -1,26 +1,26 @@
 # Configuration Overview
 
-Pentora uses a hierarchical YAML-based configuration system that allows for flexible, environment-specific settings.
+Vulntor uses a hierarchical YAML-based configuration system that allows for flexible, environment-specific settings.
 
 ## Configuration Hierarchy
 
 Configuration is loaded in order (later sources override earlier ones):
 
 1. **Builtin defaults** - Compiled into binary
-2. **System config** - `/etc/pentora/config.yaml` (Linux) or OS equivalent
-3. **User config** - `~/.config/pentora/config.yaml`
-4. **Storage config** - `<storage>/config/pentora.yaml`
+2. **System config** - `/etc/vulntor/config.yaml` (Linux) or OS equivalent
+3. **User config** - `~/.config/vulntor/config.yaml`
+4. **Storage config** - `<storage>/config/vulntor.yaml`
 5. **Custom config** - `--config /path/to/config.yaml`
-6. **Environment variables** - `PENTORA_*`
+6. **Environment variables** - `VULNTOR_*`
 7. **CLI flags** - Command-line arguments
 
 ## Configuration File Structure
 
 ```yaml
-# ~/.config/pentora/config.yaml
+# ~/.config/vulntor/config.yaml
 
 storage:
-  dir: ~/.local/share/pentora
+  dir: ~/.local/share/vulntor
   enabled: true
   auto_create: true
   retention:
@@ -63,7 +63,7 @@ fingerprint:
   max_protocols: 3
   catalog:
     builtin: true
-    remote_url: https://catalog.pentora.io/fingerprints.yaml
+    remote_url: https://catalog.vulntor.io/fingerprints.yaml
   cache:
     ttl: 7d
     auto_sync: true
@@ -75,7 +75,7 @@ logging:
   output: stderr
   file:
     enabled: false
-    path: /var/log/pentora/pentora.log
+    path: /var/log/vulntor/vulntor.log
     max_size: 100MB
     max_backups: 10
     max_age: 30d
@@ -90,7 +90,7 @@ server:
   ui:
     enabled: true
     path: /ui
-    static_dir: /usr/share/pentora/ui
+    static_dir: /usr/share/vulntor/ui
   tls:
     enabled: false
     cert_file: ""
@@ -119,7 +119,7 @@ notifications:
   email:
     smtp_server: ""
     smtp_port: 587
-    from: "pentora@company.com"
+    from: "vulntor@company.com"
     to: []
 
 # Enterprise-only sections

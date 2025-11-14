@@ -1,4 +1,4 @@
-// Copyright 2025 Pentora Authors
+// Copyright 2025 Vulntor Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 
@@ -210,7 +210,7 @@ func TestFunctionalOptions_WithPluginSources(t *testing.T) {
 		require.NotNil(t, svc)
 		require.Len(t, svc.sources, 1)
 		require.Equal(t, "official", svc.sources[0].Name)
-		require.Equal(t, "https://plugins.pentora.ai/manifest.yaml", svc.sources[0].URL)
+		require.Equal(t, "https://plugins.vulntor.ai/manifest.yaml", svc.sources[0].URL)
 	})
 }
 

@@ -1,4 +1,4 @@
-// Copyright 2025 Pentora Authors
+// Copyright 2025 Vulntor Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 
@@ -48,7 +48,7 @@ type YAMLPlugin struct {
 	Author  string     `yaml:"author" json:"author"`
 
 	// Compatibility (optional)
-	MinPentoraVersion string `yaml:"pentora_min_version,omitempty" json:"pentora_min_version,omitempty"`
+	MinVulntorVersion string `yaml:"vulntor_min_version,omitempty" json:"vulntor_min_version,omitempty"`
 
 	// Metadata
 	Metadata PluginMetadata `yaml:"metadata" json:"metadata"`
@@ -179,43 +179,43 @@ func (p *YAMLPlugin) Validate() error {
 		return fmt.Errorf("output message is required")
 	}
 
-	// Validate pentora_min_version format if present
-	if p.MinPentoraVersion != "" {
-		if !isValidSemver(p.MinPentoraVersion) {
-			return fmt.Errorf("invalid pentora_min_version format: %s (must be semantic version like 0.1.0 or v0.1.0)", p.MinPentoraVersion)
+	// Validate vulntor_min_version format if present
+	if p.MinVulntorVersion != "" {
+		if !isValidSemver(p.MinVulntorVersion) {
+			return fmt.Errorf("invalid vulntor_min_version format: %s (must be semantic version like 0.1.0 or v0.1.0)", p.MinVulntorVersion)
 		}
 	}
 
 	return nil
 }
 
-// IsCompatibleWithPentora checks if the plugin is compatible with the given Pentora version.
+// IsCompatibleWithVulntor checks if the plugin is compatible with the given Vulntor version.
 // Returns true if:
-// - No version constraint is specified (MinPentoraVersion is empty)
-// - Current Pentora version >= MinPentoraVersion
-func (p *YAMLPlugin) IsCompatibleWithPentora(pentoraVersion string) (bool, error) {
+// - No version constraint is specified (MinVulntorVersion is empty)
+// - Current Vulntor version >= MinVulntorVersion
+func (p *YAMLPlugin) IsCompatibleWithVulntor(vulntorVersion string) (bool, error) {
 	// No version constraint means compatible with all versions
-	if p.MinPentoraVersion == "" {
+	if p.MinVulntorVersion == "" {
 		return true, nil
 	}
 
 	// Normalize versions to ensure they have 'v' prefix
-	currentVersion := normalizeVersion(pentoraVersion)
-	requiredVersion := normalizeVersion(p.MinPentoraVersion)
+	currentVersion := normalizeVersion(vulntorVersion)
+	requiredVersion := normalizeVersion(p.MinVulntorVersion)
 
 	// Validate version formats
 	if !semver.IsValid(currentVersion) {
-		return false, fmt.Errorf("invalid pentora version: %s", pentoraVersion)
+		return false, fmt.Errorf("invalid vulntor version: %s", vulntorVersion)
 	}
 
 	if !semver.IsValid(requiredVersion) {
-		return false, fmt.Errorf("invalid plugin min_pentora_version: %s", p.MinPentoraVersion)
+		return false, fmt.Errorf("invalid plugin min_vulntor_version: %s", p.MinVulntorVersion)
 	}
 
 	// Compare versions (semver.Compare returns -1, 0, or 1)
 	// Returns: -1 if current < required, 0 if equal, 1 if current > required
 	if semver.Compare(currentVersion, requiredVersion) < 0 {
-		return false, fmt.Errorf("plugin requires Pentora >= %s (current: %s)", p.MinPentoraVersion, pentoraVersion)
+		return false, fmt.Errorf("plugin requires Vulntor >= %s (current: %s)", p.MinVulntorVersion, vulntorVersion)
 	}
 
 	return true, nil

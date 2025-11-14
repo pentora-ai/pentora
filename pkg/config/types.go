@@ -3,7 +3,7 @@ package config
 
 import "time"
 
-// Config is the root configuration structure for the Pentora application.
+// Config is the root configuration structure for the Vulntor application.
 // It aggregates all other specific configuration structs.
 type Config struct {
 	Log    LogConfig    `description:"Logging configuration" koanf:"log"`   // Logging configuration
@@ -12,13 +12,13 @@ type Config struct {
 
 // LogConfig holds logging related configuration.
 type LogConfig struct {
-	Level  string `description:"Log level set to pentora logs." koanf:"level"`   // Log level (e.g., "debug", "info", "warn", "error")
-	Format string `description:"Pentora log format: json | text" koanf:"format"` // Log format (e.g., "json", "text")
+	Level  string `description:"Log level set to vulntor logs." koanf:"level"`   // Log level (e.g., "debug", "info", "warn", "error")
+	Format string `description:"Vulntor log format: json | text" koanf:"format"` // Log format (e.g., "json", "text")
 	File   string `description:"Log file path" koanf:"file"`                     // Log file path (optional)
 }
 
-// ServerConfig holds configuration for the Pentora server runtime.
-// Used by 'pentora server start' command.
+// ServerConfig holds configuration for the Vulntor server runtime.
+// Used by 'vulntor server start' command.
 type ServerConfig struct {
 	// Network settings
 	Addr string `description:"Server listen address" koanf:"addr"`

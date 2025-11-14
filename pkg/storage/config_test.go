@@ -26,7 +26,7 @@ func TestConfig_Validate(t *testing.T) {
 
 	t.Run("valid config with tilde expansion", func(t *testing.T) {
 		cfg := &Config{
-			WorkspaceRoot: "~/test-pentora",
+			WorkspaceRoot: "~/test-vulntor",
 		}
 
 		err := cfg.Validate()
@@ -91,9 +91,9 @@ func TestDefaultWorkspaceRoot(t *testing.T) {
 		t.Errorf("DefaultWorkspaceRoot() not absolute: %s", root)
 	}
 
-	// Should contain "pentora" or "Pentora"
-	if !contains(root, "pentora") && !contains(root, "Pentora") {
-		t.Errorf("DefaultWorkspaceRoot() does not contain 'pentora': %s", root)
+	// Should contain "vulntor" or "Vulntor"
+	if !contains(root, "vulntor") && !contains(root, "Vulntor") {
+		t.Errorf("DefaultWorkspaceRoot() does not contain 'vulntor': %s", root)
 	}
 
 	// Platform-specific checks

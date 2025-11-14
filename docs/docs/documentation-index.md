@@ -1,6 +1,6 @@
-# Pentora Documentation Index
+# Vulntor Documentation Index
 
-Complete documentation for the Pentora security scanner.
+Complete documentation for the Vulntor security scanner.
 
 ## Getting Started (1 file)
 
@@ -17,9 +17,9 @@ Complete documentation for the Pentora security scanner.
 ## CLI Reference (4 files)
 
 - [CLI Overview](/cli/overview) - Command structure and usage
-- [pentora scan](/cli/scan) - Scan command reference
-- [pentora server](/cli/server) - Server control
-- [pentora fingerprint](/cli/fingerprint) - Fingerprint management
+- [vulntor scan](/cli/scan) - Scan command reference
+- [vulntor server](/cli/server) - Server control
+- [vulntor fingerprint](/cli/fingerprint) - Fingerprint management
 
 ## Configuration (3 files)
 

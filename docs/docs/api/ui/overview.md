@@ -1,6 +1,6 @@
 # UI Portal Overview
 
-Pentora UI provides a clean, approachable interface for non-technical stakeholders.
+Vulntor UI provides a clean, approachable interface for non-technical stakeholders.
 
 ## Purpose
 
@@ -16,7 +16,7 @@ While technical operators use the CLI, the UI empowers the rest of the organizat
 
 Navigate to server address:
 ```
-https://pentora.company.com/ui
+https://vulntor.company.com/ui
 ```
 
 Default credentials (change immediately):
@@ -56,7 +56,7 @@ Default credentials (change immediately):
 ## Architecture
 
 ```
-[Browser] → [Pentora Server] → [REST API] → [Storage]
+[Browser] → [Vulntor Server] → [REST API] → [Storage]
                 ↓
          [Static UI Files]
 ```

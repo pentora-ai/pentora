@@ -12,8 +12,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/pentora-ai/pentora/pkg/server/api"
-	"github.com/pentora-ai/pentora/pkg/storage"
+	"github.com/vulntor/vulntor/pkg/server/api"
+	"github.com/vulntor/vulntor/pkg/storage"
 )
 
 // Mock workspace for testing

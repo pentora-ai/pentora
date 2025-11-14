@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pentora-ai/pentora/pkg/engine"
+	"github.com/vulntor/vulntor/pkg/engine"
 )
 
 func mustListenTCP(t *testing.T, addr string) net.Listener {
@@ -203,7 +203,7 @@ func TestRunProbesCollectsHTTPEvidence(t *testing.T) {
 
 	server := &http.Server{
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Server", "PentoraTest/1.0")
+			w.Header().Set("Server", "VulntorTest/1.0")
 			_, _ = fmt.Fprint(w, "hello from test")
 		}),
 	}

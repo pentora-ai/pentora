@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/pentora-ai/pentora/pkg/fingerprint"
+	"github.com/vulntor/vulntor/pkg/fingerprint"
 )
 
 // Source loads the raw probe catalog bytes (YAML/JSON) from a backing store.

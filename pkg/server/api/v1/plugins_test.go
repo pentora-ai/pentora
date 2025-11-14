@@ -11,8 +11,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/pentora-ai/pentora/pkg/plugin"
-	"github.com/pentora-ai/pentora/pkg/server/api"
+	"github.com/vulntor/vulntor/pkg/plugin"
+	"github.com/vulntor/vulntor/pkg/server/api"
 )
 
 // mockPluginService implements PluginService for testing
@@ -77,7 +77,7 @@ func TestInstallPluginHandler_Success(t *testing.T) {
 					Name:     "SSH Weak Cipher Detection",
 					Version:  "1.0.0",
 					Type:     "evaluation",
-					Author:   "pentora-security",
+					Author:   "vulntor-security",
 					Severity: "high",
 					Tags:     []string{"ssh", "crypto"},
 				},
@@ -269,7 +269,7 @@ func TestListPluginsHandler_MultiplePlugins(t *testing.T) {
 				Name:     "SSH Weak Cipher Detection",
 				Version:  "1.0.0",
 				Type:     "evaluation",
-				Author:   "pentora-security",
+				Author:   "vulntor-security",
 				Severity: "high",
 				Tags:     []string{"ssh", "crypto"},
 			},
@@ -278,7 +278,7 @@ func TestListPluginsHandler_MultiplePlugins(t *testing.T) {
 				Name:     "HTTP Default Pages",
 				Version:  "1.0.0",
 				Type:     "evaluation",
-				Author:   "pentora-security",
+				Author:   "vulntor-security",
 				Severity: "medium",
 				Tags:     []string{"http", "web"},
 			},
@@ -339,7 +339,7 @@ func TestGetPluginHandler_Success(t *testing.T) {
 			Name:     "SSH Weak Cipher Detection",
 			Version:  "1.0.0",
 			Type:     "evaluation",
-			Author:   "pentora-security",
+			Author:   "vulntor-security",
 			Severity: "high",
 			Tags:     []string{"ssh", "crypto"},
 		},
@@ -512,13 +512,13 @@ func TestUpdatePluginsHandler_Success(t *testing.T) {
 					ID:      "ssh-weak-cipher",
 					Name:    "SSH Weak Cipher Detection",
 					Version: "1.0.1",
-					Author:  "pentora-security",
+					Author:  "vulntor-security",
 				},
 				{
 					ID:      "http-default-pages",
 					Name:    "HTTP Default Pages",
 					Version: "1.0.1",
-					Author:  "pentora-security",
+					Author:  "vulntor-security",
 				},
 			},
 			Errors: []plugin.PluginError{},

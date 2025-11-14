@@ -9,8 +9,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/pentora-ai/pentora/pkg/appctx"
-	"github.com/pentora-ai/pentora/pkg/engine"
+	"github.com/vulntor/vulntor/pkg/appctx"
+	"github.com/vulntor/vulntor/pkg/engine"
 )
 
 // TestRunWithEphemeralTCP ensures the scan service can execute end-to-end

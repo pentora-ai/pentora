@@ -1,4 +1,4 @@
-// Copyright 2025 Pentora Authors
+// Copyright 2025 Vulntor Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 
@@ -15,9 +15,9 @@ import (
 )
 
 // CacheManager manages plugin download cache.
-// Cache location: ~/.pentora/plugins/cache/
+// Cache location: ~/.vulntor/plugins/cache/
 type CacheManager struct {
-	// Base cache directory (e.g., ~/.pentora/plugins/cache/)
+	// Base cache directory (e.g., ~/.vulntor/plugins/cache/)
 	cacheDir string
 
 	// Registry for tracking cached plugins

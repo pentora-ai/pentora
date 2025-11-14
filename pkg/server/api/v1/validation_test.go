@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/pentora-ai/pentora/pkg/plugin"
+	"github.com/vulntor/vulntor/pkg/plugin"
 )
 
 // --- helper for request ---

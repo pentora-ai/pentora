@@ -1,6 +1,6 @@
 # DAG Execution Engine
 
-Pentora's DAG (Directed Acyclic Graph) engine orchestrates scan execution by managing module dependencies, enabling parallel execution, and coordinating data flow between stages.
+Vulntor's DAG (Directed Acyclic Graph) engine orchestrates scan execution by managing module dependencies, enabling parallel execution, and coordinating data flow between stages.
 
 ## What is a DAG?
 
@@ -131,7 +131,7 @@ DAG validator checks:
 
 ```bash
 # Validate DAG definition
-pentora dag validate scan-profile.yaml
+vulntor dag validate scan-profile.yaml
 ```
 
 ## Execution Model
@@ -469,7 +469,7 @@ nodes:
     config:
       methods: [GET, HEAD, OPTIONS]
       headers:
-        User-Agent: Pentora/1.0
+        User-Agent: Vulntor/1.0
 
   - instance_id: ssl_scan
     module_type: ssl_analyzer
@@ -491,15 +491,15 @@ nodes:
 
 ```bash
 # Execute custom DAG
-pentora scan --targets example.com --dag custom-scan.yaml
+vulntor scan --targets example.com --dag custom-scan.yaml
 
 # Validate DAG before execution
-pentora dag validate custom-scan.yaml
+vulntor dag validate custom-scan.yaml
 ```
 
 ### Built-in DAGs
 
-Pentora includes predefined DAGs for common scenarios:
+Vulntor includes predefined DAGs for common scenarios:
 
 - `standard.yaml`: Full 9-stage pipeline
 - `discovery-only.yaml`: Target ingestion + discovery + reporting
@@ -509,7 +509,7 @@ Pentora includes predefined DAGs for common scenarios:
 Accessed via scan profiles:
 
 ```bash
-pentora scan --targets 192.168.1.0/24 --profile standard
+vulntor scan --targets 192.168.1.0/24 --profile standard
 # Uses builtin/standard.yaml DAG
 ```
 
@@ -565,7 +565,7 @@ See [Hook System](/advanced/hooks-events) for event details.
 Track execution progress:
 
 ```bash
-pentora scan --targets 192.168.1.0/24 --progress
+vulntor scan --targets 192.168.1.0/24 --progress
 ```
 
 ```
@@ -708,10 +708,10 @@ If execution hangs:
 
 ```bash
 # Enable detailed logging
-pentora scan --targets 192.168.1.100 --log-level debug
+vulntor scan --targets 192.168.1.100 --log-level debug
 
 # Check for circular dependencies
-pentora dag validate my-dag.yaml
+vulntor dag validate my-dag.yaml
 ```
 
 ## Next Steps

@@ -8,8 +8,8 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"github.com/pentora-ai/pentora/pkg/engine"
-	"github.com/pentora-ai/pentora/pkg/modules/scan"
+	"github.com/vulntor/vulntor/pkg/engine"
+	"github.com/vulntor/vulntor/pkg/modules/scan"
 )
 
 func init() {

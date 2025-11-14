@@ -9,7 +9,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/pentora-ai/pentora/pkg/config"
+	"github.com/vulntor/vulntor/pkg/config"
 )
 
 // NewHandler creates an HTTP handler for serving UI assets.

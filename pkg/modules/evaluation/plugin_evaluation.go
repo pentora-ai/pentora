@@ -7,10 +7,10 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/pentora-ai/pentora/pkg/engine"
-	"github.com/pentora-ai/pentora/pkg/modules/parse"
-	"github.com/pentora-ai/pentora/pkg/modules/scan"
-	"github.com/pentora-ai/pentora/pkg/plugin"
+	"github.com/vulntor/vulntor/pkg/engine"
+	"github.com/vulntor/vulntor/pkg/modules/parse"
+	"github.com/vulntor/vulntor/pkg/modules/scan"
+	"github.com/vulntor/vulntor/pkg/plugin"
 )
 
 const (
@@ -18,7 +18,7 @@ const (
 	pluginEvalModuleName        = "plugin-evaluation"
 	pluginEvalModuleDescription = "Evaluates scan results against embedded security check plugins."
 	pluginEvalModuleVersion     = "0.1.0"
-	pluginEvalModuleAuthor      = "Pentora Team"
+	pluginEvalModuleAuthor      = "Vulntor Team"
 )
 
 // VulnerabilityResult represents a matched vulnerability from plugin evaluation.

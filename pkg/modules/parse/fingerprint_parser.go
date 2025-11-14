@@ -9,9 +9,9 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/pentora-ai/pentora/pkg/engine"
-	"github.com/pentora-ai/pentora/pkg/fingerprint"
-	"github.com/pentora-ai/pentora/pkg/modules/scan"
+	"github.com/vulntor/vulntor/pkg/engine"
+	"github.com/vulntor/vulntor/pkg/fingerprint"
+	"github.com/vulntor/vulntor/pkg/modules/scan"
 )
 
 const (
@@ -19,7 +19,7 @@ const (
 	fingerprintParserModuleName        = "fingerprint-parser"
 	fingerprintParserModuleDescription = "Matches service banners with fingerprint catalog entries."
 	fingerprintParserModuleVersion     = "0.1.0"
-	fingerprintParserModuleAuthor      = "Pentora Team"
+	fingerprintParserModuleAuthor      = "Vulntor Team"
 )
 
 var getResolver = fingerprint.GetFingerprintResolver

@@ -1,6 +1,6 @@
 # JWT-Based Licensing
 
-Pentora Enterprise uses JWT tokens for license management and feature gating.
+Vulntor Enterprise uses JWT tokens for license management and feature gating.
 
 ## License Structure
 
@@ -30,13 +30,13 @@ Location: `<storage>/config/license.key`
 
 ```bash
 # Install license
-cp license.key ~/.local/share/pentora/config/
+cp license.key ~/.local/share/vulntor/config/
 
 # Verify license
-pentora license verify
+vulntor license verify
 
 # View license details
-pentora license show
+vulntor license show
 ```
 
 ## Feature Gating
@@ -59,14 +59,14 @@ License allows 7-day offline operation before requiring refresh.
 
 ```bash
 # Check expiry
-pentora license show
+vulntor license show
 
 # Refresh from server
-pentora license refresh
+vulntor license refresh
 
 # Manual update
-cp new-license.key ~/.local/share/pentora/config/license.key
-pentora server restart
+cp new-license.key ~/.local/share/vulntor/config/license.key
+vulntor server restart
 ```
 
 Expiry warnings: 30 days, 7 days, 1 day before expiration.

@@ -1,6 +1,6 @@
 # Module System
 
-Modules are the building blocks of Pentora scans. Each module performs a specific function within the scan pipeline and can be composed via the DAG engine to create custom workflows.
+Modules are the building blocks of Vulntor scans. Each module performs a specific function within the scan pipeline and can be composed via the DAG engine to create custom workflows.
 
 ## What is a Module?
 
@@ -142,7 +142,7 @@ package discovery
 
 import (
     "context"
-    "github.com/pentora/pentora/pkg/module"
+    "github.com/vulntor/vulntor/pkg/module"
 )
 
 type ICMPModule struct {
@@ -234,7 +234,7 @@ Modules register themselves during package initialization:
 ```go
 package discovery
 
-import "github.com/pentora/pentora/pkg/module"
+import "github.com/vulntor/vulntor/pkg/module"
 
 func init() {
     module.Register("icmp_discovery", &ICMPModule{})
@@ -247,7 +247,7 @@ func init() {
 
 ### Embedded Modules (Builtin)
 
-Compiled into Pentora binary:
+Compiled into Vulntor binary:
 
 **Advantages**:
 - Fast (no IPC overhead)
@@ -262,9 +262,9 @@ Compiled into Pentora binary:
 
 **Usage**:
 ```go
-import _ "github.com/pentora/pentora/pkg/modules/discovery"
-import _ "github.com/pentora/pentora/pkg/modules/scanner"
-import _ "github.com/pentora/pentora/pkg/modules/fingerprint"
+import _ "github.com/vulntor/vulntor/pkg/modules/discovery"
+import _ "github.com/vulntor/vulntor/pkg/modules/scanner"
+import _ "github.com/vulntor/vulntor/pkg/modules/fingerprint"
 ```
 
 All builtin modules auto-register via `init()`.
@@ -274,8 +274,8 @@ All builtin modules auto-register via `init()`.
 Isolated processes or libraries:
 
 **Advantages**:
-- Hot-reloadable without Pentora restart
-- Isolated failures (crash doesn't kill Pentora)
+- Hot-reloadable without Vulntor restart
+- Isolated failures (crash doesn't kill Vulntor)
 - Any language (via gRPC)
 - Memory efficient (loaded on demand)
 - Third-party distribution
@@ -293,7 +293,7 @@ Isolated processes or libraries:
 // plugin-vuln/main.go
 package main
 
-import "github.com/pentora/pentora/pkg/module"
+import "github.com/vulntor/vulntor/pkg/module"
 
 type CustomVulnChecker struct{}
 
@@ -313,7 +313,7 @@ go build -buildmode=plugin -o vuln-checker.so plugin-vuln/main.go
 
 Load:
 ```bash
-pentora scan --plugin vuln-checker.so --targets 192.168.1.100
+vulntor scan --plugin vuln-checker.so --targets 192.168.1.100
 ```
 
 #### 2. gRPC Plugins (any language)
@@ -340,8 +340,8 @@ Python example:
 ```python
 # custom_module.py
 import grpc
-from pentora_pb2 import ExecuteRequest, ExecuteResponse
-from pentora_pb2_grpc import ModuleServiceServicer
+from vulntor_pb2 import ExecuteRequest, ExecuteResponse
+from vulntor_pb2_grpc import ModuleServiceServicer
 
 class CustomModule(ModuleServiceServicer):
     def Execute(self, request, context):
@@ -372,7 +372,7 @@ WebAssembly modules for sandboxed execution:
 
 ```rust
 // custom_scanner.rs
-use pentora_sdk::*;
+use vulntor_sdk::*;
 
 #[no_mangle]
 pub extern "C" fn execute(context: *const Context) -> i32 {
@@ -390,7 +390,7 @@ cargo build --target wasm32-wasi --release
 
 Load:
 ```bash
-pentora scan --plugin custom_scanner.wasm --targets 192.168.1.100
+vulntor scan --plugin custom_scanner.wasm --targets 192.168.1.100
 ```
 
 ## Module Lifecycle
@@ -443,7 +443,7 @@ func (m *MyModule) Initialize() error {
 }
 ```
 
-Called once when Pentora starts or plugin loads.
+Called once when Vulntor starts or plugin loads.
 
 ### Configure Phase
 
@@ -493,7 +493,7 @@ func (m *MyModule) Cleanup() error {
 }
 ```
 
-Called when Pentora exits or plugin unloads.
+Called when Vulntor exits or plugin unloads.
 
 ## Module Configuration
 
@@ -549,10 +549,10 @@ nodes:
 
 ### Configuration Validation
 
-Pentora validates config against schema before execution:
+Vulntor validates config against schema before execution:
 
 ```bash
-pentora dag validate my-scan.yaml
+vulntor dag validate my-scan.yaml
 ```
 
 Checks:
@@ -705,7 +705,7 @@ func (m *Module) Execute(ctx context.Context, data DataContext) error {
 
 ### Builtin Modules
 
-Shipped with Pentora:
+Shipped with Vulntor:
 
 - Discovery: ICMP, ARP, TCP probe
 - Scanner: SYN, Connect, UDP, banner grab
@@ -718,23 +718,23 @@ Always available, no installation required.
 
 ### Official Plugin Repository
 
-Pentora-maintained plugins:
+Vulntor-maintained plugins:
 
 ```bash
 # List available plugins
-pentora plugin list
+vulntor plugin list
 
 # Install plugin
-pentora plugin install vuln/nmap-nse-wrapper
+vulntor plugin install vuln/nmap-nse-wrapper
 
 # Update plugin
-pentora plugin update vuln/nmap-nse-wrapper
+vulntor plugin update vuln/nmap-nse-wrapper
 
 # Remove plugin
-pentora plugin remove vuln/nmap-nse-wrapper
+vulntor plugin remove vuln/nmap-nse-wrapper
 ```
 
-Plugins installed to `~/.local/share/pentora/plugins/`.
+Plugins installed to `~/.local/share/vulntor/plugins/`.
 
 ### Third-Party Plugins
 
@@ -742,10 +742,10 @@ Community-developed modules:
 
 ```bash
 # Install from URL
-pentora plugin install https://github.com/user/custom-scanner/releases/latest/plugin.so
+vulntor plugin install https://github.com/user/custom-scanner/releases/latest/plugin.so
 
 # Install from file
-pentora plugin install /path/to/plugin.so
+vulntor plugin install /path/to/plugin.so
 ```
 
 **Security**: Signature verification required (Enterprise):

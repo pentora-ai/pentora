@@ -46,7 +46,7 @@ jobs:
           mkdir -p pkg/ui/dist
           cat > pkg/ui/dist/index.html << 'EOF'
           <!DOCTYPE html>
-          <html><head><title>Pentora UI - Not Built</title></head>
+          <html><head><title>Vulntor UI - Not Built</title></head>
           <body><h1>UI not built</h1><p>Run: make generate-ui</p></body>
           </html>
           EOF
@@ -154,11 +154,11 @@ jobs:
             x86_64) GOARCH=amd64 ;;
             aarch64) GOARCH=arm64 ;;
           esac
-          ./dist/${GOOS}/${GOARCH}/pentora version
+          ./dist/${GOOS}/${GOARCH}/vulntor version
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: pentora-${{ runner.os }}-${{ runner.arch }}
+          name: vulntor-${{ runner.os }}-${{ runner.arch }}
           path: dist/
           retention-days: 7

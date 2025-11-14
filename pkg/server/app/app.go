@@ -7,10 +7,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/pentora-ai/pentora/pkg/config"
-	"github.com/pentora-ai/pentora/pkg/server/api"
-	"github.com/pentora-ai/pentora/pkg/server/httpx"
-	"github.com/pentora-ai/pentora/pkg/server/jobs"
+	"github.com/vulntor/vulntor/pkg/config"
+	"github.com/vulntor/vulntor/pkg/server/api"
+	"github.com/vulntor/vulntor/pkg/server/httpx"
+	"github.com/vulntor/vulntor/pkg/server/jobs"
 )
 
 // App orchestrates the server runtime components:
@@ -91,7 +91,7 @@ func (a *App) Run(ctx context.Context) error {
 		Bool("api", a.Config.APIEnabled).
 		Bool("ui", a.Config.UIEnabled).
 		Bool("jobs", a.Config.JobsEnabled).
-		Msg("Starting Pentora server")
+		Msg("Starting Vulntor server")
 
 	// Start HTTP server in goroutine
 	serverErr := make(chan error, 1)

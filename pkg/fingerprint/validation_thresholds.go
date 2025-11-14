@@ -104,25 +104,25 @@ func loadPositiveIntEnv(key string, defaultVal int) int {
 
 // LoadThresholdsFromEnv loads validation thresholds from environment variables.
 // Environment variables override default values. Supported variables:
-//   - PENTORA_VALIDATION_TARGET_FPR: False positive rate target (0.0-1.0)
-//   - PENTORA_VALIDATION_TARGET_TPR: True positive rate target (0.0-1.0)
-//   - PENTORA_VALIDATION_TARGET_PRECISION: Precision target (0.0-1.0)
-//   - PENTORA_VALIDATION_TARGET_F1: F1 score target (0.0-1.0)
-//   - PENTORA_VALIDATION_TARGET_PROTOCOLS: Protocol coverage target (int)
-//   - PENTORA_VALIDATION_TARGET_VERSION_RATE: Version extraction rate target (0.0-1.0)
-//   - PENTORA_VALIDATION_TARGET_PERF_MS: Performance target in milliseconds (float)
+//   - VULNTOR_VALIDATION_TARGET_FPR: False positive rate target (0.0-1.0)
+//   - VULNTOR_VALIDATION_TARGET_TPR: True positive rate target (0.0-1.0)
+//   - VULNTOR_VALIDATION_TARGET_PRECISION: Precision target (0.0-1.0)
+//   - VULNTOR_VALIDATION_TARGET_F1: F1 score target (0.0-1.0)
+//   - VULNTOR_VALIDATION_TARGET_PROTOCOLS: Protocol coverage target (int)
+//   - VULNTOR_VALIDATION_TARGET_VERSION_RATE: Version extraction rate target (0.0-1.0)
+//   - VULNTOR_VALIDATION_TARGET_PERF_MS: Performance target in milliseconds (float)
 //
 // Invalid values are silently ignored, falling back to defaults.
 func LoadThresholdsFromEnv() ValidationThresholds {
 	defaults := DefaultThresholds()
 	return ValidationThresholds{
-		TargetFPR:         loadFloatEnv("PENTORA_VALIDATION_TARGET_FPR", defaults.TargetFPR),
-		TargetTPR:         loadFloatEnv("PENTORA_VALIDATION_TARGET_TPR", defaults.TargetTPR),
-		TargetPrecision:   loadFloatEnv("PENTORA_VALIDATION_TARGET_PRECISION", defaults.TargetPrecision),
-		TargetF1:          loadFloatEnv("PENTORA_VALIDATION_TARGET_F1", defaults.TargetF1),
-		TargetProtocols:   loadPositiveIntEnv("PENTORA_VALIDATION_TARGET_PROTOCOLS", defaults.TargetProtocols),
-		TargetVersionRate: loadFloatEnv("PENTORA_VALIDATION_TARGET_VERSION_RATE", defaults.TargetVersionRate),
-		TargetPerfMs:      loadPositiveFloatEnv("PENTORA_VALIDATION_TARGET_PERF_MS", defaults.TargetPerfMs),
+		TargetFPR:         loadFloatEnv("VULNTOR_VALIDATION_TARGET_FPR", defaults.TargetFPR),
+		TargetTPR:         loadFloatEnv("VULNTOR_VALIDATION_TARGET_TPR", defaults.TargetTPR),
+		TargetPrecision:   loadFloatEnv("VULNTOR_VALIDATION_TARGET_PRECISION", defaults.TargetPrecision),
+		TargetF1:          loadFloatEnv("VULNTOR_VALIDATION_TARGET_F1", defaults.TargetF1),
+		TargetProtocols:   loadPositiveIntEnv("VULNTOR_VALIDATION_TARGET_PROTOCOLS", defaults.TargetProtocols),
+		TargetVersionRate: loadFloatEnv("VULNTOR_VALIDATION_TARGET_VERSION_RATE", defaults.TargetVersionRate),
+		TargetPerfMs:      loadPositiveFloatEnv("VULNTOR_VALIDATION_TARGET_PERF_MS", defaults.TargetPerfMs),
 	}
 }
 

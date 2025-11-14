@@ -17,12 +17,12 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 
-	"github.com/pentora-ai/pentora/pkg/config"
-	"github.com/pentora-ai/pentora/pkg/plugin"
-	"github.com/pentora-ai/pentora/pkg/server/api"
-	v1 "github.com/pentora-ai/pentora/pkg/server/api/v1"
-	"github.com/pentora-ai/pentora/pkg/server/app"
-	"github.com/pentora-ai/pentora/pkg/storage"
+	"github.com/vulntor/vulntor/pkg/config"
+	"github.com/vulntor/vulntor/pkg/plugin"
+	"github.com/vulntor/vulntor/pkg/server/api"
+	v1 "github.com/vulntor/vulntor/pkg/server/api/v1"
+	"github.com/vulntor/vulntor/pkg/server/app"
+	"github.com/vulntor/vulntor/pkg/storage"
 )
 
 func init() {
@@ -42,7 +42,7 @@ func init() {
 // Run with: go test -tags=integration -v ./pkg/server/api/v1
 func TestPluginAPIFullLifecycle(t *testing.T) {
 	// Create temporary plugin cache
-	tmpDir, err := os.MkdirTemp("", "pentora-plugin-integration-*")
+	tmpDir, err := os.MkdirTemp("", "vulntor-plugin-integration-*")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
@@ -194,7 +194,7 @@ func TestPluginAPIFullLifecycle(t *testing.T) {
 // TestPluginAPICategoryInstall tests installing plugins by category.
 func TestPluginAPICategoryInstall(t *testing.T) {
 	// Create temporary plugin cache
-	tmpDir, err := os.MkdirTemp("", "pentora-plugin-category-*")
+	tmpDir, err := os.MkdirTemp("", "vulntor-plugin-category-*")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
@@ -251,7 +251,7 @@ func TestPluginAPICategoryInstall(t *testing.T) {
 // TestPluginAPIErrorCases tests error handling in plugin API.
 func TestPluginAPIErrorCases(t *testing.T) {
 	// Create temporary plugin cache
-	tmpDir, err := os.MkdirTemp("", "pentora-plugin-errors-*")
+	tmpDir, err := os.MkdirTemp("", "vulntor-plugin-errors-*")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
@@ -319,7 +319,7 @@ func TestPluginAPIErrorCases(t *testing.T) {
 // TestPluginAPIUpdateOperations tests plugin update functionality.
 func TestPluginAPIUpdateOperations(t *testing.T) {
 	// Create temporary plugin cache
-	tmpDir, err := os.MkdirTemp("", "pentora-plugin-update-*")
+	tmpDir, err := os.MkdirTemp("", "vulntor-plugin-update-*")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
@@ -413,7 +413,7 @@ func startTestServer(t *testing.T, ctx context.Context, port int, pluginService 
 	cfgMgr := config.NewManager()
 
 	// Create storage backend (temporary)
-	tmpDir, err := os.MkdirTemp("", "pentora-storage-*")
+	tmpDir, err := os.MkdirTemp("", "vulntor-storage-*")
 	require.NoError(t, err)
 	t.Cleanup(func() { os.RemoveAll(tmpDir) })
 

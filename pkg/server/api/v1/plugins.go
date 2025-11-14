@@ -9,8 +9,8 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/pentora-ai/pentora/pkg/plugin"
-	"github.com/pentora-ai/pentora/pkg/server/api"
+	"github.com/vulntor/vulntor/pkg/plugin"
+	"github.com/vulntor/vulntor/pkg/server/api"
 )
 
 // DTO Evolution Policy
@@ -355,7 +355,7 @@ func InstallPluginHandler(pluginService PluginService, config api.Config) http.H
 //	      "id": "ssh-weak-cipher",
 //	      "name": "SSH Weak Cipher Detection",
 //	      "version": "1.0.0",
-//	      "author": "pentora-security",
+//	      "author": "vulntor-security",
 //	      "severity": "high",
 //	      "tags": ["ssh", "crypto"]
 //	    }
@@ -443,7 +443,7 @@ func ListPluginsHandler(pluginService PluginService) http.HandlerFunc {
 //	  "id": "ssh-weak-cipher",
 //	  "name": "SSH Weak Cipher Detection",
 //	  "version": "1.0.0",
-//	  "author": "pentora-security",
+//	  "author": "vulntor-security",
 //	  "severity": "high",
 //	  "tags": ["ssh", "crypto"]
 //	}

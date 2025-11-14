@@ -4,11 +4,11 @@ sidebar_position: 2
 
 # Quick Start Guide
 
-Get up and running with Pentora in 5 minutes. This guide walks you through basic scanning operations.
+Get up and running with Vulntor in 5 minutes. This guide walks you through basic scanning operations.
 
 ## Prerequisites
 
-- Pentora installed ([Installation Guide](./installation.md))
+- Vulntor installed ([Installation Guide](./installation.md))
 - Network access to target systems
 - Administrator/root privileges for network scanning
 
@@ -19,7 +19,7 @@ Get up and running with Pentora in 5 minutes. This guide walks you through basic
 Scan a single IP address:
 
 ```bash
-pentora scan 192.168.1.100
+vulntor scan 192.168.1.100
 ```
 
 Output:
@@ -46,29 +46,29 @@ Scan completed in 2.34s
 
 ```bash
 # Scan CIDR range
-pentora scan 192.168.1.0/24
+vulntor scan 192.168.1.0/24
 
 # Scan multiple IPs
-pentora scan 192.168.1.100,192.168.1.101,192.168.1.102
+vulntor scan 192.168.1.100,192.168.1.101,192.168.1.102
 
 # Scan IP range
-pentora scan 192.168.1.100-110
+vulntor scan 192.168.1.100-110
 ```
 
 ### Custom Port Scanning
 
 ```bash
 # Scan specific ports
-pentora scan 192.168.1.100 --ports 22,80,443,8080
+vulntor scan 192.168.1.100 --ports 22,80,443,8080
 
 # Scan port range
-pentora scan 192.168.1.100 --ports 1-1000
+vulntor scan 192.168.1.100 --ports 1-1000
 
 # Scan all common ports
-pentora scan 192.168.1.100 --ports common
+vulntor scan 192.168.1.100 --ports common
 
 # Scan all 65535 ports
-pentora scan 192.168.1.100 --ports all
+vulntor scan 192.168.1.100 --ports all
 ```
 
 ## Scan Modes
@@ -78,7 +78,7 @@ pentora scan 192.168.1.100 --ports all
 Quickly find live hosts without port scanning:
 
 ```bash
-pentora scan 192.168.1.0/24 --only-discover
+vulntor scan 192.168.1.0/24 --only-discover
 ```
 
 Output:
@@ -96,7 +96,7 @@ Discovered 12 active hosts:
 Scan known hosts directly (faster when targets are known):
 
 ```bash
-pentora scan 192.168.1.100 --no-discover
+vulntor scan 192.168.1.100 --no-discover
 ```
 
 ### Vulnerability Scanning
@@ -104,7 +104,7 @@ pentora scan 192.168.1.100 --no-discover
 Enable vulnerability assessment:
 
 ```bash
-pentora scan 192.168.1.100 --vuln
+vulntor scan 192.168.1.100 --vuln
 ```
 
 Output includes CVE matches:
@@ -124,25 +124,25 @@ Port 80: Apache/2.4.29
 ### JSON Export
 
 ```bash
-pentora scan 192.168.1.100 --format json -o results.json
+vulntor scan 192.168.1.100 --format json -o results.json
 ```
 
 ### CSV Export
 
 ```bash
-pentora scan 192.168.1.100 --format csv -o results.csv
+vulntor scan 192.168.1.100 --format csv -o results.csv
 ```
 
 ### PDF Report
 
 ```bash
-pentora scan 192.168.1.100 --format pdf -o report.pdf
+vulntor scan 192.168.1.100 --format pdf -o report.pdf
 ```
 
 ### Multiple Formats
 
 ```bash
-pentora scan 192.168.1.100 -o results.json -o report.pdf
+vulntor scan 192.168.1.100 -o results.json -o report.pdf
 ```
 
 ## Performance Tuning
@@ -153,23 +153,23 @@ Control scan speed with concurrency settings:
 
 ```bash
 # Slow, stealthy scan
-pentora scan 192.168.1.0/24 --rate 10
+vulntor scan 192.168.1.0/24 --rate 10
 
 # Fast scan (default)
-pentora scan 192.168.1.0/24 --rate 100
+vulntor scan 192.168.1.0/24 --rate 100
 
 # Maximum speed (aggressive)
-pentora scan 192.168.1.0/24 --rate 1000 --timeout 500ms
+vulntor scan 192.168.1.0/24 --rate 1000 --timeout 500ms
 ```
 
 ### Timeout Configuration
 
 ```bash
 # Quick timeout for fast networks
-pentora scan 192.168.1.100 --timeout 200ms
+vulntor scan 192.168.1.100 --timeout 200ms
 
 # Longer timeout for slow networks
-pentora scan 192.168.1.100 --timeout 5s
+vulntor scan 192.168.1.100 --timeout 5s
 ```
 
 ## Storage Operations
@@ -179,7 +179,7 @@ pentora scan 192.168.1.100 --timeout 5s
 View all stored scans:
 
 ```bash
-pentora storage list
+vulntor storage list
 ```
 
 Output:
@@ -196,23 +196,23 @@ Output:
 ### View Scan Details
 
 ```bash
-pentora storage show scan-2025-10-06-1
+vulntor storage show scan-2025-10-06-1
 ```
 
 ### Export Scan
 
 ```bash
-pentora storage export scan-2025-10-06-1 --format json -o export.json
+vulntor storage export scan-2025-10-06-1 --format json -o export.json
 ```
 
 ### Clean Up Old Scans
 
 ```bash
 # Delete scans older than 30 days
-pentora storage gc --older-than 30d
+vulntor storage gc --older-than 30d
 
 # Delete all but last 10 scans
-pentora storage gc --keep-last 10
+vulntor storage gc --keep-last 10
 ```
 
 ## Practical Examples
@@ -220,19 +220,19 @@ pentora storage gc --keep-last 10
 ### Web Server Assessment
 
 ```bash
-pentora scan example.com --ports 80,443,8080,8443 --vuln
+vulntor scan example.com --ports 80,443,8080,8443 --vuln
 ```
 
 ### Database Server Scan
 
 ```bash
-pentora scan 192.168.1.50 --ports 3306,5432,1433,27017 --vuln
+vulntor scan 192.168.1.50 --ports 3306,5432,1433,27017 --vuln
 ```
 
 ### Full Network Audit
 
 ```bash
-pentora scan 192.168.1.0/24 \
+vulntor scan 192.168.1.0/24 \
   --ports all \
   --vuln \
   --format pdf \
@@ -243,7 +243,7 @@ pentora scan 192.168.1.0/24 \
 
 ```bash
 # Scan and compare with previous results
-pentora scan 192.168.1.0/24 --compare-with scan-2025-10-05-1
+vulntor scan 192.168.1.0/24 --compare-with scan-2025-10-05-1
 ```
 
 ## Configuration File
@@ -251,14 +251,14 @@ pentora scan 192.168.1.0/24 --compare-with scan-2025-10-05-1
 Create a reusable scan profile:
 
 ```yaml
-# ~/.config/pentora/config.yaml
+# ~/.config/vulntor/config.yaml
 scan:
   default_ports: [22,80,443,3306,5432,8080]
   timeout: 2s
   rate: 100
 
 storage:
-  dir: /var/pentora/storage
+  dir: /var/vulntor/storage
   retention: 90d
 
 logging:
@@ -269,7 +269,7 @@ logging:
 Run with config:
 
 ```bash
-pentora scan 192.168.1.0/24 --config ~/.config/pentora/config.yaml
+vulntor scan 192.168.1.0/24 --config ~/.config/vulntor/config.yaml
 ```
 
 ## Common Use Cases
@@ -277,32 +277,32 @@ pentora scan 192.168.1.0/24 --config ~/.config/pentora/config.yaml
 ### 1. Quick Port Check
 
 ```bash
-pentora scan 192.168.1.100 --ports 22,80,443
+vulntor scan 192.168.1.100 --ports 22,80,443
 ```
 
 ### 2. Service Discovery
 
 ```bash
-pentora scan 192.168.1.0/24 --only-discover
+vulntor scan 192.168.1.0/24 --only-discover
 ```
 
 ### 3. Vulnerability Assessment
 
 ```bash
-pentora scan 192.168.1.100 --vuln --format pdf -o vuln-report.pdf
+vulntor scan 192.168.1.100 --vuln --format pdf -o vuln-report.pdf
 ```
 
 ### 4. Compliance Scan
 
 ```bash
-pentora scan 192.168.1.0/24 --compliance pci-dss --format pdf
+vulntor scan 192.168.1.0/24 --compliance pci-dss --format pdf
 ```
 
 ### 5. Scheduled Scanning
 
 ```bash
 # Add to crontab
-0 2 * * * /usr/local/bin/pentora scan 192.168.1.0/24 --vuln -o /var/reports/daily-scan.json
+0 2 * * * /usr/local/bin/vulntor scan 192.168.1.0/24 --vuln -o /var/reports/daily-scan.json
 ```
 
 ## Stateless Mode
@@ -310,7 +310,7 @@ pentora scan 192.168.1.0/24 --compliance pci-dss --format pdf
 Run without storage persistence (like Nmap):
 
 ```bash
-pentora scan 192.168.1.100 --no-storage
+vulntor scan 192.168.1.100 --no-storage
 ```
 
 Results print to stdout only, nothing saved to disk.
@@ -321,29 +321,29 @@ Results print to stdout only, nothing saved to disk.
 
 ```bash
 # General help
-pentora --help
+vulntor --help
 
 # Command-specific help
-pentora scan --help
+vulntor scan --help
 
 # List all commands
-pentora --help
+vulntor --help
 ```
 
 ### Check Version
 
 ```bash
-pentora version
+vulntor version
 ```
 
 ### Enable Verbose Output
 
 ```bash
 # Detailed logs
-pentora scan 192.168.1.100 --verbose
+vulntor scan 192.168.1.100 --verbose
 
 # Debug-level logging
-pentora scan 192.168.1.100 --verbosity debug
+vulntor scan 192.168.1.100 --verbosity debug
 ```
 
 ## Next Steps
@@ -351,7 +351,7 @@ pentora scan 192.168.1.100 --verbosity debug
 Now that you've run basic scans, explore:
 
 - 📖 [First Scan Tutorial](./first-scan.md) - Detailed walkthrough with explanations
-- 🎯 [Core Concepts](../concepts/overview.md) - Understand Pentora's architecture
+- 🎯 [Core Concepts](../concepts/overview.md) - Understand Vulntor's architecture
 - 🔧 [CLI Reference](../cli/overview.md) - Complete command reference
 - ⚙️ [Configuration](../configuration/overview.md) - Advanced configuration options
 - 🛡️ [Vulnerability Scanning](../guides/vulnerability-assessment.md) - Deep dive into vuln assessment
@@ -362,21 +362,21 @@ Now that you've run basic scans, explore:
 
 ```bash
 # Run with sudo for network scans
-sudo pentora scan 192.168.1.0/24
+sudo vulntor scan 192.168.1.0/24
 ```
 
 ### Slow Scans
 
 ```bash
 # Increase concurrency
-pentora scan 192.168.1.0/24 --rate 500
+vulntor scan 192.168.1.0/24 --rate 500
 ```
 
 ### No Results
 
 ```bash
 # Enable debug logging
-pentora scan 192.168.1.100 --verbosity debug
+vulntor scan 192.168.1.100 --verbosity debug
 ```
 
 For more troubleshooting, see the [Troubleshooting Guide](../troubleshooting/common-issues.md).

@@ -1,6 +1,6 @@
 # Performance Troubleshooting
 
-Optimize Pentora for faster scans and lower resource usage.
+Optimize Vulntor for faster scans and lower resource usage.
 
 ## Slow Scans
 
@@ -10,7 +10,7 @@ Scans take longer than expected.
 ### Diagnosis
 ```bash
 # Enable verbose logging
-pentora scan --targets 192.168.1.0/24 -vv
+vulntor scan --targets 192.168.1.0/24 -vv
 
 # Check for bottlenecks in logs
 ```
@@ -19,34 +19,34 @@ pentora scan --targets 192.168.1.0/24 -vv
 
 #### 1. Increase Rate Limit
 ```bash
-pentora scan --targets 192.168.1.0/24 --rate 5000
+vulntor scan --targets 192.168.1.0/24 --rate 5000
 ```
 
 #### 2. Increase Concurrency
 ```bash
-pentora scan --targets 192.168.1.0/24 --concurrency 200
+vulntor scan --targets 192.168.1.0/24 --concurrency 200
 ```
 
 #### 3. Use Quick Profile
 ```bash
-pentora scan --targets 192.168.1.0/24 --profile quick
+vulntor scan --targets 192.168.1.0/24 --profile quick
 ```
 
 #### 4. Disable Fingerprinting
 ```bash
-pentora scan --targets 192.168.1.0/24 --no-fingerprint
+vulntor scan --targets 192.168.1.0/24 --no-fingerprint
 ```
 
 #### 5. Skip Vulnerability Checks
 ```bash
-pentora scan --targets 192.168.1.0/24 --no-vuln
+vulntor scan --targets 192.168.1.0/24 --no-vuln
 ```
 
 ## High Memory Usage
 
 ### Symptoms
 ```
-pentora process using > 2GB RAM
+vulntor process using > 2GB RAM
 ```
 
 ### Solutions
@@ -73,7 +73,7 @@ split -l 1000 targets.txt batch-
 
 # Scan batches sequentially
 for batch in batch-*; do
-    pentora scan --target-file $batch
+    vulntor scan --target-file $batch
 done
 ```
 
@@ -99,12 +99,12 @@ engine:
 
 #### 1. Rate Limiting
 ```bash
-pentora scan --targets 192.168.1.0/24 --rate 1000
+vulntor scan --targets 192.168.1.0/24 --rate 1000
 ```
 
 #### 2. Timeouts
 ```bash
-pentora scan --targets 192.168.1.0/24 --timeout 2s
+vulntor scan --targets 192.168.1.0/24 --timeout 2s
 ```
 
 ## Disk I/O Issues
@@ -133,9 +133,9 @@ storage:
 
 ```bash
 # Benchmark different profiles
-time pentora scan --targets test-network.txt --profile quick
-time pentora scan --targets test-network.txt --profile standard
-time pentora scan --targets test-network.txt --profile deep
+time vulntor scan --targets test-network.txt --profile quick
+time vulntor scan --targets test-network.txt --profile standard
+time vulntor scan --targets test-network.txt --profile deep
 ```
 
 See [Configuration Overview](/configuration/overview) for tuning options.

@@ -1,4 +1,4 @@
-// Copyright 2025 Pentora Authors
+// Copyright 2025 Vulntor Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 
@@ -197,11 +197,11 @@ func GetSuggestion(err error) string {
 
 	switch {
 	case errors.Is(err, ErrPluginNotFound):
-		return "list available plugins with: pentora plugin list"
+		return "list available plugins with: vulntor plugin list"
 	case errors.Is(err, ErrPluginNotInstalled):
-		return "install the plugin first with: pentora plugin install <name>"
+		return "install the plugin first with: vulntor plugin install <name>"
 	case errors.Is(err, ErrNoPluginsFound):
-		return "check plugin category and try: pentora plugin update"
+		return "check plugin category and try: vulntor plugin update"
 	case errors.Is(err, ErrInvalidCategory):
 		return "valid categories: ssh, http, tls, database, network, misc"
 	case errors.Is(err, ErrInvalidPluginID):

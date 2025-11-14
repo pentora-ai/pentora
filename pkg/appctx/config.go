@@ -3,12 +3,12 @@ package appctx
 import (
 	"context"
 
-	"github.com/pentora-ai/pentora/pkg/config"
+	"github.com/vulntor/vulntor/pkg/config"
 )
 
 type key string
 
-const configKey key = "pentora.config.manager"
+const configKey key = "vulntor.config.manager"
 
 // WithConfig stores the shared config manager on context.
 func WithConfig(ctx context.Context, manager *config.Manager) context.Context {

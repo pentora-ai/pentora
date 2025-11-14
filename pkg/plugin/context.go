@@ -5,7 +5,7 @@ package plugin
 import (
 	"github.com/rs/zerolog"
 
-	"github.com/pentora-ai/pentora/pkg/hook"
+	"github.com/vulntor/vulntor/pkg/hook"
 )
 
 // PluginContext carries execution context for plugins.

@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pentora-ai/pentora/pkg/engine"
-	"github.com/pentora-ai/pentora/pkg/modules/discovery"
-	"github.com/pentora-ai/pentora/pkg/modules/evaluation"
-	"github.com/pentora-ai/pentora/pkg/modules/parse"
-	"github.com/pentora-ai/pentora/pkg/modules/scan"
+	"github.com/vulntor/vulntor/pkg/engine"
+	"github.com/vulntor/vulntor/pkg/modules/discovery"
+	"github.com/vulntor/vulntor/pkg/modules/evaluation"
+	"github.com/vulntor/vulntor/pkg/modules/parse"
+	"github.com/vulntor/vulntor/pkg/modules/scan"
 )
 
 func TestAssetProfileBuilderUsesFingerprintForNonDefaultPort(t *testing.T) {

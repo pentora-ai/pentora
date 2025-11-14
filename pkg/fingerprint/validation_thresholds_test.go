@@ -50,13 +50,13 @@ func TestRelaxedThresholds(t *testing.T) {
 func TestLoadThresholdsFromEnv(t *testing.T) {
 	t.Run("default when no env vars", func(t *testing.T) {
 		// Clear all env vars
-		os.Unsetenv("PENTORA_VALIDATION_TARGET_FPR")
-		os.Unsetenv("PENTORA_VALIDATION_TARGET_TPR")
-		os.Unsetenv("PENTORA_VALIDATION_TARGET_PRECISION")
-		os.Unsetenv("PENTORA_VALIDATION_TARGET_F1")
-		os.Unsetenv("PENTORA_VALIDATION_TARGET_PROTOCOLS")
-		os.Unsetenv("PENTORA_VALIDATION_TARGET_VERSION_RATE")
-		os.Unsetenv("PENTORA_VALIDATION_TARGET_PERF_MS")
+		os.Unsetenv("VULNTOR_VALIDATION_TARGET_FPR")
+		os.Unsetenv("VULNTOR_VALIDATION_TARGET_TPR")
+		os.Unsetenv("VULNTOR_VALIDATION_TARGET_PRECISION")
+		os.Unsetenv("VULNTOR_VALIDATION_TARGET_F1")
+		os.Unsetenv("VULNTOR_VALIDATION_TARGET_PROTOCOLS")
+		os.Unsetenv("VULNTOR_VALIDATION_TARGET_VERSION_RATE")
+		os.Unsetenv("VULNTOR_VALIDATION_TARGET_PERF_MS")
 
 		thresholds := LoadThresholdsFromEnv()
 		defaults := DefaultThresholds()
@@ -66,13 +66,13 @@ func TestLoadThresholdsFromEnv(t *testing.T) {
 
 	t.Run("override individual thresholds", func(t *testing.T) {
 		// Set custom env vars
-		os.Setenv("PENTORA_VALIDATION_TARGET_FPR", "0.05")
-		os.Setenv("PENTORA_VALIDATION_TARGET_TPR", "0.90")
-		os.Setenv("PENTORA_VALIDATION_TARGET_PROTOCOLS", "25")
+		os.Setenv("VULNTOR_VALIDATION_TARGET_FPR", "0.05")
+		os.Setenv("VULNTOR_VALIDATION_TARGET_TPR", "0.90")
+		os.Setenv("VULNTOR_VALIDATION_TARGET_PROTOCOLS", "25")
 		defer func() {
-			os.Unsetenv("PENTORA_VALIDATION_TARGET_FPR")
-			os.Unsetenv("PENTORA_VALIDATION_TARGET_TPR")
-			os.Unsetenv("PENTORA_VALIDATION_TARGET_PROTOCOLS")
+			os.Unsetenv("VULNTOR_VALIDATION_TARGET_FPR")
+			os.Unsetenv("VULNTOR_VALIDATION_TARGET_TPR")
+			os.Unsetenv("VULNTOR_VALIDATION_TARGET_PROTOCOLS")
 		}()
 
 		thresholds := LoadThresholdsFromEnv()
@@ -87,13 +87,13 @@ func TestLoadThresholdsFromEnv(t *testing.T) {
 
 	t.Run("ignore invalid values", func(t *testing.T) {
 		// Set invalid env vars
-		os.Setenv("PENTORA_VALIDATION_TARGET_FPR", "invalid")
-		os.Setenv("PENTORA_VALIDATION_TARGET_TPR", "-1.5")
-		os.Setenv("PENTORA_VALIDATION_TARGET_PROTOCOLS", "not_a_number")
+		os.Setenv("VULNTOR_VALIDATION_TARGET_FPR", "invalid")
+		os.Setenv("VULNTOR_VALIDATION_TARGET_TPR", "-1.5")
+		os.Setenv("VULNTOR_VALIDATION_TARGET_PROTOCOLS", "not_a_number")
 		defer func() {
-			os.Unsetenv("PENTORA_VALIDATION_TARGET_FPR")
-			os.Unsetenv("PENTORA_VALIDATION_TARGET_TPR")
-			os.Unsetenv("PENTORA_VALIDATION_TARGET_PROTOCOLS")
+			os.Unsetenv("VULNTOR_VALIDATION_TARGET_FPR")
+			os.Unsetenv("VULNTOR_VALIDATION_TARGET_TPR")
+			os.Unsetenv("VULNTOR_VALIDATION_TARGET_PROTOCOLS")
 		}()
 
 		thresholds := LoadThresholdsFromEnv()
@@ -106,8 +106,8 @@ func TestLoadThresholdsFromEnv(t *testing.T) {
 
 	t.Run("validate range constraints", func(t *testing.T) {
 		// FPR > 1.0 should be ignored
-		os.Setenv("PENTORA_VALIDATION_TARGET_FPR", "1.5")
-		defer os.Unsetenv("PENTORA_VALIDATION_TARGET_FPR")
+		os.Setenv("VULNTOR_VALIDATION_TARGET_FPR", "1.5")
+		defer os.Unsetenv("VULNTOR_VALIDATION_TARGET_FPR")
 
 		thresholds := LoadThresholdsFromEnv()
 		require.Equal(t, DefaultThresholds().TargetFPR, thresholds.TargetFPR, "Should ignore out-of-range value")
@@ -259,11 +259,11 @@ func TestValidationRunnerWithCustomThresholds(t *testing.T) {
 
 	t.Run("env variables override defaults", func(t *testing.T) {
 		// Set custom thresholds via env
-		os.Setenv("PENTORA_VALIDATION_TARGET_FPR", "0.05")
-		os.Setenv("PENTORA_VALIDATION_TARGET_TPR", "0.90")
+		os.Setenv("VULNTOR_VALIDATION_TARGET_FPR", "0.05")
+		os.Setenv("VULNTOR_VALIDATION_TARGET_TPR", "0.90")
 		defer func() {
-			os.Unsetenv("PENTORA_VALIDATION_TARGET_FPR")
-			os.Unsetenv("PENTORA_VALIDATION_TARGET_TPR")
+			os.Unsetenv("VULNTOR_VALIDATION_TARGET_FPR")
+			os.Unsetenv("VULNTOR_VALIDATION_TARGET_TPR")
 		}()
 
 		rules := []StaticRule{
