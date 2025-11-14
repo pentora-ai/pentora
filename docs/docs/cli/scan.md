@@ -1,12 +1,12 @@
-# pentora scan
+# vulntor scan
 
 Execute security scans against target hosts and networks.
 
 ## Synopsis
 
 ```bash
-pentora scan --targets <targets> [flags]
-pentora scan --target-file <file> [flags]
+vulntor scan --targets <targets> [flags]
+vulntor scan --target-file <file> [flags]
 ```
 
 ## Description
@@ -18,25 +18,25 @@ The `scan` command performs comprehensive security scanning including host disco
 ### Single Target
 
 ```bash
-pentora scan --targets 192.168.1.100
+vulntor scan --targets 192.168.1.100
 ```
 
 ### CIDR Range
 
 ```bash
-pentora scan --targets 192.168.1.0/24
+vulntor scan --targets 192.168.1.0/24
 ```
 
 ### Multiple Targets
 
 ```bash
-pentora scan --targets "192.168.1.100,192.168.1.200,10.0.0.1"
+vulntor scan --targets "192.168.1.100,192.168.1.200,10.0.0.1"
 ```
 
 ### From File
 
 ```bash
-pentora scan --target-file targets.txt
+vulntor scan --target-file targets.txt
 ```
 
 `targets.txt` format (one target per line):
@@ -62,8 +62,8 @@ Comma-separated list of targets.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.0/24
-pentora scan -t "192.168.1.100,192.168.1.200"
+vulntor scan --targets 192.168.1.0/24
+vulntor scan -t "192.168.1.100,192.168.1.200"
 ```
 
 ### --target-file, -f
@@ -72,8 +72,8 @@ Read targets from file (one per line).
 
 **Example**:
 ```bash
-pentora scan --target-file /path/to/targets.txt
-pentora scan -f targets.txt
+vulntor scan --target-file /path/to/targets.txt
+vulntor scan -f targets.txt
 ```
 
 ### --exclude
@@ -82,7 +82,7 @@ Exclude specific targets or ranges.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.0/24 --exclude 192.168.1.1,192.168.1.254
+vulntor scan --targets 192.168.1.0/24 --exclude 192.168.1.1,192.168.1.254
 ```
 
 ### --exclude-file
@@ -91,7 +91,7 @@ Read exclusions from file.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.0/24 --exclude-file blocklist.txt
+vulntor scan --targets 192.168.1.0/24 --exclude-file blocklist.txt
 ```
 
 ## Scan Profiles
@@ -109,8 +109,8 @@ Use predefined scan profile.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.100 --profile deep
-pentora scan -t example.com -p webapp
+vulntor scan --targets 192.168.1.100 --profile deep
+vulntor scan -t example.com -p webapp
 ```
 
 ### Custom Profiles
@@ -118,7 +118,7 @@ pentora scan -t example.com -p webapp
 Reference custom profile file:
 
 ```bash
-pentora scan --targets 192.168.1.100 --profile /path/to/custom-profile.yaml
+vulntor scan --targets 192.168.1.100 --profile /path/to/custom-profile.yaml
 ```
 
 See [Scan Profiles](/configuration/scan-profiles) for profile structure.
@@ -131,7 +131,7 @@ Run discovery phase only (identify live hosts).
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.0/24 --only-discover
+vulntor scan --targets 192.168.1.0/24 --only-discover
 ```
 
 Output: List of responsive hosts, no port scanning.
@@ -142,7 +142,7 @@ Skip discovery phase (assume targets are live).
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.100 --no-discover
+vulntor scan --targets 192.168.1.100 --no-discover
 ```
 
 Useful when targets are known to be live or ICMP is blocked.
@@ -153,7 +153,7 @@ Enable vulnerability evaluation.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.100 --vuln
+vulntor scan --targets 192.168.1.100 --vuln
 ```
 
 Matches service versions against CVE database.
@@ -164,7 +164,7 @@ Disable vulnerability checks (faster).
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.100 --no-vuln
+vulntor scan --targets 192.168.1.100 --no-vuln
 ```
 
 ### --no-fingerprint
@@ -173,7 +173,7 @@ Skip service fingerprinting.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.100 --no-fingerprint
+vulntor scan --targets 192.168.1.100 --no-fingerprint
 ```
 
 Only reports port states, no service identification.
@@ -192,7 +192,7 @@ Select discovery method.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.0/24 --discover-profile deep
+vulntor scan --targets 192.168.1.0/24 --discover-profile deep
 ```
 
 ### --discovery-timeout
@@ -201,7 +201,7 @@ Discovery probe timeout.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.0/24 --discovery-timeout 5s
+vulntor scan --targets 192.168.1.0/24 --discovery-timeout 5s
 ```
 
 ### --discovery-retry
@@ -210,7 +210,7 @@ Number of discovery retries.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.0/24 --discovery-retry 3
+vulntor scan --targets 192.168.1.0/24 --discovery-retry 3
 ```
 
 ## Port Scanning Options
@@ -227,8 +227,8 @@ Specify ports to scan.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.100 --ports 80,443
-pentora scan --targets 192.168.1.100 --ports 1-65535
+vulntor scan --targets 192.168.1.100 --ports 80,443
+vulntor scan --targets 192.168.1.100 --ports 1-65535
 ```
 
 ### --top-ports
@@ -237,7 +237,7 @@ Scan top N most common ports.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.100 --top-ports 100
+vulntor scan --targets 192.168.1.100 --top-ports 100
 ```
 
 ### --rate, -r
@@ -246,8 +246,8 @@ Packets per second rate limit.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.0/24 --rate 5000
-pentora scan -t 192.168.1.100 -r 100
+vulntor scan --targets 192.168.1.0/24 --rate 5000
+vulntor scan -t 192.168.1.100 -r 100
 ```
 
 Lower rates are less disruptive but slower.
@@ -258,7 +258,7 @@ Connection timeout for port probes.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.100 --timeout 5s
+vulntor scan --targets 192.168.1.100 --timeout 5s
 ```
 
 ### --scan-type
@@ -272,7 +272,7 @@ Port scanning technique.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.100 --scan-type connect
+vulntor scan --targets 192.168.1.100 --scan-type connect
 ```
 
 ### --max-retries
@@ -281,7 +281,7 @@ Port scan retry attempts.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.100 --max-retries 2
+vulntor scan --targets 192.168.1.100 --max-retries 2
 ```
 
 ## Fingerprinting Options
@@ -292,7 +292,7 @@ Use cached fingerprint database.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.100 --fingerprint-cache
+vulntor scan --targets 192.168.1.100 --fingerprint-cache
 ```
 
 ### --fingerprint-rules
@@ -301,7 +301,7 @@ Load custom fingerprint rules.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.100 --fingerprint-rules custom-rules.yaml
+vulntor scan --targets 192.168.1.100 --fingerprint-rules custom-rules.yaml
 ```
 
 ### --fingerprint-timeout
@@ -310,7 +310,7 @@ Fingerprint probe timeout.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.100 --fingerprint-timeout 10s
+vulntor scan --targets 192.168.1.100 --fingerprint-timeout 10s
 ```
 
 ### --max-protocols
@@ -319,7 +319,7 @@ Maximum protocols to probe per port.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.100 --max-protocols 2
+vulntor scan --targets 192.168.1.100 --max-protocols 2
 ```
 
 ## Output Options
@@ -330,8 +330,8 @@ Output file path.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.100 --output results.json
-pentora scan -t 192.168.1.100 -o scan-report.csv
+vulntor scan --targets 192.168.1.100 --output results.json
+vulntor scan -t 192.168.1.100 -o scan-report.csv
 ```
 
 ### --format
@@ -346,8 +346,8 @@ Output format.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.100 --format json
-pentora scan --targets 192.168.1.100 --format csv --output report.csv
+vulntor scan --targets 192.168.1.100 --format json
+vulntor scan --targets 192.168.1.100 --format csv --output report.csv
 ```
 
 ### --template
@@ -356,7 +356,7 @@ Use custom output template.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.100 --template custom-report.tmpl
+vulntor scan --targets 192.168.1.100 --template custom-report.tmpl
 ```
 
 ## Storage Options
@@ -367,7 +367,7 @@ Specify storage directory.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.100 --storage-dir /data/pentora
+vulntor scan --targets 192.168.1.100 --storage-dir /data/vulntor
 ```
 
 ### --no-storage
@@ -376,7 +376,7 @@ Disable storage persistence (stateless mode).
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.100 --no-storage
+vulntor scan --targets 192.168.1.100 --no-storage
 ```
 
 Results output to stdout/file only, no storage persistence.
@@ -387,7 +387,7 @@ Assign custom scan name.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.0/24 --scan-name "Production Network Audit"
+vulntor scan --targets 192.168.1.0/24 --scan-name "Production Network Audit"
 ```
 
 ### --tags
@@ -396,7 +396,7 @@ Add tags to scan for organization.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.0/24 --tags "production,weekly,compliance"
+vulntor scan --targets 192.168.1.0/24 --tags "production,weekly,compliance"
 ```
 
 ## Concurrency Options
@@ -407,7 +407,7 @@ Maximum concurrent target scans.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.0/24 --concurrency 50
+vulntor scan --targets 192.168.1.0/24 --concurrency 50
 ```
 
 ### --port-concurrency
@@ -416,21 +416,21 @@ Maximum concurrent ports per host.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.100 --port-concurrency 100
+vulntor scan --targets 192.168.1.100 --port-concurrency 100
 ```
 
 ## Server Mode Options
 
 ### --server
 
-Pentora server URL for remote execution.
+Vulntor server URL for remote execution.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.100 --server https://pentora.company.com
+vulntor scan --targets 192.168.1.100 --server https://vulntor.company.com
 ```
 
-Requires `PENTORA_API_TOKEN` environment variable or `--api-token` flag.
+Requires `VULNTOR_API_TOKEN` environment variable or `--api-token` flag.
 
 ### --api-token
 
@@ -438,7 +438,7 @@ API authentication token.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.100 --server https://pentora.company.com --api-token your-token
+vulntor scan --targets 192.168.1.100 --server https://vulntor.company.com --api-token your-token
 ```
 
 ### --schedule
@@ -450,10 +450,10 @@ Create recurring scan (server mode only).
 **Example**:
 ```bash
 # Daily at 2 AM
-pentora scan --targets 192.168.1.0/24 --schedule "0 2 * * *" --server https://pentora.company.com
+vulntor scan --targets 192.168.1.0/24 --schedule "0 2 * * *" --server https://vulntor.company.com
 
 # Every 6 hours
-pentora scan --targets 192.168.1.0/24 --schedule "0 */6 * * *"
+vulntor scan --targets 192.168.1.0/24 --schedule "0 */6 * * *"
 ```
 
 ### --notify
@@ -462,8 +462,8 @@ Notification channels for scan results.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.100 --notify slack://security-alerts
-pentora scan --targets 192.168.1.100 --notify "slack://alerts,email://team@company.com"
+vulntor scan --targets 192.168.1.100 --notify slack://security-alerts
+vulntor scan --targets 192.168.1.100 --notify "slack://alerts,email://team@company.com"
 ```
 
 ## Logging Options
@@ -476,7 +476,7 @@ Logging verbosity.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.100 --log-level debug
+vulntor scan --targets 192.168.1.100 --log-level debug
 ```
 
 ### --log-format
@@ -487,7 +487,7 @@ Log output format.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.100 --log-format json
+vulntor scan --targets 192.168.1.100 --log-format json
 ```
 
 ### --verbosity, -v
@@ -496,9 +496,9 @@ Shorthand verbosity levels.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.100 -v      # Verbose
-pentora scan --targets 192.168.1.100 -vv     # Very verbose
-pentora scan --targets 192.168.1.100 -vvv    # Maximum verbosity
+vulntor scan --targets 192.168.1.100 -v      # Verbose
+vulntor scan --targets 192.168.1.100 -vv     # Very verbose
+vulntor scan --targets 192.168.1.100 -vvv    # Maximum verbosity
 ```
 
 ### --quiet, -q
@@ -507,7 +507,7 @@ Suppress non-error output.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.100 --quiet
+vulntor scan --targets 192.168.1.100 --quiet
 ```
 
 ### --progress
@@ -516,7 +516,7 @@ Show real-time progress.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.0/24 --progress
+vulntor scan --targets 192.168.1.0/24 --progress
 ```
 
 ## DAG Options
@@ -527,7 +527,7 @@ Use custom DAG definition.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.100 --dag custom-pipeline.yaml
+vulntor scan --targets 192.168.1.100 --dag custom-pipeline.yaml
 ```
 
 ### --fail-fast
@@ -536,7 +536,7 @@ Stop on first error.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.0/24 --fail-fast
+vulntor scan --targets 192.168.1.0/24 --fail-fast
 ```
 
 ### --continue-on-error
@@ -545,7 +545,7 @@ Continue scanning despite errors.
 
 **Example**:
 ```bash
-pentora scan --targets 192.168.1.0/24 --continue-on-error
+vulntor scan --targets 192.168.1.0/24 --continue-on-error
 ```
 
 ## Examples
@@ -553,25 +553,25 @@ pentora scan --targets 192.168.1.0/24 --continue-on-error
 ### Quick Network Discovery
 
 ```bash
-pentora scan --targets 192.168.1.0/24 --only-discover
+vulntor scan --targets 192.168.1.0/24 --only-discover
 ```
 
 ### Standard Scan with Vulnerability Checks
 
 ```bash
-pentora scan --targets 192.168.1.100 --vuln
+vulntor scan --targets 192.168.1.100 --vuln
 ```
 
 ### Deep Scan of Web Server
 
 ```bash
-pentora scan --targets example.com --profile webapp --ports 80,443,8000-9000
+vulntor scan --targets example.com --profile webapp --ports 80,443,8000-9000
 ```
 
 ### Large Network Scan with Rate Limiting
 
 ```bash
-pentora scan --targets 10.0.0.0/16 \
+vulntor scan --targets 10.0.0.0/16 \
   --rate 500 \
   --concurrency 100 \
   --timeout 5s \
@@ -581,7 +581,7 @@ pentora scan --targets 10.0.0.0/16 \
 ### Stateless Scan (No Storage)
 
 ```bash
-pentora scan --targets 192.168.1.100 \
+vulntor scan --targets 192.168.1.100 \
   --no-storage \
   --output /tmp/scan-results.json
 ```
@@ -589,10 +589,10 @@ pentora scan --targets 192.168.1.100 \
 ### Remote Execution via Server
 
 ```bash
-export PENTORA_SERVER=https://pentora.company.com
-export PENTORA_API_TOKEN=abc123xyz
+export VULNTOR_SERVER=https://vulntor.company.com
+export VULNTOR_API_TOKEN=abc123xyz
 
-pentora scan --targets 192.168.1.0/24 \
+vulntor scan --targets 192.168.1.0/24 \
   --profile standard \
   --notify slack://security-team
 ```
@@ -600,18 +600,18 @@ pentora scan --targets 192.168.1.0/24 \
 ### Scheduled Weekly Scan
 
 ```bash
-pentora scan --targets production-network.txt \
+vulntor scan --targets production-network.txt \
   --schedule "0 2 * * 0" \
   --tags "production,weekly" \
   --vuln \
   --notify "slack://prod-alerts,email://security@company.com" \
-  --server https://pentora.company.com
+  --server https://vulntor.company.com
 ```
 
 ### Custom Ports and Fingerprinting
 
 ```bash
-pentora scan --targets 192.168.1.100 \
+vulntor scan --targets 192.168.1.100 \
   --ports "22,80,443,3306,5432,6379,8080,8443" \
   --fingerprint-rules custom-signatures.yaml \
   --fingerprint-timeout 10s
@@ -620,7 +620,7 @@ pentora scan --targets 192.168.1.100 \
 ### Exclude Sensitive Hosts
 
 ```bash
-pentora scan --targets 10.0.0.0/24 \
+vulntor scan --targets 10.0.0.0/24 \
   --exclude "10.0.0.1,10.0.0.254" \
   --exclude-file sensitive-hosts.txt
 ```
@@ -628,7 +628,7 @@ pentora scan --targets 10.0.0.0/24 \
 ### Debug Failed Scan
 
 ```bash
-pentora scan --targets 192.168.1.100 \
+vulntor scan --targets 192.168.1.100 \
   --log-level debug \
   --log-format json \
   --verbosity 3 \
@@ -655,15 +655,15 @@ pentora scan --targets 192.168.1.100 \
 TCP SYN scans require raw socket access:
 
 ```bash
-sudo pentora scan --targets 192.168.1.0/24
+sudo vulntor scan --targets 192.168.1.0/24
 ```
 
 Alternatives without root:
 - Use `--scan-type connect` (full TCP connect)
-- Run Pentora with `CAP_NET_RAW` capability:
+- Run Vulntor with `CAP_NET_RAW` capability:
   ```bash
-  sudo setcap cap_net_raw+ep /usr/local/bin/pentora
-  pentora scan --targets 192.168.1.0/24
+  sudo setcap cap_net_raw+ep /usr/local/bin/vulntor
+  vulntor scan --targets 192.168.1.0/24
   ```
 
 ### Performance Tuning

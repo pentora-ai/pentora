@@ -1,6 +1,6 @@
 # Enterprise Features Overview
 
-Pentora Enterprise extends the open-source core with advanced capabilities for organizations.
+Vulntor Enterprise extends the open-source core with advanced capabilities for organizations.
 
 ## Pricing Tiers
 

@@ -1,6 +1,6 @@
 # Scan Pipeline
 
-Pentora's scan pipeline is a structured 9-stage process that transforms raw targets into actionable security intelligence. Each stage builds upon the previous, creating a data flow from initial target specification to final reporting.
+Vulntor's scan pipeline is a structured 9-stage process that transforms raw targets into actionable security intelligence. Each stage builds upon the previous, creating a data flow from initial target specification to final reporting.
 
 ## Pipeline Overview
 
@@ -135,13 +135,13 @@ discovery:
 **CLI Control**:
 ```bash
 # Discovery only
-pentora scan --targets 192.168.1.0/24 --only-discover
+vulntor scan --targets 192.168.1.0/24 --only-discover
 
 # Skip discovery (targets known to be live)
-pentora scan --targets 192.168.1.100 --no-discover
+vulntor scan --targets 192.168.1.100 --no-discover
 
 # Custom discovery profile
-pentora scan --targets 192.168.1.0/24 --discover-profile deep
+vulntor scan --targets 192.168.1.0/24 --discover-profile deep
 ```
 
 **Performance**: Discovers 1000 hosts in ~10-30 seconds depending on profile and network conditions.
@@ -194,16 +194,16 @@ scanner:
 **CLI Control**:
 ```bash
 # Use predefined profile
-pentora scan --targets 192.168.1.100 --profile quick
+vulntor scan --targets 192.168.1.100 --profile quick
 
 # Scan specific ports
-pentora scan --targets 192.168.1.100 --ports 80,443,8080
+vulntor scan --targets 192.168.1.100 --ports 80,443,8080
 
 # Scan port range
-pentora scan --targets 192.168.1.100 --ports 1-1024
+vulntor scan --targets 192.168.1.100 --ports 1-1024
 
 # Adjust rate limit
-pentora scan --targets 192.168.1.0/24 --rate 500
+vulntor scan --targets 192.168.1.0/24 --rate 500
 ```
 
 **Performance**: Scans 1000 ports on a single host in ~5-10 seconds at default rate.
@@ -271,7 +271,7 @@ Aggregate evidence from multiple sources:
 **Fingerprint Database**:
 - Builtin rules compiled into binary
 - Cached catalogs in storage: `<storage>/cache/fingerprints/`
-- Sync remote catalogs: `pentora fingerprint sync`
+- Sync remote catalogs: `vulntor fingerprint sync`
 
 **Output**: Service records with application, version, OS, and confidence scores.
 
@@ -283,16 +283,16 @@ fingerprint:
   max_protocols: 3  # Max protocols to probe per port
   catalog:
     builtin: true
-    remote_url: https://catalog.pentora.io/fingerprints.yaml
+    remote_url: https://catalog.vulntor.io/fingerprints.yaml
 ```
 
 **CLI Control**:
 ```bash
 # Use cached fingerprints
-pentora scan --targets 192.168.1.100 --fingerprint-cache
+vulntor scan --targets 192.168.1.100 --fingerprint-cache
 
 # Update fingerprint catalog
-pentora fingerprint sync
+vulntor fingerprint sync
 ```
 
 See [Fingerprinting System](/concepts/fingerprinting) for detailed probe specifications.
@@ -392,10 +392,10 @@ Example profile:
 **CLI Control**:
 ```bash
 # Enable vulnerability checks
-pentora scan --targets 192.168.1.100 --vuln
+vulntor scan --targets 192.168.1.100 --vuln
 
 # Disable vulnerability checks (faster)
-pentora scan --targets 192.168.1.100 --no-vuln
+vulntor scan --targets 192.168.1.100 --no-vuln
 ```
 
 ## Stage 7: Compliance & Risk Scoring
@@ -444,10 +444,10 @@ Risk Score = (Severity × Exploitability × Exposure) / Mitigations
 **CLI Control** (Enterprise):
 ```bash
 # Run compliance checks
-pentora scan --targets cardholder-env.txt --compliance pci-dss
+vulntor scan --targets cardholder-env.txt --compliance pci-dss
 
 # Multiple frameworks
-pentora scan --targets dmz.txt --compliance cis-level1,nist-800-53
+vulntor scan --targets dmz.txt --compliance cis-level1,nist-800-53
 ```
 
 ## Stage 8: Reporting & Notification
@@ -487,10 +487,10 @@ notifications:
 **CLI Control**:
 ```bash
 # Specify output format
-pentora scan --targets 192.168.1.100 --output json
+vulntor scan --targets 192.168.1.100 --output json
 
 # Export to file
-pentora scan --targets 192.168.1.100 -o results.csv
+vulntor scan --targets 192.168.1.100 -o results.csv
 
 # Trigger notifications (server mode)
 curl -X POST /api/scans -d '{"targets": [...], "notify": ["slack://security"]}'
@@ -537,13 +537,13 @@ storage:
 **CLI Control**:
 ```bash
 # Clean old scans
-pentora storage gc --older-than 30d
+vulntor storage gc --older-than 30d
 
 # Disable storage (stateless)
-pentora scan --targets 192.168.1.100 --no-storage
+vulntor scan --targets 192.168.1.100 --no-storage
 
 # Custom storage location
-pentora scan --targets 192.168.1.100 --storage-dir /data/pentora
+vulntor scan --targets 192.168.1.100 --storage-dir /data/vulntor
 ```
 
 ## Pipeline Control
@@ -554,16 +554,16 @@ Control which stages execute:
 
 ```bash
 # Discovery only (stages 1-2)
-pentora scan --targets 192.168.1.0/24 --only-discover
+vulntor scan --targets 192.168.1.0/24 --only-discover
 
 # Skip discovery (stages 1, 3-9)
-pentora scan --targets 192.168.1.100 --no-discover
+vulntor scan --targets 192.168.1.100 --no-discover
 
 # Disable vulnerability checks (stages 1-5, 8-9)
-pentora scan --targets 192.168.1.100 --no-vuln
+vulntor scan --targets 192.168.1.100 --no-vuln
 
 # Full pipeline with all stages
-pentora scan --targets 192.168.1.100 --vuln
+vulntor scan --targets 192.168.1.100 --vuln
 ```
 
 ### Profiles
@@ -572,13 +572,13 @@ Predefined profiles configure multiple stages:
 
 ```bash
 # Quick: Fast discovery, top 100 ports, no vuln
-pentora scan --targets 192.168.1.0/24 --profile quick
+vulntor scan --targets 192.168.1.0/24 --profile quick
 
 # Standard: Standard discovery, top 1000 ports, basic fingerprint
-pentora scan --targets 192.168.1.0/24 --profile standard
+vulntor scan --targets 192.168.1.0/24 --profile standard
 
 # Deep: Thorough discovery, all ports, advanced fingerprint, vuln checks
-pentora scan --targets 192.168.1.0/24 --profile deep
+vulntor scan --targets 192.168.1.0/24 --profile deep
 ```
 
 See [Scan Profiles](/configuration/scan-profiles) for custom profile creation.

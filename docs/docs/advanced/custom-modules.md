@@ -1,6 +1,6 @@
 # Custom Module Development
 
-Create custom scan modules to extend Pentora's capabilities.
+Create custom scan modules to extend Vulntor's capabilities.
 
 ## Module Interface
 
@@ -9,7 +9,7 @@ package mymodule
 
 import (
     "context"
-    "github.com/pentora/pentora/pkg/module"
+    "github.com/vulntor/vulntor/pkg/module"
 )
 
 type CustomModule struct {
@@ -50,7 +50,7 @@ func init() {
 Modules auto-register via `init()` or explicit registration:
 
 ```go
-import _ "github.com/company/pentora-custom-modules"
+import _ "github.com/company/vulntor-custom-modules"
 ```
 
 ## Usage in DAG

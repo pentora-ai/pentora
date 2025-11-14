@@ -1,6 +1,6 @@
 # Air-Gapped Deployment
 
-Deploy Pentora in environments without internet access.
+Deploy Vulntor in environments without internet access.
 
 ## Offline Installation
 
@@ -8,27 +8,27 @@ Deploy Pentora in environments without internet access.
 
 ```bash
 # Download binary
-curl -LO https://github.com/pentora-ai/pentora/releases/latest/download/pentora-linux-amd64
+curl -LO https://github.com/vulntor-ai/vulntor/releases/latest/download/vulntor-linux-amd64
 
 # Download fingerprint catalog
-curl -LO https://catalog.pentora.io/fingerprints.yaml
+curl -LO https://catalog.vulntor.io/fingerprints.yaml
 ```
 
 2. **Transfer to air-gapped system**:
 
 ```bash
-scp pentora-linux-amd64 fingerprints.yaml user@airgapped-host:/tmp/
+scp vulntor-linux-amd64 fingerprints.yaml user@airgapped-host:/tmp/
 ```
 
 3. **Install on air-gapped system**:
 
 ```bash
-sudo mv /tmp/pentora-linux-amd64 /usr/local/bin/pentora
-sudo chmod +x /usr/local/bin/pentora
+sudo mv /tmp/vulntor-linux-amd64 /usr/local/bin/vulntor
+sudo chmod +x /usr/local/bin/vulntor
 
 # Install fingerprint catalog
-mkdir -p ~/.local/share/pentora/cache/fingerprints/
-cp /tmp/fingerprints.yaml ~/.local/share/pentora/cache/fingerprints/
+mkdir -p ~/.local/share/vulntor/cache/fingerprints/
+cp /tmp/fingerprints.yaml ~/.local/share/vulntor/cache/fingerprints/
 ```
 
 ## Configuration
@@ -49,7 +49,7 @@ server:
 Copy license file:
 
 ```bash
-cp license.key ~/.local/share/pentora/config/
+cp license.key ~/.local/share/vulntor/config/
 ```
 
 Offline grace period: 7 days

@@ -6,7 +6,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/pentora-ai/pentora/pkg/config"
+	"github.com/vulntor/vulntor/pkg/config"
 )
 
 // Chain applies middleware in order: Logger → Auth → Recovery → CORS → handler

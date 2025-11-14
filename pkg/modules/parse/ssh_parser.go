@@ -10,8 +10,8 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"github.com/pentora-ai/pentora/pkg/engine"
-	"github.com/pentora-ai/pentora/pkg/modules/scan"
+	"github.com/vulntor/vulntor/pkg/engine"
+	"github.com/vulntor/vulntor/pkg/modules/scan"
 )
 
 const (
@@ -20,7 +20,7 @@ const (
 	sshParserModuleName        = "ssh-parser"
 	sshParserModuleDescription = "Parses raw SSH response banners into structured data (service, product, etc.)."
 	sshParserModuleVersion     = "0.1.0"
-	sshParserModuleAuthor      = "Pentora Team"
+	sshParserModuleAuthor      = "Vulntor Team"
 )
 
 // Package parse provides a module for parsing SSH messages.

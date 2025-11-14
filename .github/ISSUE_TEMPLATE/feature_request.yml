@@ -1,5 +1,5 @@
 name: ✨ Feature Request
-description: Suggest a new feature or enhancement for Pentora
+description: Suggest a new feature or enhancement for Vulntor
 title: "[Feature]: "
 labels: ["enhancement", "needs-triage"]
 assignees: []
@@ -27,7 +27,7 @@ body:
     id: component
     attributes:
       label: Component
-      description: Which part of Pentora is this for?
+      description: Which part of Vulntor is this for?
       options:
         - Scanner (port scanning, discovery)
         - Engine (DAG, orchestrator, modules)
@@ -57,10 +57,10 @@ body:
       label: Proposed Solution
       description: How should this feature work?
       placeholder: |
-        Add a `pentora schedule` command that allows users to configure recurring scans:
+        Add a `vulntor schedule` command that allows users to configure recurring scans:
 
         ```bash
-        pentora schedule add \
+        vulntor schedule add \
           --name "daily-scan" \
           --targets "192.168.1.0/24" \
           --cron "0 2 * * *" \
@@ -81,7 +81,7 @@ body:
       label: Alternatives Considered
       description: What other approaches did you think about?
       placeholder: |
-        Option 1: External cron + pentora CLI (current workaround)
+        Option 1: External cron + vulntor CLI (current workaround)
         Option 2: Integration with system schedulers (systemd timers, launchd)
         Option 3: Built-in scheduler (proposed)
 
@@ -92,7 +92,7 @@ body:
       description: Why is this valuable?
       placeholder: |
         - Simplifies deployment (no external scheduler setup)
-        - Better integration with Pentora (workspace, reporting)
+        - Better integration with Vulntor (workspace, reporting)
         - Built-in notification system
         - Easier for non-technical users
 
@@ -104,19 +104,19 @@ body:
       placeholder: |
         ```bash
         # Create a schedule
-        pentora schedule add --name "nightly" --targets "prod.yaml" --cron "0 2 * * *"
+        vulntor schedule add --name "nightly" --targets "prod.yaml" --cron "0 2 * * *"
 
         # List schedules
-        pentora schedule list
+        vulntor schedule list
 
         # View schedule details
-        pentora schedule get nightly
+        vulntor schedule get nightly
 
         # Delete schedule
-        pentora schedule delete nightly
+        vulntor schedule delete nightly
 
         # Run scheduler daemon
-        pentora server start --enable-scheduler
+        vulntor server start --enable-scheduler
         ```
 
   - type: textarea
@@ -126,12 +126,12 @@ body:
       description: Proposed commands, flags, or API endpoints
       placeholder: |
         CLI Commands:
-        - `pentora schedule add [flags]`
-        - `pentora schedule list`
-        - `pentora schedule get <name>`
-        - `pentora schedule delete <name>`
-        - `pentora schedule pause <name>`
-        - `pentora schedule resume <name>`
+        - `vulntor schedule add [flags]`
+        - `vulntor schedule list`
+        - `vulntor schedule get <name>`
+        - `vulntor schedule delete <name>`
+        - `vulntor schedule pause <name>`
+        - `vulntor schedule resume <name>`
 
         Server API:
         - POST /api/v1/schedules

@@ -1,6 +1,6 @@
 SRCS = $(shell git ls-files '*.go' | grep -v '^vendor/')
 
-BIN_NAME=pentora
+BIN_NAME=vulntor
 TAG_NAME := $(shell git describe --abbrev=0 --tags --exact-match 2>/dev/null || echo "unknown")
 COMMIT := $(shell git rev-parse HEAD)
 VERSION_GIT := $(if $(TAG_NAME),$(TAG_NAME),$(SHA))
@@ -15,11 +15,11 @@ LINT_EXECUTABLES = misspell shellcheck
 
 .PHONY: p ps
 
-p: CLI_EXEC=pentora
-ps: CLI_EXEC=pentora-server
+p: CLI_EXEC=vulntor
+ps: CLI_EXEC=vulntor-server
 
 p ps:
-	@PENTORA_CLI_EXECUTABLE=$(CLI_EXEC) go run ./cmd/main.go $(word 2,$(MAKECMDGOALS))
+	@VULNTOR_CLI_EXECUTABLE=$(CLI_EXEC) go run ./cmd/main.go $(word 2,$(MAKECMDGOALS))
 
 # Parametreler hata vermesin diye
 %:
@@ -58,7 +58,7 @@ test-all: test-unit test-integration
 #? fmt: Format the Code
 fmt:
 	@echo "🔧 Running gci (import organization)..."
-	@gci write --skip-generated -s standard -s default -s "prefix(github.com/pentora-ai/pentora)" $(SRCS)
+	@gci write --skip-generated -s standard -s default -s "prefix(github.com/vulntor/vulntor)" $(SRCS)
 	@echo "🔧 Running gofumpt (code formatting)..."
 	@gofumpt -l -w -extra $(SRCS)
 	@echo "✅ Code formatted"	
@@ -101,9 +101,9 @@ binary: build-ui generate dist
 	@echo "🔨 Building binary with embedded UI..."
 	@echo "Version: $(VERSION) | Commit: $(COMMIT) | Date: $(DATE)"
 	CGO_ENABLED=0 GOGC=off GOOS=${GOOS} GOARCH=${GOARCH} go build ${FLAGS[*]} -ldflags "-s -w \
-    -X github.com/pentora-ai/pentora/pkg/version.version=$(VERSION) \
-    -X github.com/pentora-ai/pentora/pkg/version.commit=$(COMMIT) \
-    -X github.com/pentora-ai/pentora/pkg/version.buildDate=$(DATE)" \
+    -X github.com/vulntor/vulntor/pkg/version.version=$(VERSION) \
+    -X github.com/vulntor/vulntor/pkg/version.commit=$(COMMIT) \
+    -X github.com/vulntor/vulntor/pkg/version.buildDate=$(DATE)" \
     -installsuffix nocgo -o "./dist/${GOOS}/${GOARCH}/$(BIN_NAME)" ./cmd
 	@echo "✅ Binary built → ./dist/${GOOS}/${GOARCH}/$(BIN_NAME)"
 
@@ -128,5 +128,5 @@ validate: lint validate-files
 .PHONY: help
 #? help: Get more info on make commands
 help: Makefile
-	@echo " Choose a command run in pentora:"
+	@echo " Choose a command run in vulntor:"
 	@sed -n 's/^#?//p' $< | column -t -s ':' |  sort | sed -e 's/^/ /'

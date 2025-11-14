@@ -17,7 +17,7 @@ Fast reconnaissance scan.
 
 **Usage**:
 ```bash
-pentora scan --targets 192.168.1.0/24 --profile quick
+vulntor scan --targets 192.168.1.0/24 --profile quick
 ```
 
 ### standard (default)
@@ -31,7 +31,7 @@ Balanced scan for general security assessment.
 
 **Usage**:
 ```bash
-pentora scan --targets 192.168.1.100 --profile standard
+vulntor scan --targets 192.168.1.100 --profile standard
 ```
 
 ### deep
@@ -45,7 +45,7 @@ Comprehensive scan for thorough assessment.
 
 **Usage**:
 ```bash
-pentora scan --targets 192.168.1.100 --profile deep
+vulntor scan --targets 192.168.1.100 --profile deep
 ```
 
 ### webapp
@@ -59,15 +59,15 @@ Web application focused scan.
 
 **Usage**:
 ```bash
-pentora scan --targets example.com --profile webapp
+vulntor scan --targets example.com --profile webapp
 ```
 
 ## Custom Profiles
 
-Create custom profiles in `~/.config/pentora/profiles/`:
+Create custom profiles in `~/.config/vulntor/profiles/`:
 
 ```yaml
-# ~/.config/pentora/profiles/production.yaml
+# ~/.config/vulntor/profiles/production.yaml
 name: production
 description: Production network scan with conservative settings
 
@@ -98,14 +98,14 @@ notifications:
 
 **Usage**:
 ```bash
-pentora scan --targets prod-network.txt --profile production
+vulntor scan --targets prod-network.txt --profile production
 ```
 
 ## Profile Reference
 
 Profiles stored in:
-- System: `/etc/pentora/profiles/`
-- User: `~/.config/pentora/profiles/`
+- System: `/etc/vulntor/profiles/`
+- User: `~/.config/vulntor/profiles/`
 - Storage: `<storage>/config/profiles/`
 
 See [Configuration Overview](/configuration/overview) for complete schema.

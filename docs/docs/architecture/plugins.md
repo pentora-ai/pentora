@@ -1,6 +1,6 @@
 # Plugin Architecture
 
-Pentora supports two plugin models: embedded and external.
+Vulntor supports two plugin models: embedded and external.
 
 ## Embedded Plugins (Go)
 
@@ -15,7 +15,7 @@ Separate processes communicating via gRPC.
 
 **Advantages**: 
 - Any language (Python, Rust, etc.)
-- Isolation (crashes don't affect Pentora)
+- Isolation (crashes don't affect Vulntor)
 - Hot reload
 
 **Disadvantages**: IPC overhead (~10-50ms per call)

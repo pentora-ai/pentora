@@ -1,4 +1,4 @@
-// Copyright 2025 Pentora Authors
+// Copyright 2025 Vulntor Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 
@@ -340,95 +340,95 @@ func TestPluginTypeValues(t *testing.T) {
 	require.Equal(t, PluginType("integration"), IntegrationType)
 }
 
-func TestPlugin_IsCompatibleWithPentora(t *testing.T) {
+func TestPlugin_IsCompatibleWithVulntor(t *testing.T) {
 	tests := []struct {
 		name             string
 		minVersion       string
-		pentoraVersion   string
+		vulntorVersion   string
 		expectCompatible bool
 		expectError      bool
 	}{
 		{
 			name:             "no version constraint",
 			minVersion:       "",
-			pentoraVersion:   "0.1.0",
+			vulntorVersion:   "0.1.0",
 			expectCompatible: true,
 			expectError:      false,
 		},
 		{
 			name:             "compatible version (greater)",
 			minVersion:       "0.1.0",
-			pentoraVersion:   "0.2.0",
+			vulntorVersion:   "0.2.0",
 			expectCompatible: true,
 			expectError:      false,
 		},
 		{
 			name:             "compatible version (equal)",
 			minVersion:       "0.1.0",
-			pentoraVersion:   "0.1.0",
+			vulntorVersion:   "0.1.0",
 			expectCompatible: true,
 			expectError:      false,
 		},
 		{
 			name:             "incompatible version (lower)",
 			minVersion:       "0.2.0",
-			pentoraVersion:   "0.1.0",
+			vulntorVersion:   "0.1.0",
 			expectCompatible: false,
 			expectError:      true,
 		},
 		{
 			name:             "version with v prefix",
 			minVersion:       "v0.1.0",
-			pentoraVersion:   "v0.2.0",
+			vulntorVersion:   "v0.2.0",
 			expectCompatible: true,
 			expectError:      false,
 		},
 		{
-			name:             "mixed v prefix (min has v, pentora doesn't)",
+			name:             "mixed v prefix (min has v, vulntor doesn't)",
 			minVersion:       "v0.1.0",
-			pentoraVersion:   "0.2.0",
+			vulntorVersion:   "0.2.0",
 			expectCompatible: true,
 			expectError:      false,
 		},
 		{
-			name:             "mixed v prefix (pentora has v, min doesn't)",
+			name:             "mixed v prefix (vulntor has v, min doesn't)",
 			minVersion:       "0.1.0",
-			pentoraVersion:   "v0.2.0",
+			vulntorVersion:   "v0.2.0",
 			expectCompatible: true,
 			expectError:      false,
 		},
 		{
 			name:             "patch version matters",
 			minVersion:       "0.1.5",
-			pentoraVersion:   "0.1.4",
+			vulntorVersion:   "0.1.4",
 			expectCompatible: false,
 			expectError:      true,
 		},
 		{
 			name:             "patch version compatible",
 			minVersion:       "0.1.5",
-			pentoraVersion:   "0.1.6",
+			vulntorVersion:   "0.1.6",
 			expectCompatible: true,
 			expectError:      false,
 		},
 		{
 			name:             "dev version (treated as vdev)",
 			minVersion:       "0.1.0",
-			pentoraVersion:   "dev",
+			vulntorVersion:   "dev",
 			expectCompatible: false, // "vdev" < "v0.1.0" lexicographically
 			expectError:      true,
 		},
 		{
-			name:             "invalid pentora version",
+			name:             "invalid vulntor version",
 			minVersion:       "0.1.0",
-			pentoraVersion:   "invalid",
+			vulntorVersion:   "invalid",
 			expectCompatible: false,
 			expectError:      true,
 		},
 		{
 			name:             "invalid min version",
 			minVersion:       "not-a-version",
-			pentoraVersion:   "0.1.0",
+			vulntorVersion:   "0.1.0",
 			expectCompatible: false,
 			expectError:      true,
 		},
@@ -442,7 +442,7 @@ func TestPlugin_IsCompatibleWithPentora(t *testing.T) {
 				Version:           "1.0.0",
 				Type:              EvaluationType,
 				Author:            "test",
-				MinPentoraVersion: tt.minVersion,
+				MinVulntorVersion: tt.minVersion,
 				Metadata: PluginMetadata{
 					Severity: HighSeverity,
 					Tags:     []string{"test"},
@@ -452,7 +452,7 @@ func TestPlugin_IsCompatibleWithPentora(t *testing.T) {
 				},
 			}
 
-			compatible, err := plugin.IsCompatibleWithPentora(tt.pentoraVersion)
+			compatible, err := plugin.IsCompatibleWithVulntor(tt.vulntorVersion)
 
 			if tt.expectError {
 				require.Error(t, err)
@@ -511,7 +511,7 @@ func TestIsValidSemver(t *testing.T) {
 	}
 }
 
-func TestPlugin_Validate_WithMinPentoraVersion(t *testing.T) {
+func TestPlugin_Validate_WithMinVulntorVersion(t *testing.T) {
 	tests := []struct {
 		name        string
 		minVersion  string
@@ -537,7 +537,7 @@ func TestPlugin_Validate_WithMinPentoraVersion(t *testing.T) {
 			name:        "invalid min version",
 			minVersion:  "not-a-version",
 			expectErr:   true,
-			errContains: "invalid pentora_min_version format",
+			errContains: "invalid vulntor_min_version format",
 		},
 		{
 			name:       "short version (Go allows)",
@@ -554,7 +554,7 @@ func TestPlugin_Validate_WithMinPentoraVersion(t *testing.T) {
 				Version:           "1.0.0",
 				Type:              EvaluationType,
 				Author:            "test",
-				MinPentoraVersion: tt.minVersion,
+				MinVulntorVersion: tt.minVersion,
 				Metadata: PluginMetadata{
 					Severity: HighSeverity,
 					Tags:     []string{"test"},

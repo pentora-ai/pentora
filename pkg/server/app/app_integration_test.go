@@ -14,10 +14,10 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 
-	"github.com/pentora-ai/pentora/pkg/config"
-	"github.com/pentora-ai/pentora/pkg/server/api"
-	"github.com/pentora-ai/pentora/pkg/server/app"
-	"github.com/pentora-ai/pentora/pkg/storage"
+	"github.com/vulntor/vulntor/pkg/config"
+	"github.com/vulntor/vulntor/pkg/server/api"
+	"github.com/vulntor/vulntor/pkg/server/app"
+	"github.com/vulntor/vulntor/pkg/storage"
 )
 
 func init() {

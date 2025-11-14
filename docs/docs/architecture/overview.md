@@ -1,6 +1,6 @@
 # Architecture Overview
 
-Pentora is built on a modular architecture centered around a DAG execution engine.
+Vulntor is built on a modular architecture centered around a DAG execution engine.
 
 ## High-Level Architecture
 

@@ -44,14 +44,14 @@ server:
 
 Start worker:
 ```bash
-pentora worker start --queue redis://redis:6379
+vulntor worker start --queue redis://redis:6379
 ```
 
 ## Job Submission
 
 ```bash
 # Submit distributed job
-pentora scan --targets 10.0.0.0/8 --distributed --workers 10
+vulntor scan --targets 10.0.0.0/8 --distributed --workers 10
 ```
 
 ## Worker Pools

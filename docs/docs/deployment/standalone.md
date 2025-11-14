@@ -1,6 +1,6 @@
 # Standalone CLI Deployment
 
-Deploy Pentora as a standalone CLI tool for direct command-line usage and ad-hoc scanning.
+Deploy Vulntor as a standalone CLI tool for direct command-line usage and ad-hoc scanning.
 
 ## Overview
 
@@ -22,23 +22,23 @@ The standalone mode operates without a persistent server daemon, executing scans
 
 ```bash
 # Download and install
-curl -sSL https://pentora.io/install.sh | bash
+curl -sSL https://vulntor.io/install.sh | bash
 
 # Verify installation
-pentora version
+vulntor version
 ```
 
 #### Windows
 
 ```powershell
 # Download installer
-Invoke-WebRequest -Uri https://pentora.io/install.ps1 -OutFile install.ps1
+Invoke-WebRequest -Uri https://vulntor.io/install.ps1 -OutFile install.ps1
 
 # Run installer
 .\install.ps1
 
 # Verify installation
-pentora version
+vulntor version
 ```
 
 ### Manual Binary Installation
@@ -47,73 +47,73 @@ pentora version
 
 ```bash
 # Download latest release
-curl -LO https://github.com/pentora-ai/pentora/releases/latest/download/pentora-linux-amd64.tar.gz
+curl -LO https://github.com/vulntor-ai/vulntor/releases/latest/download/vulntor-linux-amd64.tar.gz
 
 # Extract
-tar -xzf pentora-linux-amd64.tar.gz
+tar -xzf vulntor-linux-amd64.tar.gz
 
 # Install to system path
-sudo mv pentora /usr/local/bin/
+sudo mv vulntor /usr/local/bin/
 
 # Set executable permissions
-sudo chmod +x /usr/local/bin/pentora
+sudo chmod +x /usr/local/bin/vulntor
 
 # Verify
-pentora version
+vulntor version
 ```
 
 #### macOS (amd64)
 
 ```bash
 # Download
-curl -LO https://github.com/pentora-ai/pentora/releases/latest/download/pentora-darwin-amd64.tar.gz
+curl -LO https://github.com/vulntor-ai/vulntor/releases/latest/download/vulntor-darwin-amd64.tar.gz
 
 # Extract and install
-tar -xzf pentora-darwin-amd64.tar.gz
-sudo mv pentora /usr/local/bin/
-sudo chmod +x /usr/local/bin/pentora
+tar -xzf vulntor-darwin-amd64.tar.gz
+sudo mv vulntor /usr/local/bin/
+sudo chmod +x /usr/local/bin/vulntor
 
 # macOS may require security approval
-sudo xattr -d com.apple.quarantine /usr/local/bin/pentora
+sudo xattr -d com.apple.quarantine /usr/local/bin/vulntor
 
 # Verify
-pentora version
+vulntor version
 ```
 
 #### macOS (arm64 - Apple Silicon)
 
 ```bash
 # Download ARM64 version
-curl -LO https://github.com/pentora-ai/pentora/releases/latest/download/pentora-darwin-arm64.tar.gz
+curl -LO https://github.com/vulntor-ai/vulntor/releases/latest/download/vulntor-darwin-arm64.tar.gz
 
 # Extract and install
-tar -xzf pentora-darwin-arm64.tar.gz
-sudo mv pentora /usr/local/bin/
-sudo chmod +x /usr/local/bin/pentora
-sudo xattr -d com.apple.quarantine /usr/local/bin/pentora
+tar -xzf vulntor-darwin-arm64.tar.gz
+sudo mv vulntor /usr/local/bin/
+sudo chmod +x /usr/local/bin/vulntor
+sudo xattr -d com.apple.quarantine /usr/local/bin/vulntor
 
 # Verify
-pentora version
+vulntor version
 ```
 
 #### Windows (Manual)
 
 ```powershell
 # Download
-Invoke-WebRequest -Uri https://github.com/pentora-ai/pentora/releases/latest/download/pentora-windows-amd64.zip -OutFile pentora.zip
+Invoke-WebRequest -Uri https://github.com/vulntor-ai/vulntor/releases/latest/download/vulntor-windows-amd64.zip -OutFile vulntor.zip
 
 # Extract
-Expand-Archive pentora.zip -DestinationPath "C:\Program Files\Pentora"
+Expand-Archive vulntor.zip -DestinationPath "C:\Program Files\Vulntor"
 
 # Add to PATH (requires Administrator)
 [Environment]::SetEnvironmentVariable(
     "Path",
-    $env:Path + ";C:\Program Files\Pentora",
+    $env:Path + ";C:\Program Files\Vulntor",
     "Machine"
 )
 
 # Verify (restart terminal)
-pentora version
+vulntor version
 ```
 
 ### Package Manager Installation
@@ -122,68 +122,68 @@ pentora version
 
 ```bash
 # Add repository
-curl -fsSL https://pentora.io/gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/pentora-archive-keyring.gpg
+curl -fsSL https://vulntor.io/gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/vulntor-archive-keyring.gpg
 
-echo "deb [signed-by=/usr/share/keyrings/pentora-archive-keyring.gpg] https://apt.pentora.io stable main" | \
-  sudo tee /etc/apt/sources.list.d/pentora.list
+echo "deb [signed-by=/usr/share/keyrings/vulntor-archive-keyring.gpg] https://apt.vulntor.io stable main" | \
+  sudo tee /etc/apt/sources.list.d/vulntor.list
 
 # Install
 sudo apt update
-sudo apt install pentora
+sudo apt install vulntor
 
 # Verify
-pentora version
+vulntor version
 ```
 
 #### RHEL / CentOS / Fedora (YUM/DNF)
 
 ```bash
 # Add repository
-sudo tee /etc/yum.repos.d/pentora.repo <<EOF
-[pentora]
-name=Pentora Repository
-baseurl=https://yum.pentora.io/stable
+sudo tee /etc/yum.repos.d/vulntor.repo <<EOF
+[vulntor]
+name=Vulntor Repository
+baseurl=https://yum.vulntor.io/stable
 enabled=1
 gpgcheck=1
-gpgkey=https://pentora.io/gpg.key
+gpgkey=https://vulntor.io/gpg.key
 EOF
 
 # Install
-sudo dnf install pentora
+sudo dnf install vulntor
 # or
-sudo yum install pentora
+sudo yum install vulntor
 
 # Verify
-pentora version
+vulntor version
 ```
 
 #### Homebrew (macOS)
 
 ```bash
 # Add tap
-brew tap pentora/tap
+brew tap vulntor/tap
 
 # Install
-brew install pentora
+brew install vulntor
 
 # Verify
-pentora version
+vulntor version
 ```
 
 ## Initial Configuration
 
 ### Storage Setup
 
-Pentora uses a storage directory to store scan results:
+Vulntor uses a storage directory to store scan results:
 
 ```bash
 # Default storage locations:
-# Linux: ~/.local/share/pentora
-# macOS: ~/Library/Application Support/Pentora
-# Windows: %AppData%\Pentora
+# Linux: ~/.local/share/vulntor
+# macOS: ~/Library/Application Support/Vulntor
+# Windows: %AppData%\Vulntor
 
 # Custom storage location
-export PENTORA_STORAGE_DIR=/data/pentora-scans
+export VULNTOR_STORAGE_DIR=/data/vulntor-scans
 ```
 
 ### Configuration File
@@ -192,17 +192,17 @@ Create user configuration:
 
 ```bash
 # Create config directory
-mkdir -p ~/.config/pentora
+mkdir -p ~/.config/vulntor
 
 # Generate default config
-pentora config init > ~/.config/pentora/config.yaml
+vulntor config init > ~/.config/vulntor/config.yaml
 ```
 
-Edit `~/.config/pentora/config.yaml`:
+Edit `~/.config/vulntor/config.yaml`:
 
 ```yaml
 storage:
-  dir: ~/.local/share/pentora
+  dir: ~/.local/share/vulntor
   enabled: true
   retention:
     max_age: 90d
@@ -233,10 +233,10 @@ Allow raw socket access without sudo:
 
 ```bash
 # Set capabilities
-sudo setcap cap_net_raw,cap_net_admin+eip /usr/local/bin/pentora
+sudo setcap cap_net_raw,cap_net_admin+eip /usr/local/bin/vulntor
 
 # Verify
-getcap /usr/local/bin/pentora
+getcap /usr/local/bin/vulntor
 ```
 
 This allows:
@@ -249,7 +249,7 @@ This allows:
 
 ```bash
 # Run scans with sudo
-sudo pentora scan 192.168.1.0/24
+sudo vulntor scan 192.168.1.0/24
 ```
 
 #### Windows: Administrator Access
@@ -262,72 +262,72 @@ Run PowerShell/CMD as Administrator for full scanning capabilities.
 
 ```bash
 # Scan single host
-pentora scan 192.168.1.100
+vulntor scan 192.168.1.100
 
 # Scan network range
-pentora scan 192.168.1.0/24
+vulntor scan 192.168.1.0/24
 
 # Scan with specific ports
-pentora scan 192.168.1.100 --ports 22,80,443,8080
+vulntor scan 192.168.1.100 --ports 22,80,443,8080
 
 # Scan from file
-pentora scan --target-file targets.txt
+vulntor scan --target-file targets.txt
 ```
 
 ### Scan Profiles
 
 ```bash
 # Quick scan (fast, top 100 ports)
-pentora scan 192.168.1.0/24 --profile quick
+vulntor scan 192.168.1.0/24 --profile quick
 
 # Standard scan (balanced, top 1000 ports)
-pentora scan 192.168.1.0/24 --profile standard
+vulntor scan 192.168.1.0/24 --profile standard
 
 # Deep scan (comprehensive, all ports)
-pentora scan 192.168.1.0/24 --profile deep
+vulntor scan 192.168.1.0/24 --profile deep
 ```
 
 ### Discovery-Only Mode
 
 ```bash
 # Only discover live hosts
-pentora scan 10.0.0.0/16 --only-discover -o live-hosts.txt
+vulntor scan 10.0.0.0/16 --only-discover -o live-hosts.txt
 
 # Skip discovery for known hosts
-pentora scan --target-file live-hosts.txt --no-discover
+vulntor scan --target-file live-hosts.txt --no-discover
 ```
 
 ### Vulnerability Assessment
 
 ```bash
 # Scan with vulnerability detection
-pentora scan 192.168.1.100 --vuln
+vulntor scan 192.168.1.100 --vuln
 
 # Vulnerability scan with severity filter
-pentora scan 192.168.1.100 --vuln --min-severity high
+vulntor scan 192.168.1.100 --vuln --min-severity high
 ```
 
 ### Output Options
 
 ```bash
 # JSON output
-pentora scan 192.168.1.100 -o results.json --format json
+vulntor scan 192.168.1.100 -o results.json --format json
 
 # CSV output
-pentora scan 192.168.1.100 -o results.csv --format csv
+vulntor scan 192.168.1.100 -o results.csv --format csv
 
 # PDF report
-pentora scan 192.168.1.100 -o report.pdf --format pdf
+vulntor scan 192.168.1.100 -o report.pdf --format pdf
 
 # Multiple formats
-pentora scan 192.168.1.100 -o results --format json,csv,pdf
+vulntor scan 192.168.1.100 -o results --format json,csv,pdf
 ```
 
 ## Advanced Configuration
 
 ### Custom Scan Profile
 
-Create `~/.config/pentora/profiles/custom.yaml`:
+Create `~/.config/vulntor/profiles/custom.yaml`:
 
 ```yaml
 name: custom
@@ -364,33 +364,33 @@ vulnerability:
 Use custom profile:
 
 ```bash
-pentora scan 192.168.1.0/24 --profile custom
+vulntor scan 192.168.1.0/24 --profile custom
 ```
 
 ### Rate Limiting
 
 ```bash
 # Conservative rate (production networks)
-pentora scan 192.168.1.0/24 --rate 100 --concurrency 10
+vulntor scan 192.168.1.0/24 --rate 100 --concurrency 10
 
 # Aggressive rate (lab environments)
-pentora scan 192.168.1.0/24 --rate 5000 --concurrency 200
+vulntor scan 192.168.1.0/24 --rate 5000 --concurrency 200
 
 # Timeout configuration
-pentora scan 192.168.1.0/24 --timeout 5s --retry 2
+vulntor scan 192.168.1.0/24 --timeout 5s --retry 2
 ```
 
 ### Exclusions
 
 ```bash
 # Exclude specific hosts
-pentora scan 192.168.1.0/24 --exclude 192.168.1.1,192.168.1.2
+vulntor scan 192.168.1.0/24 --exclude 192.168.1.1,192.168.1.2
 
 # Exclude from file
-pentora scan 192.168.1.0/24 --exclude-file sensitive-hosts.txt
+vulntor scan 192.168.1.0/24 --exclude-file sensitive-hosts.txt
 
 # Exclude ports
-pentora scan 192.168.1.0/24 --exclude-ports 25,465,587
+vulntor scan 192.168.1.0/24 --exclude-ports 25,465,587
 ```
 
 ## Storage Management
@@ -399,39 +399,39 @@ pentora scan 192.168.1.0/24 --exclude-ports 25,465,587
 
 ```bash
 # List all scans
-pentora storage list
+vulntor storage list
 
 # List recent scans
-pentora storage list --limit 10
+vulntor storage list --limit 10
 
 # Show specific scan
-pentora storage show <scan-id>
+vulntor storage show <scan-id>
 
 # Export scan results
-pentora storage export <scan-id> -o results.json
+vulntor storage export <scan-id> -o results.json
 ```
 
 ### Cleanup
 
 ```bash
 # Remove old scans
-pentora storage gc --older-than 30d
+vulntor storage gc --older-than 30d
 
 # Remove specific scan
-pentora storage delete <scan-id>
+vulntor storage delete <scan-id>
 
 # Check storage size
-pentora storage info
+vulntor storage info
 
 # Validate storage integrity
-pentora storage check
+vulntor storage check
 ```
 
 ### Statistics
 
 ```bash
 # Show storage statistics
-pentora storage stats
+vulntor storage stats
 
 # Example output:
 # Total scans: 145
@@ -446,14 +446,14 @@ pentora storage stats
 
 ### Cron Jobs
 
-Create `/etc/cron.d/pentora`:
+Create `/etc/cron.d/vulntor`:
 
 ```bash
 # Daily network scan at 2 AM
-0 2 * * * pentora pentora scan --target-file /etc/pentora/targets.txt --profile standard -o /var/log/pentora/scan-$(date +\%Y\%m\%d).json
+0 2 * * * vulntor vulntor scan --target-file /etc/vulntor/targets.txt --profile standard -o /var/log/vulntor/scan-$(date +\%Y\%m\%d).json
 
 # Weekly full scan on Sunday at 1 AM
-0 1 * * 0 pentora pentora scan --target-file /etc/pentora/all-hosts.txt --profile deep --vuln
+0 1 * * 0 vulntor vulntor scan --target-file /etc/vulntor/all-hosts.txt --profile deep --vuln
 ```
 
 Or use crontab:
@@ -462,7 +462,7 @@ Or use crontab:
 crontab -e
 
 # Add:
-0 2 * * * /usr/local/bin/pentora scan 192.168.1.0/24 -o ~/scans/daily-$(date +\%Y\%m\%d).json
+0 2 * * * /usr/local/bin/vulntor scan 192.168.1.0/24 -o ~/scans/daily-$(date +\%Y\%m\%d).json
 ```
 
 ### Shell Scripts
@@ -473,14 +473,14 @@ Create `scan-network.sh`:
 #!/bin/bash
 set -euo pipefail
 
-TARGETS="/etc/pentora/targets.txt"
-OUTPUT_DIR="/var/pentora/scans"
+TARGETS="/etc/vulntor/targets.txt"
+OUTPUT_DIR="/var/vulntor/scans"
 DATE=$(date +%Y%m%d-%H%M%S)
 
-echo "Starting Pentora scan at $(date)"
+echo "Starting Vulntor scan at $(date)"
 
 # Run scan
-pentora scan --target-file "$TARGETS" \
+vulntor scan --target-file "$TARGETS" \
     --profile standard \
     --vuln \
     -o "$OUTPUT_DIR/scan-$DATE.json" \
@@ -492,7 +492,7 @@ CRITICAL=$(jq '[.findings[] | select(.severity == "critical")] | length' "$OUTPU
 if [ "$CRITICAL" -gt 0 ]; then
     echo "ALERT: $CRITICAL critical vulnerabilities found!"
     # Send alert
-    mail -s "Pentora: Critical Vulnerabilities Detected" security@company.com < "$OUTPUT_DIR/scan-$DATE.json"
+    mail -s "Vulntor: Critical Vulnerabilities Detected" security@company.com < "$OUTPUT_DIR/scan-$DATE.json"
 fi
 
 echo "Scan completed at $(date)"
@@ -523,14 +523,14 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
-      - name: Install Pentora
+      - name: Install Vulntor
         run: |
-          curl -sSL https://pentora.io/install.sh | bash
-          pentora version
+          curl -sSL https://vulntor.io/install.sh | bash
+          vulntor version
 
       - name: Run Security Scan
         run: |
-          pentora scan ${{ secrets.SCAN_TARGETS }} \
+          vulntor scan ${{ secrets.SCAN_TARGETS }} \
             --profile standard \
             --vuln \
             -o scan-results.json \
@@ -560,9 +560,9 @@ security_scan:
   stage: test
   image: ubuntu:latest
   before_script:
-    - curl -sSL https://pentora.io/install.sh | bash
+    - curl -sSL https://vulntor.io/install.sh | bash
   script:
-    - pentora scan $SCAN_TARGETS --profile standard --vuln -o results.json
+    - vulntor scan $SCAN_TARGETS --profile standard --vuln -o results.json
     - jq . results.json
   artifacts:
     reports:
@@ -582,16 +582,16 @@ pipeline {
     agent any
 
     stages {
-        stage('Install Pentora') {
+        stage('Install Vulntor') {
             steps {
-                sh 'curl -sSL https://pentora.io/install.sh | bash'
+                sh 'curl -sSL https://vulntor.io/install.sh | bash'
             }
         }
 
         stage('Security Scan') {
             steps {
                 sh '''
-                    pentora scan ${SCAN_TARGETS} \
+                    vulntor scan ${SCAN_TARGETS} \
                         --profile standard \
                         --vuln \
                         -o scan-results.json \
@@ -624,42 +624,42 @@ pipeline {
 
 ## Environment Variables
 
-Configure Pentora via environment variables:
+Configure Vulntor via environment variables:
 
 ```bash
 # Storage directory
-export PENTORA_STORAGE_DIR=/data/pentora
+export VULNTOR_STORAGE_DIR=/data/vulntor
 
 # Configuration file
-export PENTORA_CONFIG=/etc/pentora/config.yaml
+export VULNTOR_CONFIG=/etc/vulntor/config.yaml
 
 # Log level
-export PENTORA_LOG_LEVEL=debug
+export VULNTOR_LOG_LEVEL=debug
 
 # Log format
-export PENTORA_LOG_FORMAT=json
+export VULNTOR_LOG_FORMAT=json
 
 # API token (for server integration)
-export PENTORA_API_TOKEN=your-token-here
+export VULNTOR_API_TOKEN=your-token-here
 
 # Default scan profile
-export PENTORA_PROFILE=standard
+export VULNTOR_PROFILE=standard
 
 # Rate limiting
-export PENTORA_RATE=1000
-export PENTORA_CONCURRENCY=100
+export VULNTOR_RATE=1000
+export VULNTOR_CONCURRENCY=100
 
 # Timeout
-export PENTORA_TIMEOUT=5s
+export VULNTOR_TIMEOUT=5s
 ```
 
 Add to `~/.bashrc` or `~/.zshrc`:
 
 ```bash
-# Pentora configuration
-export PENTORA_STORAGE_DIR=~/pentora-storage
-export PENTORA_LOG_LEVEL=info
-export PENTORA_PROFILE=standard
+# Vulntor configuration
+export VULNTOR_STORAGE_DIR=~/vulntor-storage
+export VULNTOR_LOG_LEVEL=info
+export VULNTOR_PROFILE=standard
 ```
 
 ## Troubleshooting
@@ -668,13 +668,13 @@ export PENTORA_PROFILE=standard
 
 ```bash
 # Solution 1: Set capabilities
-sudo setcap cap_net_raw,cap_net_admin+eip /usr/local/bin/pentora
+sudo setcap cap_net_raw,cap_net_admin+eip /usr/local/bin/vulntor
 
 # Solution 2: Use sudo
-sudo pentora scan 192.168.1.0/24
+sudo vulntor scan 192.168.1.0/24
 
 # Solution 3: Use connect scan (no raw sockets)
-pentora scan 192.168.1.0/24 --scan-type connect
+vulntor scan 192.168.1.0/24 --scan-type connect
 ```
 
 ### Command Not Found
@@ -684,34 +684,34 @@ pentora scan 192.168.1.0/24 --scan-type connect
 export PATH=$PATH:/usr/local/bin
 
 # Verify binary location
-which pentora
-ls -l /usr/local/bin/pentora
+which vulntor
+ls -l /usr/local/bin/vulntor
 
 # Make executable
-chmod +x /usr/local/bin/pentora
+chmod +x /usr/local/bin/vulntor
 ```
 
 ### Slow Scans
 
 ```bash
 # Increase rate and concurrency
-pentora scan 192.168.1.0/24 --rate 2000 --concurrency 200
+vulntor scan 192.168.1.0/24 --rate 2000 --concurrency 200
 
 # Use quick profile
-pentora scan 192.168.1.0/24 --profile quick
+vulntor scan 192.168.1.0/24 --profile quick
 
 # Skip unnecessary phases
-pentora scan 192.168.1.0/24 --no-vuln --no-fingerprint
+vulntor scan 192.168.1.0/24 --no-vuln --no-fingerprint
 ```
 
 ### No Hosts Discovered
 
 ```bash
 # Use TCP-based discovery
-pentora scan 192.168.1.0/24 --discover-profile tcp
+vulntor scan 192.168.1.0/24 --discover-profile tcp
 
 # Skip discovery for known hosts
-pentora scan 192.168.1.100 --no-discover
+vulntor scan 192.168.1.100 --no-discover
 
 # Verify network connectivity
 ping 192.168.1.100
@@ -721,16 +721,16 @@ ping 192.168.1.100
 
 ```bash
 # Check storage integrity
-pentora storage check
+vulntor storage check
 
 # Fix corrupted storage
-pentora storage check --fix
+vulntor storage check --fix
 
 # Clean old scans
-pentora storage gc --older-than 7d
+vulntor storage gc --older-than 7d
 
 # Check disk space
-df -h ~/.local/share/pentora
+df -h ~/.local/share/vulntor
 ```
 
 ## Upgrading
@@ -739,36 +739,36 @@ df -h ~/.local/share/pentora
 
 ```bash
 # APT
-sudo apt update && sudo apt upgrade pentora
+sudo apt update && sudo apt upgrade vulntor
 
 # YUM/DNF
-sudo yum update pentora
+sudo yum update vulntor
 
 # Homebrew
-brew upgrade pentora
+brew upgrade vulntor
 ```
 
 ### Manual Upgrade
 
 ```bash
 # Download latest version
-curl -sSL https://pentora.io/install.sh | bash
+curl -sSL https://vulntor.io/install.sh | bash
 
 # Verify upgrade
-pentora version
+vulntor version
 
 # Check for updates
-pentora version --check-updates
+vulntor version --check-updates
 ```
 
 ### Backup Before Upgrade
 
 ```bash
 # Backup storage
-tar -czf pentora-backup-$(date +%Y%m%d).tar.gz ~/.local/share/pentora
+tar -czf vulntor-backup-$(date +%Y%m%d).tar.gz ~/.local/share/vulntor
 
 # Backup configuration
-cp -r ~/.config/pentora ~/pentora-config-backup
+cp -r ~/.config/vulntor ~/vulntor-config-backup
 ```
 
 ## Uninstallation
@@ -777,28 +777,28 @@ cp -r ~/.config/pentora ~/pentora-config-backup
 
 ```bash
 # APT
-sudo apt remove pentora
+sudo apt remove vulntor
 
 # YUM/DNF
-sudo yum remove pentora
+sudo yum remove vulntor
 
 # Homebrew
-brew uninstall pentora
+brew uninstall vulntor
 ```
 
 ### Manual Removal
 
 ```bash
 # Remove binary
-sudo rm /usr/local/bin/pentora
+sudo rm /usr/local/bin/vulntor
 
 # Remove configuration
-rm -rf ~/.config/pentora
+rm -rf ~/.config/vulntor
 
 # Remove storage (optional - contains scan results)
-rm -rf ~/.local/share/pentora  # Linux
-rm -rf ~/Library/Application\ Support/Pentora  # macOS
-rm -rf %AppData%\Pentora  # Windows
+rm -rf ~/.local/share/vulntor  # Linux
+rm -rf ~/Library/Application\ Support/Vulntor  # macOS
+rm -rf %AppData%\Vulntor  # Windows
 ```
 
 ## Security Considerations
@@ -814,13 +814,13 @@ rm -rf %AppData%\Pentora  # Windows
 
 ```bash
 # Rate limit to avoid detection/disruption
-pentora scan 192.168.1.0/24 --rate 500 --concurrency 50
+vulntor scan 192.168.1.0/24 --rate 500 --concurrency 50
 
 # Scan during maintenance windows
-pentora scan prod-network.txt --schedule "0 2 * * *"
+vulntor scan prod-network.txt --schedule "0 2 * * *"
 
 # Use TCP discovery in strict environments
-pentora scan 192.168.1.0/24 --discover-profile tcp
+vulntor scan 192.168.1.0/24 --discover-profile tcp
 ```
 
 ### Data Security
@@ -830,10 +830,10 @@ pentora scan 192.168.1.0/24 --discover-profile tcp
 gpg --encrypt --recipient security@company.com results.json
 
 # Secure storage permissions
-chmod 700 ~/.local/share/pentora
+chmod 700 ~/.local/share/vulntor
 
 # Disable storage for stateless scanning
-pentora scan 192.168.1.0/24 --no-storage -o results.json
+vulntor scan 192.168.1.0/24 --no-storage -o results.json
 ```
 
 ## Next Steps

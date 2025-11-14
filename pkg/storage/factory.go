@@ -25,8 +25,8 @@ type Factory func(ctx context.Context, cfg *Config) (Backend, error)
 // Example (Enterprise):
 //
 //	import (
-//	    "github.com/pentora-ai/pentora/pkg/storage"
-//	    enterpriseStorage "github.com/pentora-ai/pentora-enterprise/pkg/storage"
+//	    "github.com/vulntor/vulntor/pkg/storage"
+//	    enterpriseStorage "github.com/vulntor/vulntor-enterprise/pkg/storage"
 //	)
 //
 //	func init() {
@@ -46,7 +46,7 @@ var DefaultFactory Factory
 // Example (OSS):
 //
 //	cfg := &storage.Config{
-//	    WorkspaceRoot: "~/.local/share/pentora",
+//	    WorkspaceRoot: "~/.local/share/vulntor",
 //	}
 //	backend, err := storage.NewBackend(ctx, cfg)
 //	if err != nil {
@@ -57,8 +57,8 @@ var DefaultFactory Factory
 // Example (Enterprise):
 //
 //	cfg := &storage.Config{
-//	    DatabaseURL: "postgresql://pentora:password@localhost:5432/pentora",
-//	    S3Bucket:    "pentora-scans",
+//	    DatabaseURL: "postgresql://vulntor:password@localhost:5432/vulntor",
+//	    S3Bucket:    "vulntor-scans",
 //	    S3Region:    "us-west-2",
 //	}
 //	backend, err := storage.NewBackend(ctx, cfg)

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pentora-ai/pentora/pkg/engine"
+	"github.com/vulntor/vulntor/pkg/engine"
 )
 
 func TestTCPPortDiscoveryModule_Metadata(t *testing.T) {
@@ -62,8 +62,8 @@ func TestNewTCPPortDiscoveryModule_Defaults(t *testing.T) {
 	if meta.Type != engine.DiscoveryModuleType {
 		t.Errorf("expected Type '%s', got '%s'", engine.DiscoveryModuleType, meta.Type)
 	}
-	if meta.Author != "Pentora Team" {
-		t.Errorf("expected Author 'Pentora Team', got '%s'", meta.Author)
+	if meta.Author != "Vulntor Team" {
+		t.Errorf("expected Author 'Vulntor Team', got '%s'", meta.Author)
 	}
 	if len(meta.Tags) == 0 {
 		t.Error("expected non-empty Tags")

@@ -11,8 +11,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/pentora-ai/pentora/pkg/plugin"
-	"github.com/pentora-ai/pentora/pkg/server/api"
+	"github.com/vulntor/vulntor/pkg/plugin"
+	"github.com/vulntor/vulntor/pkg/server/api"
 )
 
 // slowPluginService simulates slow operations that exceed timeout

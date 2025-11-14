@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/pentora-ai/pentora/pkg/config"
+	"github.com/vulntor/vulntor/pkg/config"
 )
 
 func TestWithConfig(t *testing.T) {

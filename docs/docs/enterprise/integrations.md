@@ -1,6 +1,6 @@
 # Enterprise Integrations
 
-Connect Pentora with SIEM, ticketing, and collaboration platforms.
+Connect Vulntor with SIEM, ticketing, and collaboration platforms.
 
 ## SIEM Integrations
 
@@ -32,7 +32,7 @@ enterprise:
     siem:
       - type: elasticsearch
         url: https://elastic.company.com:9200
-        index: pentora-scans
+        index: vulntor-scans
         api_key: ${ELASTIC_API_KEY}
 ```
 
@@ -58,7 +58,7 @@ enterprise:
     ticketing:
       - type: servicenow
         instance: company.service-now.com
-        username: pentora
+        username: vulntor
         password: ${SNOW_PASSWORD}
 ```
 

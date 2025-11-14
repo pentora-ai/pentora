@@ -7,7 +7,7 @@ REST endpoints for scan submission and management.
 **POST** `/api/v1/scans`
 
 ```bash
-curl -X POST https://pentora.company.com/api/v1/scans \
+curl -X POST https://vulntor.company.com/api/v1/scans \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -34,7 +34,7 @@ curl -X POST https://pentora.company.com/api/v1/scans \
 **GET** `/api/v1/scans`
 
 ```bash
-curl https://pentora.company.com/api/v1/scans?limit=20&status=completed \
+curl https://vulntor.company.com/api/v1/scans?limit=20&status=completed \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -49,7 +49,7 @@ curl https://pentora.company.com/api/v1/scans?limit=20&status=completed \
 **GET** `/api/v1/scans/{scan_id}`
 
 ```bash
-curl https://pentora.company.com/api/v1/scans/20231006-143022-a1b2c3 \
+curl https://vulntor.company.com/api/v1/scans/20231006-143022-a1b2c3 \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -76,7 +76,7 @@ curl https://pentora.company.com/api/v1/scans/20231006-143022-a1b2c3 \
 **DELETE** `/api/v1/scans/{scan_id}`
 
 ```bash
-curl -X DELETE https://pentora.company.com/api/v1/scans/20231006-143022-a1b2c3 \
+curl -X DELETE https://vulntor.company.com/api/v1/scans/20231006-143022-a1b2c3 \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -85,7 +85,7 @@ curl -X DELETE https://pentora.company.com/api/v1/scans/20231006-143022-a1b2c3 \
 **GET** `/api/v1/scans/{scan_id}/results`
 
 ```bash
-curl https://pentora.company.com/api/v1/scans/20231006-143022-a1b2c3/results?format=json \
+curl https://vulntor.company.com/api/v1/scans/20231006-143022-a1b2c3/results?format=json \
   -H "Authorization: Bearer $TOKEN" \
   -o results.json
 ```

@@ -200,17 +200,17 @@ func TestGetSuggestion(t *testing.T) {
 		{
 			name:     "ErrPluginNotFound suggests listing plugins",
 			err:      ErrPluginNotFound,
-			expected: "list available plugins with: pentora plugin list",
+			expected: "list available plugins with: vulntor plugin list",
 		},
 		{
 			name:     "ErrPluginNotInstalled suggests installing",
 			err:      ErrPluginNotInstalled,
-			expected: "install the plugin first with: pentora plugin install <name>",
+			expected: "install the plugin first with: vulntor plugin install <name>",
 		},
 		{
 			name:     "ErrNoPluginsFound suggests updating",
 			err:      ErrNoPluginsFound,
-			expected: "check plugin category and try: pentora plugin update",
+			expected: "check plugin category and try: vulntor plugin update",
 		},
 		{
 			name:     "ErrInvalidCategory suggests valid categories",

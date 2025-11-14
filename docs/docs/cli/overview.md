@@ -1,12 +1,12 @@
 # CLI Overview
 
-The Pentora command-line interface (CLI) provides direct access to all scanning capabilities, storage management, and server control. The CLI is designed for technical operators performing ad-hoc scans, troubleshooting, and integration into automation workflows.
+The Vulntor command-line interface (CLI) provides direct access to all scanning capabilities, storage management, and server control. The CLI is designed for technical operators performing ad-hoc scans, troubleshooting, and integration into automation workflows.
 
 ## Philosophy
 
 ### CLI vs UI Design
 
-Pentora separates technical and non-technical user experiences:
+Vulntor separates technical and non-technical user experiences:
 
 **CLI** targets:
 
@@ -26,101 +26,101 @@ The CLI remains fully functional without the server component, while the UI requ
 
 ### Self-Sufficiency
 
-The CLI never accesses server internals directly. When interacting with a remote Pentora server, the CLI uses the REST/gRPC API just like any external client.
+The CLI never accesses server internals directly. When interacting with a remote Vulntor server, the CLI uses the REST/gRPC API just like any external client.
 
 **Local Mode** (no server):
 
 ```bash
-pentora scan --targets 192.168.1.0/24
+vulntor scan --targets 192.168.1.0/24
 # Executes scan locally, writes to local storage
 ```
 
 **Remote Mode** (with server):
 
 ```bash
-pentora scan --targets 192.168.1.0/24 --server https://pentora.company.com
+vulntor scan --targets 192.168.1.0/24 --server https://vulntor.company.com
 # Submits scan job to server via API
 ```
 
 ## Command Structure
 
 ```
-pentora <command> [subcommand] [flags] [arguments]
+vulntor <command> [subcommand] [flags] [arguments]
 ```
 
 ## Primary Commands
 
-### pentora scan
+### vulntor scan
 
 Execute security scans:
 
 ```bash
-pentora scan --targets 192.168.1.0/24
+vulntor scan --targets 192.168.1.0/24
 ```
 
 Performs complete scan pipeline or selective phases. Most commonly used command.
 
 See [Scan Command Reference](./scan.md) for details.
 
-### pentora storage
+### vulntor storage
 
 Manage storage and scan results:
 
 ```bash
-pentora storage list              # List all scans
-pentora storage show <scan-id>    # Show scan details
-pentora storage gc                # Garbage collection
+vulntor storage list              # List all scans
+vulntor storage show <scan-id>    # Show scan details
+vulntor storage gc                # Garbage collection
 ```
 
 See [Storage Commands](./storage.md) for details.
 
-### pentora server
+### vulntor server
 
-Control Pentora server daemon:
+Control Vulntor server daemon:
 
 ```bash
-pentora server start                # Start server
-pentora server stop                 # Stop server
-pentora server status               # Check server status
+vulntor server start                # Start server
+vulntor server stop                 # Stop server
+vulntor server status               # Check server status
 ```
 
 See [Server Commands](./server.md) for details.
 
-### pentora fingerprint
+### vulntor fingerprint
 
 Manage fingerprint catalogs:
 
 ```bash
-pentora fingerprint sync            # Update fingerprint database
-pentora fingerprint list            # List available rules
+vulntor fingerprint sync            # Update fingerprint database
+vulntor fingerprint list            # List available rules
 ```
 
 See [Fingerprint Commands](./fingerprint.md) for details.
 
-### pentora version
+### vulntor version
 
 Display version information:
 
 ```bash
-pentora version
+vulntor version
 ```
 
 Output:
 
 ```
-Pentora version 1.0.0
+Vulntor version 1.0.0
 Build: 20231006-a1b2c3d
 Go version: go1.21.3
 Platform: linux/amd64
 ```
 
-### pentora dag
+### vulntor dag
 
 Validate and inspect DAG definitions:
 
 ```bash
-pentora dag validate scan-profile.yaml   # Validate DAG
-pentora dag show scan-profile.yaml       # Visualize DAG
+vulntor dag validate scan-profile.yaml   # Validate DAG
+vulntor dag show scan-profile.yaml       # Visualize DAG
 ```
 
 ## Quick Start
@@ -128,25 +128,25 @@ pentora dag show scan-profile.yaml       # Visualize DAG
 ### Basic Network Scan
 
 ```bash
-pentora scan --targets 192.168.1.0/24
+vulntor scan --targets 192.168.1.0/24
 ```
 
 ### Scan with Vulnerability Detection
 
 ```bash
-pentora scan --targets 192.168.1.100 --vuln
+vulntor scan --targets 192.168.1.100 --vuln
 ```
 
 ### List Scan Results
 
 ```bash
-pentora storage list
+vulntor storage list
 ```
 
 ### Export Results
 
 ```bash
-pentora storage export <scan-id> --format json -o report.json
+vulntor storage export <scan-id> --format json -o report.json
 ```
 
 ## Learn More
@@ -207,5 +207,5 @@ pentora storage export <scan-id> --format json -o report.json
 | ------------------------------- | --------------------------------- |
 | [scan](./scan.md)               | Execute security scans            |
 | [storage](./storage.md)         | Manage scan results and storage   |
-| [server](./server.md)           | Control Pentora server            |
+| [server](./server.md)           | Control Vulntor server            |
 | [fingerprint](./fingerprint.md) | Manage fingerprint database       |

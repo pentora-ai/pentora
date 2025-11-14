@@ -18,8 +18,8 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cast"
 
-	"github.com/pentora-ai/pentora/pkg/engine" // Assuming your core module interfaces are in pkg/engine
-	"github.com/pentora-ai/pentora/pkg/netutil"
+	"github.com/vulntor/vulntor/pkg/engine" // Assuming your core module interfaces are in pkg/engine
+	"github.com/vulntor/vulntor/pkg/netutil"
 )
 
 // ICMPPingDiscoveryResult stores the outcome of the ping discovery.
@@ -86,7 +86,7 @@ func newICMPPingDiscoveryModule() *ICMPPingDiscoveryModule {
 			Version:     "0.1.0",                        // Incremented version for clarity
 			Description: "Detects live hosts using ICMP echo requests via the go-ping library.",
 			Type:        engine.DiscoveryModuleType,
-			Author:      "Pentora Team",
+			Author:      "Vulntor Team",
 			Tags:        []string{"discovery", "host", "icmp", "ping"},
 			Consumes: []engine.DataContractEntry{
 				{
@@ -395,7 +395,7 @@ func ICMPPingModuleFactory() engine.Module {
 }
 
 func init() {
-	// Register the module factory with Pentora's core module registry.
+	// Register the module factory with Vulntor's core module registry.
 	// The name "icmp-ping-discovery" will be used in DAG definitions to instantiate this module.
 	engine.RegisterModuleFactory("icmp-ping-discovery", ICMPPingModuleFactory)
 }

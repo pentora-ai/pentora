@@ -6,14 +6,14 @@ Solutions to frequently encountered problems.
 
 ### Binary Not Found
 ```
-bash: pentora: command not found
+bash: vulntor: command not found
 ```
 
 **Solution**: Add to PATH
 ```bash
 export PATH=$PATH:/usr/local/bin
 # Or move binary
-sudo mv pentora /usr/local/bin/
+sudo mv vulntor /usr/local/bin/
 ```
 
 ### Permission Denied
@@ -23,7 +23,7 @@ Error: permission denied
 
 **Solution**: Make executable
 ```bash
-chmod +x pentora
+chmod +x vulntor
 ```
 
 ## Scanning Issues
@@ -41,10 +41,10 @@ INFO Discovery completed: 0 hosts found
 **Solutions**:
 ```bash
 # Try TCP-based discovery
-pentora scan --targets 192.168.1.0/24 --discover-profile tcp
+vulntor scan --targets 192.168.1.0/24 --discover-profile tcp
 
 # Skip discovery if hosts known live
-pentora scan --targets 192.168.1.100 --no-discover
+vulntor scan --targets 192.168.1.100 --no-discover
 
 # Verify connectivity
 ping 192.168.1.100
@@ -58,13 +58,13 @@ Error: raw socket access denied (requires root)
 **Solutions**:
 ```bash
 # Run with sudo
-sudo pentora scan --targets 192.168.1.0/24
+sudo vulntor scan --targets 192.168.1.0/24
 
 # OR use connect scan (no root needed)
-pentora scan --targets 192.168.1.0/24 --scan-type connect
+vulntor scan --targets 192.168.1.0/24 --scan-type connect
 
 # OR set capability
-sudo setcap cap_net_raw+ep /usr/local/bin/pentora
+sudo setcap cap_net_raw+ep /usr/local/bin/vulntor
 ```
 
 ### Scan Timeout
@@ -75,10 +75,10 @@ Error: scan timeout after 1h
 **Solutions**:
 ```bash
 # Increase timeout
-pentora scan --targets large-network.txt --timeout 2h
+vulntor scan --targets large-network.txt --timeout 2h
 
 # Reduce scan scope
-pentora scan --targets 192.168.1.0/24 --profile quick
+vulntor scan --targets 192.168.1.0/24 --profile quick
 
 # Split into smaller batches
 ```
@@ -91,10 +91,10 @@ WARN Rate limit exceeded, throttling
 **Solutions**:
 ```bash
 # Reduce rate
-pentora scan --targets 192.168.1.0/24 --rate 500
+vulntor scan --targets 192.168.1.0/24 --rate 500
 
 # Reduce concurrency
-pentora scan --targets 192.168.1.0/24 --concurrency 50
+vulntor scan --targets 192.168.1.0/24 --concurrency 50
 ```
 
 ## Storage Issues
@@ -107,10 +107,10 @@ Error: no space left on device
 **Solutions**:
 ```bash
 # Clean old scans
-pentora storage gc --older-than 30d
+vulntor storage gc --older-than 30d
 
 # Check storage size
-du -sh ~/.local/share/pentora
+du -sh ~/.local/share/vulntor
 
 # Enable compression
 # Add to config.yaml:
@@ -127,13 +127,13 @@ Error: failed to read scan results
 **Solution**:
 ```bash
 # Check storage integrity
-pentora storage check
+vulntor storage check
 
 # Attempt repair
-pentora storage check --fix
+vulntor storage check --fix
 
 # Delete corrupted scan
-pentora storage delete <scan-id>
+vulntor storage delete <scan-id>
 ```
 
 ## Server Issues
@@ -146,7 +146,7 @@ Error: bind: address already in use
 **Solutions**:
 ```bash
 # Use different port
-pentora server start --bind 0.0.0.0:9090
+vulntor server start --bind 0.0.0.0:9090
 
 # Find process using port
 lsof -i :8080
@@ -161,10 +161,10 @@ Error: 401 Unauthorized
 **Solutions**:
 ```bash
 # Check API token
-export PENTORA_API_TOKEN=your-token
+export VULNTOR_API_TOKEN=your-token
 
 # Verify token
-pentora server token verify
+vulntor server token verify
 ```
 
 ## Configuration Issues
@@ -177,13 +177,13 @@ Error: invalid configuration file
 **Solutions**:
 ```bash
 # Validate config
-pentora config validate
+vulntor config validate
 
 # Check YAML syntax
-yamllint ~/.config/pentora/config.yaml
+yamllint ~/.config/vulntor/config.yaml
 
 # Use default config
-pentora scan --targets 192.168.1.100 --config ""
+vulntor scan --targets 192.168.1.100 --config ""
 ```
 
 See [Performance Troubleshooting](/troubleshooting/performance) for optimization.

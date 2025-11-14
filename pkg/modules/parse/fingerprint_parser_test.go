@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pentora-ai/pentora/pkg/engine"
-	"github.com/pentora-ai/pentora/pkg/fingerprint"
-	"github.com/pentora-ai/pentora/pkg/modules/scan"
+	"github.com/vulntor/vulntor/pkg/engine"
+	"github.com/vulntor/vulntor/pkg/fingerprint"
+	"github.com/vulntor/vulntor/pkg/modules/scan"
 )
 
 // --- MOCK RESOLVER ---

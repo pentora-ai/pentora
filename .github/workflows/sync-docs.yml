@@ -1,4 +1,4 @@
-name: Sync /docs to pentora-ai/docs
+name: Sync /docs to vulntor-ai/docs
 
 on:
   push:
@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout source repo (pentora)
+      - name: Checkout source repo (vulntor)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -26,14 +26,14 @@ jobs:
 
       - name: Configure git
         run: |
-          git config --global user.name "pentorabot"
-          git config --global user.email "pentorabot@users.noreply.github.com"
+          git config --global user.name "vulntorbot"
+          git config --global user.email "vulntorbot@users.noreply.github.com"
 
-      - name: Clone destination repo (pentora-ai/docs)
+      - name: Clone destination repo (vulntor-ai/docs)
         env:
           GITHUB_TOKEN: ${{ secrets.PENTORABOT_PAT }}
         run: |
-          git clone https://x-access-token:${GITHUB_TOKEN}@github.com/pentora-ai/docs.git ../docs-repo
+          git clone https://x-access-token:${GITHUB_TOKEN}@github.com/vulntor-ai/docs.git ../docs-repo
           cd ../docs-repo
           # Eski içeriği temizle
           find . ! -name '.git' -mindepth 1 -maxdepth 1 -exec rm -rf {} +
@@ -54,5 +54,5 @@ jobs:
             echo "No changes to commit."
           else
             git commit -m "${{ steps.commitmsg.outputs.message }}"
-            git push https://x-access-token:${GITHUB_TOKEN}@github.com/pentora-ai/docs.git main
+            git push https://x-access-token:${GITHUB_TOKEN}@github.com/vulntor-ai/docs.git main
           fi

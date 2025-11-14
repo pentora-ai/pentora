@@ -5,8 +5,8 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/pentora-ai/pentora/pkg/server/api"
-	"github.com/pentora-ai/pentora/pkg/storage"
+	"github.com/vulntor/vulntor/pkg/server/api"
+	"github.com/vulntor/vulntor/pkg/storage"
 )
 
 // DTO Evolution Policy

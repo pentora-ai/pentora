@@ -266,17 +266,17 @@ func Suggestions(err error) []string {
 	switch ErrorCode(err) {
 	case errorCodeNoRetention:
 		return []string{
-			"Set max scans:              pentora storage gc --max-scans=100",
-			"Set max age days:           pentora storage gc --max-age-days=30",
+			"Set max scans:              vulntor storage gc --max-scans=100",
+			"Set max age days:           vulntor storage gc --max-age-days=30",
 		}
 	case errorCodeInvalidRetention:
 		return []string{
 			"Use non-negative numbers for retention flags",
-			"Override config with flags: pentora storage gc --max-scans=100",
+			"Override config with flags: vulntor storage gc --max-scans=100",
 		}
 	case errorCodeWorkspaceInvalid:
 		return []string{
-			"Set workspace dir:          pentora storage gc --storage-dir <path>",
+			"Set workspace dir:          vulntor storage gc --storage-dir <path>",
 			"Ensure directory exists and is writable",
 		}
 	case errorCodeWorkspacePerm:
@@ -291,7 +291,7 @@ func Suggestions(err error) []string {
 		}
 	case errorCodeStorageFailure:
 		return []string{
-			"Retry with verbose logs:    pentora storage gc --verbosity 1",
+			"Retry with verbose logs:    vulntor storage gc --verbosity 1",
 			"Check storage directory permissions",
 		}
 	default:

@@ -14,20 +14,20 @@ Assess compliance against regulatory frameworks (Enterprise).
 
 ```bash
 # CIS Level 1
-pentora scan --targets prod-servers.txt --compliance cis-level1
+vulntor scan --targets prod-servers.txt --compliance cis-level1
 
 # PCI DSS
-pentora scan --targets cardholder-env.txt --compliance pci-dss
+vulntor scan --targets cardholder-env.txt --compliance pci-dss
 
 # Multiple frameworks
-pentora scan --targets critical.txt --compliance "cis-level1,nist-800-53"
+vulntor scan --targets critical.txt --compliance "cis-level1,nist-800-53"
 ```
 
 ## Compliance Reports
 
 Generate compliance reports:
 ```bash
-pentora storage export scan-id --format pdf --compliance-report pci-dss
+vulntor storage export scan-id --format pdf --compliance-report pci-dss
 ```
 
 ## Common Controls
@@ -56,10 +56,10 @@ pentora storage export scan-id --format pdf --compliance-report pci-dss
 
 ```bash
 # Initial assessment
-pentora scan --targets servers.txt --compliance pci-dss -o baseline.json
+vulntor scan --targets servers.txt --compliance pci-dss -o baseline.json
 
 # After remediation
-pentora scan --targets servers.txt --compliance pci-dss -o remediated.json
+vulntor scan --targets servers.txt --compliance pci-dss -o remediated.json
 
 # Compare
 diff baseline.json remediated.json
@@ -69,7 +69,7 @@ diff baseline.json remediated.json
 
 Schedule regular checks:
 ```bash
-pentora scan --targets prod.txt \
+vulntor scan --targets prod.txt \
   --compliance cis-level1 \
   --schedule "0 2 * * 0" \
   --notify email://compliance-team@company.com

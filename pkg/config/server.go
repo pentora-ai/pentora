@@ -32,7 +32,7 @@ func DefaultServerConfig() ServerConfig {
 }
 
 // BindServerFlags binds server-specific flags to the provided FlagSet.
-// These flags will be used by the 'pentora server start' command.
+// These flags will be used by the 'vulntor server start' command.
 //
 // Flags are namespaced under 'server.' to avoid conflicts with global flags.
 // Example: --server.addr, --server.port

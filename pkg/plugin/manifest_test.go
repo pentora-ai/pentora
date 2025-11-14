@@ -1,4 +1,4 @@
-// Copyright 2025 Pentora Authors
+// Copyright 2025 Vulntor Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 
@@ -465,7 +465,7 @@ func TestManifestManager_SetGetRegistryURL(t *testing.T) {
 	require.NoError(t, err)
 
 	// Set URL
-	testURL := "https://registry.pentora.io/plugins"
+	testURL := "https://registry.vulntor.io/plugins"
 	err = mm.SetRegistryURL(testURL)
 	require.NoError(t, err)
 
@@ -529,7 +529,7 @@ func TestManifestManager_SaveAndLoad_RoundTrip(t *testing.T) {
 	err = mm1.Add(entry)
 	require.NoError(t, err)
 
-	err = mm1.SetRegistryURL("https://registry.pentora.io")
+	err = mm1.SetRegistryURL("https://registry.vulntor.io")
 	require.NoError(t, err)
 
 	err = mm1.Save()
@@ -552,7 +552,7 @@ func TestManifestManager_SaveAndLoad_RoundTrip(t *testing.T) {
 
 	url, err := mm2.GetRegistryURL()
 	require.NoError(t, err)
-	require.Equal(t, "https://registry.pentora.io", url)
+	require.Equal(t, "https://registry.vulntor.io", url)
 }
 
 func TestManifestManager_Add_AutoLoad(t *testing.T) {
@@ -896,7 +896,7 @@ func TestGetRegistryURL_AutoLoad(t *testing.T) {
 		Version:     "1.0",
 		LastUpdated: time.Now(),
 		Plugins:     make(map[string]*ManifestEntry),
-		RegistryURL: "https://registry.pentora.io",
+		RegistryURL: "https://registry.vulntor.io",
 	}
 	data, err := json.MarshalIndent(manifest, "", "  ")
 	require.NoError(t, err)
@@ -911,7 +911,7 @@ func TestGetRegistryURL_AutoLoad(t *testing.T) {
 	// GetRegistryURL should auto-load
 	url, err := mm.GetRegistryURL()
 	require.NoError(t, err)
-	require.Equal(t, "https://registry.pentora.io", url)
+	require.Equal(t, "https://registry.vulntor.io", url)
 	require.NotNil(t, mm.manifest) // Now loaded
 }
 
@@ -941,7 +941,7 @@ func TestSetRegistryURL_LoadError(t *testing.T) {
 	}
 
 	// SetRegistryURL should fail to load
-	err := mm.SetRegistryURL("https://registry.pentora.io")
+	err := mm.SetRegistryURL("https://registry.vulntor.io")
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to load manifest")
 }

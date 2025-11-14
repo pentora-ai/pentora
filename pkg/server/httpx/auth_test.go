@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/pentora-ai/pentora/pkg/config"
+	"github.com/vulntor/vulntor/pkg/config"
 )
 
 func TestAuth_ValidToken(t *testing.T) {

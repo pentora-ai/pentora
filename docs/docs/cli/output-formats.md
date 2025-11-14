@@ -1,13 +1,13 @@
 # Output Formats
 
-Pentora supports multiple output formats for different use cases and integrations.
+Vulntor supports multiple output formats for different use cases and integrations.
 
 ## Terminal Output (default)
 
 Human-readable text output:
 
 ```bash
-pentora scan --targets 192.168.1.100
+vulntor scan --targets 192.168.1.100
 ```
 
 ```
@@ -17,7 +17,7 @@ pentora scan --targets 192.168.1.100
 [INFO] Found 5 open ports
 [INFO] Fingerprinting services...
 [INFO] Scan complete in 45s
-[INFO] Results: ~/.local/share/pentora/scans/20231006-143022-a1b2c3/
+[INFO] Results: ~/.local/share/vulntor/scans/20231006-143022-a1b2c3/
 ```
 
 ## JSON Output
@@ -25,7 +25,7 @@ pentora scan --targets 192.168.1.100
 Machine-readable structured output:
 
 ```bash
-pentora scan --targets 192.168.1.100 --output json
+vulntor scan --targets 192.168.1.100 --output json
 ```
 
 ```json
@@ -49,7 +49,7 @@ pentora scan --targets 192.168.1.100 --output json
 Line-delimited JSON (streamable):
 
 ```bash
-pentora scan --targets 192.168.1.100 --output jsonl
+vulntor scan --targets 192.168.1.100 --output jsonl
 ```
 
 ```jsonl
@@ -62,7 +62,7 @@ pentora scan --targets 192.168.1.100 --output jsonl
 Tabular format for spreadsheets:
 
 ```bash
-pentora scan --targets 192.168.1.100 --output csv
+vulntor scan --targets 192.168.1.100 --output csv
 ```
 
 ```csv
@@ -76,8 +76,8 @@ host,port,protocol,state,service,version
 Write results to file:
 
 ```bash
-pentora scan --targets 192.168.1.100 -o results.json
-pentora scan --targets 192.168.1.100 --output-file report.csv --format csv
+vulntor scan --targets 192.168.1.100 -o results.json
+vulntor scan --targets 192.168.1.100 --output-file report.csv --format csv
 ```
 
 ## Progress and Verbosity
@@ -87,7 +87,7 @@ pentora scan --targets 192.168.1.100 --output-file report.csv --format csv
 Show real-time progress:
 
 ```bash
-pentora scan --targets 192.168.1.0/24 --progress
+vulntor scan --targets 192.168.1.0/24 --progress
 ```
 
 ```
@@ -102,16 +102,16 @@ Increase log detail:
 
 ```bash
 # Standard logging (info level)
-pentora scan --targets 192.168.1.100
+vulntor scan --targets 192.168.1.100
 
 # Verbose (debug level)
-pentora scan --targets 192.168.1.100 -v
+vulntor scan --targets 192.168.1.100 -v
 
 # Very verbose (trace level with module details)
-pentora scan --targets 192.168.1.100 -vv
+vulntor scan --targets 192.168.1.100 -vv
 
 # Maximum verbosity (all events and data flow)
-pentora scan --targets 192.168.1.100 -vvv
+vulntor scan --targets 192.168.1.100 -vvv
 ```
 
 ### Quiet Mode
@@ -119,13 +119,13 @@ pentora scan --targets 192.168.1.100 -vvv
 Suppress all output except errors:
 
 ```bash
-pentora scan --targets 192.168.1.100 --quiet
+vulntor scan --targets 192.168.1.100 --quiet
 ```
 
 Use in scripts where only exit code matters:
 
 ```bash
-if pentora scan --targets 192.168.1.100 --quiet; then
+if vulntor scan --targets 192.168.1.100 --quiet; then
     echo "Scan successful"
 else
     echo "Scan failed"
@@ -134,7 +134,7 @@ fi
 
 ## Exit Codes
 
-Pentora uses standard Unix exit codes:
+Vulntor uses standard Unix exit codes:
 
 | Code | Meaning |
 |------|---------|
@@ -150,7 +150,7 @@ Pentora uses standard Unix exit codes:
 Use in scripts:
 
 ```bash
-pentora scan --targets 192.168.1.100
+vulntor scan --targets 192.168.1.100
 case $? in
     0) echo "Success" ;;
     4) echo "Network error" ;;

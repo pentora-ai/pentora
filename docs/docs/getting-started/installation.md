@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Installation
 
-Pentora supports multiple installation methods across macOS, Linux, and Windows platforms.
+Vulntor supports multiple installation methods across macOS, Linux, and Windows platforms.
 
 ## System Requirements
 
@@ -29,20 +29,20 @@ Pentora supports multiple installation methods across macOS, Linux, and Windows 
 Use the official install script:
 
 ```bash
-curl -sSL https://pentora.io/install.sh | bash
+curl -sSL https://vulntor.io/install.sh | bash
 ```
 
 This script will:
 
 1. Detect your platform and architecture
 2. Download the latest release binary
-3. Install to `/usr/local/bin/pentora`
+3. Install to `/usr/local/bin/vulntor`
 4. Set appropriate permissions
 
 Verify installation:
 
 ```bash
-pentora version
+vulntor version
 ```
 
 ### Manual Install Script
@@ -50,7 +50,7 @@ pentora version
 If you prefer to review the script first:
 
 ```bash
-curl -sSL https://pentora.io/install.sh -o install.sh
+curl -sSL https://vulntor.io/install.sh -o install.sh
 chmod +x install.sh
 ./install.sh
 ```
@@ -62,31 +62,31 @@ chmod +x install.sh
 #### Homebrew (Coming Soon)
 
 ```bash
-brew tap pentora/tap
-brew install pentora
+brew tap vulntor/tap
+brew install vulntor
 ```
 
 #### Download Binary
 
 ```bash
 # Download latest release
-curl -LO https://github.com/pentora-ai/pentora/releases/latest/download/pentora-darwin-amd64.tar.gz
+curl -LO https://github.com/vulntor-ai/vulntor/releases/latest/download/vulntor-darwin-amd64.tar.gz
 
 # Extract
-tar -xzf pentora-darwin-amd64.tar.gz
+tar -xzf vulntor-darwin-amd64.tar.gz
 
 # Move to PATH
-sudo mv pentora /usr/local/bin/
+sudo mv vulntor /usr/local/bin/
 
 # Verify
-pentora version
+vulntor version
 ```
 
 #### DMG Installer
 
-1. Download `pentora-installer.dmg` from [releases page](https://github.com/pentora-ai/pentora/releases)
+1. Download `vulntor-installer.dmg` from [releases page](https://github.com/vulntor-ai/vulntor/releases)
 2. Open the DMG file
-3. Drag Pentora to Applications folder
+3. Drag Vulntor to Applications folder
 4. Run from Terminal or add to PATH
 
 ### Linux
@@ -94,96 +94,96 @@ pentora version
 #### Debian / Ubuntu (APT)
 
 ```bash
-# Add Pentora repository
-curl -fsSL https://pentora.io/gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/pentora-archive-keyring.gpg
+# Add Vulntor repository
+curl -fsSL https://vulntor.io/gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/vulntor-archive-keyring.gpg
 
-echo "deb [signed-by=/usr/share/keyrings/pentora-archive-keyring.gpg] https://apt.pentora.io stable main" | \
-  sudo tee /etc/apt/sources.list.d/pentora.list
+echo "deb [signed-by=/usr/share/keyrings/vulntor-archive-keyring.gpg] https://apt.vulntor.io stable main" | \
+  sudo tee /etc/apt/sources.list.d/vulntor.list
 
 # Install
 sudo apt update
-sudo apt install pentora
+sudo apt install vulntor
 ```
 
 #### RHEL / CentOS / Fedora (YUM/DNF)
 
 ```bash
-# Add Pentora repository
-sudo tee /etc/yum.repos.d/pentora.repo <<EOF
-[pentora]
-name=Pentora Repository
-baseurl=https://yum.pentora.io/stable
+# Add Vulntor repository
+sudo tee /etc/yum.repos.d/vulntor.repo <<EOF
+[vulntor]
+name=Vulntor Repository
+baseurl=https://yum.vulntor.io/stable
 enabled=1
 gpgcheck=1
-gpgkey=https://pentora.io/gpg.key
+gpgkey=https://vulntor.io/gpg.key
 EOF
 
 # Install
-sudo yum install pentora
+sudo yum install vulntor
 # or
-sudo dnf install pentora
+sudo dnf install vulntor
 ```
 
 #### Arch Linux (AUR)
 
 ```bash
-yay -S pentora-bin
+yay -S vulntor-bin
 # or
-paru -S pentora-bin
+paru -S vulntor-bin
 ```
 
 #### Generic Linux Binary
 
 ```bash
 # Download
-curl -LO https://github.com/pentora-ai/pentora/releases/latest/download/pentora-linux-amd64.tar.gz
+curl -LO https://github.com/vulntor-ai/vulntor/releases/latest/download/vulntor-linux-amd64.tar.gz
 
 # Extract
-tar -xzf pentora-linux-amd64.tar.gz
+tar -xzf vulntor-linux-amd64.tar.gz
 
 # Install
-sudo mv pentora /usr/local/bin/
+sudo mv vulntor /usr/local/bin/
 
 # Verify
-pentora version
+vulntor version
 ```
 
 ### Windows
 
 #### Installer (MSI)
 
-1. Download `pentora-installer-x64.msi` from [releases page](https://github.com/pentora-ai/pentora/releases)
+1. Download `vulntor-installer-x64.msi` from [releases page](https://github.com/vulntor-ai/vulntor/releases)
 2. Run the installer
 3. Follow the installation wizard
-4. Pentora will be added to PATH automatically
+4. Vulntor will be added to PATH automatically
 
 #### Chocolatey (Coming Soon)
 
 ```powershell
-choco install pentora
+choco install vulntor
 ```
 
 #### Scoop
 
 ```powershell
-scoop bucket add pentora https://github.com/pentora/scoop-bucket
-scoop install pentora
+scoop bucket add vulntor https://github.com/vulntor/scoop-bucket
+scoop install vulntor
 ```
 
 #### Manual Binary
 
 ```powershell
 # Download latest release
-Invoke-WebRequest -Uri https://github.com/pentora-ai/pentora/releases/latest/download/pentora-windows-amd64.zip -OutFile pentora.zip
+Invoke-WebRequest -Uri https://github.com/vulntor-ai/vulntor/releases/latest/download/vulntor-windows-amd64.zip -OutFile vulntor.zip
 
 # Extract
-Expand-Archive pentora.zip -DestinationPath C:\Program Files\Pentora
+Expand-Archive vulntor.zip -DestinationPath C:\Program Files\Vulntor
 
 # Add to PATH (run as Administrator)
-[Environment]::SetEnvironmentVariable("Path", $env:Path + ";C:\Program Files\Pentora", "Machine")
+[Environment]::SetEnvironmentVariable("Path", $env:Path + ";C:\Program Files\Vulntor", "Machine")
 
 # Verify
-pentora version
+vulntor version
 ```
 
 ## Build from Source
@@ -198,17 +198,17 @@ pentora version
 
 ```bash
 # Clone repository
-git clone https://github.com/pentora-ai/pentora.git
-cd pentora
+git clone https://github.com/vulntor-ai/vulntor.git
+cd vulntor
 
 # Build
-go build -o pentora ./cmd/pentora
+go build -o vulntor ./cmd/vulntor
 
 # Install
-sudo mv pentora /usr/local/bin/
+sudo mv vulntor /usr/local/bin/
 
 # Verify
-pentora version
+vulntor version
 ```
 
 ### Build with Make
@@ -231,7 +231,7 @@ make pkg
 
 ```bash
 # Build with debug symbols
-go build -tags debug -o pentora ./cmd/pentora
+go build -tags debug -o vulntor ./cmd/vulntor
 
 # Run tests
 make test
@@ -245,20 +245,20 @@ make lint
 ### Pull Official Image
 
 ```bash
-docker pull pentora/pentora:latest
+docker pull vulntor/vulntor:latest
 ```
 
 ### Run Container
 
 ```bash
 # Basic scan
-docker run --rm pentora/pentora scan 192.168.1.0/24
+docker run --rm vulntor/vulntor scan 192.168.1.0/24
 
 # With storage persistence
-docker run --rm -v $(pwd)/storage:/storage pentora/pentora scan 192.168.1.0/24
+docker run --rm -v $(pwd)/storage:/storage vulntor/vulntor scan 192.168.1.0/24
 
 # Interactive mode
-docker run -it --rm pentora/pentora
+docker run -it --rm vulntor/vulntor
 ```
 
 ### Docker Compose
@@ -268,13 +268,13 @@ Create `docker-compose.yml`:
 ```yaml
 version: '3.8'
 services:
-  pentora:
-    image: pentora/pentora:latest
+  vulntor:
+    image: vulntor/vulntor:latest
     volumes:
       - ./storage:/storage
       - ./config:/config
     environment:
-      - PENTORA_STORAGE_DIR=/storage
+      - VULNTOR_STORAGE_DIR=/storage
     command: ['server', 'start']
     ports:
       - '8080:8080'
@@ -288,88 +288,88 @@ docker-compose up -d
 
 ## Verification
 
-After installation, verify Pentora is working:
+After installation, verify Vulntor is working:
 
 ```bash
 # Check version
-pentora version
+vulntor version
 
 # Run help
-pentora --help
+vulntor --help
 
 # Test with a simple scan (local interface)
-pentora scan 127.0.0.1 --ports 22,80,443
+vulntor scan 127.0.0.1 --ports 22,80,443
 ```
 
 ## Configuration
 
-Pentora looks for configuration in the following locations (in order):
+Vulntor looks for configuration in the following locations (in order):
 
-1. `./pentora.yaml` (current directory)
-2. `~/.config/pentora/config.yaml` (Linux/macOS)
-3. `%AppData%\Pentora\config.yaml` (Windows)
-4. `/etc/pentora/config.yaml` (system-wide, Linux)
+1. `./vulntor.yaml` (current directory)
+2. `~/.config/vulntor/config.yaml` (Linux/macOS)
+3. `%AppData%\Vulntor\config.yaml` (Windows)
+4. `/etc/vulntor/config.yaml` (system-wide, Linux)
 
 Create a basic config file:
 
 ```bash
 # Create config directory
-mkdir -p ~/.config/pentora
+mkdir -p ~/.config/vulntor
 
 # Generate default config
-pentora config init > ~/.config/pentora/config.yaml
+vulntor config init > ~/.config/vulntor/config.yaml
 ```
 
 See the [Configuration Guide](../configuration/overview.md) for detailed options.
 
 ## Storage Setup
 
-Pentora uses a storage directory to store scan results:
+Vulntor uses a storage directory to store scan results:
 
 ```bash
 # Default storage locations:
-# Linux: ~/.local/share/pentora or $XDG_DATA_HOME/pentora
-# macOS: ~/Library/Application Support/Pentora
-# Windows: %AppData%\Pentora
+# Linux: ~/.local/share/vulntor or $XDG_DATA_HOME/vulntor
+# macOS: ~/Library/Application Support/Vulntor
+# Windows: %AppData%\Vulntor
 
 # Initialize storage
-pentora storage init
+vulntor storage init
 
 # Set custom storage directory
-export PENTORA_STORAGE_DIR=/path/to/storage
-pentora storage init
+export VULNTOR_STORAGE_DIR=/path/to/storage
+vulntor storage init
 ```
 
-## Updating Pentora
+## Updating Vulntor
 
 ### Via Package Manager
 
 ```bash
 # APT
-sudo apt update && sudo apt upgrade pentora
+sudo apt update && sudo apt upgrade vulntor
 
 # YUM/DNF
-sudo yum update pentora
+sudo yum update vulntor
 
 # Homebrew
-brew upgrade pentora
+brew upgrade vulntor
 ```
 
 ### Manual Update
 
 ```bash
 # Download latest release
-curl -sSL https://pentora.io/install.sh | bash
+curl -sSL https://vulntor.io/install.sh | bash
 
 # Verify new version
-pentora version
+vulntor version
 ```
 
 ### Check for Updates
 
 ```bash
 # Check if newer version is available
-pentora version --check-updates
+vulntor version --check-updates
 ```
 
 ## Uninstallation
@@ -378,27 +378,27 @@ pentora version --check-updates
 
 ```bash
 # APT
-sudo apt remove pentora
+sudo apt remove vulntor
 
 # YUM/DNF
-sudo yum remove pentora
+sudo yum remove vulntor
 
 # Homebrew
-brew uninstall pentora
+brew uninstall vulntor
 ```
 
 ### Manual Removal
 
 ```bash
 # Remove binary
-sudo rm /usr/local/bin/pentora
+sudo rm /usr/local/bin/vulntor
 
 # Remove configuration
-rm -rf ~/.config/pentora
+rm -rf ~/.config/vulntor
 
 # Remove storage (optional)
-rm -rf ~/.local/share/pentora  # Linux
-rm -rf ~/Library/Application\ Support/Pentora  # macOS
+rm -rf ~/.local/share/vulntor  # Linux
+rm -rf ~/Library/Application\ Support/Vulntor  # macOS
 ```
 
 ## Troubleshooting
@@ -409,19 +409,19 @@ If you encounter permission errors:
 
 ```bash
 # Ensure binary is executable
-chmod +x /usr/local/bin/pentora
+chmod +x /usr/local/bin/vulntor
 
 # Or run with sudo for privileged operations
-sudo pentora scan 192.168.1.0/24
+sudo vulntor scan 192.168.1.0/24
 ```
 
 ### Command Not Found
 
-If `pentora` command is not found after installation:
+If `vulntor` command is not found after installation:
 
 ```bash
 # Check if binary exists
-ls -l /usr/local/bin/pentora
+ls -l /usr/local/bin/vulntor
 
 # Add to PATH manually (add to ~/.bashrc or ~/.zshrc)
 export PATH=$PATH:/usr/local/bin
@@ -436,15 +436,15 @@ Raw socket operations require elevated privileges:
 
 ```bash
 # Run with sudo
-sudo pentora scan 192.168.1.0/24
+sudo vulntor scan 192.168.1.0/24
 
 # Or set capabilities (Linux only)
-sudo setcap cap_net_raw,cap_net_admin+eip /usr/local/bin/pentora
+sudo setcap cap_net_raw,cap_net_admin+eip /usr/local/bin/vulntor
 ```
 
 ## Next Steps
 
 - 🚀 [Quick Start Guide](./quick-start.md) - Run your first scan
 - 📖 [First Scan Tutorial](./first-scan.md) - Detailed walkthrough
-- ⚙️ [Configuration Guide](../configuration/overview.md) - Customize Pentora
+- ⚙️ [Configuration Guide](../configuration/overview.md) - Customize Vulntor
 - 🔧 [CLI Reference](../cli/overview.md) - Explore all commands

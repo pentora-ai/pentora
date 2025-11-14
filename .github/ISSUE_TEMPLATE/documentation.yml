@@ -8,7 +8,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for helping improve Pentora's documentation!
+        Thanks for helping improve Vulntor's documentation!
 
   - type: dropdown
     id: type
@@ -50,7 +50,7 @@ body:
       label: Issue Description
       description: What's wrong or missing?
       placeholder: |
-        The README doesn't explain how to use the --vuln flag. Users don't know they need to run `pentora plugin update` first.
+        The README doesn't explain how to use the --vuln flag. Users don't know they need to run `vulntor plugin update` first.
     validations:
       required: true
 
@@ -63,7 +63,7 @@ body:
         ```markdown
         ## Usage
 
-        pentora scan --targets 192.168.1.0/24
+        vulntor scan --targets 192.168.1.0/24
         ```
 
   - type: textarea
@@ -76,17 +76,17 @@ body:
         ## Usage
 
         ### Basic Scan
-        pentora scan --targets 192.168.1.0/24
+        vulntor scan --targets 192.168.1.0/24
 
         ### Vulnerability Scan
         First, download vulnerability plugins:
         ```bash
-        pentora plugin update
+        vulntor plugin update
         ```
 
         Then run scan with vulnerability detection:
         ```bash
-        pentora scan --targets 192.168.1.0/24 --vuln
+        vulntor scan --targets 192.168.1.0/24 --vuln
         ```
         ```
 
@@ -103,8 +103,8 @@ body:
       label: Related Documentation
       description: Links to related docs that might need updating
       placeholder: |
-        - CLI help text for `pentora scan`
-        - Plugin documentation in pentora-plugins repo
+        - CLI help text for `vulntor scan`
+        - Plugin documentation in vulntor-plugins repo
         - CLAUDE.md section on plugins
 
   - type: checkboxes

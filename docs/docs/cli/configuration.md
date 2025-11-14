@@ -1,17 +1,17 @@
 # CLI Configuration
 
-Learn how to configure Pentora CLI using configuration files, environment variables, and command-line flags.
+Learn how to configure Vulntor CLI using configuration files, environment variables, and command-line flags.
 
 ## Configuration Precedence
 
 Configuration loaded in order (later overrides earlier):
 
 1. Builtin defaults
-2. System config: `/etc/pentora/config.yaml`
-3. User config: `~/.config/pentora/config.yaml`
-4. Storage config: `<storage>/config/pentora.yaml`
+2. System config: `/etc/vulntor/config.yaml`
+3. User config: `~/.config/vulntor/config.yaml`
+4. Storage config: `<storage>/config/vulntor.yaml`
 5. Custom config: `--config /path/to/config.yaml`
-6. Environment variables: `PENTORA_*`
+6. Environment variables: `VULNTOR_*`
 7. CLI flags: `--flag value`
 
 ## Global Flags
@@ -19,7 +19,7 @@ Configuration loaded in order (later overrides earlier):
 Available on all commands:
 
 ```bash
---config string          Config file path (default: ~/.config/pentora/config.yaml)
+--config string          Config file path (default: ~/.config/vulntor/config.yaml)
 --storage-dir string    Storage directory (default: OS-specific)
 --no-storage            Disable storage persistence
 --log-level string      Logging level: debug, info, warn, error (default: info)
@@ -36,11 +36,11 @@ Available on all commands:
 Override config and flags:
 
 ```bash
-PENTORA_CONFIG           # Config file path
-PENTORA_STORAGE_DIR      # Storage directory
-PENTORA_LOG_LEVEL        # Logging level
-PENTORA_SERVER           # Server URL for remote mode
-PENTORA_API_TOKEN        # API authentication token
+VULNTOR_CONFIG           # Config file path
+VULNTOR_STORAGE_DIR      # Storage directory
+VULNTOR_LOG_LEVEL        # Logging level
+VULNTOR_SERVER           # Server URL for remote mode
+VULNTOR_API_TOKEN        # API authentication token
 ```
 
 ## Config File Format
@@ -48,9 +48,9 @@ PENTORA_API_TOKEN        # API authentication token
 YAML format:
 
 ```yaml
-# ~/.config/pentora/config.yaml
+# ~/.config/vulntor/config.yaml
 storage:
-  dir: ~/.local/share/pentora
+  dir: ~/.local/share/vulntor
   enabled: true
 
 scanner:
@@ -61,7 +61,7 @@ scanner:
 fingerprint:
   cache_dir: ${storage}/cache/fingerprints
   catalog:
-    remote_url: https://catalog.pentora.io/fingerprints.yaml
+    remote_url: https://catalog.vulntor.io/fingerprints.yaml
 
 logging:
   level: info
@@ -81,14 +81,14 @@ Generate shell completion scripts:
 ### Bash
 
 ```bash
-pentora completion bash > /etc/bash_completion.d/pentora
-source /etc/bash_completion.d/pentora
+vulntor completion bash > /etc/bash_completion.d/vulntor
+source /etc/bash_completion.d/vulntor
 ```
 
 ### Zsh
 
 ```bash
-pentora completion zsh > ~/.zsh/completion/_pentora
+vulntor completion zsh > ~/.zsh/completion/_vulntor
 # Add to ~/.zshrc:
 fpath=(~/.zsh/completion $fpath)
 autoload -U compinit && compinit
@@ -97,13 +97,13 @@ autoload -U compinit && compinit
 ### Fish
 
 ```bash
-pentora completion fish > ~/.config/fish/completions/pentora.fish
+vulntor completion fish > ~/.config/fish/completions/vulntor.fish
 ```
 
 ### PowerShell
 
 ```powershell
-pentora completion powershell | Out-String | Invoke-Expression
+vulntor completion powershell | Out-String | Invoke-Expression
 ```
 
 ## Debugging
@@ -111,13 +111,13 @@ pentora completion powershell | Out-String | Invoke-Expression
 ### Enable Debug Logging
 
 ```bash
-pentora scan --targets 192.168.1.100 --log-level debug
+vulntor scan --targets 192.168.1.100 --log-level debug
 ```
 
 ### Log to File
 
 ```bash
-pentora scan --targets 192.168.1.100 2> scan-debug.log
+vulntor scan --targets 192.168.1.100 2> scan-debug.log
 ```
 
 ### Trace Execution
@@ -125,7 +125,7 @@ pentora scan --targets 192.168.1.100 2> scan-debug.log
 Show detailed execution flow:
 
 ```bash
-pentora scan --targets 192.168.1.100 --log-level trace --log-format json | jq
+vulntor scan --targets 192.168.1.100 --log-level trace --log-format json | jq
 ```
 
 ### Dry Run
@@ -133,7 +133,7 @@ pentora scan --targets 192.168.1.100 --log-level trace --log-format json | jq
 Validate configuration without executing:
 
 ```bash
-pentora scan --targets 192.168.1.100 --dry-run
+vulntor scan --targets 192.168.1.100 --dry-run
 ```
 
 Shows what would be executed without actually running the scan.

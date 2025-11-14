@@ -1,14 +1,14 @@
 # CLI Integrations
 
-Learn how to integrate Pentora CLI with automation tools, CI/CD pipelines, and scripting environments.
+Learn how to integrate Vulntor CLI with automation tools, CI/CD pipelines, and scripting environments.
 
 ## Cron Scheduling
 
 Schedule periodic scans using cron:
 
 ```bash
-# /etc/cron.d/pentora-scan
-0 2 * * * pentora-user /usr/local/bin/pentora scan --targets /etc/pentora/targets.txt --quiet
+# /etc/cron.d/vulntor-scan
+0 2 * * * vulntor-user /usr/local/bin/vulntor scan --targets /etc/vulntor/targets.txt --quiet
 ```
 
 ## CI/CD Pipeline
@@ -19,12 +19,12 @@ Schedule periodic scans using cron:
 # .gitlab-ci.yml
 security-scan:
   stage: test
-  image: pentora/pentora:latest
+  image: vulntor/vulntor:latest
   script:
-    - pentora scan --targets $CI_ENVIRONMENT_URL --output report.json
+    - vulntor scan --targets $CI_ENVIRONMENT_URL --output report.json
   artifacts:
     reports:
-      pentora: report.json
+      vulntor: report.json
 ```
 
 ### GitHub Actions
@@ -41,8 +41,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Run Pentora scan
-        uses: pentora/pentora-action@v1
+      - name: Run Vulntor scan
+        uses: vulntor/vulntor-action@v1
         with:
           targets: ${{ secrets.SCAN_TARGETS }}
           profile: standard
@@ -57,7 +57,7 @@ pipeline {
     stages {
         stage('Security Scan') {
             steps {
-                sh 'pentora scan --targets ${TARGET_NETWORK} --output report.json'
+                sh 'vulntor scan --targets ${TARGET_NETWORK} --output report.json'
                 archiveArtifacts artifacts: 'report.json'
             }
         }
@@ -68,9 +68,9 @@ pipeline {
 ## Ansible Playbook
 
 ```yaml
-- name: Run Pentora scan
+- name: Run Vulntor scan
   command: >
-    pentora scan
+    vulntor scan
     --targets {{ target_network }}
     --profile standard
     --output /tmp/scan-results.json
@@ -88,7 +88,7 @@ import subprocess
 import json
 
 result = subprocess.run(
-    ['pentora', 'scan', '--targets', '192.168.1.100', '--output', 'json'],
+    ['vulntor', 'scan', '--targets', '192.168.1.100', '--output', 'json'],
     capture_output=True,
     text=True
 )
@@ -106,7 +106,7 @@ else:
 #!/bin/bash
 
 # Run scan and capture output
-pentora scan --targets 192.168.1.0/24 --output json > scan.json
+vulntor scan --targets 192.168.1.0/24 --output json > scan.json
 
 # Check exit code
 if [ $? -eq 0 ]; then
@@ -129,7 +129,7 @@ fi
 ```hcl
 resource "null_resource" "security_scan" {
   provisioner "local-exec" {
-    command = "pentora scan --targets ${aws_instance.web.public_ip} --output report.json"
+    command = "vulntor scan --targets ${aws_instance.web.public_ip} --output report.json"
   }
 
   depends_on = [aws_instance.web]
@@ -139,19 +139,19 @@ resource "null_resource" "security_scan" {
 ## Docker Integration
 
 ```dockerfile
-FROM pentora/pentora:latest
+FROM vulntor/vulntor:latest
 
 COPY targets.txt /app/targets.txt
 WORKDIR /app
 
-ENTRYPOINT ["pentora", "scan"]
+ENTRYPOINT ["vulntor", "scan"]
 CMD ["--targets", "targets.txt", "--output", "results.json"]
 ```
 
 Run as container:
 
 ```bash
-docker run -v $(pwd)/results:/app/results pentora-scanner
+docker run -v $(pwd)/results:/app/results vulntor-scanner
 ```
 
 ## Kubernetes CronJob
@@ -160,7 +160,7 @@ docker run -v $(pwd)/results:/app/results pentora-scanner
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: pentora-scan
+  name: vulntor-scan
 spec:
   schedule: "0 2 * * *"
   jobTemplate:
@@ -168,8 +168,8 @@ spec:
       template:
         spec:
           containers:
-          - name: pentora
-            image: pentora/pentora:latest
+          - name: vulntor
+            image: vulntor/vulntor:latest
             args:
             - scan
             - --targets
@@ -182,6 +182,6 @@ spec:
           volumes:
           - name: results
             persistentVolumeClaim:
-              claimName: pentora-results
+              claimName: vulntor-results
           restartPolicy: OnFailure
 ```

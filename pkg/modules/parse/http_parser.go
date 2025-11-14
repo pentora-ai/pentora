@@ -16,8 +16,8 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/pentora-ai/pentora/pkg/engine"
-	"github.com/pentora-ai/pentora/pkg/modules/scan" // To consume scan.BannerGrabResult
+	"github.com/vulntor/vulntor/pkg/engine"
+	"github.com/vulntor/vulntor/pkg/modules/scan" // To consume scan.BannerGrabResult
 )
 
 const (
@@ -65,7 +65,7 @@ func newHTTPParserModule() *HTTPParserModule {
 			Version:     "0.1.0",
 			Description: "Parses raw HTTP response banners into structured data (status, headers, etc.).",
 			Type:        engine.ParseModuleType,
-			Author:      "Pentora Team",
+			Author:      "Vulntor Team",
 			Tags:        []string{"parser", "http", "banner"},
 			Consumes: []engine.DataContractEntry{
 				{

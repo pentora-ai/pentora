@@ -4,13 +4,13 @@ import (
 	"errors"
 	"os"
 
-	pentoraCli "github.com/pentora-ai/pentora/cmd/pentora/commands"
-	"github.com/pentora-ai/pentora/pkg/plugin"
+	vulntorCli "github.com/vulntor/vulntor/cmd/vulntor/commands"
+	"github.com/vulntor/vulntor/pkg/plugin"
 )
 
 // main initializes the CLI application by determining the executable name and selecting
 // the appropriate command to execute. It checks the executable name from the environment
-// or the current process, then switches between available CLI commands (pentora or pentora-server).
+// or the current process, then switches between available CLI commands (vulntor or vulntor-server).
 // If the command execution fails, the application exits with an appropriate status code based on error type.
 //
 // Exit codes (as defined in ADR-0001):
@@ -21,7 +21,7 @@ import (
 //   - 7: Service unavailable (plugin errors: ErrSourceNotAvailable, ErrUnavailable)
 //   - 8: Partial failure (plugin errors: ErrPartialFailure)
 func main() {
-	command := pentoraCli.NewCommand()
+	command := vulntorCli.NewCommand()
 
 	err := command.Execute()
 	if err != nil {

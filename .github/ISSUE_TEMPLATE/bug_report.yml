@@ -1,5 +1,5 @@
 name: 🐛 Bug Report
-description: Report a bug or unexpected behavior in Pentora
+description: Report a bug or unexpected behavior in Vulntor
 title: "[Bug]: "
 labels: ["bug", "needs-triage"]
 assignees: []
@@ -27,7 +27,7 @@ body:
     id: component
     attributes:
       label: Component
-      description: Which part of Pentora is affected?
+      description: Which part of Vulntor is affected?
       options:
         - Scanner (port scanning, discovery)
         - Engine (DAG, orchestrator, modules)
@@ -48,7 +48,7 @@ body:
       description: Clear description of what's broken
       placeholder: |
         Example:
-        When running `pentora scan --targets 192.168.1.0/24 --vuln`, the scan completes but no vulnerabilities are reported even though the target has known issues.
+        When running `vulntor scan --targets 192.168.1.0/24 --vuln`, the scan completes but no vulnerabilities are reported even though the target has known issues.
     validations:
       required: true
 
@@ -58,8 +58,8 @@ body:
       label: Reproduction Steps
       description: Minimal steps to reproduce the issue
       placeholder: |
-        1. Run `pentora plugin update`
-        2. Execute `pentora scan --targets 192.168.1.100 --ports 22 --vuln`
+        1. Run `vulntor plugin update`
+        2. Execute `vulntor scan --targets 192.168.1.100 --ports 22 --vuln`
         3. Observe output
         4. Expected: Should detect SSH weak cipher
            Actual: No vulnerabilities reported
@@ -96,7 +96,7 @@ body:
       description: Paste relevant logs, error messages, or output
       placeholder: |
         ```
-        $ pentora scan --targets 192.168.1.100 --ports 22 --vuln -vvv
+        $ vulntor scan --targets 192.168.1.100 --ports 22 --vuln -vvv
         [DEBUG] Loading plugins from cache...
         [ERROR] Plugin evaluation failed: trigger[0]: data_key is required
         ```
@@ -105,8 +105,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: Pentora Version
-      description: Output of `pentora version`
+      label: Vulntor Version
+      description: Output of `vulntor version`
       placeholder: "v0.1.0-dev (commit: abc1234)"
     validations:
       required: true
@@ -160,7 +160,7 @@ body:
       placeholder: |
         - `pkg/plugin/types.go:149-156` (Validate method)
         - `pkg/plugin/cache.go:27-41` (CacheManager initialization)
-        - `cmd/pentora/commands/plugin/update.go:171-179` (cache check logic)
+        - `cmd/vulntor/commands/plugin/update.go:171-179` (cache check logic)
 
   - type: checkboxes
     id: impact

@@ -14,8 +14,8 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cast"
 
-	"github.com/pentora-ai/pentora/pkg/engine" // Engine interfaces
-	"github.com/pentora-ai/pentora/pkg/netutil"
+	"github.com/vulntor/vulntor/pkg/engine" // Engine interfaces
+	"github.com/vulntor/vulntor/pkg/netutil"
 )
 
 // TCPPortDiscoveryResult stores the outcome of the TCP port discovery for a single target.
@@ -60,7 +60,7 @@ func newTCPPortDiscoveryModule() *TCPPortDiscoveryModule {
 			Version:     "0.1.0",
 			Description: "Discovers open TCP ports on target hosts based on a list or range.",
 			Type:        engine.DiscoveryModuleType,
-			Author:      "Pentora Team",
+			Author:      "Vulntor Team",
 			Tags:        []string{"discovery", "port", "tcp"},
 			Consumes: []engine.DataContractEntry{
 				{
@@ -332,7 +332,7 @@ func TCPPortDiscoveryModuleFactory() engine.Module {
 }
 
 func init() {
-	// Register the module factory with Pentora's core module registry.
+	// Register the module factory with Vulntor's core module registry.
 	// The name "tcp-port-discovery" will be used in DAG definitions to instantiate this module.
 	engine.RegisterModuleFactory(tcpPortDiscoveryModuleTypeName, TCPPortDiscoveryModuleFactory)
 }

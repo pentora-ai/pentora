@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pentora-ai/pentora/pkg/engine"
-	"github.com/pentora-ai/pentora/pkg/modules/parse"
+	"github.com/vulntor/vulntor/pkg/engine"
+	"github.com/vulntor/vulntor/pkg/modules/parse"
 )
 
 // NOTE: Vulnerability aggregation is handled, but not asserted here due to

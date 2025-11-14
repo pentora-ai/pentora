@@ -15,7 +15,7 @@ service ModuleService {
 
 ```python
 import grpc
-from pentora_pb2 import ExecuteRequest, ExecuteResponse
+from vulntor_pb2 import ExecuteRequest, ExecuteResponse
 
 class CustomModule:
     def Execute(self, request, context):
@@ -39,7 +39,7 @@ plugins:
 ## Usage
 
 ```bash
-pentora scan --targets 192.168.1.100 --plugin custom_python_scanner
+vulntor scan --targets 192.168.1.100 --plugin custom_python_scanner
 ```
 
 See [Plugin Architecture](/architecture/plugins) for design details.

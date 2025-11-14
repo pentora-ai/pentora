@@ -1,6 +1,6 @@
-# Contributing to Pentora
+# Contributing to Vulntor
 
-Thank you for your interest in contributing to Pentora! This guide explains how to set up your environment, propose changes, and keep contributions consistent and easy to review.
+Thank you for your interest in contributing to Vulntor! This guide explains how to set up your environment, propose changes, and keep contributions consistent and easy to review.
 
 ## Quick Start
 
@@ -10,11 +10,11 @@ Thank you for your interest in contributing to Pentora! This guide explains how 
   - `make fmt`
   - `make lint`
   - `make test`
-  - Optional smoke build: `go build -o pentora ./cmd/pentora`
+  - Optional smoke build: `go build -o vulntor ./cmd/vulntor`
 
 ## Project Layout
 
-- CLI entrypoint: `cmd/pentora/commands/`
+- CLI entrypoint: `cmd/vulntor/commands/`
   - `scan.go` - Scan commands
   - `server/` - Server commands
   - `plugin/` - Plugin management commands
@@ -64,7 +64,7 @@ Thank you for your interest in contributing to Pentora! This guide explains how 
 5. **Push and create PR**
    ```bash
    git push origin feat/<short-name>
-   gh pr create --repo pentora-ai/pentora --web
+   gh pr create --repo vulntor-ai/vulntor --web
    ```
 
    **PR description should include**:
@@ -152,7 +152,7 @@ if err != nil {
 
 CI automatically checks for violations using `.github/scripts/check-error-handling.sh`. The check currently enforces this standard for:
 
-- ✅ Plugin commands (`cmd/pentora/commands/plugin`)
+- ✅ Plugin commands (`cmd/vulntor/commands/plugin`)
 
 Future command families (scan, storage, server) will be added as their standards are defined.
 
@@ -190,7 +190,7 @@ go run ./cmd <command>
 
 **Build to dist/** (if needed):
 ```bash
-make binary  # Outputs to dist/<GOOS>/<GOARCH>/pentora
+make binary  # Outputs to dist/<GOOS>/<GOARCH>/vulntor
 ```
 
 **Quality checks** (MANDATORY before commit):
@@ -235,4 +235,4 @@ Interfaces in `pkg/api` and `pkg/server` are evolving. Treat them as experimenta
 - Single maintainer workflows are welcome: self-review via PR is encouraged for structure and history.
 - If a review task was interrupted in the CLI, re-initiate with `/review` and wait for it to complete.
 
-Thanks for contributing and keeping Pentora healthy and reliable!
+Thanks for contributing and keeping Vulntor healthy and reliable!

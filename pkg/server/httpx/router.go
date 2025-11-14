@@ -6,10 +6,10 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/pentora-ai/pentora/pkg/config"
-	"github.com/pentora-ai/pentora/pkg/server/api"
-	v1 "github.com/pentora-ai/pentora/pkg/server/api/v1"
-	"github.com/pentora-ai/pentora/pkg/ui"
+	"github.com/vulntor/vulntor/pkg/config"
+	"github.com/vulntor/vulntor/pkg/server/api"
+	v1 "github.com/vulntor/vulntor/pkg/server/api/v1"
+	"github.com/vulntor/vulntor/pkg/ui"
 )
 
 // NewRouter creates and configures the main HTTP router.

@@ -1,7 +1,7 @@
 name: PostgreSQL Default Credentials
 version: 1.0.0
 type: evaluation
-author: pentora-security
+author: vulntor-security
 
 metadata:
   severity: critical

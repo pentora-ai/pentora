@@ -49,7 +49,7 @@ Grid/list of available integrations:
 
 1. Navigate to **Integrations** → **Slack**
 2. Click **Connect**
-3. Authorize Pentora app
+3. Authorize Vulntor app
 4. Select channel
 5. Test notification
 

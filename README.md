@@ -1,13 +1,13 @@
-# Pentora
+# Vulntor
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/pentora-ai/pentora)](https://goreportcard.com/report/github.com/pentora-ai/pentora)
-[![Test](https://github.com/pentora-ai/pentora/actions/workflows/test.yaml/badge.svg)](https://github.com/pentora-ai/pentora/actions/workflows/test.yaml)
-![Coverage](https://img.shields.io/codecov/c/github/pentora-ai/pentora)
+[![Go Report Card](https://goreportcard.com/badge/github.com/vulntor-ai/vulntor)](https://goreportcard.com/report/github.com/vulntor-ai/vulntor)
+[![Test](https://github.com/vulntor-ai/vulntor/actions/workflows/test.yaml/badge.svg)](https://github.com/vulntor-ai/vulntor/actions/workflows/test.yaml)
+![Coverage](https://img.shields.io/codecov/c/github/vulntor-ai/vulntor)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://opensource.org/license/apache-2-0)
 
-> ⚠️ **Active Development Notice**: Pentora is currently under active development and has not been released yet. APIs, CLI commands, and core features are subject to change. This project is not production-ready.
+> ⚠️ **Active Development Notice**: Vulntor is currently under active development and has not been released yet. APIs, CLI commands, and core features are subject to change. This project is not production-ready.
 
-**Pentora** is a modular, high-performance security scanner that rapidly discovers network services, captures banners, and maps findings into vulnerability intelligence. Built with a powerful DAG-based execution engine, Pentora enables security teams to perform comprehensive network assessments with precision and efficiency.
+**Vulntor** is a modular, high-performance security scanner that rapidly discovers network services, captures banners, and maps findings into vulnerability intelligence. Built with a powerful DAG-based execution engine, Vulntor enables security teams to perform comprehensive network assessments with precision and efficiency.
 
 ## ✨ Key Features
 
@@ -48,50 +48,50 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/pentora-ai/pentora.git
-cd pentora
+git clone https://github.com/vulntor-ai/vulntor.git
+cd vulntor
 
 # Build the binary (outputs to dist/)
 make binary
 
 # Or build manually to dist/
 mkdir -p dist
-go build -o dist/pentora ./cmd
+go build -o dist/vulntor ./cmd
 
 # Verify installation
-./dist/pentora version
+./dist/vulntor version
 ```
 
 ### Basic Usage
 
 ```bash
 # Scan a single target with default ports (22,80,443)
-pentora scan --targets 192.168.1.1
+vulntor scan --targets 192.168.1.1
 
 # Scan a CIDR range with custom ports
-pentora scan --targets 192.168.1.0/24 --ports 21,22,80,443,8080
+vulntor scan --targets 192.168.1.0/24 --ports 21,22,80,443,8080
 
 # Perform discovery only (skip port scanning)
-pentora scan --targets 192.168.1.1 --only-discover
+vulntor scan --targets 192.168.1.1 --only-discover
 
 # Enable vulnerability detection
-pentora scan --targets 192.168.1.1 --vuln
+vulntor scan --targets 192.168.1.1 --vuln
 
 # Scan with fingerprinting enabled
-pentora scan --targets 10.0.0.0/24 --fingerprint
+vulntor scan --targets 10.0.0.0/24 --fingerprint
 
 # List previous scan results
-pentora storage list
+vulntor storage list
 
 # Get scan details
-pentora storage get <scan-id>
+vulntor storage get <scan-id>
 ```
 
 ### Server Mode
 
 ```bash
-# Start the Pentora server
-pentora server start --addr 0.0.0.0 --port 8080
+# Start the Vulntor server
+vulntor server start --addr 0.0.0.0 --port 8080
 
 # Submit a scan via API
 curl -X POST http://localhost:8080/api/v1/scans \
@@ -99,7 +99,7 @@ curl -X POST http://localhost:8080/api/v1/scans \
   -d '{"targets": ["192.168.1.0/24"], "ports": [22,80,443]}'
 
 # Check scan status
-pentora server status
+vulntor server status
 ```
 
 ### DAG Management
@@ -108,19 +108,19 @@ Validate and manage DAG (Directed Acyclic Graph) definitions:
 
 ```bash
 # Validate a DAG definition file
-pentora dag validate scan-dag.yaml
+vulntor dag validate scan-dag.yaml
 
 # Export the internal scan DAG to YAML for inspection
-pentora dag export --targets 192.168.1.0/24 --output scan.yaml
+vulntor dag export --targets 192.168.1.0/24 --output scan.yaml
 
 # Export with vulnerability evaluation enabled
-pentora dag export --targets 10.0.0.1 --vuln --output full-scan.yaml
+vulntor dag export --targets 10.0.0.1 --vuln --output full-scan.yaml
 
 # Strict validation (treat warnings as errors)
-pentora dag validate dag.yaml --strict
+vulntor dag validate dag.yaml --strict
 
 # Output validation results as JSON (for CI/CD)
-pentora dag validate dag.yaml --json
+vulntor dag validate dag.yaml --json
 ```
 
 ### YAML Plugin System
@@ -129,13 +129,13 @@ pentora dag validate dag.yaml --json
 
 ```bash
 # Load and evaluate YAML plugins
-pentora scan --targets 192.168.1.1 --plugins ./my-plugins/
+vulntor scan --targets 192.168.1.1 --plugins ./my-plugins/
 
 # List available plugins
-pentora plugin list
+vulntor plugin list
 
 # Validate a plugin definition
-pentora plugin validate ssh-cve-check.yaml
+vulntor plugin validate ssh-cve-check.yaml
 ```
 
 Example YAML plugin (`ssh-vuln-check.yaml`):
@@ -194,8 +194,8 @@ See [pkg/plugin/testdata/plugins/](pkg/plugin/testdata/plugins/) and [pkg/plugin
 ## 📂 Project Structure
 
 ```
-pentora/
-├── cmd/pentora/           # CLI entry point
+vulntor/
+├── cmd/vulntor/           # CLI entry point
 ├── pkg/
 │   ├── api/              # REST and gRPC API servers
 │   ├── appctx/           # Application context management
@@ -223,7 +223,7 @@ pentora/
 
 ## 🔧 Architecture
 
-Pentora is built around several core concepts:
+Vulntor is built around several core concepts:
 
 ### DAG Execution Engine
 
@@ -249,13 +249,13 @@ Modules are self-contained units that perform specific scan phases:
 All scan results are stored using the `pkg/storage` abstraction layer:
 
 - **LocalBackend (OSS)**: File-based JSONL storage with thread-safe operations
-- OS-specific defaults: `~/Library/Application Support/Pentora` (macOS), `~/.local/share/pentora` (Linux)
+- OS-specific defaults: `~/Library/Application Support/Vulntor` (macOS), `~/.local/share/vulntor` (Linux)
 - Features: filtering, pagination, partial updates, typed errors
 - Retention policies: automatic cleanup based on age and count limits
 
 ### Testing Strategy
 
-Pentora uses a comprehensive testing approach:
+Vulntor uses a comprehensive testing approach:
 
 #### Unit Tests
 - Run with `make test` or `go test ./...`
@@ -284,7 +284,7 @@ Pentora uses a comprehensive testing approach:
 - Unit tests run on every commit (fast feedback)
 - Integration tests run on PR events (comprehensive validation)
 
-## 🔌 Extending Pentora
+## 🔌 Extending Vulntor
 
 ### Custom Parsers
 
@@ -385,7 +385,7 @@ React to scan events:
 ```go
 package main
 
-import "github.com/pentora-ai/pentora/pkg/hook"
+import "github.com/vulntor-ai/vulntor/pkg/hook"
 
 func init() {
     hook.Register("on_scan_complete", func(data interface{}) error {
@@ -399,14 +399,14 @@ func init() {
 
 For comprehensive documentation, visit:
 
-- **Documentation Site**: https://docs.pentora.ai (In Development)
+- **Documentation Site**: https://docs.vulntor.ai (In Development)
 - **Getting Started Guide**: [docs/getting-started/installation.md](docs/docs/getting-started/installation.md)
 - **CLI Reference**: [docs/cli/overview.md](docs/docs/cli/overview.md)
 - **Architecture Overview**: [docs/architecture/overview.md](docs/docs/architecture/overview.md)
 
 ## 🤝 Contributing
 
-We welcome contributions! Pentora is in active development, and we're building the foundation for a powerful security scanning platform.
+We welcome contributions! Vulntor is in active development, and we're building the foundation for a powerful security scanning platform.
 
 Areas where we need help:
 
@@ -436,18 +436,18 @@ Licensed under the Apache License, Version 2.0. See [LICENSE.md](LICENSE.md) for
 
 ## 🔗 Links
 
-- **Website**: https://pentora.ai
-- **Documentation**: https://docs.pentora.ai
-- **GitHub**: https://github.com/pentora-ai/pentora
-- **Issues**: https://github.com/pentora-ai/pentora/issues
-- **Discussions**: https://github.com/pentora-ai/pentora/discussions
+- **Website**: https://vulntor.ai
+- **Documentation**: https://docs.vulntor.ai
+- **GitHub**: https://github.com/vulntor-ai/vulntor
+- **Issues**: https://github.com/vulntor-ai/vulntor/issues
+- **Discussions**: https://github.com/vulntor-ai/vulntor/discussions
 
 ---
 
-**Note**: Pentora is under active development. Star the repository to stay updated on releases and new features!
+**Note**: Vulntor is under active development. Star the repository to stay updated on releases and new features!
 ## ValidationRunner Options (Fingerprint)
 
-Pentora's fingerprint validation supports functional options to configure thresholds, parallelism, timeouts, and progress callbacks.
+Vulntor's fingerprint validation supports functional options to configure thresholds, parallelism, timeouts, and progress callbacks.
 
 Basic usage (defaults):
 

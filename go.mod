@@ -1,4 +1,4 @@
-module github.com/pentora-ai/pentora
+module github.com/vulntor/vulntor
 
 go 1.25.0
 
@@ -17,15 +17,10 @@ require (
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/mod v0.29.0
-	google.golang.org/grpc v1.76.0
-	google.golang.org/protobuf v1.36.10
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-require (
-	golang.org/x/text v0.27.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250804133106-a7a43d27e69b // indirect
-)
+require golang.org/x/text v0.27.0 // indirect
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -33,6 +28,7 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
+	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/knadh/koanf/maps v0.1.2 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect

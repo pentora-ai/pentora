@@ -1,7 +1,7 @@
 name: Service Version Detection (Informational)
 version: 1.0.0
 type: evaluation
-author: pentora-core
+author: vulntor-core
 
 metadata:
   severity: info

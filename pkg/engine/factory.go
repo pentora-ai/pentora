@@ -7,10 +7,10 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 
-	"github.com/pentora-ai/pentora/pkg/config"
-	"github.com/pentora-ai/pentora/pkg/event"
-	"github.com/pentora-ai/pentora/pkg/hook"
-	"github.com/pentora-ai/pentora/pkg/logging"
+	"github.com/vulntor/vulntor/pkg/config"
+	"github.com/vulntor/vulntor/pkg/event"
+	"github.com/vulntor/vulntor/pkg/hook"
+	"github.com/vulntor/vulntor/pkg/logging"
 )
 
 // Factory is responsible for constructing an AppManager instance with all required components.

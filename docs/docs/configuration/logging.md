@@ -1,6 +1,6 @@
 # Logging Configuration
 
-Configure logging output, verbosity, and format for Pentora.
+Configure logging output, verbosity, and format for Vulntor.
 
 ## Log Levels
 
@@ -25,7 +25,7 @@ logging:
   # File logging
   file:
     enabled: false
-    path: /var/log/pentora/pentora.log
+    path: /var/log/vulntor/vulntor.log
     max_size: 100MB
     max_backups: 10
     max_age: 30d
@@ -42,17 +42,17 @@ logging:
 
 ```bash
 # Set log level
-pentora scan --targets 192.168.1.100 --log-level debug
+vulntor scan --targets 192.168.1.100 --log-level debug
 
 # JSON format
-pentora scan --targets 192.168.1.100 --log-format json
+vulntor scan --targets 192.168.1.100 --log-format json
 
 # Verbosity shortcuts
-pentora scan --targets 192.168.1.100 -v    # verbose (debug)
-pentora scan --targets 192.168.1.100 -vv   # very verbose (trace)
+vulntor scan --targets 192.168.1.100 -v    # verbose (debug)
+vulntor scan --targets 192.168.1.100 -vv   # very verbose (trace)
 
 # Quiet mode
-pentora scan --targets 192.168.1.100 --quiet
+vulntor scan --targets 192.168.1.100 --quiet
 ```
 
 ## Log Examples
@@ -74,6 +74,6 @@ pentora scan --targets 192.168.1.100 --quiet
 ## Environment Variables
 
 ```bash
-PENTORA_LOG_LEVEL=debug
-PENTORA_LOG_FORMAT=json
+VULNTOR_LOG_LEVEL=debug
+VULNTOR_LOG_FORMAT=json
 ```

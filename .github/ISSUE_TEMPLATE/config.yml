@@ -1,17 +1,17 @@
 blank_issues_enabled: true
 contact_links:
   - name: 💬 GitHub Discussions
-    url: https://github.com/pentora-ai/pentora/discussions
-    about: Ask questions, share ideas, and discuss Pentora with the community
+    url: https://github.com/vulntor-ai/vulntor/discussions
+    about: Ask questions, share ideas, and discuss Vulntor with the community
   - name: 📚 Documentation
-    url: https://github.com/pentora-ai/pentora/blob/main/README.md
+    url: https://github.com/vulntor-ai/vulntor/blob/main/README.md
     about: Read the official documentation and guides
   - name: 🔒 Security Vulnerability
-    url: https://github.com/pentora-ai/pentora/security/advisories/new
+    url: https://github.com/vulntor-ai/vulntor/security/advisories/new
     about: Report security vulnerabilities privately (do not create public issues)
   - name: 🗺️ Roadmap
-    url: https://github.com/pentora-ai/pentora-roadmap
+    url: https://github.com/vulntor-ai/vulntor-roadmap
     about: View development roadmap and planned features
   - name: 🔌 Plugin Repository
-    url: https://github.com/pentora-ai/pentora-plugins
+    url: https://github.com/vulntor-ai/vulntor-plugins
     about: Browse available vulnerability detection plugins

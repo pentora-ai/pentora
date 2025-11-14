@@ -1,10 +1,10 @@
 # Fingerprinting System
 
-Pentora's fingerprinting system identifies services, applications, versions, and operating systems through a layered detection approach that combines heuristics, protocol-specific probes, and confidence scoring.
+Vulntor's fingerprinting system identifies services, applications, versions, and operating systems through a layered detection approach that combines heuristics, protocol-specific probes, and confidence scoring.
 
 ## Overview
 
-Service fingerprinting goes beyond simple banner matching. Pentora employs a multi-stage approach:
+Service fingerprinting goes beyond simple banner matching. Vulntor employs a multi-stage approach:
 
 1. **Initial heuristics** - Port number and basic banner
 2. **Protocol-specific probes** - Targeted requests per protocol
@@ -44,7 +44,7 @@ Targeted probes confirm and refine Layer 1 guesses:
 ```http
 GET / HTTP/1.1
 Host: target.com
-User-Agent: Pentora/1.0
+User-Agent: Vulntor/1.0
 Accept: */*
 Connection: close
 ```
@@ -87,7 +87,7 @@ TLS ClientHello → ServerHello + Certificate
 
 **SMTP**:
 ```
-EHLO pentora.scanner
+EHLO vulntor.scanner
 ```
 
 Response:
@@ -225,7 +225,7 @@ Aggregate evidence from multiple sources:
 
 ### Layer 4: Multiple Match Support
 
-Pentora surfaces all detected technologies, not just the primary service:
+Vulntor surfaces all detected technologies, not just the primary service:
 
 **Web Server Stack Example**:
 ```
@@ -246,7 +246,7 @@ Port 443/tcp open
 
 ### Builtin Rules
 
-Compiled into Pentora binary:
+Compiled into Vulntor binary:
 
 ```yaml
 # builtin fingerprints
@@ -288,13 +288,13 @@ Sync updated fingerprints from remote repository:
 
 ```bash
 # Sync from default catalog
-pentora fingerprint sync
+vulntor fingerprint sync
 
 # Sync from custom URL
-pentora fingerprint sync --url https://custom.repo/fingerprints.yaml
+vulntor fingerprint sync --url https://custom.repo/fingerprints.yaml
 
 # Show available catalogs
-pentora fingerprint list-catalogs
+vulntor fingerprint list-catalogs
 ```
 
 **Cached Location**: `<storage>/cache/fingerprints/`
@@ -307,7 +307,7 @@ fingerprint:
     ttl: 7d
     auto_sync: true
   catalog:
-    remote_url: https://catalog.pentora.io/fingerprints.yaml
+    remote_url: https://catalog.vulntor.io/fingerprints.yaml
 ```
 
 ### Custom Fingerprints
@@ -315,7 +315,7 @@ fingerprint:
 Add organization-specific rules:
 
 ```yaml
-# ~/.config/pentora/fingerprints/custom.yaml
+# ~/.config/vulntor/fingerprints/custom.yaml
 fingerprints:
   - name: internal_webapp
     category: http
@@ -338,7 +338,7 @@ fingerprints:
 Load custom rules:
 
 ```bash
-pentora scan --targets 192.168.1.100 --fingerprint-rules custom.yaml
+vulntor scan --targets 192.168.1.100 --fingerprint-rules custom.yaml
 ```
 
 See [Custom Fingerprints Guide](/advanced/custom-fingerprints) for rule syntax.
@@ -361,7 +361,7 @@ probes:
     request: |
       GET / HTTP/1.1
       Host: {target}
-      User-Agent: Pentora/1.0
+      User-Agent: Vulntor/1.0
       Accept: */*
       Connection: close
 
@@ -378,7 +378,7 @@ probes:
     request: |
       GET / HTTP/1.1
       Host: {target}
-      User-Agent: Pentora/1.0
+      User-Agent: Vulntor/1.0
       Accept: */*
       Connection: close
 
@@ -390,7 +390,7 @@ probes:
       - port: 25
       - port: 587
       - service_hint: smtp
-    request: "EHLO pentora.scanner\r\n"
+    request: "EHLO vulntor.scanner\r\n"
     timeout: 5s
 
   - name: imap_capability
@@ -536,7 +536,7 @@ Highest confidence retained, sources combined.
 Enabled by default in standard scans:
 
 ```bash
-pentora scan --targets 192.168.1.100
+vulntor scan --targets 192.168.1.100
 ```
 
 Output includes fingerprints:
@@ -552,7 +552,7 @@ Output includes fingerprints:
 Skip fingerprinting for faster scans:
 
 ```bash
-pentora scan --targets 192.168.1.100 --no-fingerprint
+vulntor scan --targets 192.168.1.100 --no-fingerprint
 ```
 
 Only port states reported, no service identification.
@@ -563,10 +563,10 @@ Use cached fingerprint database:
 
 ```bash
 # Enable caching (faster, may be outdated)
-pentora scan --targets 192.168.1.100 --fingerprint-cache
+vulntor scan --targets 192.168.1.100 --fingerprint-cache
 
 # Force refresh
-pentora fingerprint sync --force
+vulntor fingerprint sync --force
 ```
 
 ### Custom Rules
@@ -574,7 +574,7 @@ pentora fingerprint sync --force
 Load additional rules:
 
 ```bash
-pentora scan --targets 192.168.1.100 --fingerprint-rules /path/to/custom.yaml
+vulntor scan --targets 192.168.1.100 --fingerprint-rules /path/to/custom.yaml
 ```
 
 ### Verbose Output
@@ -582,7 +582,7 @@ pentora scan --targets 192.168.1.100 --fingerprint-rules /path/to/custom.yaml
 Show all fingerprint matches and confidence scores:
 
 ```bash
-pentora scan --targets 192.168.1.100 --verbose
+vulntor scan --targets 192.168.1.100 --verbose
 ```
 
 ## Performance Considerations
@@ -701,7 +701,7 @@ Port 8080 identified as Tomcat, but actually Jetty
 **Solutions**:
 1. Check probe output: Review `artifacts/banners/`
 2. Add higher-confidence rule for Jetty
-3. Report false positive to Pentora team
+3. Report false positive to Vulntor team
 
 ### Probe Timeouts
 

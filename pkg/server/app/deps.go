@@ -3,9 +3,9 @@ package app
 import (
 	"github.com/rs/zerolog"
 
-	"github.com/pentora-ai/pentora/pkg/config"
-	"github.com/pentora-ai/pentora/pkg/server/api"
-	"github.com/pentora-ai/pentora/pkg/storage"
+	"github.com/vulntor/vulntor/pkg/config"
+	"github.com/vulntor/vulntor/pkg/server/api"
+	"github.com/vulntor/vulntor/pkg/storage"
 )
 
 // Deps holds dependencies for the server application.

@@ -1,11 +1,11 @@
-# pentora fingerprint
+# vulntor fingerprint
 
 Manage fingerprint catalogs and service detection rules.
 
 ## Synopsis
 
 ```bash
-pentora fingerprint <subcommand> [flags]
+vulntor fingerprint <subcommand> [flags]
 ```
 
 ## Description
@@ -19,34 +19,34 @@ The `fingerprint` command manages service fingerprinting databases, including sy
 Sync fingerprint catalog from remote repository.
 
 ```bash
-pentora fingerprint sync [flags]
+vulntor fingerprint sync [flags]
 ```
 
 **Flags**:
-- `--url`: Remote catalog URL (default: `https://catalog.pentora.io/fingerprints.yaml`)
+- `--url`: Remote catalog URL (default: `https://catalog.vulntor.io/fingerprints.yaml`)
 - `--force`: Force re-download even if cache is fresh
 - `--verify`: Verify signature (Enterprise)
 
 **Examples**:
 ```bash
 # Sync from default catalog
-pentora fingerprint sync
+vulntor fingerprint sync
 
 # Force update
-pentora fingerprint sync --force
+vulntor fingerprint sync --force
 
 # Custom catalog URL
-pentora fingerprint sync --url https://custom.repo/fingerprints.yaml
+vulntor fingerprint sync --url https://custom.repo/fingerprints.yaml
 
 # Verify signature (Enterprise)
-pentora fingerprint sync --verify
+vulntor fingerprint sync --verify
 ```
 
 **Output**:
 ```
 Syncing fingerprint catalog...
 Downloaded: 15,234 fingerprints
-Cached to: ~/.local/share/pentora/cache/fingerprints/
+Cached to: ~/.local/share/vulntor/cache/fingerprints/
 ```
 
 ### list
@@ -54,7 +54,7 @@ Cached to: ~/.local/share/pentora/cache/fingerprints/
 List available fingerprint rules.
 
 ```bash
-pentora fingerprint list [flags]
+vulntor fingerprint list [flags]
 ```
 
 **Flags**:
@@ -65,16 +65,16 @@ pentora fingerprint list [flags]
 **Examples**:
 ```bash
 # List all fingerprints
-pentora fingerprint list
+vulntor fingerprint list
 
 # Filter by category
-pentora fingerprint list --category http
+vulntor fingerprint list --category http
 
 # Search by name
-pentora fingerprint list --search nginx
+vulntor fingerprint list --search nginx
 
 # JSON output
-pentora fingerprint list --format json
+vulntor fingerprint list --format json
 ```
 
 **Output**:
@@ -91,13 +91,13 @@ postfix         smtp        3           85
 Show detailed fingerprint rule.
 
 ```bash
-pentora fingerprint show <name>
+vulntor fingerprint show <name>
 ```
 
 **Examples**:
 ```bash
 # Show nginx fingerprint
-pentora fingerprint show nginx
+vulntor fingerprint show nginx
 ```
 
 **Output**:
@@ -122,13 +122,13 @@ patterns:
 Validate custom fingerprint rules.
 
 ```bash
-pentora fingerprint validate <file>
+vulntor fingerprint validate <file>
 ```
 
 **Examples**:
 ```bash
 # Validate custom rules
-pentora fingerprint validate custom-fingerprints.yaml
+vulntor fingerprint validate custom-fingerprints.yaml
 ```
 
 **Output**:
@@ -146,16 +146,16 @@ Validation successful
 Test fingerprint rules against sample data.
 
 ```bash
-pentora fingerprint test <rule-file> <sample-data>
+vulntor fingerprint test <rule-file> <sample-data>
 ```
 
 **Examples**:
 ```bash
 # Test rule against banner
-pentora fingerprint test nginx.yaml banner.txt
+vulntor fingerprint test nginx.yaml banner.txt
 
 # Test against HTTP response
-pentora fingerprint test webapp.yaml http-response.txt
+vulntor fingerprint test webapp.yaml http-response.txt
 ```
 
 **Output**:
@@ -177,7 +177,7 @@ Matches:
 Display fingerprint catalog statistics.
 
 ```bash
-pentora fingerprint stats
+vulntor fingerprint stats
 ```
 
 **Output**:
@@ -195,7 +195,7 @@ Categories:
 
 Cache status: up-to-date
 Last sync: 2023-10-06 14:30:22
-Cache location: ~/.local/share/pentora/cache/fingerprints/
+Cache location: ~/.local/share/vulntor/cache/fingerprints/
 ```
 
 ### add
@@ -203,15 +203,15 @@ Cache location: ~/.local/share/pentora/cache/fingerprints/
 Add custom fingerprint rule.
 
 ```bash
-pentora fingerprint add <file>
+vulntor fingerprint add <file>
 ```
 
-Adds custom rule to user fingerprint directory (`~/.config/pentora/fingerprints/custom/`).
+Adds custom rule to user fingerprint directory (`~/.config/vulntor/fingerprints/custom/`).
 
 **Examples**:
 ```bash
 # Add custom rule
-pentora fingerprint add my-custom-rule.yaml
+vulntor fingerprint add my-custom-rule.yaml
 ```
 
 ### remove
@@ -219,13 +219,13 @@ pentora fingerprint add my-custom-rule.yaml
 Remove custom fingerprint rule.
 
 ```bash
-pentora fingerprint remove <name>
+vulntor fingerprint remove <name>
 ```
 
 **Examples**:
 ```bash
 # Remove custom rule
-pentora fingerprint remove my_custom_app
+vulntor fingerprint remove my_custom_app
 ```
 
 ## Fingerprint Rule Format
@@ -296,8 +296,8 @@ fingerprints:
 Place in user config directory:
 
 ```bash
-mkdir -p ~/.config/pentora/fingerprints/custom/
-cp my-rules.yaml ~/.config/pentora/fingerprints/custom/
+mkdir -p ~/.config/vulntor/fingerprints/custom/
+cp my-rules.yaml ~/.config/vulntor/fingerprints/custom/
 ```
 
 Automatically loaded on scan.
@@ -307,7 +307,7 @@ Automatically loaded on scan.
 Use `--fingerprint-rules` flag:
 
 ```bash
-pentora scan --targets 192.168.1.100 --fingerprint-rules /path/to/custom.yaml
+vulntor scan --targets 192.168.1.100 --fingerprint-rules /path/to/custom.yaml
 ```
 
 ### Config File
@@ -317,8 +317,8 @@ Reference in config:
 ```yaml
 fingerprint:
   custom_rules:
-    - ~/.config/pentora/fingerprints/custom/webapp.yaml
-    - /etc/pentora/fingerprints/internal-services.yaml
+    - ~/.config/vulntor/fingerprints/custom/webapp.yaml
+    - /etc/vulntor/fingerprints/internal-services.yaml
 ```
 
 ## Examples
@@ -326,25 +326,25 @@ fingerprint:
 ### Sync Latest Fingerprints
 
 ```bash
-pentora fingerprint sync --force
+vulntor fingerprint sync --force
 ```
 
 ### Search for Web Server Fingerprints
 
 ```bash
-pentora fingerprint list --category http --search server
+vulntor fingerprint list --category http --search server
 ```
 
 ### View Specific Fingerprint
 
 ```bash
-pentora fingerprint show nginx
+vulntor fingerprint show nginx
 ```
 
 ### Validate Custom Rules
 
 ```bash
-pentora fingerprint validate my-custom-rules.yaml
+vulntor fingerprint validate my-custom-rules.yaml
 ```
 
 ### Test Rule Against Sample
@@ -359,7 +359,7 @@ X-Powered-By: CustomFramework/3.0
 
 Test fingerprint:
 ```bash
-pentora fingerprint test custom-app.yaml test-response.txt
+vulntor fingerprint test custom-app.yaml test-response.txt
 ```
 
 ### Add Custom Rule
@@ -378,11 +378,11 @@ fingerprints:
         confidence: 95
 EOF
 
-# Add to Pentora
-pentora fingerprint add internal-app.yaml
+# Add to Vulntor
+vulntor fingerprint add internal-app.yaml
 
 # Use in scan
-pentora scan --targets 192.168.1.100
+vulntor scan --targets 192.168.1.100
 ```
 
 ## See Also

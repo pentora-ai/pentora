@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/pentora-ai/pentora/pkg/engine"
+	"github.com/vulntor/vulntor/pkg/engine"
 )
 
 func TestNoopLifecycle_FullCoverage(t *testing.T) {

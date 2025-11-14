@@ -7,25 +7,25 @@ Generate and customize scan reports for different audiences.
 ### JSON
 Machine-readable, complete data:
 ```bash
-pentora scan --targets 192.168.1.100 --output results.json --format json
+vulntor scan --targets 192.168.1.100 --output results.json --format json
 ```
 
 ### CSV
 Spreadsheet import:
 ```bash
-pentora scan --targets 192.168.1.100 --output report.csv --format csv
+vulntor scan --targets 192.168.1.100 --output report.csv --format csv
 ```
 
 ### JSONL
 Streaming/log-friendly:
 ```bash
-pentora scan --targets 192.168.1.100 --output results.jsonl --format jsonl
+vulntor scan --targets 192.168.1.100 --output results.jsonl --format jsonl
 ```
 
 ### PDF (Enterprise)
 Executive reports:
 ```bash
-pentora storage export scan-id --format pdf -o executive-report.pdf
+vulntor storage export scan-id --format pdf -o executive-report.pdf
 ```
 
 ## Custom Templates
@@ -54,7 +54,7 @@ cat > custom-report.tmpl <<'TMPL'
 TMPL
 
 # Use template
-pentora scan --targets 192.168.1.100 --template custom-report.tmpl -o report.md
+vulntor scan --targets 192.168.1.100 --template custom-report.tmpl -o report.md
 ```
 
 ## Report Sections
@@ -80,7 +80,7 @@ pentora scan --targets 192.168.1.100 --template custom-report.tmpl -o report.md
 
 ```bash
 # Weekly executive report
-pentora report schedule \
+vulntor report schedule \
   --name "Weekly Security Posture" \
   --schedule "0 9 * * 1" \
   --format pdf \

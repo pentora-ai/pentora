@@ -1,14 +1,14 @@
-# Pentora Documentation
+# Vulntor Documentation
 
-This directory contains the official documentation for Pentora, an advanced penetration testing and security assessment framework. The documentation is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
+This directory contains the official documentation for Vulntor, an advanced penetration testing and security assessment framework. The documentation is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
 
-> **Note:** This documentation is automatically synced from the main repository at [https://github.com/pentora-ai/pentora/tree/main/docs](https://github.com/pentora-ai/pentora/tree/main/docs). Any changes should be made in the original repository.
+> **Note:** This documentation is automatically synced from the main repository at [https://github.com/vulntor-ai/vulntor/tree/main/docs](https://github.com/vulntor-ai/vulntor/tree/main/docs). Any changes should be made in the original repository.
 
 ## What's Inside
 
 The documentation provides comprehensive guides, API references, and tutorials for:
 
-- Getting started with Pentora
+- Getting started with Vulntor
 - Configuration and setup
 - Plugin development
 - Security scanning techniques

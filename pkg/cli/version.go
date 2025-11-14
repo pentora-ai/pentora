@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	v "github.com/pentora-ai/pentora/pkg/version"
+	v "github.com/vulntor/vulntor/pkg/version"
 )
 
 func NewVersionCommand(cliExecutable string) *cobra.Command {
