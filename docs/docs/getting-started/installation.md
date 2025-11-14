@@ -70,7 +70,7 @@ brew install vulntor
 
 ```bash
 # Download latest release
-curl -LO https://github.com/vulntor-ai/vulntor/releases/latest/download/vulntor-darwin-amd64.tar.gz
+curl -LO https://github.com/vulntor/vulntor/releases/latest/download/vulntor-darwin-amd64.tar.gz
 
 # Extract
 tar -xzf vulntor-darwin-amd64.tar.gz
@@ -84,7 +84,7 @@ vulntor version
 
 #### DMG Installer
 
-1. Download `vulntor-installer.dmg` from [releases page](https://github.com/vulntor-ai/vulntor/releases)
+1. Download `vulntor-installer.dmg` from [releases page](https://github.com/vulntor/vulntor/releases)
 2. Open the DMG file
 3. Drag Vulntor to Applications folder
 4. Run from Terminal or add to PATH
@@ -136,7 +136,7 @@ paru -S vulntor-bin
 
 ```bash
 # Download
-curl -LO https://github.com/vulntor-ai/vulntor/releases/latest/download/vulntor-linux-amd64.tar.gz
+curl -LO https://github.com/vulntor/vulntor/releases/latest/download/vulntor-linux-amd64.tar.gz
 
 # Extract
 tar -xzf vulntor-linux-amd64.tar.gz
@@ -152,7 +152,7 @@ vulntor version
 
 #### Installer (MSI)
 
-1. Download `vulntor-installer-x64.msi` from [releases page](https://github.com/vulntor-ai/vulntor/releases)
+1. Download `vulntor-installer-x64.msi` from [releases page](https://github.com/vulntor/vulntor/releases)
 2. Run the installer
 3. Follow the installation wizard
 4. Vulntor will be added to PATH automatically
@@ -174,7 +174,7 @@ scoop install vulntor
 
 ```powershell
 # Download latest release
-Invoke-WebRequest -Uri https://github.com/vulntor-ai/vulntor/releases/latest/download/vulntor-windows-amd64.zip -OutFile vulntor.zip
+Invoke-WebRequest -Uri https://github.com/vulntor/vulntor/releases/latest/download/vulntor-windows-amd64.zip -OutFile vulntor.zip
 
 # Extract
 Expand-Archive vulntor.zip -DestinationPath C:\Program Files\Vulntor
@@ -198,7 +198,7 @@ vulntor version
 
 ```bash
 # Clone repository
-git clone https://github.com/vulntor-ai/vulntor.git
+git clone https://github.com/vulntor/vulntor.git
 cd vulntor
 
 # Build

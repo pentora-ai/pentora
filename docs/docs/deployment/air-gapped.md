@@ -8,7 +8,7 @@ Deploy Vulntor in environments without internet access.
 
 ```bash
 # Download binary
-curl -LO https://github.com/vulntor-ai/vulntor/releases/latest/download/vulntor-linux-amd64
+curl -LO https://github.com/vulntor/vulntor/releases/latest/download/vulntor-linux-amd64
 
 # Download fingerprint catalog
 curl -LO https://catalog.vulntor.io/fingerprints.yaml

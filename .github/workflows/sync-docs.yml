@@ -1,10 +1,11 @@
-name: Sync /docs to vulntor-ai/docs
+name: Sync /docs to vulntor/docs
 
-on:
-  push:
-    branches: [main]
-    paths:
-      - 'docs/**'
+on: workflow_dispatch
+#on:
+#  push:
+#    branches: [main]
+#    paths:
+#      - 'docs/**'
 
 jobs:
   sync-docs:
@@ -29,11 +30,11 @@ jobs:
           git config --global user.name "vulntorbot"
           git config --global user.email "vulntorbot@users.noreply.github.com"
 
-      - name: Clone destination repo (vulntor-ai/docs)
+      - name: Clone destination repo (vulntor/docs)
         env:
           GITHUB_TOKEN: ${{ secrets.PENTORABOT_PAT }}
         run: |
-          git clone https://x-access-token:${GITHUB_TOKEN}@github.com/vulntor-ai/docs.git ../docs-repo
+          git clone https://x-access-token:${GITHUB_TOKEN}@github.com/vulntor/docs.git ../docs-repo
           cd ../docs-repo
           # Eski içeriği temizle
           find . ! -name '.git' -mindepth 1 -maxdepth 1 -exec rm -rf {} +
@@ -54,5 +55,5 @@ jobs:
             echo "No changes to commit."
           else
             git commit -m "${{ steps.commitmsg.outputs.message }}"
-            git push https://x-access-token:${GITHUB_TOKEN}@github.com/vulntor-ai/docs.git main
+            git push https://x-access-token:${GITHUB_TOKEN}@github.com/vulntor/docs.git main
           fi

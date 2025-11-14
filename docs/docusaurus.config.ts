@@ -15,14 +15,14 @@ const config: Config = {
   },
 
   // Set the production url of your site here
-  url: 'https://docs.pentora.ai',
+  url: 'https://docs.vulntor.ai',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
   baseUrl: '/',
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
-  organizationName: 'pentora', // Usually your GitHub org/user name.
+  organizationName: 'vulntor', // Usually your GitHub org/user name.
   projectName: 'docs', // Usually your repo name.
 
   onBrokenLinks: 'throw',
@@ -67,7 +67,7 @@ const config: Config = {
     algolia: {
       appId: 'BH4D9OD16A',
       apiKey: 'your-api-key-here',
-      indexName: 'pentora',
+      indexName: 'vulntor',
       contextualSearch: true,
       searchPagePath: false,
     },
@@ -75,9 +75,9 @@ const config: Config = {
       title: 'Pentora',
       logo: {
         alt: 'Pentora Logo',
-        src: 'img/pentora-fill-color-30.svg',
+        src: 'img/vulntor-fill-color-30.svg',
         srcDark: 'img/logo-dark.svg',
-        href: 'https://pentora.ai/',
+        href: 'https://vulntor.ai/',
         target: '_self',
       },
       items: [
@@ -88,13 +88,13 @@ const config: Config = {
           className: 'navbar__item navbar__link docs__link',
         },
         {
-          to: 'https://pentora.ai/blog',
+          to: 'https://vulntor.ai/blog',
           label: 'Blog',
           position: 'right',
           target: '_self',
         },
         {
-          href: 'https://github.com/pentora-ai/pentora',
+          href: 'https://github.com/vulntor/vulntor',
           label: 'GitHub',
           position: 'right',
         },
@@ -125,11 +125,11 @@ const config: Config = {
           items: [
             {
               label: 'GitHub Issues',
-              href: 'https://github.com/pentora-ai/pentora/issues',
+              href: 'https://github.com/vulntor/vulntor/issues',
             },
             {
               label: 'Discussions',
-              href: 'https://github.com/pentora-ai/pentora/discussions',
+              href: 'https://github.com/vulntor/vulntor/discussions',
             },
           ],
         },
@@ -142,7 +142,7 @@ const config: Config = {
             },
             {
               label: 'GitHub',
-              href: 'https://github.com/pentora-ai/pentora',
+              href: 'https://github.com/vulntor/vulntor',
             },
           ],
         },

@@ -22,4 +22,4 @@ We want to keep Vulntor safe for everyone.
 
 If you've discovered a security vulnerability in Vulntor,
 we appreciate your help in disclosing it to us in a responsible manner,
-by creating a [security advisory](https://github.com/vulntor-ai/vulntor/security/advisories).
+by creating a [security advisory](https://github.com/vulntor/vulntor/security/advisories).

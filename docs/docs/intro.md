@@ -466,7 +466,7 @@ Vulntor uses a **DAG-based execution engine** where each scan phase is represent
     </a>
   </div>
   <div className="col col--3">
-    <a href="https://github.com/vulntor-ai/vulntor/discussions" className="card" style={{textDecoration: 'none', height: '100%'}}>
+    <a href="https://github.com/vulntor/vulntor/discussions" className="card" style={{textDecoration: 'none', height: '100%'}}>
       <div className="card__body" style={{textAlign: 'center'}}>
         <div style={{fontSize: '2rem'}}>💬</div>
         <h4>Discussions</h4>
@@ -474,7 +474,7 @@ Vulntor uses a **DAG-based execution engine** where each scan phase is represent
     </a>
   </div>
   <div className="col col--3">
-    <a href="https://github.com/vulntor-ai/vulntor/issues" className="card" style={{textDecoration: 'none', height: '100%'}}>
+    <a href="https://github.com/vulntor/vulntor/issues" className="card" style={{textDecoration: 'none', height: '100%'}}>
       <div className="card__body" style={{textAlign: 'center'}}>
         <div style={{fontSize: '2rem'}}>🐛</div>
         <h4>Issue Tracker</h4>
@@ -482,7 +482,7 @@ Vulntor uses a **DAG-based execution engine** where each scan phase is represent
     </a>
   </div>
   <div className="col col--3">
-    <a href="https://github.com/vulntor-ai/vulntor/security/policy" className="card" style={{textDecoration: 'none', height: '100%'}}>
+    <a href="https://github.com/vulntor/vulntor/security/policy" className="card" style={{textDecoration: 'none', height: '100%'}}>
       <div className="card__body" style={{textAlign: 'center'}}>
         <div style={{fontSize: '2rem'}}>🔒</div>
         <h4>Security Policy</h4>

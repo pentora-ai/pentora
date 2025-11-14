@@ -1,8 +1,8 @@
 # Vulntor
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/vulntor-ai/vulntor)](https://goreportcard.com/report/github.com/vulntor-ai/vulntor)
-[![Test](https://github.com/vulntor-ai/vulntor/actions/workflows/test.yaml/badge.svg)](https://github.com/vulntor-ai/vulntor/actions/workflows/test.yaml)
-![Coverage](https://img.shields.io/codecov/c/github/vulntor-ai/vulntor)
+[![Go Report Card](https://goreportcard.com/badge/github.com/vulntor/vulntor)](https://goreportcard.com/report/github.com/vulntor/vulntor)
+[![Test](https://github.com/vulntor/vulntor/actions/workflows/test.yaml/badge.svg)](https://github.com/vulntor/vulntor/actions/workflows/test.yaml)
+![Coverage](https://img.shields.io/codecov/c/github/vulntor/vulntor)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://opensource.org/license/apache-2-0)
 
 > ⚠️ **Active Development Notice**: Vulntor is currently under active development and has not been released yet. APIs, CLI commands, and core features are subject to change. This project is not production-ready.
@@ -48,7 +48,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/vulntor-ai/vulntor.git
+git clone https://github.com/vulntor/vulntor.git
 cd vulntor
 
 # Build the binary (outputs to dist/)
@@ -163,18 +163,19 @@ match:
   rules:
     - field: ssh.version
       operator: version_lt
-      value: "8.5"
+      value: '8.5'
     - field: ssh.banner
       operator: contains
-      value: "OpenSSH"
+      value: 'OpenSSH'
 
 output:
   vulnerability: true
-  message: "SSH version vulnerable to authentication bypass"
-  remediation: "Upgrade OpenSSH to version 8.5 or higher"
+  message: 'SSH version vulnerable to authentication bypass'
+  remediation: 'Upgrade OpenSSH to version 8.5 or higher'
 ```
 
 **Supported Operators**:
+
 - String: `equals`, `contains`, `startsWith`, `endsWith`, `matches` (regex)
 - Numeric: `gt`, `gte`, `lt`, `lte`, `between`
 - Version: `version_eq`, `version_lt`, `version_gt`, `version_lte`, `version_gte`, `version_between`
@@ -183,6 +184,7 @@ output:
 **Match Logic**: `AND`, `OR`, `NOT` for combining rules
 
 **Embedded Plugins** (19 total, ~50 KB):
+
 - **SSH** (5): weak-key-exchange, weak-mac, weak-cipher, default-creds, regreSSHion (CVE-2024-6387)
 - **HTTP** (4): missing-security-headers, server-version-disclosure, default-pages, weak-ssl
 - **TLS** (4): weak-cipher, expired-cert, self-signed-cert, weak-protocol
@@ -258,12 +260,14 @@ All scan results are stored using the `pkg/storage` abstraction layer:
 Vulntor uses a comprehensive testing approach:
 
 #### Unit Tests
+
 - Run with `make test` or `go test ./...`
 - Table-driven tests with testify/require
 - Mock interfaces for isolation
 - Target: >80% coverage for core packages
 
 #### Integration Tests
+
 - Build tag: `//go:build integration`
 - Run with `make test-integration` or `go test -tags=integration ./...`
 - Black-box testing with real HTTP servers and network requests
@@ -273,14 +277,18 @@ Vulntor uses a comprehensive testing approach:
 - Run all tests: `make test-all`
 
 #### Testing Policy
+
 **Before Every Commit (MANDATORY)**:
+
 - ✅ `make test` - Unit tests only (fast, <2min)
 - ✅ `make validate` - Linting, formatting, spell check, shell script validation
 
 **Before Opening PR (RECOMMENDED)**:
+
 - ⚡ `make test-all` - Runs both unit AND integration tests
 
 **CI/CD Behavior**:
+
 - Unit tests run on every commit (fast feedback)
 - Integration tests run on PR events (comprehensive validation)
 
@@ -335,18 +343,19 @@ match:
   rules:
     - field: http.server
       operator: contains
-      value: "VulnerableApp/1.0"
+      value: 'VulnerableApp/1.0'
     - field: service.port
       operator: equals
       value: 8080
 
 output:
   vulnerability: true
-  message: "Vulnerable application detected"
-  remediation: "Upgrade to version 2.0 or higher"
+  message: 'Vulnerable application detected'
+  remediation: 'Upgrade to version 2.0 or higher'
 ```
 
 **Benefits**:
+
 - ✅ No recompilation needed
 - ✅ Easy to create and share
 - ✅ Declarative and readable
@@ -385,7 +394,7 @@ React to scan events:
 ```go
 package main
 
-import "github.com/vulntor-ai/vulntor/pkg/hook"
+import "github.com/vulntor/vulntor/pkg/hook"
 
 func init() {
     hook.Register("on_scan_complete", func(data interface{}) error {
@@ -399,7 +408,7 @@ func init() {
 
 For comprehensive documentation, visit:
 
-- **Documentation Site**: https://docs.vulntor.ai (In Development)
+- **Documentation Site**: https://docs.vulntor (In Development)
 - **Getting Started Guide**: [docs/getting-started/installation.md](docs/docs/getting-started/installation.md)
 - **CLI Reference**: [docs/cli/overview.md](docs/docs/cli/overview.md)
 - **Architecture Overview**: [docs/architecture/overview.md](docs/docs/architecture/overview.md)
@@ -436,15 +445,16 @@ Licensed under the Apache License, Version 2.0. See [LICENSE.md](LICENSE.md) for
 
 ## 🔗 Links
 
-- **Website**: https://vulntor.ai
-- **Documentation**: https://docs.vulntor.ai
-- **GitHub**: https://github.com/vulntor-ai/vulntor
-- **Issues**: https://github.com/vulntor-ai/vulntor/issues
-- **Discussions**: https://github.com/vulntor-ai/vulntor/discussions
+- **Website**: https://vulntor
+- **Documentation**: https://docs.vulntor
+- **GitHub**: https://github.com/vulntor/vulntor
+- **Issues**: https://github.com/vulntor/vulntor/issues
+- **Discussions**: https://github.com/vulntor/vulntor/discussions
 
 ---
 
 **Note**: Vulntor is under active development. Star the repository to stay updated on releases and new features!
+
 ## ValidationRunner Options (Fingerprint)
 
 Vulntor's fingerprint validation supports functional options to configure thresholds, parallelism, timeouts, and progress callbacks.

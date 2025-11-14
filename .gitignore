@@ -9,7 +9,6 @@ go.work*
 .gocache
 public.pem
 test.license
-./pentora
 diff.log
 build
 
