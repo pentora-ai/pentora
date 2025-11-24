@@ -64,7 +64,7 @@ func executeVerifyCommand(cmd *cobra.Command, cacheDir string) error {
 
 	// Setup dependencies
 	formatter := getFormatter(cmd)
-	svc, err := getPluginService(cacheDir)
+	svc, err := getPluginService(cmd, cacheDir)
 	if err != nil {
 		return err
 	}

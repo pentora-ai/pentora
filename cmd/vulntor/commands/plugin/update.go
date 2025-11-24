@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
@@ -63,7 +64,7 @@ func executeUpdateCommand(cmd *cobra.Command, cacheDir string) error {
 	// Setup dependencies
 	formatter := getFormatter(cmd)
 	out := setupPluginOutputPipeline(cmd)
-	svc, err := getPluginService(cacheDir)
+	svc, err := getPluginService(cmd, cacheDir)
 	if err != nil {
 		return err
 	}
@@ -78,10 +79,22 @@ func executeUpdateCommand(cmd *cobra.Command, cacheDir string) error {
 	}
 
 	// Setup structured logger
-	logger := log.With().
-		Str("component", "plugin.cli").
-		Str("op", "update").
-		Logger()
+	// For human-friendly text mode, suppress info logs (Output pipeline handles user messaging)
+	// For JSON mode, keep info logs for structured observability
+	outputFormat, _ := cmd.Flags().GetString("output")
+	var logger zerolog.Logger
+	if outputFormat == outputFormatJSON {
+		logger = log.With().
+			Str("component", "plugin.cli").
+			Str("op", "update").
+			Logger()
+	} else {
+		// Suppress info-level logs in text mode (only show warnings and errors)
+		logger = log.With().
+			Str("component", "plugin.cli").
+			Str("op", "update").
+			Logger().Level(zerolog.WarnLevel)
+	}
 
 	start := time.Now()
 	defer func() {

@@ -74,7 +74,7 @@ func executeUninstallCommand(cmd *cobra.Command, target, cacheDir string) error 
 
 	// Setup dependencies
 	formatter := getFormatter(cmd)
-	svc, err := getPluginService(cacheDir)
+	svc, err := getPluginService(cmd, cacheDir)
 	if err != nil {
 		return err
 	}

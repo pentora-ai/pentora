@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/vulntor/vulntor/cmd/vulntor/internal/format"
@@ -13,6 +15,10 @@ import (
 	"github.com/vulntor/vulntor/pkg/output/subscribers"
 	"github.com/vulntor/vulntor/pkg/plugin"
 	"github.com/vulntor/vulntor/pkg/storage"
+)
+
+const (
+	outputFormatJSON = "json"
 )
 
 // getFormatter creates a formatter from command flags
@@ -23,9 +29,10 @@ func getFormatter(cmd *cobra.Command) format.Formatter {
 	return format.New(os.Stdout, os.Stderr, outputMode, quiet, !noColor)
 }
 
-// getPluginService creates a plugin service with the given cache directory
+// getPluginService creates a plugin service with the given cache directory and output format
 // If cacheDir is empty, uses the default platform-specific cache directory
-func getPluginService(cacheDir string) (*plugin.Service, error) {
+// Suppresses service layer info logs in text mode (JSON mode keeps them for observability)
+func getPluginService(cmd *cobra.Command, cacheDir string) (*plugin.Service, error) {
 	if cacheDir == "" {
 		storageConfig, err := storage.DefaultConfig()
 		if err != nil {
@@ -34,7 +41,20 @@ func getPluginService(cacheDir string) (*plugin.Service, error) {
 		cacheDir = filepath.Join(storageConfig.WorkspaceRoot, "plugins", "cache")
 	}
 
-	svc, err := plugin.NewService(plugin.WithCacheDir(cacheDir))
+	// Create logger based on output format
+	// Text mode: suppress info logs (Output pipeline handles user messaging)
+	// JSON mode: keep info logs (structured observability)
+	outputFormat, _ := cmd.Flags().GetString("output")
+	logger := log.With().Str("component", "plugin.service").Logger()
+	if outputFormat != outputFormatJSON {
+		// Suppress info-level logs in text mode (only show warnings and errors)
+		logger = logger.Level(zerolog.WarnLevel)
+	}
+
+	svc, err := plugin.NewService(
+		plugin.WithCacheDir(cacheDir),
+		plugin.WithLogger(logger),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("create plugin service: %w", err)
 	}
@@ -97,6 +117,7 @@ func formatBytes(bytes int64) string {
 
 // setupPluginOutputPipeline creates an Output pipeline for plugin commands
 // Handles both human-friendly and JSON output based on --output flag
+// Uses global -v count for verbosity level (consistent with scan command)
 func setupPluginOutputPipeline(cmd *cobra.Command) output.Output {
 	stream := output.NewOutputEventStream()
 
@@ -104,7 +125,7 @@ func setupPluginOutputPipeline(cmd *cobra.Command) output.Output {
 	outputFormat, _ := cmd.Flags().GetString("output")
 	noColor, _ := cmd.Flags().GetBool("no-color")
 
-	if outputFormat == "json" {
+	if outputFormat == outputFormatJSON {
 		// JSON output mode
 		stream.Subscribe(subscribers.NewJSONFormatter(os.Stdout))
 	} else {
@@ -113,11 +134,16 @@ func setupPluginOutputPipeline(cmd *cobra.Command) output.Output {
 		stream.Subscribe(subscribers.NewHumanFormatter(os.Stdout, os.Stderr, colorEnabled))
 	}
 
-	// Add diagnostic subscriber for verbose output
-	// Plugin commands use --verbose flag (not -v count)
-	verbose, _ := cmd.Flags().GetBool("verbose")
-	if verbose {
-		stream.Subscribe(subscribers.NewDiagnosticSubscriber(output.LevelVerbose, os.Stderr))
+	// Add diagnostic subscriber based on global verbosity counter
+	// Only for text mode (JSON mode should not have styled diagnostic output)
+	// Uses global persistent -v flag (same as scan command)
+	// -v (1): Verbose, -vv (2): Debug, -vvv (3): Trace
+	if outputFormat != outputFormatJSON {
+		verbosityCount, _ := cmd.Flags().GetCount("verbosity")
+		if verbosityCount > 0 {
+			level := output.OutputLevel(verbosityCount)
+			stream.Subscribe(subscribers.NewDiagnosticSubscriber(level, os.Stderr))
+		}
 	}
 
 	return output.NewDefaultOutput(stream)

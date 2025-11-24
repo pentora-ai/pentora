@@ -13,10 +13,7 @@ import (
 )
 
 func newListCommand() *cobra.Command {
-	var (
-		cacheDir string
-		verbose  bool
-	)
+	var cacheDir string
 
 	cmd := &cobra.Command{
 		Use:   "list",
@@ -37,12 +34,14 @@ found in the plugin cache directory.`,
   # JSON output
   vulntor plugin list --output json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Use global persistent --verbose flag
+			verbose, _ := cmd.Flags().GetBool("verbose")
 			return executeListCommand(cmd, cacheDir, verbose)
 		},
 	}
 
 	cmd.Flags().StringVar(&cacheDir, "cache-dir", "", "Plugin cache directory (default: platform-specific, see storage config)")
-	cmd.Flags().BoolVar(&verbose, "verbose", false, "Show detailed information")
+	// Note: --verbose is a global persistent flag, not defined locally
 
 	return cmd
 }
@@ -71,7 +70,7 @@ func executeListCommand(cmd *cobra.Command, cacheDir string, verbose bool) error
 
 	// Setup dependencies
 	formatter := getFormatter(cmd)
-	svc, err := getPluginService(cacheDir)
+	svc, err := getPluginService(cmd, cacheDir)
 	if err != nil {
 		return err
 	}
