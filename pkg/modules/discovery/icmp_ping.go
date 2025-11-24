@@ -20,6 +20,7 @@ import (
 
 	"github.com/vulntor/vulntor/pkg/engine" // Assuming your core module interfaces are in pkg/engine
 	"github.com/vulntor/vulntor/pkg/netutil"
+	"github.com/vulntor/vulntor/pkg/output"
 )
 
 // ICMPPingDiscoveryResult stores the outcome of the ping discovery.
@@ -217,6 +218,8 @@ func (m *ICMPPingDiscoveryModule) Init(instanceID string, configMap map[string]i
 }
 
 // Execute performs the host discovery using ICMP pings based on the initialized configuration.
+//
+//nolint:gocyclo // Complexity inherited from existing implementation (target resolution, timeout handling, context management)
 func (m *ICMPPingDiscoveryModule) Execute(ctx context.Context, inputs map[string]interface{}, outputChan chan<- engine.ModuleOutput) error {
 	logger := log.With().Str("module", m.meta.Name).Str("instance_id", m.meta.ID).Logger()
 	logger.Debug().Interface("received_inputs", inputs).Msg("Executing module")
@@ -368,6 +371,11 @@ func (m *ICMPPingDiscoveryModule) Execute(ctx context.Context, inputs map[string
 				liveHosts = append(liveHosts, ip)
 				mu.Unlock()
 				logger.Debug().Str("target", ip).Msg("Host is live")
+
+				// Real-time output: Emit host discovery to user
+				if out, ok := ctx.Value(output.OutputKey).(output.Output); ok {
+					out.Diag(output.LevelVerbose, fmt.Sprintf("Host discovered: %s", ip), nil)
+				}
 			} else {
 				logger.Debug().Str("target", ip).Int("sent", stats.PacketsSent).Int("recv", stats.PacketsRecv).Msg("Host did not respond")
 			}
