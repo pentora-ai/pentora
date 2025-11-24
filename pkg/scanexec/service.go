@@ -79,12 +79,10 @@ func (s *Service) WithOrchestratorFactory(factory func(*engine.DAGDefinition) (o
 
 // Run executes the scan pipeline using provided parameters and context carrying AppManager.
 func (s *Service) Run(ctx context.Context, params Params) (*Result, error) {
-	var appMgr engine.Manager
-	switch v := ctx.Value(engine.AppManagerKey).(type) {
-	case *engine.AppManager:
-		appMgr = v
-	case engine.Manager:
-		appMgr = v
+	// Validate that context contains AppManager (required for engine operation)
+	switch ctx.Value(engine.AppManagerKey).(type) {
+	case *engine.AppManager, engine.Manager:
+		// Valid AppManager found in context
 	default:
 		return nil, fmt.Errorf("app manager missing from context")
 	}
@@ -184,7 +182,9 @@ func (s *Service) Run(ctx context.Context, params Params) (*Result, error) {
 	}
 
 	s.emit("run", "", dagDefinition.Name, "start", "")
-	dataCtx, runErr := orchestrator.Run(appMgr.Context(), inputs)
+	// Use ctx (not appMgr.Context()) to preserve context values like output.OutputKey
+	// This enables real-time progress reporting from modules
+	dataCtx, runErr := orchestrator.Run(ctx, inputs)
 	status := statusFromError(runErr)
 	s.emit("run", "", dagDefinition.Name, status, "")
 
