@@ -10,6 +10,7 @@ import (
 	"github.com/vulntor/vulntor/pkg/engine"
 	"github.com/vulntor/vulntor/pkg/modules/parse"
 	"github.com/vulntor/vulntor/pkg/modules/scan"
+	"github.com/vulntor/vulntor/pkg/output"
 	"github.com/vulntor/vulntor/pkg/plugin"
 )
 
@@ -220,6 +221,9 @@ func (m *PluginEvaluationModule) Execute(ctx context.Context, inputs map[string]
 	logger := log.With().Str("module", m.meta.Name).Str("instance_id", m.meta.ID).Logger()
 	logger.Info().Msg("Plugin evaluation module execution started")
 
+	// Extract Output interface for real-time vulnerability reporting
+	out, _ := ctx.Value(output.OutputKey).(output.Output)
+
 	// Build evaluation context from inputs
 	evalContext := m.buildEvaluationContext(inputs)
 	if len(evalContext) == 0 {
@@ -276,6 +280,16 @@ func (m *PluginEvaluationModule) Execute(ctx context.Context, inputs map[string]
 		// Add CVE reference if available (CVE is a single string in metadata)
 		if len(result.Plugin.Metadata.CVE) > 0 {
 			vuln.CVE = []string{result.Plugin.Metadata.CVE}
+		}
+
+		// Real-time output: Emit vulnerability detection to user
+		if out != nil {
+			severity := string(result.Output.Severity)
+			message := fmt.Sprintf("Vulnerability found: %s - %s (Severity: %s)", vuln.Plugin, vuln.Message, severity)
+			if len(vuln.CVE) > 0 {
+				message = fmt.Sprintf("Vulnerability found: %s - %s (%s)", vuln.Plugin, vuln.CVE[0], severity)
+			}
+			out.Diag(output.LevelVerbose, message, nil)
 		}
 
 		// Send vulnerability to output channel

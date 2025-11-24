@@ -44,6 +44,19 @@ var (
 	pluginFailStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("9")) // Red
 
+	// Vulnerability styles - severity-based colors
+	vulnCriticalStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("196")) // Bright red
+
+	vulnHighStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("9")) // Red
+
+	vulnMediumStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("11")) // Yellow
+
+	vulnLowStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("33")) // Blue
+
 	// Generic diagnostic style - gray
 	diagStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("244")) // Gray
@@ -120,6 +133,19 @@ func (s *DiagnosticSubscriber) Handle(event output.OutputEvent) {
 	case strings.Contains(message, "Open port:"):
 		// Port discovery - cyan with icon
 		styled = portDiscoveryStyle.Render("  🔓 " + message)
+
+	case strings.Contains(message, "Vulnerability found:"):
+		// Vulnerability detection - severity-based styling with appropriate emoji
+		lowerMsg := strings.ToLower(message)
+		if strings.Contains(lowerMsg, "critical") {
+			styled = vulnCriticalStyle.Render("  🚨 " + message)
+		} else if strings.Contains(lowerMsg, "high") {
+			styled = vulnHighStyle.Render("  ⚠️  " + message)
+		} else if strings.Contains(lowerMsg, "medium") {
+			styled = vulnMediumStyle.Render("  ⚡ " + message)
+		} else {
+			styled = vulnLowStyle.Render("  ℹ️  " + message)
+		}
 
 	case strings.Contains(message, "Downloading ") || strings.Contains(message, "Installing "):
 		// Plugin download/install in progress - blue with icon
