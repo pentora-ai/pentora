@@ -224,7 +224,7 @@ func (m *SSHParserModule) Execute(ctx context.Context, inputs map[string]interfa
 			if parsedInfo.SoftwareVersion != "" {
 				message = fmt.Sprintf("SSH service detected: %s:%d - %s %s", bannerResult.IP, bannerResult.Port, parsedInfo.Software, parsedInfo.SoftwareVersion)
 			}
-			out.Diag(output.LevelVerbose, message, nil)
+			out.Diag(output.LevelNormal, message, nil)
 		}
 
 		// Output structured SSH details

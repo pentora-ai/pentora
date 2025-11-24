@@ -374,7 +374,7 @@ func (m *ICMPPingDiscoveryModule) Execute(ctx context.Context, inputs map[string
 
 				// Real-time output: Emit host discovery to user
 				if out, ok := ctx.Value(output.OutputKey).(output.Output); ok {
-					out.Diag(output.LevelVerbose, fmt.Sprintf("Host discovered: %s", ip), nil)
+					out.Diag(output.LevelNormal, fmt.Sprintf("Host discovered: %s", ip), nil)
 				}
 			} else {
 				logger.Debug().Str("target", ip).Int("sent", stats.PacketsSent).Int("recv", stats.PacketsRecv).Msg("Host did not respond")

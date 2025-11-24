@@ -287,7 +287,7 @@ func (m *HTTPParserModule) Execute(ctx context.Context, inputs map[string]interf
 			if parsedInfo.HTMLTitle != "" {
 				message += fmt.Sprintf(" - %s", parsedInfo.HTMLTitle)
 			}
-			out.Diag(output.LevelVerbose, message, nil)
+			out.Diag(output.LevelNormal, message, nil)
 		}
 
 		outputChan <- engine.ModuleOutput{FromModuleName: m.meta.ID, DataKey: m.meta.Produces[0].Key, Data: parsedInfo, Timestamp: time.Now(), Target: bannerResult.IP}

@@ -291,7 +291,7 @@ func (m *TCPPortDiscoveryModule) Execute(ctx context.Context, inputs map[string]
 
 						// Real-time output: Emit open port discovery to user
 						if out, ok := ctx.Value(output.OutputKey).(output.Output); ok {
-							out.Diag(output.LevelVerbose, fmt.Sprintf("Open port: %s:%d/tcp", ip, p), nil)
+							out.Diag(output.LevelNormal, fmt.Sprintf("Open port: %s:%d/tcp", ip, p), nil)
 						}
 					}
 				}(targetIP, port)

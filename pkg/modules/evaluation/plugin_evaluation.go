@@ -289,7 +289,7 @@ func (m *PluginEvaluationModule) Execute(ctx context.Context, inputs map[string]
 			if len(vuln.CVE) > 0 {
 				message = fmt.Sprintf("Vulnerability found: %s - %s (%s)", vuln.Plugin, vuln.CVE[0], severity)
 			}
-			out.Diag(output.LevelVerbose, message, nil)
+			out.Diag(output.LevelNormal, message, nil)
 		}
 
 		// Send vulnerability to output channel
