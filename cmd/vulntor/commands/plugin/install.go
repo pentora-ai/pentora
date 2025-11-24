@@ -10,6 +10,7 @@ import (
 
 	"github.com/vulntor/vulntor/cmd/vulntor/internal/bind"
 	"github.com/vulntor/vulntor/cmd/vulntor/internal/format"
+	"github.com/vulntor/vulntor/pkg/output"
 	"github.com/vulntor/vulntor/pkg/plugin"
 )
 
@@ -86,10 +87,17 @@ func executeInstallCommand(cmd *cobra.Command, target, cacheDir string) error {
 
 	// Setup dependencies
 	formatter := getFormatter(cmd)
+	out := setupPluginOutputPipeline(cmd)
 	svc, err := getPluginService(cacheDir)
 	if err != nil {
 		return err
 	}
+
+	// Inject Output interface into context for plugin service to use
+	ctx = context.WithValue(ctx, output.OutputKey, out)
+
+	// Emit info message about operation start
+	out.Info(fmt.Sprintf("Installing plugin(s): %s...", target))
 
 	// Call service layer
 	result, err := svc.Install(ctx, target, opts)

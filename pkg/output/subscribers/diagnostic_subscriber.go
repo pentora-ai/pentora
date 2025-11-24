@@ -90,6 +90,8 @@ func (s *DiagnosticSubscriber) ShouldHandle(event output.OutputEvent) bool {
 }
 
 // Handle processes a diagnostic event and renders it to stderr.
+//
+//nolint:gocyclo // Pattern matching requires multiple cases for different message types
 func (s *DiagnosticSubscriber) Handle(event output.OutputEvent) {
 	if !s.colorEnabled {
 		// Plain text mode
@@ -119,20 +121,20 @@ func (s *DiagnosticSubscriber) Handle(event output.OutputEvent) {
 		// Port discovery - cyan with icon
 		styled = portDiscoveryStyle.Render("  🔓 " + message)
 
-	case strings.Contains(message, "Downloading "):
-		// Plugin download in progress - blue with icon
+	case strings.Contains(message, "Downloading ") || strings.Contains(message, "Installing "):
+		// Plugin download/install in progress - blue with icon
 		styled = pluginDownloadStyle.Render("  📦 " + message)
 
-	case strings.Contains(message, "Downloaded ") && strings.Contains(message, "successfully"):
-		// Plugin download success - green with icon
+	case (strings.Contains(message, "Downloaded ") || strings.Contains(message, "Installed ")) && strings.Contains(message, "successfully"):
+		// Plugin download/install success - green with icon
 		styled = pluginSuccessStyle.Render("  ✓ " + message)
 
 	case strings.Contains(message, "Skipped "):
 		// Plugin skipped - yellow with icon
 		styled = pluginSkipStyle.Render("  ⊘ " + message)
 
-	case strings.Contains(message, "Failed to download "):
-		// Plugin download failed - red with icon
+	case strings.Contains(message, "Failed to download ") || strings.Contains(message, "Failed to install "):
+		// Plugin download/install failed - red with icon
 		styled = pluginFailStyle.Render("  ✗ " + message)
 
 	case strings.Contains(message, "Would download "):

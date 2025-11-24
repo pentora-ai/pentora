@@ -341,6 +341,9 @@ func (s *Service) Install(ctx context.Context, target string, opts InstallOption
 		return nil, err
 	}
 
+	// Get Output interface from context for real-time feedback
+	out, _ := ctx.Value(output.OutputKey).(output.Output)
+
 	// Install each plugin
 	for _, p := range toInstall {
 		// Check context cancellation
@@ -350,6 +353,11 @@ func (s *Service) Install(ctx context.Context, target string, opts InstallOption
 		default:
 		}
 
+		// Real-time output: Starting installation
+		if out != nil {
+			out.Diag(output.LevelVerbose, fmt.Sprintf("Installing %s v%s...", p.Name, p.Version), nil)
+		}
+
 		if err := s.installOne(ctx, p, opts); err != nil {
 			// Check if plugin was already installed (not an error)
 			if err == ErrPluginAlreadyInstalled {
@@ -357,6 +365,11 @@ func (s *Service) Install(ctx context.Context, target string, opts InstallOption
 				s.logger.Debug().
 					Str("plugin", p.Name).
 					Msg("Plugin already installed")
+
+				// Real-time output: Plugin already installed
+				if out != nil {
+					out.Diag(output.LevelVerbose, fmt.Sprintf("Skipped %s (already installed)", p.Name), nil)
+				}
 			} else {
 				result.FailedCount++
 				result.Errors = append(result.Errors, PluginError{
@@ -369,9 +382,19 @@ func (s *Service) Install(ctx context.Context, target string, opts InstallOption
 					Str("plugin", p.Name).
 					Err(err).
 					Msg("Failed to install plugin")
+
+				// Real-time output: Installation failed
+				if out != nil {
+					out.Diag(output.LevelVerbose, fmt.Sprintf("Failed to install %s: %v", p.Name, err), nil)
+				}
 			}
 		} else {
 			result.InstalledCount++
+
+			// Real-time output: Installation succeeded
+			if out != nil {
+				out.Diag(output.LevelVerbose, fmt.Sprintf("Installed %s v%s successfully", p.Name, p.Version), nil)
+			}
 			result.Plugins = append(result.Plugins, pluginInfoFromManifestEntry(&p))
 			s.logger.Info().
 				Str("plugin", p.Name).
