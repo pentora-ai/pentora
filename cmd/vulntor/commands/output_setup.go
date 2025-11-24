@@ -42,8 +42,10 @@ func setupOutputPipeline(cmd *cobra.Command) output.Output {
 	}
 
 	// Diagnostic subscriber: -v/-vv/-vvv controls verbosity
-	// Independent of format - works with both JSON and Human modes
-	if verbosityCount > 0 {
+	// Only for text mode (JSON mode should not have styled diagnostic output)
+	// Uses global persistent -v flag (same as plugin commands)
+	// -v (1): Verbose, -vv (2): Debug, -vvv (3): Trace
+	if outputFormat != "json" && verbosityCount > 0 {
 		// Map -v count to OutputLevel
 		verboseLevel := output.OutputLevel(verbosityCount)
 		stream.Subscribe(subscribers.NewDiagnosticSubscriber(verboseLevel, os.Stderr))
