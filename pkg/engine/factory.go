@@ -40,6 +40,7 @@ func (f *DefaultAppManagerFactory) Create(flags *pflag.FlagSet, configFile strin
 	logLevel := f.GetRuntimeLogLevel(flags)
 
 	// Configure global logging for CLI
+	// Colors are auto-detected based on TTY (see logging.ConfigureGlobal)
 	logging.ConfigureGlobal(logLevel)
 
 	ConfigManager := config.NewManager()

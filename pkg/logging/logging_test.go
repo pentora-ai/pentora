@@ -2,6 +2,7 @@ package logging
 
 import (
 	"bytes"
+	"os"
 	"testing"
 
 	"github.com/rs/zerolog"
@@ -50,6 +51,18 @@ func TestConfigureGlobal(t *testing.T) {
 
 	// Global level should be set
 	assert.Equal(t, zerolog.DebugLevel, zerolog.GlobalLevel())
+}
+
+func TestIsTTY(t *testing.T) {
+	// Test TTY detection
+	// Note: In test environment, os.Stdout might not be a TTY
+
+	// Nil file should return false
+	assert.False(t, isTTY(nil))
+
+	// Test with os.Stdout (result depends on test environment)
+	// Just verify it doesn't panic
+	_ = isTTY(os.Stdout)
 }
 
 func TestNewLoggerComponentField(t *testing.T) {
