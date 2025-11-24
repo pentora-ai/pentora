@@ -18,6 +18,7 @@ import (
 
 	"github.com/vulntor/vulntor/pkg/engine"
 	"github.com/vulntor/vulntor/pkg/modules/scan" // To consume scan.BannerGrabResult
+	"github.com/vulntor/vulntor/pkg/output"
 )
 
 const (
@@ -125,9 +126,14 @@ var titleRegex = regexp.MustCompile(`(?i)<title.*?>(.*?)</title>`)
 var serverRegex = regexp.MustCompile(`^([a-zA-Z0-9._-]+)(?:/([0-9a-zA-Z._-]+))?(?:\s*\(([^)]*)\))?`)
 
 // Execute parses HTTP banners.
+//
+//nolint:gocyclo // Complexity is inherent to HTTP response parsing logic
 func (m *HTTPParserModule) Execute(ctx context.Context, inputs map[string]interface{}, outputChan chan<- engine.ModuleOutput) error {
 	logger := log.With().Str("module", m.meta.Name).Str("instance_id", m.meta.ID).Logger()
 	logger.Debug().Interface("received_inputs", inputs).Msg("Executing module")
+
+	// Extract Output interface for real-time HTTP service detection
+	out, _ := ctx.Value(output.OutputKey).(output.Output)
 
 	rawBannerInput, ok := inputs["service.banner.tcp"]
 	if !ok {
@@ -271,6 +277,19 @@ func (m *HTTPParserModule) Execute(ctx context.Context, inputs map[string]interf
 		}
 
 		logger.Debug().Str("target", bannerResult.IP).Int("port", bannerResult.Port).Int("status", parsedInfo.StatusCode).Str("server", parsedInfo.ServerProduct).Msg("HTTP banner parsed")
+
+		// Real-time output: Emit HTTP service detection to user
+		if out != nil {
+			message := fmt.Sprintf("HTTP service detected: %s:%d - %s %d", bannerResult.IP, bannerResult.Port, parsedInfo.ServerProduct, parsedInfo.StatusCode)
+			if parsedInfo.ServerVersion != "" {
+				message = fmt.Sprintf("HTTP service detected: %s:%d - %s/%s (Status: %d)", bannerResult.IP, bannerResult.Port, parsedInfo.ServerProduct, parsedInfo.ServerVersion, parsedInfo.StatusCode)
+			}
+			if parsedInfo.HTMLTitle != "" {
+				message += fmt.Sprintf(" - %s", parsedInfo.HTMLTitle)
+			}
+			out.Diag(output.LevelVerbose, message, nil)
+		}
+
 		outputChan <- engine.ModuleOutput{FromModuleName: m.meta.ID, DataKey: m.meta.Produces[0].Key, Data: parsedInfo, Timestamp: time.Now(), Target: bannerResult.IP}
 	}
 

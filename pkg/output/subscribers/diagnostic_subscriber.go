@@ -57,6 +57,13 @@ var (
 	vulnLowStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("33")) // Blue
 
+	// Service detection styles - protocol-based colors
+	sshServiceStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("141")) // Purple
+
+	httpServiceStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("45")) // Bright cyan
+
 	// Generic diagnostic style - gray
 	diagStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("244")) // Gray
@@ -146,6 +153,14 @@ func (s *DiagnosticSubscriber) Handle(event output.OutputEvent) {
 		} else {
 			styled = vulnLowStyle.Render("  ℹ️  " + message)
 		}
+
+	case strings.Contains(message, "SSH service detected:"):
+		// SSH service detection - purple with icon
+		styled = sshServiceStyle.Render("  🔐 " + message)
+
+	case strings.Contains(message, "HTTP service detected:"):
+		// HTTP service detection - bright cyan with icon
+		styled = httpServiceStyle.Render("  🌐 " + message)
 
 	case strings.Contains(message, "Downloading ") || strings.Contains(message, "Installing "):
 		// Plugin download/install in progress - blue with icon

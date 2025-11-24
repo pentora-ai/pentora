@@ -12,6 +12,7 @@ import (
 
 	"github.com/vulntor/vulntor/pkg/engine"
 	"github.com/vulntor/vulntor/pkg/modules/scan"
+	"github.com/vulntor/vulntor/pkg/output"
 )
 
 const (
@@ -136,6 +137,9 @@ func (m *SSHParserModule) Init(instanceID string, configMap map[string]interface
 //
 //nolint:gocyclo // Complexity is inherent to banner parsing logic
 func (m *SSHParserModule) Execute(ctx context.Context, inputs map[string]interface{}, outputChan chan<- engine.ModuleOutput) error {
+	// Extract Output interface for real-time SSH service detection
+	out, _ := ctx.Value(output.OutputKey).(output.Output)
+
 	rawBannerInput, ok := inputs["service.banner.tcp"] // This comes from service-banner-scanner
 	if !ok {
 		m.logger.Info().Msg("'service.banner.tcp' not found in inputs. Nothing to parse for SSH.")
@@ -213,6 +217,15 @@ func (m *SSHParserModule) Execute(ctx context.Context, inputs map[string]interfa
 		}
 
 		m.logger.Debug().Str("ip", bannerResult.IP).Int("port", bannerResult.Port).Str("ssh_version", parsedInfo.SSHVersion).Str("software", parsedInfo.Software).Msg("SSH banner parsed")
+
+		// Real-time output: Emit SSH service detection to user
+		if out != nil {
+			message := fmt.Sprintf("SSH service detected: %s:%d - %s", bannerResult.IP, bannerResult.Port, parsedInfo.Software)
+			if parsedInfo.SoftwareVersion != "" {
+				message = fmt.Sprintf("SSH service detected: %s:%d - %s %s", bannerResult.IP, bannerResult.Port, parsedInfo.Software, parsedInfo.SoftwareVersion)
+			}
+			out.Diag(output.LevelVerbose, message, nil)
+		}
 
 		// Output structured SSH details
 		outputChan <- engine.ModuleOutput{
