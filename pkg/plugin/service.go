@@ -15,6 +15,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"github.com/vulntor/vulntor/pkg/output"
 	"github.com/vulntor/vulntor/pkg/storage"
 )
 
@@ -687,6 +688,9 @@ func (s *Service) Update(ctx context.Context, opts UpdateOptions) (*UpdateResult
 		Int("total_plugins", len(toUpdate)).
 		Msg("Plugins to update")
 
+	// Get Output interface from context for real-time feedback
+	out, _ := ctx.Value(output.OutputKey).(output.Output)
+
 	// Update each plugin
 	for _, p := range toUpdate {
 		select {
@@ -703,6 +707,11 @@ func (s *Service) Update(ctx context.Context, opts UpdateOptions) (*UpdateResult
 					Str("plugin", p.Name).
 					Str("version", p.Version).
 					Msg("Plugin already cached, skipping")
+
+				// Real-time output: Plugin already cached
+				if out != nil {
+					out.Diag(output.LevelVerbose, fmt.Sprintf("Skipped %s (already cached)", p.Name), nil)
+				}
 				continue
 			}
 		}
@@ -715,7 +724,17 @@ func (s *Service) Update(ctx context.Context, opts UpdateOptions) (*UpdateResult
 				Str("plugin", p.Name).
 				Bool("dry_run", true).
 				Msg("Would update plugin (dry run)")
+
+			// Real-time output: Dry run
+			if out != nil {
+				out.Diag(output.LevelVerbose, fmt.Sprintf("Would download %s v%s", p.Name, p.Version), nil)
+			}
 			continue
+		}
+
+		// Real-time output: Starting download
+		if out != nil {
+			out.Diag(output.LevelVerbose, fmt.Sprintf("Downloading %s v%s...", p.Name, p.Version), nil)
 		}
 
 		// Download plugin
@@ -732,7 +751,17 @@ func (s *Service) Update(ctx context.Context, opts UpdateOptions) (*UpdateResult
 				Str("plugin", p.Name).
 				Err(err).
 				Msg("Failed to update plugin")
+
+			// Real-time output: Download failed
+			if out != nil {
+				out.Diag(output.LevelVerbose, fmt.Sprintf("Failed to download %s: %v", p.Name, err), nil)
+			}
 			continue
+		}
+
+		// Real-time output: Download succeeded
+		if out != nil {
+			out.Diag(output.LevelVerbose, fmt.Sprintf("Downloaded %s v%s successfully", p.Name, p.Version), nil)
 		}
 
 		// Add to manifest

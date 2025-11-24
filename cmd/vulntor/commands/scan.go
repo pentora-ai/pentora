@@ -18,6 +18,7 @@ import (
 	"github.com/vulntor/vulntor/pkg/appctx"
 	"github.com/vulntor/vulntor/pkg/engine"
 	parsepkg "github.com/vulntor/vulntor/pkg/modules/parse" // Alias for parse package functions
+	"github.com/vulntor/vulntor/pkg/output"
 	"github.com/vulntor/vulntor/pkg/scanexec"
 	"github.com/vulntor/vulntor/pkg/storage"
 	"github.com/vulntor/vulntor/pkg/stringutil"
@@ -36,6 +37,7 @@ The command automatically plans the execution DAG using available modules.`,
 
 func runScanCommand(cmd *cobra.Command, args []string) error {
 	formatter := format.FromCommand(cmd)
+	out := setupOutputPipeline(cmd)
 
 	if len(args) == 0 {
 		return formatter.PrintTotalFailureSummary("scan", scanexec.ErrNoTargets, scanexec.ErrorCode(scanexec.ErrNoTargets))
@@ -43,6 +45,11 @@ func runScanCommand(cmd *cobra.Command, args []string) error {
 
 	logger := log.With().Str("command", "scan").Logger()
 	logger.Info().Strs("targets", args).Msg("Initializing scan command")
+
+	// Output pipeline: Emit initialization event
+	out.Diag(output.LevelVerbose, "Initializing scan command", map[string]interface{}{
+		"targets": args,
+	})
 
 	// Bind flags to options using centralized binder
 	params, err := bind.BindScanOptions(cmd, args)
@@ -95,21 +102,30 @@ func runScanCommand(cmd *cobra.Command, args []string) error {
 	// Enable progress logging if interactive flag is set
 	interactive, _ := cmd.Flags().GetBool("progress")
 	if interactive {
-		svc = svc.WithProgressSink(&progressLogger{logger: logger})
+		svc = svc.WithProgressSink(&progressLogger{
+			logger: logger,
+			out:    out,
+		})
 	}
+
+	// Inject Output interface into context for modules to access
+	// This enables real-time progress reporting (discovered hosts, open ports, etc.)
+	orchestratorCtx = context.WithValue(orchestratorCtx, output.OutputKey, out)
 
 	if params.OutputFormat == "text" {
 		logger.Info().Msg("Starting scan execution with automatically planned DAG...")
+		out.Info("Starting scan execution...")
 	}
 
 	res, runErr := svc.Run(orchestratorCtx, params)
 	if runErr != nil {
 		logger.Error().Err(runErr).Msg("Scan execution failed")
+		out.Error(runErr)
 		return formatter.PrintTotalFailureSummary("scan", runErr, scanexec.ErrorCode(runErr))
 	}
 
 	dataCtx := extractDataContext(res)
-	return renderScanOutput(formatter, params, res, dataCtx, logger)
+	return renderScanOutput(out, formatter, params, res, dataCtx, logger)
 }
 
 func extractDataContext(res *scanexec.Result) map[string]interface{} {
@@ -119,14 +135,16 @@ func extractDataContext(res *scanexec.Result) map[string]interface{} {
 	return map[string]interface{}{}
 }
 
-func renderScanOutput(formatter format.Formatter, params scanexec.Params, res *scanexec.Result, dataCtx map[string]interface{}, logger zerolog.Logger) error {
+func renderScanOutput(out output.Output, formatter format.Formatter, params scanexec.Params, res *scanexec.Result, dataCtx map[string]interface{}, logger zerolog.Logger) error {
 	profiles, missingProfiles, profileErr := collectAssetProfiles(dataCtx)
 
 	if missingProfiles {
 		logger.Info().Msg("No 'asset.profiles' data found in scan results.")
+		out.Diag(output.LevelVerbose, "No asset.profiles data found in scan results", nil)
 	}
 	if profileErr != nil {
 		logger.Warn().Err(profileErr).Msg("Scan completed with post-processing errors")
+		out.Warning(fmt.Sprintf("Scan completed with post-processing errors: %v", profileErr))
 	}
 
 	switch strings.ToLower(params.OutputFormat) {
@@ -153,11 +171,11 @@ func renderScanOutput(formatter format.Formatter, params scanexec.Params, res *s
 	default:
 		if len(profiles) > 0 {
 			if res != nil {
-				printScanSummary(res, profiles)
+				printScanSummary(out, res, profiles)
 			}
-			printAssetProfileTextOutput(profiles)
+			printAssetProfileTextOutput(out, profiles)
 		} else {
-			fmt.Println("\nScan completed, but no asset profiles were generated.")
+			out.Info("Scan completed, but no asset profiles were generated.")
 		}
 	}
 
@@ -188,17 +206,26 @@ func collectAssetProfiles(dataCtx map[string]interface{}) ([]engine.AssetProfile
 	return castedProfiles, false, nil
 }
 
-func printAssetProfileTextOutput(profiles []engine.AssetProfile) {
-	fmt.Println("--- Scan Results ---")
+func printAssetProfileTextOutput(out output.Output, profiles []engine.AssetProfile) {
+	out.Info("--- Scan Results ---")
+
 	for _, asset := range profiles {
-		fmt.Printf("\n## Target: %s (IPs: %v)\n", asset.Target, getMapKeys(asset.ResolvedIPs))
-		fmt.Printf("   Is Alive: %v\n", asset.IsAlive)
+		// Target header
+		out.Info(fmt.Sprintf("\n## Target: %s (IPs: %v)", asset.Target, getMapKeys(asset.ResolvedIPs)))
+		out.Diag(output.LevelVerbose, "Asset details", map[string]interface{}{
+			"target":    asset.Target,
+			"is_alive":  asset.IsAlive,
+			"hostnames": asset.Hostnames,
+		})
+
+		out.Info(fmt.Sprintf("   Is Alive: %v", asset.IsAlive))
 		if len(asset.Hostnames) > 0 {
-			fmt.Printf("   Hostnames: %v\n", asset.Hostnames)
+			out.Info(fmt.Sprintf("   Hostnames: %v", asset.Hostnames))
 		}
 
 		if len(asset.OpenPorts) > 0 {
-			fmt.Println("   --- Open Ports ---")
+			out.Info("   --- Open Ports ---")
+
 			// Portları sıralı göstermek için IP'leri sırala
 			var sortedIPs []string
 			for ip := range asset.OpenPorts {
@@ -207,7 +234,7 @@ func printAssetProfileTextOutput(profiles []engine.AssetProfile) {
 			sort.Strings(sortedIPs)
 
 			for _, ip := range sortedIPs {
-				fmt.Printf("     IP: %s\n", ip)
+				out.Info(fmt.Sprintf("     IP: %s", ip))
 				// Portları sıralı göstermek için port numarasına göre sırala
 				portProfiles := asset.OpenPorts[ip]
 				sort.Slice(portProfiles, func(i, j int) bool {
@@ -215,12 +242,13 @@ func printAssetProfileTextOutput(profiles []engine.AssetProfile) {
 				})
 
 				for _, port := range portProfiles {
-					fmt.Printf("       - Port: %d/%s (%s)\n", port.PortNumber, port.Protocol, port.Status)
+					out.Info(fmt.Sprintf("       - Port: %d/%s (%s)", port.PortNumber, port.Protocol, port.Status))
+
 					if port.Service.Name != "" || port.Service.Product != "" {
-						fmt.Printf("         Service: %s %s %s\n", port.Service.Name, port.Service.Product, port.Service.Version)
+						out.Info(fmt.Sprintf("         Service: %s %s %s", port.Service.Name, port.Service.Product, port.Service.Version))
 					}
 					if port.Service.RawBanner != "" {
-						fmt.Printf("         Banner: %s\n", stringutil.Ellipsis(port.Service.RawBanner, 80))
+						out.Info(fmt.Sprintf("         Banner: %s", stringutil.Ellipsis(port.Service.RawBanner, 80)))
 					}
 					if port.Service.ParsedAttributes != nil {
 						attrs := port.Service.ParsedAttributes
@@ -228,55 +256,58 @@ func printAssetProfileTextOutput(profiles []engine.AssetProfile) {
 						if rawMatches, ok := attrs["fingerprints"]; ok {
 							if matches, ok := rawMatches.([]parsepkg.FingerprintParsedInfo); ok && len(matches) > 0 {
 								printedFingerprintList = true
-								fmt.Println("         Fingerprints:")
+								out.Info("         Fingerprints:")
 								for _, match := range matches {
-									fmt.Printf("           - %s", match.Product)
+									fingerprintLine := fmt.Sprintf("           - %s", match.Product)
 									if match.Version != "" {
-										fmt.Printf(" %s", match.Version)
+										fingerprintLine += fmt.Sprintf(" %s", match.Version)
 									}
 									if match.Vendor != "" {
-										fmt.Printf(" [%s]", match.Vendor)
+										fingerprintLine += fmt.Sprintf(" [%s]", match.Vendor)
 									}
-									fmt.Printf(" (confidence %.2f", match.Confidence)
+									fingerprintLine += fmt.Sprintf(" (confidence %.2f", match.Confidence)
 									if match.SourceProbe != "" {
-										fmt.Printf(", probe %s", match.SourceProbe)
+										fingerprintLine += fmt.Sprintf(", probe %s", match.SourceProbe)
 									}
-									fmt.Println(")")
+									fingerprintLine += ")"
+									out.Info(fingerprintLine)
+
 									if match.CPE != "" {
-										fmt.Printf("             CPE: %s\n", match.CPE)
+										out.Info(fmt.Sprintf("             CPE: %s", match.CPE))
 									}
 									if match.Description != "" {
-										fmt.Printf("             Notes: %s\n", match.Description)
+										out.Info(fmt.Sprintf("             Notes: %s", match.Description))
 									}
 								}
 							}
 						}
 						if !printedFingerprintList {
 							if confidence, ok := attrs["fingerprint_confidence"]; ok {
-								fmt.Printf("         Fingerprint Confidence: %v\n", confidence)
+								out.Info(fmt.Sprintf("         Fingerprint Confidence: %v", confidence))
 							}
 							if vendor, ok := attrs["vendor"]; ok {
-								fmt.Printf("         Vendor: %v\n", vendor)
+								out.Info(fmt.Sprintf("         Vendor: %v", vendor))
 							}
 							if cpe, ok := attrs["cpe"]; ok {
-								fmt.Printf("         CPE: %v\n", cpe)
+								out.Info(fmt.Sprintf("         CPE: %v", cpe))
 							}
 						}
 					}
 
 					if len(port.Vulnerabilities) > 0 {
-						fmt.Println("         Vulnerabilities:")
+						out.Warning("         Vulnerabilities:")
 						for _, vuln := range port.Vulnerabilities {
-							fmt.Printf("           - [%s] %s (%s)\n", vuln.Severity, vuln.ID, vuln.Summary)
+							out.Warning(fmt.Sprintf("           - [%s] %s (%s)", vuln.Severity, vuln.ID, vuln.Summary))
 						}
 					}
 				}
 			}
 		} else {
-			fmt.Println("   No open ports found.")
+			out.Info("   No open ports found.")
 		}
 	}
-	fmt.Println("\n--- End of Scan Results ---")
+
+	out.Info("\n--- End of Scan Results ---")
 }
 
 // Helper function to get keys from a map for printing.
@@ -291,10 +322,11 @@ func getMapKeys(m map[string]time.Time) []string {
 
 type progressLogger struct {
 	logger zerolog.Logger
+	out    output.Output
 }
 
 // printScanSummary displays a human-readable summary table of scan results
-func printScanSummary(res *scanexec.Result, profiles []engine.AssetProfile) {
+func printScanSummary(out output.Output, res *scanexec.Result, profiles []engine.AssetProfile) {
 	if res == nil || len(profiles) == 0 {
 		return
 	}
@@ -350,22 +382,29 @@ func printScanSummary(res *scanexec.Result, profiles []engine.AssetProfile) {
 		target = profiles[0].Target
 	}
 
-	// Print summary table
-	separator := "════════════════════════════════════════════════════"
-	fmt.Printf("\n%s\n", separator)
-	fmt.Printf("%-15s %s\n", "Target:", target)
-	fmt.Printf("%-15s %s\n", "Duration:", duration)
-	fmt.Printf("%-15s %d\n", "Hosts Found:", hostsFound)
-	fmt.Printf("%-15s %d\n", "Open Ports:", totalOpenPorts)
-	// Only show Services line if any services were detected
-	if servicesStr != "" {
-		fmt.Printf("%-15s %s\n", "Services:", servicesStr)
+	// Build summary table for Output.Table()
+	headers := []string{"Metric", "Value"}
+	rows := [][]string{
+		{"Target", target},
+		{"Duration", duration},
+		{"Hosts Found", fmt.Sprintf("%d", hostsFound)},
+		{"Open Ports", fmt.Sprintf("%d", totalOpenPorts)},
 	}
-	fmt.Printf("\n%-15s %d\n", "Vulnerabilities:", totalVulns)
-	fmt.Printf("%s\n\n", separator)
+
+	// Only show Services row if any services were detected
+	if servicesStr != "" {
+		rows = append(rows, []string{"Services", servicesStr})
+	}
+
+	// Add vulnerabilities row
+	rows = append(rows, []string{"Vulnerabilities", fmt.Sprintf("%d", totalVulns)})
+
+	// Output using Output.Table() - this will be rendered by HumanFormatter or JSONFormatter
+	out.Table(headers, rows)
 }
 
 func (p *progressLogger) OnEvent(ev scanexec.ProgressEvent) {
+	// Structured logging for debugging
 	entry := p.logger.Info().
 		Str("phase", ev.Phase).
 		Str("module", ev.Module).
@@ -377,6 +416,35 @@ func (p *progressLogger) OnEvent(ev scanexec.ProgressEvent) {
 		entry = entry.Str("message", ev.Message)
 	}
 	entry.Msg("scan progress")
+
+	// User-friendly progress output via Output interface
+	if p.out != nil {
+		// Build progress message
+		statusIcon := getStatusIcon(ev.Status)
+		message := fmt.Sprintf("%s %s: %s", statusIcon, ev.Phase, ev.Module)
+		if ev.Message != "" {
+			message += fmt.Sprintf(" - %s", ev.Message)
+		}
+
+		// Emit as info event (HumanFormatter will style it)
+		p.out.Info(message)
+	}
+}
+
+// getStatusIcon returns an icon based on status
+func getStatusIcon(status string) string {
+	switch status {
+	case "running", "started":
+		return "⏳"
+	case "completed", "success":
+		return "✓"
+	case "failed", "error":
+		return "✗"
+	case "skipped":
+		return "⊘"
+	default:
+		return "•"
+	}
 }
 
 func init() {

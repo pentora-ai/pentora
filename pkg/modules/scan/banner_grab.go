@@ -23,6 +23,7 @@ import (
 	"github.com/vulntor/vulntor/pkg/engine" // Your engine/core package
 	"github.com/vulntor/vulntor/pkg/fingerprint"
 	"github.com/vulntor/vulntor/pkg/modules/discovery"
+	"github.com/vulntor/vulntor/pkg/output"
 )
 
 // BannerGrabConfig holds configuration for the banner grabbing module.
@@ -185,6 +186,8 @@ type TargetPortData struct {
 
 // Execute attempts to grab banners from open ports.
 // It consumes 'discovery.open_tcp_ports' which should be of type PortStatusInfo.
+//
+//nolint:gocyclo // Complexity inherited from existing implementation
 func (m *BannerGrabModule) Execute(ctx context.Context, inputs map[string]interface{}, outputChan chan<- engine.ModuleOutput) error {
 	m.logger.Debug().Interface("received_inputs", inputs).Msg("Executing module")
 
@@ -244,6 +247,21 @@ func (m *BannerGrabModule) Execute(ctx context.Context, inputs map[string]interf
 			defer func() { <-sem }()
 
 			result := m.runProbes(ctx, currentTarget, currentPort)
+
+			// Real-time output: Emit banner grab result to user
+			if out, ok := ctx.Value(output.OutputKey).(output.Output); ok && result.Banner != "" {
+				// Success case: banner captured
+				message := fmt.Sprintf("Banner captured: %s:%d -> %s",
+					currentTarget, currentPort, strings.TrimSpace(result.Banner[:min(60, len(result.Banner))]))
+				if len(result.Banner) > 60 {
+					message += "..."
+				}
+				out.Diag(output.LevelVerbose, message, nil)
+			} else if out != nil && result.Error != "" {
+				// Error case: banner grab failed
+				out.Diag(output.LevelVerbose, fmt.Sprintf("Banner grab failed: %s:%d - %s",
+					currentTarget, currentPort, result.Error), nil)
+			}
 
 			resultsMu.Lock()
 			grabbedBanners = append(grabbedBanners, result)
@@ -744,6 +762,14 @@ func tlsVersionString(version uint16) string {
 // BannerGrabModuleFactory creates a new BannerGrabModule instance.
 func BannerGrabModuleFactory() engine.Module {
 	return newBannerGrabModule()
+}
+
+// min returns the minimum of two integers
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 func init() {

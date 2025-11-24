@@ -16,6 +16,7 @@ import (
 
 	"github.com/vulntor/vulntor/pkg/engine" // Engine interfaces
 	"github.com/vulntor/vulntor/pkg/netutil"
+	"github.com/vulntor/vulntor/pkg/output"
 )
 
 // TCPPortDiscoveryResult stores the outcome of the TCP port discovery for a single target.
@@ -183,6 +184,8 @@ func (m *TCPPortDiscoveryModule) Init(instanceID string, moduleConfig map[string
 }
 
 // Execute performs the TCP port discovery.
+//
+//nolint:gocyclo // Complexity inherited from existing implementation
 func (m *TCPPortDiscoveryModule) Execute(ctx context.Context, inputs map[string]interface{}, outputChan chan<- engine.ModuleOutput) error {
 	var targetsToScan []string
 
@@ -285,8 +288,11 @@ func (m *TCPPortDiscoveryModule) Execute(ctx context.Context, inputs map[string]
 						mapMutex.Lock()
 						openPortsByTarget[ip] = append(openPortsByTarget[ip], p)
 						mapMutex.Unlock()
-						// Optionally, send individual open port findings immediately if needed by other real-time modules.
-						// For aggregated results, wait until all scans for a target (or all targets) are done.
+
+						// Real-time output: Emit open port discovery to user
+						if out, ok := ctx.Value(output.OutputKey).(output.Output); ok {
+							out.Diag(output.LevelVerbose, fmt.Sprintf("Open port: %s:%d/tcp", ip, p), nil)
+						}
 					}
 				}(targetIP, port)
 			}

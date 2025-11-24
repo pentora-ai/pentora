@@ -10,6 +10,7 @@ import (
 
 	"github.com/vulntor/vulntor/cmd/vulntor/internal/bind"
 	"github.com/vulntor/vulntor/cmd/vulntor/internal/format"
+	"github.com/vulntor/vulntor/pkg/output"
 	"github.com/vulntor/vulntor/pkg/plugin"
 )
 
@@ -61,10 +62,14 @@ func executeUpdateCommand(cmd *cobra.Command, cacheDir string) error {
 
 	// Setup dependencies
 	formatter := getFormatter(cmd)
+	out := setupPluginOutputPipeline(cmd)
 	svc, err := getPluginService(cacheDir)
 	if err != nil {
 		return err
 	}
+
+	// Inject Output interface into context for plugin service to use
+	ctx = context.WithValue(ctx, output.OutputKey, out)
 
 	// Bind flags to options
 	opts, err := bind.BindUpdateOptions(cmd)
@@ -92,6 +97,17 @@ func executeUpdateCommand(cmd *cobra.Command, cacheDir string) error {
 		Bool("dry_run", opts.DryRun).
 		Bool("force", opts.Force).
 		Msg("update started")
+
+	// Emit info message about operation start
+	if opts.DryRun {
+		out.Info("Running in dry-run mode (no changes will be made)")
+	} else {
+		categoryMsg := ""
+		if opts.Category != "" {
+			categoryMsg = fmt.Sprintf(" (%s category)", opts.Category)
+		}
+		out.Info(fmt.Sprintf("Updating plugins from remote repository%s...", categoryMsg))
+	}
 
 	// Call service layer
 	result, err := svc.Update(ctx, opts)

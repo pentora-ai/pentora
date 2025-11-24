@@ -9,6 +9,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/vulntor/vulntor/cmd/vulntor/internal/format"
+	"github.com/vulntor/vulntor/pkg/output"
+	"github.com/vulntor/vulntor/pkg/output/subscribers"
 	"github.com/vulntor/vulntor/pkg/plugin"
 	"github.com/vulntor/vulntor/pkg/storage"
 )
@@ -91,4 +93,32 @@ func formatBytes(bytes int64) string {
 		exp++
 	}
 	return fmt.Sprintf("%.1f %ciB", float64(bytes)/float64(div), "KMGTPE"[exp])
+}
+
+// setupPluginOutputPipeline creates an Output pipeline for plugin commands
+// Handles both human-friendly and JSON output based on --output flag
+func setupPluginOutputPipeline(cmd *cobra.Command) output.Output {
+	stream := output.NewOutputEventStream()
+
+	// Determine output format
+	outputFormat, _ := cmd.Flags().GetString("output")
+	noColor, _ := cmd.Flags().GetBool("no-color")
+
+	if outputFormat == "json" {
+		// JSON output mode
+		stream.Subscribe(subscribers.NewJSONFormatter(os.Stdout))
+	} else {
+		// Human-friendly output mode with optional color
+		colorEnabled := !noColor
+		stream.Subscribe(subscribers.NewHumanFormatter(os.Stdout, os.Stderr, colorEnabled))
+	}
+
+	// Add diagnostic subscriber for verbose output
+	// Plugin commands use --verbose flag (not -v count)
+	verbose, _ := cmd.Flags().GetBool("verbose")
+	if verbose {
+		stream.Subscribe(subscribers.NewDiagnosticSubscriber(output.LevelVerbose, os.Stderr))
+	}
+
+	return output.NewDefaultOutput(stream)
 }
