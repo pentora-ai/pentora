@@ -41,18 +41,15 @@ func setupOutputPipeline(cmd *cobra.Command) output.Output {
 		stream.Subscribe(subscribers.NewHumanFormatter(os.Stdout, os.Stderr, colorEnabled))
 	}
 
-	// Diagnostic subscriber: Real-time progress messages (always enabled in text mode)
-	// Only for text mode (JSON mode should not have styled diagnostic output)
-	// Verbosity levels:
-	//   - No flags (0): Shows LevelNormal messages (progress updates)
-	//   - -v (1): Shows LevelNormal + LevelVerbose (detailed progress)
-	//   - -vv (2): Shows up to LevelDebug
-	//   - -vvv (3): Shows up to LevelTrace
-	if outputFormat != "json" {
-		// Always create DiagnosticSubscriber in text mode
-		// verbosityCount defaults to 0 (LevelNormal) if no -v flags
-		verboseLevel := output.OutputLevel(verbosityCount)
-		stream.Subscribe(subscribers.NewDiagnosticSubscriber(verboseLevel, os.Stderr))
+	// Diagnostic subscriber: Real-time progress messages with styled output
+	// Only enabled in default mode (no verbosity flags)
+	// When -v/-vv/-vvv is used, user enters debug mode with structured logs only
+	// Behavior:
+	//   - No flags (0): Emoji-based styled progress (DiagnosticSubscriber)
+	//   - -v/-vv/-vvv: Structured zerolog logs only (no DiagnosticSubscriber)
+	if outputFormat != "json" && verbosityCount == 0 {
+		// Default mode: Show emoji-based progress for user-friendly output
+		stream.Subscribe(subscribers.NewDiagnosticSubscriber(output.LevelNormal, os.Stderr))
 	}
 
 	return output.NewDefaultOutput(stream)

@@ -114,7 +114,11 @@ func runScanCommand(cmd *cobra.Command, args []string) error {
 
 	if params.OutputFormat == "text" {
 		logger.Info().Msg("Starting scan execution with automatically planned DAG...")
-		out.Info("Starting scan execution...")
+		// Only show emoji message in default mode (not in verbose/debug mode)
+		verbosityCount, _ := cmd.Flags().GetCount("verbosity")
+		if verbosityCount == 0 {
+			out.Info("Starting scan execution...")
+		}
 	}
 
 	res, runErr := svc.Run(orchestratorCtx, params)
