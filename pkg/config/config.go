@@ -3,9 +3,12 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"sync"
 
+	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/confmap"
+	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/posflag"
 	"github.com/knadh/koanf/v2"
 	"github.com/spf13/pflag"
@@ -58,16 +61,33 @@ func DefaultConfig() Config {
 
 // Load loads configuration from various sources based on precedence.
 // It populates the manager's currentConfig.
+// Configuration precedence (highest to lowest):
+// 1. Command-line flags
+// 2. Config file (YAML)
+// 3. Default values
 func (m *Manager) Load(flags *pflag.FlagSet, customConfigFilePath string) error {
 	m.mu.Lock() // Lock for writing to m.koanfInstance and m.currentConfig
 	defer m.mu.Unlock()
 
+	// 1. Load default values (lowest precedence)
 	defaultCfgMap := DefaultConfigAsMap()
 	if err := m.koanfInstance.Load(confmap.Provider(defaultCfgMap, "."), nil); err != nil {
 		return fmt.Errorf("error loading hardcoded defaults into koanf: %w", err)
 	}
 
-	// Load command-line flags (highest precedence over files and env vars)
+	// 2. Load config file if provided (medium precedence)
+	if customConfigFilePath != "" {
+		if _, err := os.Stat(customConfigFilePath); err == nil {
+			if err := m.koanfInstance.Load(file.Provider(customConfigFilePath), yaml.Parser()); err != nil {
+				return fmt.Errorf("error loading config file %s: %w", customConfigFilePath, err)
+			}
+		} else if !os.IsNotExist(err) {
+			return fmt.Errorf("error checking config file %s: %w", customConfigFilePath, err)
+		}
+		// If file doesn't exist, silently continue (user might have passed --config but file doesn't exist yet)
+	}
+
+	// 3. Load command-line flags (highest precedence)
 	if flags != nil {
 		// The posflag.Provider needs the Koanf instance to correctly map flag names to Koanf keys.
 		if err := m.koanfInstance.Load(posflag.Provider(flags, ".", m.koanfInstance), nil); err != nil {
@@ -104,6 +124,15 @@ func (m *Manager) Get() Config {
 	// For this example, a shallow copy is shown.
 	cfgCopy := m.currentConfig
 	return cfgCopy
+}
+
+// GetValue retrieves a configuration value by key path.
+// Example: GetValue("modules.tcp-port-discovery.concurrency")
+// Returns nil if key doesn't exist.
+func (m *Manager) GetValue(key string) interface{} {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.koanfInstance.Get(key)
 }
 
 // UpdateRuntimeValue updates a specific configuration value at runtime.

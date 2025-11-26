@@ -464,8 +464,8 @@ func init() {
 	ScanCmd.Flags().Bool("progress", false, "Print live progress updates during the scan")
 	ScanCmd.Flags().String("fingerprint-cache", "", "Path to fingerprint catalog cache directory")
 	ScanCmd.Flags().StringP("output", "o", "text", "Output format: text, json, yaml")
-	ScanCmd.Flags().String("timeout", "1s", "Default timeout for network operations like ping/port connect")
-	ScanCmd.Flags().Int("concurrency", 50, "Default concurrency for parallel operations")
+	ScanCmd.Flags().String("timeout", "", "Override timeout for network operations (default: module-specific or from config file)")
+	ScanCmd.Flags().Int("concurrency", 0, "Override concurrency for parallel operations (default: module-specific or from config file)")
 
 	// Ping specific flags - planner can use these if ICMP module is selected
 	ScanCmd.Flags().Bool("ping", true, "Enable ICMP host discovery (default: true)")

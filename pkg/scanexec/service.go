@@ -35,7 +35,7 @@ type ProgressEvent struct {
 }
 
 type Service struct {
-	plannerFactory      func() (dagPlanner, error)
+	plannerFactory      func(context.Context) (dagPlanner, error)
 	orchestratorFactory func(*engine.DAGDefinition) (orchestrator, error)
 	progressSink        ProgressSink
 	storage             storage.Backend
@@ -44,8 +44,13 @@ type Service struct {
 // NewService builds a Service with default dependencies.
 func NewService() *Service {
 	return &Service{
-		plannerFactory: func() (dagPlanner, error) {
-			return engine.NewDAGPlanner(engine.GetRegisteredModuleFactories())
+		plannerFactory: func(ctx context.Context) (dagPlanner, error) {
+			// Extract ConfigManager from AppManager in context
+			var configMgr engine.ConfigManager
+			if appMgr, ok := ctx.Value(engine.AppManagerKey).(engine.Manager); ok && appMgr != nil {
+				configMgr = appMgr.Config()
+			}
+			return engine.NewDAGPlanner(engine.GetRegisteredModuleFactories(), configMgr)
 		},
 		orchestratorFactory: func(def *engine.DAGDefinition) (orchestrator, error) {
 			return engine.NewOrchestrator(def)
@@ -66,7 +71,7 @@ func (s *Service) WithStorage(backend storage.Backend) *Service {
 }
 
 // WithPlannerFactory overrides planner construction for testing.
-func (s *Service) WithPlannerFactory(factory func() (dagPlanner, error)) *Service {
+func (s *Service) WithPlannerFactory(factory func(context.Context) (dagPlanner, error)) *Service {
 	s.plannerFactory = factory
 	return s
 }
@@ -127,7 +132,7 @@ func (s *Service) Run(ctx context.Context, params Params) (*Result, error) {
 		}
 	}
 
-	planner, err := s.plannerFactory()
+	planner, err := s.plannerFactory(ctx)
 	if err != nil {
 		// Update scan status to failed if storage available
 		s.updateScanStatus(ctx, scanID, "failed", err.Error(), startTime)

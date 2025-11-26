@@ -38,13 +38,20 @@ type ScanIntent struct {
 // DAGPlanner is responsible for automatically constructing a DAGDefinition based on scan intent and module metadata.
 type DAGPlanner struct {
 	moduleRegistry map[string]ModuleFactory // Access to all registered module factories and their metadata
+	configManager  ConfigManager            // Configuration manager for reading module configs
 	logger         zerolog.Logger
 }
 
+// ConfigManager is an interface for accessing configuration values.
+type ConfigManager interface {
+	GetValue(key string) interface{}
+}
+
 // NewDAGPlanner creates a new DAGPlanner.
-func NewDAGPlanner(registry map[string]ModuleFactory) (*DAGPlanner, error) {
+func NewDAGPlanner(registry map[string]ModuleFactory, configMgr ConfigManager) (*DAGPlanner, error) {
 	return &DAGPlanner{
 		moduleRegistry: registry,
+		configManager:  configMgr,
 		logger:         log.With().Str("component", "DAGPlanner").Logger(),
 	}, nil
 }
@@ -445,51 +452,92 @@ func (p *DAGPlanner) matchesTags(moduleTags, includeTags, excludeTags []string) 
 }
 
 // configureModule creates a configuration map for a module instance based on its
-// default schema and overrides from the scan intent.
+// default schema and overrides from the scan intent and config file.
+// Configuration precedence (highest to lowest):
+// 1. Intent-specific overrides (from CLI flags)
+// 2. Config file values (from vulntor.yaml modules.* section)
+// 3. Module default values (from module schema)
 func (p *DAGPlanner) configureModule(meta ModuleMetadata, intent ScanIntent) map[string]interface{} {
 	cfg := make(map[string]interface{})
 
-	// Start with module defaults from its schema
+	// 1. Apply module defaults from schema (lowest precedence)
+	p.applyModuleDefaults(cfg, meta)
+
+	// 2. Apply config file values (medium precedence)
+	p.applyConfigFileValues(cfg, meta)
+
+	// 3. Apply intent overrides from CLI flags (highest precedence)
+	p.applyIntentOverrides(cfg, meta, intent)
+
+	return cfg
+}
+
+// applyModuleDefaults applies default values from module schema.
+func (p *DAGPlanner) applyModuleDefaults(cfg map[string]interface{}, meta ModuleMetadata) {
 	for paramName, paramDef := range meta.ConfigSchema {
 		if paramDef.Default != nil {
 			cfg[paramName] = paramDef.Default
 		}
 	}
+}
 
-	// Apply intent-specific overrides (this part needs more detailed logic)
-	// Example: if intent has specific port or timeout settings, apply them to relevant modules.
+// applyConfigFileValues applies configuration values from config file if available.
+func (p *DAGPlanner) applyConfigFileValues(cfg map[string]interface{}, meta ModuleMetadata) {
+	if p.configManager == nil {
+		return
+	}
+
+	moduleConfigKey := fmt.Sprintf("modules.%s", meta.Name)
+	moduleConfigValue := p.configManager.GetValue(moduleConfigKey)
+	if moduleConfigValue == nil {
+		return
+	}
+
+	moduleConfigMap, ok := moduleConfigValue.(map[string]interface{})
+	if !ok {
+		return
+	}
+
+	for key, value := range moduleConfigMap {
+		cfg[key] = value
+	}
+
+	p.logger.Debug().
+		Str("module", meta.Name).
+		Interface("config_from_file", moduleConfigMap).
+		Msg("Applied module config from config file")
+}
+
+// applyIntentOverrides applies CLI flag overrides from scan intent.
+// Only applies when explicitly set by user (non-zero/non-empty values).
+func (p *DAGPlanner) applyIntentOverrides(cfg map[string]interface{}, meta ModuleMetadata, intent ScanIntent) {
+	// Port override (TCP port discovery only)
 	if meta.Name == moduleTypeTCPPortDiscovery && intent.CustomPortConfig != "" {
-		// Parse intent.CustomPortConfig and override "ports" in cfg
-		// Example: cfg["ports"] = strings.Split(intent.CustomPortConfig, ",")
-		// For simplicity, assume CustomPortConfig is already []string or parseable
 		parsedPorts := strings.Split(intent.CustomPortConfig, ",")
 		if len(parsedPorts) > 0 && (len(parsedPorts) > 1 || strings.TrimSpace(parsedPorts[0]) != "") {
 			cfg["ports"] = parsedPorts
-			p.logger.Debug().Str("module", meta.Name).Interface("ports", parsedPorts).Msg("Applied custom port config")
+			p.logger.Debug().Str("module", meta.Name).Interface("ports", parsedPorts).Msg("Applied custom port config from CLI")
 		}
-
 	}
+
+	// Timeout override (TCP/ICMP discovery modules)
 	if (meta.Name == moduleTypeTCPPortDiscovery || meta.Name == moduleTypeICMPPingDiscovery) && intent.CustomTimeout != "" {
-		cfg["timeout"] = intent.CustomTimeout // Assuming modules can parse duration string
-		p.logger.Debug().Str("module", meta.Name).Str("timeout", intent.CustomTimeout).Msg("Applied custom timeout config")
+		cfg["timeout"] = intent.CustomTimeout
+		p.logger.Debug().Str("module", meta.Name).Str("timeout", intent.CustomTimeout).Msg("Applied custom timeout from CLI")
 	}
 
-	// Propagate global custom timeout to banner grabber as read/connect timeouts.
-	// This ensures slow networks have enough time for banners.
+	// Concurrency override (TCP/ICMP discovery modules)
+	if (meta.Name == moduleTypeTCPPortDiscovery || meta.Name == moduleTypeICMPPingDiscovery) && intent.Concurrency > 0 {
+		cfg["concurrency"] = intent.Concurrency
+		p.logger.Debug().Str("module", meta.Name).Int("concurrency", intent.Concurrency).Msg("Applied custom concurrency from CLI")
+	}
+
+	// Banner grabber timeout override
 	if meta.Name == "banner-grabber" && intent.CustomTimeout != "" {
-		// Use full timeout for read and half for connect to stay responsive.
 		cfg["read_timeout"] = intent.CustomTimeout
-		// We cannot easily halve the duration string without parsing here;
-		// keep connect equal to read for simplicity and reliability.
 		cfg["connect_timeout"] = intent.CustomTimeout
 		p.logger.Debug().Str("module", meta.Name).Str("read_timeout", intent.CustomTimeout).Str("connect_timeout", intent.CustomTimeout).Msg("Applied custom banner timeouts from intent")
 	}
-
-	// Pass global targets if module consumes "config.targets" and it's not set by a dependency yet
-	// This is implicitly handled by the orchestrator when it resolves inputs from DataContext.
-	// The config here is for module-specific parameters.
-
-	return cfg
 }
 
 // generateInstanceID creates a unique instance ID for a module in the DAG.

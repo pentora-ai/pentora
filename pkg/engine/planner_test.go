@@ -59,7 +59,7 @@ func TestPlanner_PlanDAG_DefaultProfile_SelectsAndConfigures(t *testing.T) {
 		reporterMeta.Name:  fakeFactory(reporterMeta),
 	}
 
-	planner, err := NewDAGPlanner(registry)
+	planner, err := NewDAGPlanner(registry, nil)
 	if err != nil {
 		t.Fatalf("NewDAGPlanner error: %v", err)
 	}
@@ -107,7 +107,7 @@ func TestPlanner_PlanDAG_DefaultProfile_SelectsAndConfigures(t *testing.T) {
 }
 
 func TestPlanner_configureModule_AppliesCustoms(t *testing.T) {
-	planner, _ := NewDAGPlanner(nil)
+	planner, _ := NewDAGPlanner(nil, nil)
 	// tcp-port-discovery gets ports and timeout from intent
 	meta := ModuleMetadata{Name: "tcp-port-discovery", ConfigSchema: map[string]ParameterDefinition{"ports": {Default: nil}, "timeout": {Default: nil}}}
 	cfg := planner.configureModule(meta, ScanIntent{CustomPortConfig: "80,443", CustomTimeout: "5s"})
@@ -124,7 +124,7 @@ func TestPlanner_configureModule_AppliesCustoms(t *testing.T) {
 }
 
 func TestPlanner_generateInstanceID_Unique(t *testing.T) {
-	planner, _ := NewDAGPlanner(nil)
+	planner, _ := NewDAGPlanner(nil, nil)
 	existing := map[string]DAGNodeConfig{"banner_grabber": {InstanceID: "banner_grabber"}}
 	id := planner.generateInstanceID("banner-grabber", existing)
 	if id == "banner_grabber" {
@@ -134,7 +134,7 @@ func TestPlanner_generateInstanceID_Unique(t *testing.T) {
 
 // Test filterHostDiscoveryModules filters ICMP but preserves port scanners
 func TestPlanner_filterHostDiscoveryModules(t *testing.T) {
-	planner, _ := NewDAGPlanner(nil)
+	planner, _ := NewDAGPlanner(nil, nil)
 
 	icmpMeta := ModuleMetadata{Name: "icmp-ping-discovery", Type: DiscoveryModuleType}
 	tcpPortMeta := ModuleMetadata{Name: "tcp-port-discovery", Type: DiscoveryModuleType}
@@ -199,7 +199,7 @@ func TestPlanner_selectModulesByProfile_SkipDiscovery(t *testing.T) {
 		parseMeta.Name:   fakeFactory(parseMeta),
 	}
 
-	planner, _ := NewDAGPlanner(registry)
+	planner, _ := NewDAGPlanner(registry, nil)
 
 	// Test with SkipDiscovery=false (normal)
 	intent := ScanIntent{Targets: []string{"127.0.0.1"}, SkipDiscovery: false}
@@ -244,7 +244,7 @@ func TestPlanner_selectModulesByProfile_SkipDiscovery(t *testing.T) {
 
 // Test initializeDataKeys injects discovery.live_hosts when SkipDiscovery=true
 func TestPlanner_initializeDataKeys_SkipDiscovery(t *testing.T) {
-	planner, _ := NewDAGPlanner(nil)
+	planner, _ := NewDAGPlanner(nil, nil)
 
 	// Without SkipDiscovery
 	intent := ScanIntent{Targets: []string{"127.0.0.1"}, SkipDiscovery: false}
@@ -281,7 +281,7 @@ func TestPlanner_selectModulesByProfile_Profiles(t *testing.T) {
 		evalMeta.Name:      fakeFactory(evalMeta),
 	}
 
-	planner, _ := NewDAGPlanner(registry)
+	planner, _ := NewDAGPlanner(registry, nil)
 
 	// Test DiscoveryOnly
 	intentDiscovery := ScanIntent{DiscoveryOnly: true}
@@ -319,7 +319,7 @@ func TestPlanner_selectModulesByProfile_Profiles(t *testing.T) {
 
 // Test matchesTags covers all scenarios
 func TestPlanner_matchesTags(t *testing.T) {
-	planner, _ := NewDAGPlanner(nil)
+	planner, _ := NewDAGPlanner(nil, nil)
 
 	tests := []struct {
 		name        string
@@ -405,7 +405,7 @@ func TestPlanner_matchesTags(t *testing.T) {
 
 // Test logUnprocessedModules logs unprocessed modules with unmet dependencies
 func TestPlanner_logUnprocessedModules(t *testing.T) {
-	planner, _ := NewDAGPlanner(nil)
+	planner, _ := NewDAGPlanner(nil, nil)
 
 	// Create modules with dependencies
 	module1Meta := ModuleMetadata{
@@ -488,7 +488,7 @@ func TestScanIntent_Profile_or_Level_or_Default(t *testing.T) {
 
 func TestDAGPlanner_PlanDAG_NoModulesSelected(t *testing.T) {
 	// Planner with empty registry
-	planner, err := NewDAGPlanner(map[string]ModuleFactory{})
+	planner, err := NewDAGPlanner(map[string]ModuleFactory{}, nil)
 	if err != nil {
 		t.Fatalf("NewDAGPlanner error: %v", err)
 	}
@@ -513,7 +513,7 @@ func TestDAGPlanner_PlanDAG_FailsWhenNoNodesPlanned(t *testing.T) {
 	registry := map[string]ModuleFactory{
 		"mod1": fakeFactory(meta),
 	}
-	planner, err := NewDAGPlanner(registry)
+	planner, err := NewDAGPlanner(registry, nil)
 	if err != nil {
 		t.Fatalf("NewDAGPlanner error: %v", err)
 	}
@@ -549,7 +549,7 @@ func TestDAGPlanner_PlanDAG_SuccessfulPlanning(t *testing.T) {
 		scanMeta.Name:      fakeFactory(scanMeta),
 		reporterMeta.Name:  fakeFactory(reporterMeta),
 	}
-	planner, err := NewDAGPlanner(registry)
+	planner, err := NewDAGPlanner(registry, nil)
 	if err != nil {
 		t.Fatalf("NewDAGPlanner error: %v", err)
 	}
@@ -610,7 +610,7 @@ func TestDAGPlanner_selectDefaultModules(t *testing.T) {
 		otherMeta.Name:         fakeFactory(otherMeta),
 	}
 
-	planner, err := NewDAGPlanner(registry)
+	planner, err := NewDAGPlanner(registry, nil)
 	if err != nil {
 		t.Fatalf("NewDAGPlanner error: %v", err)
 	}
@@ -705,7 +705,7 @@ func TestDAGPlanner_ensureReporter(t *testing.T) {
 			reporterMeta.Name: fakeFactory(reporterMeta),
 			otherMeta.Name:    fakeFactory(otherMeta),
 		}
-		planner, _ := NewDAGPlanner(registry)
+		planner, _ := NewDAGPlanner(registry, nil)
 		selected := []ModuleFactory{fakeFactory(otherMeta), fakeFactory(reporterMeta)}
 		intent := ScanIntent{}
 		result := planner.ensureReporter(selected, intent)
@@ -728,7 +728,7 @@ func TestDAGPlanner_ensureReporter(t *testing.T) {
 			reporterMeta.Name: fakeFactory(reporterMeta),
 			otherMeta.Name:    fakeFactory(otherMeta),
 		}
-		planner, _ := NewDAGPlanner(registry)
+		planner, _ := NewDAGPlanner(registry, nil)
 		selected := []ModuleFactory{fakeFactory(otherMeta)}
 		intent := ScanIntent{}
 		result := planner.ensureReporter(selected, intent)
@@ -752,7 +752,7 @@ func TestDAGPlanner_ensureReporter(t *testing.T) {
 			anotherReporterMeta.Name: fakeFactory(anotherReporterMeta),
 			otherMeta.Name:           fakeFactory(otherMeta),
 		}
-		planner, _ := NewDAGPlanner(registry)
+		planner, _ := NewDAGPlanner(registry, nil)
 		selected := []ModuleFactory{fakeFactory(otherMeta)}
 		intent := ScanIntent{IncludeTags: []string{"nonexistent"}}
 		result := planner.ensureReporter(selected, intent)
@@ -774,7 +774,7 @@ func TestDAGPlanner_ensureReporter(t *testing.T) {
 		registry := map[string]ModuleFactory{
 			reporterMeta.Name: fakeFactory(reporterMeta),
 		}
-		planner, _ := NewDAGPlanner(registry)
+		planner, _ := NewDAGPlanner(registry, nil)
 		selected := []ModuleFactory{}
 		intent := ScanIntent{}
 		result := planner.ensureReporter(selected, intent)
@@ -808,7 +808,7 @@ func TestDAGPlanner_addParseModules(t *testing.T) {
 		nonParseMeta.Name: fakeFactory(nonParseMeta),
 	}
 
-	planner, err := NewDAGPlanner(registry)
+	planner, err := NewDAGPlanner(registry, nil)
 	if err != nil {
 		t.Fatalf("NewDAGPlanner error: %v", err)
 	}

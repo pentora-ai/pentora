@@ -84,7 +84,7 @@ func TestRun_PlannerInitError(t *testing.T) {
 	ctx := context.WithValue(appMgr.Context(), engine.AppManagerKey, appMgr)
 	ctx = appctx.WithConfig(ctx, appMgr.Config())
 
-	svc := NewService().WithPlannerFactory(func() (dagPlanner, error) {
+	svc := NewService().WithPlannerFactory(func(context.Context) (dagPlanner, error) {
 		return nil, errors.New("planner init fail")
 	})
 	_, e := svc.Run(ctx, Params{Targets: []string{"127.0.0.1"}})
@@ -99,7 +99,7 @@ func TestRun_PlannerEmptyDAG(t *testing.T) {
 	ctx = appctx.WithConfig(ctx, appMgr.Config())
 
 	empty := &engine.DAGDefinition{Nodes: nil}
-	svc := NewService().WithPlannerFactory(func() (dagPlanner, error) {
+	svc := NewService().WithPlannerFactory(func(context.Context) (dagPlanner, error) {
 		return &mockPlanner{def: empty}, nil
 	})
 	_, e := svc.Run(ctx, Params{Targets: []string{"127.0.0.1"}})
@@ -115,7 +115,7 @@ func TestRun_OrchestratorErrorAndStatus(t *testing.T) {
 
 	def := &engine.DAGDefinition{Name: "test", Nodes: []engine.DAGNodeConfig{{InstanceID: "n1", ModuleType: "noop"}}}
 	svc := NewService().
-		WithPlannerFactory(func() (dagPlanner, error) { return &mockPlanner{def: def}, nil }).
+		WithPlannerFactory(func(context.Context) (dagPlanner, error) { return &mockPlanner{def: def}, nil }).
 		WithOrchestratorFactory(func(d *engine.DAGDefinition) (orchestrator, error) {
 			return &mockOrch{out: map[string]interface{}{"discovery.live_hosts": []interface{}{}}, err: errors.New("run failed")}, nil
 		})
@@ -216,7 +216,7 @@ func Test_WithProgressSink_And_WithStorage(t *testing.T) {
 	svc := NewService().
 		WithProgressSink(sink).
 		WithStorage(backend).
-		WithPlannerFactory(func() (dagPlanner, error) { return &mockPlanner{def: def}, nil }).
+		WithPlannerFactory(func(context.Context) (dagPlanner, error) { return &mockPlanner{def: def}, nil }).
 		WithOrchestratorFactory(func(d *engine.DAGDefinition) (orchestrator, error) { return &mockOrch{out: orchOut, err: nil}, nil })
 
 	res, runErr := svc.Run(ctx, Params{Targets: []string{"127.0.0.1"}})
