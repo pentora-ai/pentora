@@ -3,13 +3,9 @@ package config
 
 import (
 	"fmt"
-	"os"
+	"sort"
 	"sync"
 
-	"github.com/knadh/koanf/parsers/yaml"
-	"github.com/knadh/koanf/providers/confmap"
-	"github.com/knadh/koanf/providers/file"
-	"github.com/knadh/koanf/providers/posflag"
 	"github.com/knadh/koanf/v2"
 	"github.com/spf13/pflag"
 )
@@ -61,42 +57,52 @@ func DefaultConfig() Config {
 
 // Load loads configuration from various sources based on precedence.
 // It populates the manager's currentConfig.
+//
 // Configuration precedence (highest to lowest):
-// 1. Command-line flags
-// 2. Config file (YAML)
-// 3. Default values
+//  1. Command-line flags (--log.level=debug)
+//  2. Environment variables (VULNTOR_LOG_LEVEL=debug)
+//  3. Config file (YAML)
+//  4. Default values
+//
+// Environment variables use VULNTOR_ prefix and underscore-to-dot mapping:
+//
+//	VULNTOR_LOG_LEVEL      -> log.level
+//	VULNTOR_SERVER_PORT    -> server.port
+//
+// For custom source ordering, use LoadWithSources() instead.
 func (m *Manager) Load(flags *pflag.FlagSet, customConfigFilePath string) error {
-	m.mu.Lock() // Lock for writing to m.koanfInstance and m.currentConfig
-	defer m.mu.Unlock()
-
-	// 1. Load default values (lowest precedence)
-	defaultCfgMap := DefaultConfigAsMap()
-	if err := m.koanfInstance.Load(confmap.Provider(defaultCfgMap, "."), nil); err != nil {
-		return fmt.Errorf("error loading hardcoded defaults into koanf: %w", err)
-	}
-
-	// 2. Load config file if provided (medium precedence)
-	if customConfigFilePath != "" {
-		if _, err := os.Stat(customConfigFilePath); err == nil {
-			if err := m.koanfInstance.Load(file.Provider(customConfigFilePath), yaml.Parser()); err != nil {
-				return fmt.Errorf("error loading config file %s: %w", customConfigFilePath, err)
-			}
-		} else if !os.IsNotExist(err) {
-			return fmt.Errorf("error checking config file %s: %w", customConfigFilePath, err)
-		}
-		// If file doesn't exist, silently continue (user might have passed --config but file doesn't exist yet)
-	}
-
-	// 3. Load command-line flags (highest precedence)
+	// Check debug flag before creating sources
+	debug := false
 	if flags != nil {
-		// The posflag.Provider needs the Koanf instance to correctly map flag names to Koanf keys.
-		if err := m.koanfInstance.Load(posflag.Provider(flags, ".", m.koanfInstance), nil); err != nil {
-			return fmt.Errorf("error loading command-line flags: %w", err)
-		}
-
 		debugFlag := flags.Lookup("debug")
 		if debugFlag != nil && debugFlag.Value.String() == "true" {
-			_ = m.koanfInstance.Set("log.level", "debug")
+			debug = true
+		}
+	}
+
+	sources := DefaultSources(customConfigFilePath, flags, debug)
+	return m.LoadWithSources(sources)
+}
+
+// LoadWithSources loads configuration from the provided sources in priority order.
+// Sources with lower priority values are loaded first, higher priority sources
+// override lower priority values.
+//
+// This method allows custom source ordering and additional sources (e.g., system
+// config, secrets manager) to be inserted into the loading chain.
+func (m *Manager) LoadWithSources(sources []ConfigSource) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Sort sources by priority (lowest first)
+	sort.Slice(sources, func(i, j int) bool {
+		return sources[i].Priority() < sources[j].Priority()
+	})
+
+	// Load each source in order
+	for _, src := range sources {
+		if err := src.Load(m.koanfInstance); err != nil {
+			return fmt.Errorf("error loading config from %s: %w", src.Name(), err)
 		}
 	}
 
@@ -109,8 +115,6 @@ func (m *Manager) Load(flags *pflag.FlagSet, customConfigFilePath string) error 
 
 	// Apply any post-load processing or validation.
 	m.postProcessConfig()
-
-	// log.Printf("[DEBUG] Final configuration loaded into Manager. Log Level: %s", m.currentConfig.Log.Level)
 
 	return nil
 }

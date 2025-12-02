@@ -241,6 +241,59 @@ func TestManager_Load_ErrorPaths_Documentation(t *testing.T) {
 	})
 }
 
+func TestManager_Load_EnvVarsOverrideDefaults(t *testing.T) {
+	resetGlobalConfig()
+
+	// Set environment variables
+	t.Setenv("VULNTOR_LOG_LEVEL", "warn")
+	t.Setenv("VULNTOR_LOG_FORMAT", "json")
+	t.Setenv("VULNTOR_SERVER_PORT", "9999")
+
+	manager := NewManager()
+	err := manager.Load(nil, "")
+	assert.NoError(t, err, "Load should not return error when loading with env vars")
+
+	cfg := manager.Get()
+	assert.Equal(t, "warn", cfg.Log.Level, "ENV var should override log level")
+	assert.Equal(t, "json", cfg.Log.Format, "ENV var should override log format")
+	assert.Equal(t, 9999, cfg.Server.Port, "ENV var should override server port")
+}
+
+func TestManager_Load_FlagsOverrideEnvVars(t *testing.T) {
+	resetGlobalConfig()
+
+	// Set environment variable
+	t.Setenv("VULNTOR_LOG_LEVEL", "warn")
+
+	manager := NewManager()
+	flags := newTestFlagSet()
+	_ = flags.Set("log.level", "error") // Flag should win over env var
+
+	err := manager.Load(flags, "")
+	assert.NoError(t, err, "Load should not return error")
+
+	cfg := manager.Get()
+	assert.Equal(t, "error", cfg.Log.Level, "CLI flag should override ENV var")
+}
+
+func TestManager_Load_EnvVarNamingConvention(t *testing.T) {
+	resetGlobalConfig()
+
+	// Test nested key mapping: VULNTOR_SERVER_ADDR -> server.addr
+	// Note: Keys with underscores (like dev_mode) require double-underscore in env var
+	// e.g., VULNTOR_SERVER_UI__DEV_MODE (not supported yet, use config file instead)
+	t.Setenv("VULNTOR_SERVER_ADDR", "0.0.0.0")
+	t.Setenv("VULNTOR_SERVER_PORT", "3000")
+
+	manager := NewManager()
+	err := manager.Load(nil, "")
+	assert.NoError(t, err, "Load should not return error")
+
+	cfg := manager.Get()
+	assert.Equal(t, "0.0.0.0", cfg.Server.Addr, "ENV var should map to nested config key")
+	assert.Equal(t, 3000, cfg.Server.Port, "ENV var should map to nested config key")
+}
+
 func newTestFlagSet() *pflag.FlagSet {
 	flags := pflag.NewFlagSet("test", pflag.ContinueOnError)
 	flags.String("log.level", "info", "")
