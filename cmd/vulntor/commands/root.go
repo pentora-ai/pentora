@@ -16,6 +16,7 @@ import (
 	"github.com/vulntor/vulntor/pkg/cli"
 	"github.com/vulntor/vulntor/pkg/config"
 	"github.com/vulntor/vulntor/pkg/engine"
+
 	// Register all available modules for DAG execution
 	_ "github.com/vulntor/vulntor/pkg/modules/evaluation" // Vulnerability evaluation modules
 	_ "github.com/vulntor/vulntor/pkg/modules/parse"      // Protocol parser modules
@@ -118,7 +119,6 @@ func NewCommand() *cobra.Command {
 	cmd.AddCommand(ScanCmd)
 	cmd.AddCommand(NewFingerprintCommand())
 	cmd.AddCommand(NewStatsCommand())
-	cmd.AddCommand(configCmd)
 
 	return cmd
 }
