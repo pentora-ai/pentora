@@ -50,6 +50,15 @@ func TestFileSource_Load_NonExistentFile(t *testing.T) {
 	require.NoError(t, err, "Non-existent file should skip silently")
 }
 
+func TestFileSource_Load_NonExistentFile_Required(t *testing.T) {
+	k := koanf.New(".")
+	src := &FileSource{Path: "/nonexistent/path/config.yaml", Required: true}
+
+	err := src.Load(k)
+	require.Error(t, err, "Non-existent required file should error")
+	assert.Contains(t, err.Error(), "config file not found")
+}
+
 func TestFileSource_Load_ValidFile(t *testing.T) {
 	// Create a temporary config file
 	tmpDir := t.TempDir()

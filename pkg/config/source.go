@@ -58,7 +58,8 @@ func (s *DefaultSource) Load(k *koanf.Koanf) error {
 // FileSource loads configuration from a YAML file.
 // Priority: 20
 type FileSource struct {
-	Path string // Path to config file (optional, silently skipped if empty or missing)
+	Path     string // Path to config file
+	Required bool   // If true, error when file doesn't exist (for --config flag)
 }
 
 func (s *FileSource) Name() string  { return "file:" + s.Path }
@@ -71,6 +72,9 @@ func (s *FileSource) Load(k *koanf.Koanf) error {
 
 	if _, err := os.Stat(s.Path); err != nil {
 		if os.IsNotExist(err) {
+			if s.Required {
+				return fmt.Errorf("config file not found: %s", s.Path)
+			}
 			return nil // File doesn't exist, skip silently
 		}
 		return fmt.Errorf("error checking config file %s: %w", s.Path, err)
@@ -141,7 +145,7 @@ func (s *FlagSource) Load(k *koanf.Koanf) error {
 func DefaultSources(configPath string, flags *pflag.FlagSet, debug bool) []ConfigSource {
 	return []ConfigSource{
 		&DefaultSource{},
-		&FileSource{Path: configPath},
+		&FileSource{Path: configPath, Required: configPath != ""},
 		&EnvSource{Prefix: "VULNTOR_"},
 		&FlagSource{Flags: flags, Debug: debug},
 	}
