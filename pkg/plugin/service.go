@@ -7,15 +7,16 @@ package plugin
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"os"
 
 	"github.com/vulntor/vulntor/pkg/output"
+	"github.com/vulntor/vulntor/pkg/paths"
 	"github.com/vulntor/vulntor/pkg/storage"
 )
 
@@ -93,7 +94,7 @@ type Service struct {
 // All options are optional - sensible defaults are used when not specified.
 //
 // Returns a fully configured service with defaults:
-//   - CacheManager for managing cached plugins (~/.vulntor/plugins/cache)
+//   - CacheManager for managing cached plugins (XDG cache: e.g., ~/.cache/vulntor/plugins/cache)
 //   - ManifestManager for tracking installed plugins
 //   - Default plugin sources (official repository)
 //   - Default logger (zerolog)
@@ -133,11 +134,7 @@ func NewService(opts ...ServiceOption) (*Service, error) {
 
 	// Apply defaults for unset options
 	if config.cacheDir == "" {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return nil, fmt.Errorf("get home directory: %w", err)
-		}
-		config.cacheDir = filepath.Join(homeDir, ".vulntor", "plugins", "cache")
+		config.cacheDir = filepath.Join(paths.CacheDir(), "plugins", "cache")
 	}
 
 	if config.logger == nil {

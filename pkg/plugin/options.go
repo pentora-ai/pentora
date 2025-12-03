@@ -36,7 +36,7 @@ type serviceOptions struct {
 
 // WithCacheDir sets the plugin cache directory.
 //
-// Default: ~/.vulntor/plugins/cache (Linux) or ~/Library/Application Support/Vulntor/plugins/cache (macOS)
+// Default: XDG cache (e.g., ~/.cache/vulntor/plugins/cache on Linux/macOS, %LocalAppData%/Vulntor/Cache/plugins/cache on Windows)
 //
 // Example:
 //
