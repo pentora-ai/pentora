@@ -280,8 +280,6 @@ func TestManager_Load_EnvVarNamingConvention(t *testing.T) {
 	resetGlobalConfig()
 
 	// Test nested key mapping: VULNTOR_SERVER_ADDR -> server.addr
-	// Note: Keys with underscores (like dev_mode) require double-underscore in env var
-	// e.g., VULNTOR_SERVER_UI__DEV_MODE (not supported yet, use config file instead)
 	t.Setenv("VULNTOR_SERVER_ADDR", "0.0.0.0")
 	t.Setenv("VULNTOR_SERVER_PORT", "3000")
 

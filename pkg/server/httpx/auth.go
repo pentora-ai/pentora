@@ -13,7 +13,6 @@ import (
 //
 // Behavior:
 //   - Skips authentication for health endpoints (/healthz, /readyz)
-//   - In dev mode (cfg.UI.DevMode=true), skips authentication entirely
 //   - In "none" mode (cfg.Auth.Mode="none"), skips authentication
 //   - In "token" mode, validates Authorization: Bearer <token> header
 //   - Returns 401 Unauthorized with JSON error if auth fails
@@ -24,12 +23,6 @@ func Auth(cfg config.ServerConfig) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Skip auth for health endpoints (always accessible)
 			if isHealthEndpoint(r.URL.Path) {
-				next.ServeHTTP(w, r)
-				return
-			}
-
-			// Skip auth in dev mode
-			if cfg.UI.DevMode {
 				next.ServeHTTP(w, r)
 				return
 			}

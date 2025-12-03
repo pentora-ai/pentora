@@ -21,10 +21,10 @@ func TestNewHandler_ProductionMode(t *testing.T) {
 	require.NotNil(t, handler)
 }
 
-func TestNewHandler_DevMode(t *testing.T) {
+func TestNewHandler_DiskAssets(t *testing.T) {
 	cfg := config.ServerConfig{
 		UI: config.UIConfig{
-			AssetsPath: "./testdata", // Dev mode (disk path)
+			AssetsPath: "./testdata", // Disk path for development
 		},
 	}
 

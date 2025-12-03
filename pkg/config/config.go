@@ -174,7 +174,6 @@ func DefaultConfigAsMap() map[string]interface{} {
 		"server.write_timeout": def.Server.WriteTimeout,
 
 		// UI configuration
-		"server.ui.dev_mode":    def.Server.UI.DevMode,
 		"server.ui.assets_path": def.Server.UI.AssetsPath,
 
 		// Auth configuration

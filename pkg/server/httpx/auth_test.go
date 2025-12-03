@@ -124,32 +124,6 @@ func TestAuth_ReadyzSkipsAuth(t *testing.T) {
 	require.Equal(t, "ready", w.Body.String())
 }
 
-func TestAuth_DevModeSkipsAuth(t *testing.T) {
-	cfg := config.ServerConfig{
-		UI: config.UIConfig{
-			DevMode: true,
-		},
-		Auth: config.AuthConfig{
-			Mode:  "token",
-			Token: "secret-token-123",
-		},
-	}
-
-	handler := Auth(cfg)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("success"))
-	}))
-
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/scans", nil)
-	// No Authorization header - should work in dev mode
-	w := httptest.NewRecorder()
-
-	handler.ServeHTTP(w, req)
-
-	require.Equal(t, http.StatusOK, w.Code)
-	require.Equal(t, "success", w.Body.String())
-}
-
 func TestAuth_NoneModeSkipsAuth(t *testing.T) {
 	cfg := config.ServerConfig{
 		Auth: config.AuthConfig{

@@ -46,7 +46,6 @@ type ServerConfig struct {
 
 // UIConfig holds UI-specific configuration.
 type UIConfig struct {
-	DevMode    bool   `description:"Enable dev mode (disables auth, localhost only)" koanf:"dev_mode"`
 	AssetsPath string `description:"Override embedded assets with disk path (for development)" koanf:"assets_path"`
 }
 
